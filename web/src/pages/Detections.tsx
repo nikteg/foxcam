@@ -1,6 +1,6 @@
 import { Button, Caption1, Checkbox, Input, Link, Text } from "@fluentui/react-components";
 import { Folder20Regular, ScanObject20Regular } from "@fluentui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { api, detectionFrameUrl, segmentPlayUrl, type Detection } from "../api";
 import { CameraSelect, useCameraName } from "../components/CameraSelect";
@@ -91,6 +91,8 @@ export function Detections() {
   };
   const detections = useQuery({
     queryKey: ["detections", query],
+    // A new filter keeps the current list on screen until its own data arrives.
+    placeholderData: keepPreviousData,
     queryFn: () => api.detections(query),
     refetchInterval: 20_000,
   });

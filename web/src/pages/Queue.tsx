@@ -24,7 +24,7 @@ import {
   Timer20Regular,
 } from "@fluentui/react-icons";
 import type { ReactElement } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useState } from "react";
 import { useNavigate } from "react-router";
@@ -65,6 +65,8 @@ export function Queue() {
   const client = useQueryClient();
   const queue = useQuery({
     queryKey: ["queue", state],
+    // A new filter keeps the current list on screen until its own data arrives.
+    placeholderData: keepPreviousData,
     queryFn: () => api.queue({ state, limit: 100 }),
     refetchInterval: 5_000,
   });

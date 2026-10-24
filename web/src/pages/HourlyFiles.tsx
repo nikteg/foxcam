@@ -1,6 +1,6 @@
 import { Button } from "@fluentui/react-components";
 import { ArrowDownload20Regular, Folder20Regular } from "@fluentui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { api, type ArchiveFile } from "../api";
 import { useCameraName } from "../components/CameraSelect";
@@ -99,6 +99,8 @@ export function HourlyFiles({
   const howMade = useHowMade();
   const archives = useQuery({
     queryKey: ["archives", camera, day],
+    // A new filter keeps the current list on screen until its own data arrives.
+    placeholderData: keepPreviousData,
     queryFn: () => api.archives({ camera, day, limit: 500 }),
     refetchInterval: 30_000,
   });

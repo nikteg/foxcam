@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { api } from "../api";
 import { CameraSelect } from "../components/CameraSelect";
@@ -14,6 +14,8 @@ export function Events() {
   const profiles = useProfiles();
   const events = useQuery({
     queryKey: ["events", camera, profile],
+    // A new filter keeps the current list on screen until its own data arrives.
+    placeholderData: keepPreviousData,
     queryFn: () => api.events({ camera, profile, limit: 200 }),
     refetchInterval: 15_000,
   });

@@ -22,7 +22,7 @@ import {
   ArrowDownload20Regular,
   Pin16Filled,
 } from "@fluentui/react-icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -143,6 +143,8 @@ export function Recordings() {
   const tab = useSubPage("/recordings", ["segments", "joined"] as const);
   const segments = useQuery({
     queryKey: ["segments", f.camera, f.day, f.only_targets, f.status],
+    // A new filter keeps the current list on screen until its own data arrives.
+    placeholderData: keepPreviousData,
     queryFn: () =>
       api.segments({
         camera: f.camera,
