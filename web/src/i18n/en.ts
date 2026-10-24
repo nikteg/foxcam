@@ -495,6 +495,8 @@ export const en = {
     "Opens the camera as an HLS stream in a new tab, for browsers or networks where WebRTC does not work.",
   "queue.stats": "Stats",
   "common.configTagHint": "Defined in config.yaml: change it there (read-only here).",
+  "live.badge": "Live",
+  "live.badgeOffline": "Offline",
   "profiles.title": "Detection profiles",
   "profiles.profile": "Profile",
   "profiles.all": "All profiles",

@@ -579,6 +579,8 @@ export const sv: Record<MessageKey, string> = {
     "Öppnar kameran som HLS-ström i en ny flik, för webbläsare eller nät där WebRTC inte fungerar.",
   "queue.stats": "Statistik",
   "common.configTagHint": "Definierad i config.yaml: ändra den där (skrivskyddad här).",
+  "live.badge": "Live",
+  "live.badgeOffline": "Offline",
   "profiles.title": "Detekteringsprofiler",
   "profiles.profile": "Profil",
   "profiles.all": "Alla profiler",

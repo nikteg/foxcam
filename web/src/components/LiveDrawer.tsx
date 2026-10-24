@@ -7,7 +7,6 @@ import { useState } from "react";
 import type { Camera } from "../api";
 import { useI18n } from "../i18n";
 import { Dialog, DialogBody, DialogContent, DialogSurface, DialogTitle } from "./Drawer";
-import { Dot } from "./ui";
 
 const LOW_DATA_KEY = "media-streamer.live.lowData";
 
@@ -49,8 +48,15 @@ export function LiveDrawer({
         <DialogBody>
           <DialogTitle>
             <span className="row">
-              <Dot ok={c.online} />
               {c.name}
+              {c.online ? (
+                <output className="live-badge">
+                  <span className="live-badge-dot" aria-hidden="true" />
+                  {t("live.badge")}
+                </output>
+              ) : (
+                <output className="live-badge offline">{t("live.badgeOffline")}</output>
+              )}
             </span>
           </DialogTitle>
           <DialogContent className="form-stack">
