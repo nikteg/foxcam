@@ -10,7 +10,12 @@ import {
   Subtitle2,
   Text,
 } from "@fluentui/react-components";
-import { Edit20Regular, Folder20Regular, Video20Regular } from "@fluentui/react-icons";
+import {
+  Edit20Regular,
+  Folder20Regular,
+  Play20Filled,
+  Video20Regular,
+} from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 
 import { api, snapshotUrl, type Camera } from "../api";
@@ -138,14 +143,23 @@ function CameraCard({ camera: c, refreshKey }: { camera: Camera; refreshKey: num
         }
       />
       <CardPreview>
-        {/* refreshKey re-requests the snapshot together with the status poll. */}
-        <img
-          className="thumb"
-          loading="lazy"
-          src={`${snapshotUrl(c.id)}?t=${refreshKey}`}
-          alt={t("dashboard.snapshotAlt", { name: c.name })}
-          onError={(e) => (e.currentTarget.style.visibility = "hidden")}
-        />
+        <a
+          className="thumb-button"
+          aria-label={t("dashboard.openLive", { name: c.name })}
+          {...routerHref(`/live?camera=${c.id}`)}
+        >
+          {/* refreshKey re-requests the snapshot together with the status poll. */}
+          <img
+            className="thumb"
+            loading="lazy"
+            src={`${snapshotUrl(c.id)}?t=${refreshKey}`}
+            alt={t("dashboard.snapshotAlt", { name: c.name })}
+            onError={(e) => (e.currentTarget.style.visibility = "hidden")}
+          />
+          <span className="play-overlay" aria-hidden="true">
+            <Play20Filled />
+          </span>
+        </a>
       </CardPreview>
       <dl className="facts">
         <dt>{t("camera.segmentLength")}</dt>

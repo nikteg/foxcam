@@ -110,6 +110,7 @@ export const sv: Record<MessageKey, string> = {
   "dashboard.latestEvents": "Senaste händelser",
   "dashboard.all": "alla →",
   "dashboard.segments": "Segment",
+  "dashboard.openLive": "Öppna livebilden från {name}",
   "dashboard.snapshotAlt": "Ögonblicksbild från {name}",
 
   // Live

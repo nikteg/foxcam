@@ -385,24 +385,35 @@ table.table {
   background: none;
   cursor: pointer;
 }
+/* Play button on clip and camera previews: always visible (touch screens have no hover),
+   stronger on hover / keyboard focus. */
 .play-overlay {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
-  opacity: 0;
-  transition: opacity 0.15s;
-  background: rgb(0 0 0 / 35%);
+  transition: background 0.15s;
   color: #fff;
-  font-size: 48px;
 }
 .play-overlay svg {
-  width: 56px;
-  height: 56px;
+  box-sizing: content-box;
+  width: 28px;
+  height: 28px;
+  padding: 14px 13px 14px 15px; /* optically centre the triangle */
+  border-radius: 50%;
+  background: rgb(0 0 0 / 55%);
+  transition:
+    background 0.15s,
+    transform 0.15s;
 }
 .thumb-button:hover .play-overlay,
 .thumb-button:focus-visible .play-overlay {
-  opacity: 1;
+  background: rgb(0 0 0 / 25%);
+}
+.thumb-button:hover .play-overlay svg,
+.thumb-button:focus-visible .play-overlay svg {
+  background: var(--colorBrandBackground);
+  transform: scale(1.08);
 }
 .clip-dialog video {
   max-height: 70vh;

@@ -109,6 +109,7 @@ export const en = {
   "dashboard.latestEvents": "Latest events",
   "dashboard.all": "all →",
   "dashboard.segments": "Segments",
+  "dashboard.openLive": "Open the live view of {name}",
   "dashboard.snapshotAlt": "Snapshot from {name}",
 
   // Live
