@@ -944,3 +944,14 @@ details.helper summary {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* Camera card header tags: one fixed-height row, so tags appearing never move the card. */
+.card-status {
+  display: flex;
+  align-items: center;
+  gap: var(--spacingHorizontalXS);
+  height: 20px;
+}
+.card-status .placeholder {
+  visibility: hidden;
+}

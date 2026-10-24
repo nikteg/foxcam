@@ -14,7 +14,12 @@ import {
   Tooltip,
   type BadgeProps,
 } from "@fluentui/react-components";
-import { WeatherMoon20Regular, WeatherSunny20Regular } from "@fluentui/react-icons";
+import {
+  WeatherMoon16Regular,
+  WeatherMoon20Regular,
+  WeatherSunny16Regular,
+  WeatherSunny20Regular,
+} from "@fluentui/react-icons";
 import { useEffect, type MouseEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 
@@ -198,13 +203,29 @@ export function Tag({
   );
 }
 
-export function Light({ night, long = false }: { night: boolean | null; long?: boolean }) {
+export function Light({
+  night,
+  long = false,
+  small = false,
+}: {
+  night: boolean | null;
+  long?: boolean;
+  /** 16 px icon, for use inside a Tag (a 20 px icon makes the tag taller). */
+  small?: boolean;
+}) {
   const { t } = useI18n();
   if (night === null) return <span className="muted">–</span>;
   const label = night ? t("light.night") : t("light.day");
+  const Icon = small
+    ? night
+      ? WeatherMoon16Regular
+      : WeatherSunny16Regular
+    : night
+      ? WeatherMoon20Regular
+      : WeatherSunny20Regular;
   return (
     <span className="light" title={night ? t("light.nightIr") : t("light.day")}>
-      {night ? <WeatherMoon20Regular /> : <WeatherSunny20Regular />}
+      <Icon />
       {long && <Text size={200}>{label}</Text>}
     </span>
   );

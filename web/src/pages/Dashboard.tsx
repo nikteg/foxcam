@@ -132,13 +132,15 @@ function CameraCard({ camera: c, refreshKey }: { camera: Camera; refreshKey: num
           </span>
         }
         action={
-          <span className="row">
+          // Fixed-height row; the light tag keeps its place (hidden) until the first
+          // segment has been tagged, so the header never changes height.
+          <span className="card-status">
             {c.private && <Tag kind="private">{t("state.private")}</Tag>}
-            {c.last_is_night !== null && (
+            <span className={c.last_is_night === null ? "placeholder" : undefined}>
               <Tag>
-                <Light night={c.last_is_night} long />
+                <Light night={c.last_is_night ?? false} long small />
               </Tag>
-            )}
+            </span>
           </span>
         }
       />
