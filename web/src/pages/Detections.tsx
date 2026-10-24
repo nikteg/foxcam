@@ -280,7 +280,7 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
       <Button
         as="a"
         icon={<Folder20Regular />}
-        {...routerHref(`/recordings?selected=${d.segment_id}`)}
+        {...routerHref(`/recordings/segments?selected=${d.segment_id}`)}
       >
         {t("detections.openRecording")}
       </Button>

@@ -181,7 +181,7 @@ export function Queue() {
                   columns={jobColumns}
                   getRowId={(j) => j.id}
                   defaultSort={{ column: "id", direction: "descending" }}
-                  onRowClick={(j) => navigate(`/recordings?selected=${j.segment_id}`)}
+                  onRowClick={(j) => navigate(`/recordings/segments?selected=${j.segment_id}`)}
                 />
               )}
               {q.jobs.length === 0 && <Empty>{t("queue.noJobs")}</Empty>}

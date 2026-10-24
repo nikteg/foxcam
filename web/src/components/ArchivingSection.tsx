@@ -197,7 +197,7 @@ export function ArchivingSection() {
           columns={periodColumns(t, cameraName)}
           getRowId={(r) => r.key}
           defaultSort={{ column: "status", direction: "ascending" }}
-          onRowClick={(r) => r.archiveId && navigate(`/recordings/archives?file=${r.archiveId}`)}
+          onRowClick={(r) => r.archiveId && navigate(`/recordings?file=${r.archiveId}`)}
         />
       ) : (
         <Empty>{t("hourly.none")}</Empty>
