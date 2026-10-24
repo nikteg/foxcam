@@ -112,7 +112,7 @@ export const en = {
 
   // Live
   "live.noCameras": "No cameras configured.",
-  "live.hlsFallback": "HLS fallback",
+  "live.hlsFallback": "Open as HLS",
   "live.frameTitle": "{name} live",
   "live.offline": "Camera offline",
   "live.lowData": "Low data",
@@ -485,13 +485,14 @@ export const en = {
   "dashboard.allJobs": "All jobs",
   "dashboard.oldest": "oldest {age}",
   "dashboard.avgEach": "{s} s each",
-  "dashboard.workersOnline": "Workers online",
-  "dashboard.workingOn": "on job #{id}",
-  "dashboard.idleWorker": "idle",
-  "dashboard.noWorkers": "None: jobs wait until a worker connects (Jobs → Workers).",
   "mask.discard": "Discard the unsaved censor-area changes?",
   "dashboard.overview": "Overview",
   "recordings.playerTitle": "Recording {id}",
+  "cameras.censorSummary":
+    "{n} {n:area|areas}, blacked out in everything sent to the detection workers.",
+  "cameras.censorBurned": "Also burned into recordings and live view.",
+  "live.hlsFallbackHint":
+    "Opens the camera as an HLS stream in a new tab, for browsers or networks where WebRTC does not work.",
   "profiles.title": "Detection profiles",
   "profiles.profile": "Profile",
   "profiles.all": "All profiles",
@@ -548,7 +549,6 @@ export const en = {
   "cameras.profilesTitle": "Detection on {name}",
   "cameras.profilesHelp":
     "Each recording is sent to a worker once per chosen profile. Choose none to only record.",
-  "cameras.profilesFromUi": "Chosen here.",
   "cameras.profilesFromConfig": "Currently from config.yaml; saving here overrides it.",
   "cameras.profilesFromDefault": "Currently the default profiles; saving here overrides them.",
   "cameras.profilesReset": "Use defaults",

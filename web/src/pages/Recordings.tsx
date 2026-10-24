@@ -329,10 +329,6 @@ function RecordingDetail({
             {t("common.download")}
           </Button>
         )}
-        <Tag kind={s.status} title={s.error ?? undefined}>
-          {stateLabel(s.status)}
-        </Tag>
-        {s.pinned && <Tag kind="ok">{t("recordings.keptForEvent")}</Tag>}
         {canEdit && !s.deleted && (
           <Button
             icon={<ArrowClockwise20Regular />}
@@ -345,6 +341,13 @@ function RecordingDetail({
       </div>
       {confirming && <ReanalyseDialog segment={s} onClose={() => setConfirming(false)} />}
       <dl className="facts">
+        <dt>{t("col.status")}</dt>
+        <dd className="row wrap">
+          <Tag kind={s.status} title={s.error ?? undefined}>
+            {stateLabel(s.status)}
+          </Tag>
+          {s.pinned && <Tag kind="ok">{t("recordings.keptForEvent")}</Tag>}
+        </dd>
         <dt>{t("col.start")}</dt>
         <dd>
           <Time iso={s.start_at} />

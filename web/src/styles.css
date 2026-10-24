@@ -97,8 +97,8 @@ a.tag-link {
   text-decoration: none;
   border-radius: var(--borderRadiusCircular);
 }
-a.tag-link:hover .fui-Badge {
-  filter: brightness(1.25);
+a.tag-link:hover .app-tag {
+  border-color: var(--colorNeutralStroke1Hover);
 }
 a.tag-link:focus-visible {
   outline: 2px solid var(--colorStrokeFocus2);
@@ -243,6 +243,7 @@ main {
 /* Dates and small values never break across lines. */
 time,
 .fui-Badge,
+.app-tag,
 button.fui-Button,
 a.fui-Button,
 .nowrap {
@@ -829,7 +830,7 @@ table.table {
   main {
     padding-top: 16px;
   }
-  }
+}
 
 /* ------------------------------------------------------------------ */
 /* Phones: tables become stacked cards                                 */
@@ -1292,18 +1293,6 @@ Fluent's text styles would otherwise reset the margins. */
   margin-bottom: var(--spacingVerticalL);
 }
 
-/* Status → Jobs: the workers online. */
-.fui-Card.jobs-summary {
-  margin-top: var(--spacingVerticalM);
-  padding: var(--spacingVerticalL) var(--spacingHorizontalL);
-}
-.jobs-workers {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacingVerticalS);
-  min-width: 0;
-}
-
 /* Sub-page tabs: close under the nav bar, the first tab's text in line with the content. */
 .page-tabs {
   margin-top: calc(-1 * var(--spacingVerticalM));
@@ -1315,4 +1304,67 @@ Fluent's text styles would otherwise reset the margins. */
   --video-brand: var(--colorBrandBackground);
   --video-border-radius: var(--borderRadiusMedium);
   --video-focus-ring-color: var(--colorStrokeFocus2);
+}
+
+/* Destructive action in a drawer's button row (Remove camera): left, red, flat. */
+.fui-DrawerFooter .actions-start {
+  margin-inline-end: auto;
+}
+.fui-Button.danger {
+  color: var(--colorStatusDangerForeground1);
+}
+.fui-Button.danger:hover {
+  color: var(--colorStatusDangerForeground1);
+  background: var(--colorStatusDangerBackground1);
+}
+h3.panel-heading {
+  margin: var(--spacingVerticalS) 0 0;
+}
+
+/* Tags (components/ui.tsx Tag): a neutral pill with a coloured dot for the state. */
+.app-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 var(--spacingHorizontalS);
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: var(--borderRadiusCircular);
+  background: var(--colorNeutralBackground3);
+  color: var(--colorNeutralForeground2);
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightSemibold);
+  line-height: 1;
+  vertical-align: middle;
+}
+.app-tag > svg {
+  font-size: 14px;
+}
+.app-tag-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tag-dot);
+}
+.app-tag.tone-success {
+  --tag-dot: var(--colorPaletteGreenBorderActive);
+}
+.app-tag.tone-danger {
+  --tag-dot: var(--colorPaletteRedBorderActive);
+}
+.app-tag.tone-warning {
+  --tag-dot: var(--colorPaletteMarigoldBorderActive);
+}
+.app-tag.tone-info {
+  --tag-dot: var(--colorPaletteBlueBorderActive);
+}
+.app-tag.tone-important {
+  --tag-dot: var(--colorNeutralForeground1);
+}
+/* Target labels (fox, person): the brand's tint, no dot. */
+.app-tag.tone-brand {
+  border-color: transparent;
+  background: var(--colorBrandBackground2);
+  color: var(--colorBrandForeground2);
 }

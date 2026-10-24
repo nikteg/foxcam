@@ -113,7 +113,7 @@ export const sv: Record<MessageKey, string> = {
 
   // Live
   "live.noCameras": "Inga kameror är konfigurerade.",
-  "live.hlsFallback": "HLS-reserv",
+  "live.hlsFallback": "Öppna som HLS",
   "live.frameTitle": "{name} live",
   "live.offline": "Kameran är frånkopplad",
   "live.lowData": "Låg datamängd",
@@ -569,13 +569,14 @@ export const sv: Record<MessageKey, string> = {
   "dashboard.allJobs": "Alla jobb",
   "dashboard.oldest": "äldsta {age}",
   "dashboard.avgEach": "{s} s vardera",
-  "dashboard.workersOnline": "Arbetare online",
-  "dashboard.workingOn": "på jobb #{id}",
-  "dashboard.idleWorker": "ledig",
-  "dashboard.noWorkers": "Inga: jobben väntar tills en arbetare ansluter (Jobb → Arbetare).",
   "mask.discard": "Släng de osparade ändringarna av censurområdena?",
   "dashboard.overview": "Översikt",
   "recordings.playerTitle": "Inspelning {id}",
+  "cameras.censorSummary":
+    "{n} {n:område|områden}, svärtade i allt som skickas till detekteringsarbetarna.",
+  "cameras.censorBurned": "Även inbrända i inspelningar och livebild.",
+  "live.hlsFallbackHint":
+    "Öppnar kameran som HLS-ström i en ny flik, för webbläsare eller nät där WebRTC inte fungerar.",
   "profiles.title": "Detekteringsprofiler",
   "profiles.profile": "Profil",
   "profiles.all": "Alla profiler",
@@ -632,7 +633,6 @@ export const sv: Record<MessageKey, string> = {
   "cameras.profilesTitle": "Detektering på {name}",
   "cameras.profilesHelp":
     "Varje inspelning skickas till en arbetare en gång per vald profil. Välj ingen för att bara spela in.",
-  "cameras.profilesFromUi": "Valt här.",
   "cameras.profilesFromConfig":
     "Kommer just nu från config.yaml; sparar du här gäller det i stället.",
   "cameras.profilesFromDefault": "Just nu standardprofilerna; sparar du här gäller det i stället.",

@@ -1,5 +1,6 @@
 import {
   Body1,
+  Subtitle2,
   Button,
   Caption1,
   Checkbox,
@@ -58,7 +59,6 @@ export function Cameras() {
   const [adding, setAdding] = useState(false);
   const [addingProfile, setAddingProfile] = useState(false);
   const [settingsFor, setSettingsFor] = useState<Camera | null>(null);
-  const [maskFor, setMaskFor] = useState<string | null>(null);
   const [liveFor, setLiveFor] = useState<string | null>(null);
   const me = useMe();
   const isAdmin = me?.is_admin ?? false;
@@ -129,7 +129,6 @@ export function Cameras() {
                 refreshKey={Math.floor(cameras.dataUpdatedAt / 10_000)}
                 manage
                 onSettings={() => setSettingsFor(c)}
-                onMask={() => setMaskFor(c.id)}
               />
             ))}
           </div>
@@ -137,7 +136,6 @@ export function Cameras() {
       )}
 
       <AddCameraDialog open={adding} onClose={() => setAdding(false)} />
-      {maskFor && <MaskDrawer cameraId={maskFor} onClose={() => setMaskFor(null)} />}
       {liveFor && (
         <LiveDrawer
           cameras={cameras.data ?? []}
@@ -233,19 +231,25 @@ function GeneralPanel({
         ) : (
           <Body1 className="muted">{t("cameras.configHint")}</Body1>
         )}
-        <div className="row wrap">
+        <Subtitle2 as="h3" className="panel-heading">
+          {t("camera.censorAreas")}
+        </Subtitle2>
+        <Caption1 className="muted">
+          {t("cameras.censorSummary", { n: camera.rects.length })}
+          {camera.burn_masks && camera.rects.length > 0 && <> {t("cameras.censorBurned")}</>}
+        </Caption1>
+        <div>
           <Button size="small" icon={<EyeOff20Regular />} onClick={() => setEditingMask(true)}>
             {t("cameras.editCensorAreas")}
           </Button>
-          {editingMask && <MaskDrawer cameraId={camera.id} onClose={() => setEditingMask(false)} />}
-          {canRemove && !confirmRemove && (
-            <Button size="small" icon={<Delete20Regular />} onClick={() => setConfirmRemove(true)}>
-              {t("cameras.removeCamera")}
-            </Button>
-          )}
         </div>
+        {editingMask && <MaskDrawer cameraId={camera.id} onClose={() => setEditingMask(false)} />}
         {confirmRemove && (
-          <MessageBar intent="warning">
+          <MessageBar
+            intent="warning"
+            // The button is in the footer: bring the question into view.
+            ref={(el) => el?.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+          >
             <MessageBarBody>
               <MessageBarTitle>{t("cameras.removeTitle", { name: camera.name })}</MessageBarTitle>
               {t("cameras.removeBody")}
@@ -273,6 +277,17 @@ function GeneralPanel({
         )}
       </DialogContent>
       <DialogActions>
+        {canRemove && (
+          <Button
+            appearance="subtle"
+            className="danger actions-start"
+            icon={<Delete20Regular />}
+            disabled={confirmRemove}
+            onClick={() => setConfirmRemove(true)}
+          >
+            {t("cameras.removeCamera")}
+          </Button>
+        )}
         <Button onClick={onClose}>{editable ? t("common.cancel") : t("common.close")}</Button>
         {editable && (
           <Button type="submit" appearance="primary" disabled={!name || save.isPending}>
@@ -422,13 +437,13 @@ function RecordingPanel({
             </MessageBarBody>
           </MessageBar>
         )}
-        <Caption1 className="muted">
-          {camera.recording_profile_source === "ui"
-            ? t("cameras.profilesFromUi")
-            : camera.recording_profile_source === "config"
+        {camera.recording_profile_source !== "ui" && (
+          <Caption1 className="muted">
+            {camera.recording_profile_source === "config"
               ? t("cameras.profilesFromConfig")
               : t("recording.fromDefault")}
-        </Caption1>
+          </Caption1>
+        )}
         {save.error && (
           <MessageBar intent="error">
             <MessageBarBody>{save.error.message}</MessageBarBody>
@@ -497,13 +512,13 @@ function DetectionPanel({
               }
             />
           ))}
-        <Caption1 className="muted">
-          {camera.profiles_source === "ui"
-            ? t("cameras.profilesFromUi")
-            : camera.profiles_source === "config"
+        {camera.profiles_source !== "ui" && (
+          <Caption1 className="muted">
+            {camera.profiles_source === "config"
               ? t("cameras.profilesFromConfig")
               : t("cameras.profilesFromDefault")}
-        </Caption1>
+          </Caption1>
+        )}
         {save.error && (
           <MessageBar intent="error">
             <MessageBarBody>{save.error.message}</MessageBarBody>

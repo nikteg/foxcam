@@ -1,5 +1,4 @@
 import {
-  Badge,
   Button,
   Body1,
   Caption1,
@@ -14,7 +13,6 @@ import {
   Text,
   Title2,
   Tooltip,
-  type BadgeProps,
   Tab,
   TabList,
 } from "@fluentui/react-components";
@@ -205,7 +203,8 @@ export function Dot({ ok }: { ok: boolean }) {
   );
 }
 
-const STATE_COLORS: Record<string, BadgeProps["color"]> = {
+/** Tone of a tag per state / kind: a coloured dot (or a brand tint for target labels). */
+const TAG_TONES: Record<string, string> = {
   done: "success",
   ok: "success",
   failed: "danger",
@@ -214,8 +213,8 @@ const STATE_COLORS: Record<string, BadgeProps["color"]> = {
   leased: "warning",
   queued: "warning",
   warn: "warning",
-  pending: "informative",
-  new: "informative",
+  pending: "info",
+  new: "info",
   private: "important",
   target: "brand",
 };
@@ -277,13 +276,17 @@ export function Tag({
 }: {
   kind?: string;
   title?: string;
-  icon?: BadgeProps["icon"];
+  icon?: ReactElement;
   children?: ReactNode;
 }) {
+  // One neutral pill in both themes (Fluent's tinted badges are faint in the light theme);
+  // the state is a coloured dot next to readable text.
+  const tone = (kind && TAG_TONES[kind]) || "neutral";
   const badge = (
-    <Badge appearance="tint" color={(kind && STATE_COLORS[kind]) || "subtle"} icon={icon}>
+    <span className={`app-tag tone-${tone}`}>
+      {icon ?? (tone !== "neutral" && tone !== "brand" && <span className="app-tag-dot" />)}
       {children}
-    </Badge>
+    </span>
   );
   return title ? (
     <Tooltip content={title} relationship="description">

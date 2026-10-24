@@ -1,11 +1,4 @@
-import {
-  Caption1,
-  Card,
-  MessageBar,
-  MessageBarBody,
-  Subtitle2,
-  Text,
-} from "@fluentui/react-components";
+import { MessageBar, MessageBarBody, Subtitle2 } from "@fluentui/react-components";
 import {
   Alert20Regular,
   ArrowSync20Regular,
@@ -26,7 +19,7 @@ import { useIsAdmin } from "../auth";
 import { CameraCard } from "../components/CameraCard";
 import { EventsGrid } from "../components/EventsGrid";
 import { LiveDrawer } from "../components/LiveDrawer";
-import { Dot, SectionLink, Empty, PageTitle, QueryState, RouterLink, Stat } from "../components/ui";
+import { SectionLink, Empty, PageTitle, QueryState, RouterLink, Stat } from "../components/ui";
 import { useI18n } from "../i18n";
 import { CameraSettingsDialog } from "./Cameras";
 import { decimal, duration, fileSize } from "../format";
@@ -135,12 +128,6 @@ export function Dashboard() {
 function JobsSummary({ stats: q }: { stats: QueueStats }) {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const queue = useQuery({
-    queryKey: ["queue", "summary"],
-    queryFn: () => api.queue({ limit: 1 }),
-    refetchInterval: 15_000,
-  });
-  const online = (queue.data?.workers ?? []).filter((w) => w.online);
   const avg = q.avg_processing_ms_last_hour;
   const open = (state: string) => void navigate(`/jobs?state=${state}`);
   return (
@@ -181,28 +168,6 @@ function JobsSummary({ stats: q }: { stats: QueueStats }) {
           onClick={() => open("dead")}
         />
       </section>
-      <Card className="jobs-summary">
-        <div className="jobs-workers">
-          <Caption1 className="muted">{t("dashboard.workersOnline")}</Caption1>
-          {online.length ? (
-            <ul className="plain-list">
-              {online.map((w) => (
-                <li key={w.id} className="row">
-                  <Dot ok />
-                  <Text weight="semibold">{w.id}</Text>
-                  <Caption1 className="muted">
-                    {w.current_job_id
-                      ? t("dashboard.workingOn", { id: w.current_job_id })
-                      : t("dashboard.idleWorker")}
-                  </Caption1>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Text className="muted">{t("dashboard.noWorkers")}</Text>
-          )}
-        </div>
-      </Card>
     </>
   );
 }

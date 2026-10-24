@@ -1,6 +1,7 @@
 // Live view of one camera in a wide drawer (opened from a camera card's picture), with a
 // camera picker to flip through the others and the low-data switch.
-import { Caption1, Link, Select, Switch } from "@fluentui/react-components";
+import { Button, Caption1, Select, Switch } from "@fluentui/react-components";
+import { Open20Regular } from "@fluentui/react-icons";
 import { useState } from "react";
 
 import type { Camera } from "../api";
@@ -75,12 +76,18 @@ export function LiveDrawer({
                   onChange={(_, d) => setLowData(d.checked)}
                 />
               )}
-              <Caption1 className="muted">
-                {low ? t("live.lowDataTag") : "WebRTC"} –{" "}
-                <Link href={hls} target="_blank" rel="noreferrer">
-                  {t("live.hlsFallback")}
-                </Link>
-              </Caption1>
+              <Caption1 className="muted">{low ? t("live.lowDataTag") : "WebRTC"}</Caption1>
+              <Button
+                as="a"
+                size="small"
+                icon={<Open20Regular />}
+                href={hls}
+                target="_blank"
+                rel="noreferrer"
+                title={t("live.hlsFallbackHint")}
+              >
+                {t("live.hlsFallback")}
+              </Button>
             </div>
             {c.online ? (
               // MediaMTX's built-in WebRTC player, served through the server's

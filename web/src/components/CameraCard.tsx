@@ -12,12 +12,7 @@ import {
   Text,
   Tooltip,
 } from "@fluentui/react-components";
-import {
-  Edit20Regular,
-  Folder20Regular,
-  Play20Filled,
-  Settings20Regular,
-} from "@fluentui/react-icons";
+import { Folder20Regular, Play20Filled, Settings20Regular } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api, snapshotUrl, type Camera, type CameraSource } from "../api";
@@ -53,7 +48,6 @@ export function CameraCard({
   refreshKey,
   manage = false,
   onSettings,
-  onMask,
   onLive,
 }: {
   camera: Camera;
@@ -63,8 +57,6 @@ export function CameraCard({
   manage?: boolean;
   /** Opens the camera's settings (shown to editors and owners). */
   onSettings?: () => void;
-  /** Opens the censor-area editor (manage, editors). */
-  onMask?: () => void;
   /** Opens the live view (the picture is its button). */
   onLive: () => void;
 }) {
@@ -214,11 +206,6 @@ export function CameraCard({
         >
           {t("nav.recordings")}
         </Button>
-        {manage && canEdit && onMask && (
-          <Button size="small" icon={<Edit20Regular />} onClick={onMask}>
-            {t("camera.censorAreas")}
-          </Button>
-        )}
         {onSettings && (canEdit || isOwner) && (
           <Button size="small" icon={<Settings20Regular />} onClick={onSettings}>
             {t("cameras.settings")}
