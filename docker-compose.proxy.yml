@@ -1,0 +1,24 @@
+# Behind a reverse proxy that runs in Docker on the same host (Nginx Proxy Manager, Caddy,
+# Traefik…): joins the proxy's network so it can forward to media-streamer:8000, and tells
+# MediaMTX which addresses browsers reach WebRTC media (TCP 8189) on.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d
+#
+# Environment:
+#   PROXY_NETWORK   the proxy's Docker network (default: nginx)
+#   WEBRTC_HOSTS    comma-separated hostnames / IPs browsers use, e.g. cams.example.org,192.168.1.10
+#   HTTP_PORT       e.g. 127.0.0.1:18000 to keep port 8000 off the network (only the proxy)
+#   FORWARDED_ALLOW_IPS  the proxy's address or the network's subnet, e.g. 172.20.0.0/16
+services:
+  mediamtx:
+    environment:
+      MTX_WEBRTCADDITIONALHOSTS: ${WEBRTC_HOSTS:?set WEBRTC_HOSTS to the hostnames / IPs browsers use}
+    networks:
+      default:
+      proxy:
+        aliases: [media-streamer]
+
+networks:
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:-nginx}

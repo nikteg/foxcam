@@ -1,0 +1,12 @@
+# Config for Docker deployments set up entirely through environment variables (e.g. a
+# Komodo / Portainer stack from git): set MEDIA_CONFIG=./config.docker.yaml. Cameras,
+# profiles, workers and users are added in the web UI and live in the database; anything
+# else uses the defaults in config.example.yaml.
+data_dir: ${MEDIA_DATA_DIR:-/data}
+
+# How users open the web UI, e.g. https://cams.example.org (links in notifications; https
+# also makes the session cookie Secure).
+public_url: ${PUBLIC_URL:-}
+
+retention:
+  max_disk_gb: ${MAX_DISK_GB:-}   # oldest unpinned footage deleted first; empty = no cap
