@@ -39,7 +39,7 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 
 import { api, type Camera, type CameraSource, type RecordingProfile } from "../api";
-import { hasRole, useMe } from "../auth";
+import { useIsAdmin, hasRole, useMe } from "../auth";
 import { AddCameraDialog } from "../components/AddCameraDialog";
 import { ShareDialog, useRoleName } from "../components/ShareDialog";
 import { ProfileDialog, ProfilesSection } from "./Profiles";
@@ -437,6 +437,14 @@ function RecordingProfileDialog({ camera, onClose }: { camera: Camera; onClose: 
     },
   });
   const chosen = profiles.find((p) => p.id === selected);
+  const isAdmin = useIsAdmin();
+  const makeDefault = useMutation({
+    mutationFn: (id: string) => api.setDefaultRecordingProfile(id),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["cameras"] });
+      void client.invalidateQueries({ queryKey: ["recording-profiles"] });
+    },
+  });
 
   return (
     <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
@@ -463,6 +471,23 @@ function RecordingProfileDialog({ camera, onClose }: { camera: Camera; onClose: 
                 />
               ))}
             </RadioGroup>
+            {isAdmin && chosen && !chosen.default && (
+              <div className="row wrap">
+                <Button
+                  size="small"
+                  disabled={makeDefault.isPending}
+                  onClick={() => makeDefault.mutate(chosen.id)}
+                >
+                  {t("recording.makeDefault", { name: chosen.display_name })}
+                </Button>
+                <Caption1 className="muted">{t("recording.makeDefaultHint")}</Caption1>
+              </div>
+            )}
+            {makeDefault.error && (
+              <MessageBar intent="error">
+                <MessageBarBody>{makeDefault.error.message}</MessageBarBody>
+              </MessageBar>
+            )}
             {chosen?.transcode && (
               <MessageBar>
                 <MessageBarBody>

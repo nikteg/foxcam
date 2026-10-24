@@ -16,7 +16,7 @@ from typing import Any
 from .config import CameraConfig, RecordingProfileConfig, Settings
 from .db import db_ready, session_scope
 from .hwaccel import Encode, default_executable, transcode_command
-from .models import CameraState, MaskVersion
+from .models import AppSetting, CameraState, MaskVersion
 
 RAW_SUFFIX = "/raw"
 
@@ -69,16 +69,45 @@ def _state(camera_id: str) -> dict[str, Any]:
                 "rects": list(mask.rects) if mask else []}
 
 
+DEFAULT_KEY = "recording_profile_default"
+
+
+def default_recording_profile(settings: Settings) -> tuple[RecordingProfileConfig, str]:
+    """The profile of cameras without their own choice, and where it is set: "ui" (Recording
+    dialog, stored in the database) or "config" (``recording_profile_default``)."""
+    if db_ready():
+        with session_scope() as s:
+            row = s.get(AppSetting, DEFAULT_KEY)
+            chosen = row.value if row else None
+        if chosen and (p := recording_profile(settings, chosen)):
+            return p, "ui"
+    return recording_profile(settings, settings.recording_profile_default) or BUILTIN[0], "config"
+
+
+def set_default_recording_profile(settings: Settings, profile_id: str | None) -> None:
+    """None = back to config.yaml's ``recording_profile_default``."""
+    if profile_id is not None and recording_profile(settings, profile_id) is None:
+        raise RecordingError(f"unknown recording profile '{profile_id}'")
+    with session_scope() as s:
+        row = s.get(AppSetting, DEFAULT_KEY)
+        if profile_id is None:
+            if row is not None:
+                s.delete(row)
+        elif row is None:
+            s.add(AppSetting(key=DEFAULT_KEY, value=profile_id))
+        else:
+            row.value = profile_id
+
+
 def camera_recording_profile(settings: Settings, cam: CameraConfig,
                              state: dict[str, Any] | None = None
                              ) -> tuple[RecordingProfileConfig, str]:
     """The camera's recording profile and where the choice comes from (ui/config/default)."""
     state = state if state is not None else _state(cam.id)
-    for pid, source in ((state["recording_profile"], "ui"), (cam.recording_profile, "config"),
-                        (settings.recording_profile_default, "default")):
+    for pid, source in ((state["recording_profile"], "ui"), (cam.recording_profile, "config")):
         if pid and (p := recording_profile(settings, pid)):
             return p, source
-    return BUILTIN[0], "default"
+    return default_recording_profile(settings)[0], "default"
 
 
 def set_camera_recording_profile(settings: Settings, camera_id: str,

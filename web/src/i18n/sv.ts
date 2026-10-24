@@ -581,10 +581,12 @@ export const sv: Record<MessageKey, string> = {
   "recording.asSent": "som kameran skickar, ingen omkodning",
   "recording.keptDays": "sparas {n} {n:dag|dagar}",
   "recording.transcodeNote":
-    "Inspelningarna kodas om när varje avslutad timme fogas ihop till en fil, med serverns hårdvarukodare när det finns en (Quick Sync, NVENC, AMD, Apple). Detektering och livebild använder fortfarande kamerans original.",
+    "Inspelningarna kodas om när en avslutad period fogas ihop till en fil, med serverns hårdvarukodare när det finns en (Quick Sync, NVENC, AMD, Apple). Detektering och livebild använder fortfarande kamerans original.",
   "recording.h265Note":
-    "H.265 halverar storleken igen men alla webbläsare spelar inte upp det (Safari och nyare Chrome/Edge gör det).",
+    "Alla webbläsare spelar inte upp H.265 (Safari och nyare Chrome/Edge gör det). Med hårdvarukodare sparar det bara lite jämfört med H.264 vid samma bithastighet: upplösning och bithastighet betyder mest.",
   "recording.fromDefault": "Just nu standardprofilen; att spara här ersätter den.",
+  "recording.makeDefault": "Gör {name} till standard",
+  "recording.makeDefaultHint": "För alla kameror utan eget val.",
   "queue.byProfile": "Per profil",
   "queue.removeWorkerHint":
     "Ta bort den här offline-arbetaren från listan. Den kommer tillbaka om den ansluter igen; återkalla dess token för att stänga ute den.",

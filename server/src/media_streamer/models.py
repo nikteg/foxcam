@@ -28,6 +28,17 @@ class Base(DeclarativeBase):
     type_annotation_map: ClassVar = {dict[str, Any]: JSON, list[Any]: JSON}
 
 
+class AppSetting(Base):
+    """Server-wide settings changed in the web UI (they win over config.yaml), e.g.
+    ``recording_profile_default``."""
+
+    __tablename__ = "app_setting"
+
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    value: Mapped[Any] = mapped_column(JSON)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
 class CameraState(Base):
     """UI-editable per-camera state. Camera definitions themselves come from config."""
 

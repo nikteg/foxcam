@@ -497,10 +497,12 @@ export const en = {
   "recording.asSent": "as sent by the camera, no re-encoding",
   "recording.keptDays": "kept {n} {n:day|days}",
   "recording.transcodeNote":
-    "Recordings are re-encoded when each finished hour is joined into one file, on the server's hardware video encoder when there is one (Quick Sync, NVENC, AMD, Apple). Detection and live view keep using the camera's original.",
+    "Recordings are re-encoded when a finished period is joined into one file, on the server's hardware video encoder when there is one (Quick Sync, NVENC, AMD, Apple). Detection and live view keep using the camera's original.",
   "recording.h265Note":
-    "H.265 halves the size again but not every browser plays it (Safari and recent Chrome/Edge do).",
+    "Not every browser plays H.265 (Safari and recent Chrome/Edge do). On hardware encoders it saves only a little over H.264 at the same bitrate: resolution and bitrate matter most.",
   "recording.fromDefault": "Currently the default profile; saving here overrides it.",
+  "recording.makeDefault": "Make {name} the default",
+  "recording.makeDefaultHint": "For every camera without its own choice.",
   "queue.byProfile": "Per profile",
   "queue.removeWorkerHint":
     "Remove this offline worker from the list. It comes back if it connects again; revoke its token to keep it out.",

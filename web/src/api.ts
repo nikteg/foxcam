@@ -364,6 +364,8 @@ export interface RecordingProfile {
   managed: "builtin" | "config";
   /** The profile cameras without their own choice use. */
   default: boolean;
+  /** Where the default is set: "ui" (Recording dialog) or "config" (config.yaml). */
+  default_source: "ui" | "config" | null;
   cameras: string[];
 }
 
@@ -704,6 +706,12 @@ export const api = {
     request<{ status: string }>("DELETE", `/api/workers/tokens/${id}`),
   profiles: () => request<Profile[]>("GET", "/api/profiles"),
   recordingProfiles: () => request<RecordingProfile[]>("GET", "/api/recording-profiles"),
+  setDefaultRecordingProfile: (profile: string | null) =>
+    request<{ default: string; default_source: "ui" | "config" }>(
+      "PUT",
+      "/api/recording-profiles/default",
+      { profile },
+    ),
   setRecordingProfile: (cameraId: string, profile: string | null) =>
     request<{ recording_profile: string }>(
       "PUT",

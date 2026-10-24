@@ -245,3 +245,33 @@ def test_recording_profiles_with_several_cameras(settings, client):
     by_id = {p["id"]: p for p in r.json()}
     assert by_id["original"]["cameras"] == ["cam"] and by_id["original"]["default"]
     assert by_id["720p"]["cameras"] == ["door"]
+
+
+def test_default_recording_profile_from_the_ui(settings, client):
+    from media_streamer import recording
+    from media_streamer.config import CameraConfig
+
+    settings.cameras.append(CameraConfig.model_validate(
+        {"id": "door", "recording_profile": "720p", "source": {"type": "test"}}))
+    r = client.put("/api/recording-profiles/default", json={"profile": "h265"})
+    assert r.json() == {"default": "h265", "default_source": "ui"}
+    profiles = {p["id"]: p for p in client.get("/api/recording-profiles").json()}
+    assert profiles["h265"]["default"] and profiles["h265"]["default_source"] == "ui"
+    assert profiles["h265"]["cameras"] == ["cam"]  # no own choice: follows the default
+    assert profiles["720p"]["cameras"] == ["door"]  # its own (config) choice stays
+    assert not profiles["original"]["default"]
+    cam = settings.camera("cam")
+    assert recording.camera_recording_profile(settings, cam)[0].id == "h265"
+
+    assert client.put("/api/recording-profiles/default",
+                      json={"profile": "nope"}).status_code == 400
+    r = client.put("/api/recording-profiles/default", json={"profile": None})
+    assert r.json() == {"default": "original", "default_source": "config"}
+
+
+def test_default_recording_profile_is_for_admins(settings):
+    from .conftest import app_client
+
+    with app_client(settings, email="viewer@example.org", admin=False) as c:
+        assert c.put("/api/recording-profiles/default",
+                     json={"profile": "h265"}).status_code == 403

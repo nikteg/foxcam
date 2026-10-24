@@ -49,10 +49,26 @@ def list_recording_profiles(settings: Settings = Depends(settings_dep),
             continue
         profile, _ = recording.camera_recording_profile(settings, cam)
         by_profile.setdefault(profile.id, []).append(cam.id)
+    default, default_source = recording.default_recording_profile(settings)
     return [{**rp.model_dump(), "display_name": rp.display_name,
-             "default": rp.id == settings.recording_profile_default,
+             # The profile of cameras without their own choice (set in the UI or config).
+             "default": rp.id == default.id,
+             "default_source": default_source if rp.id == default.id else None,
              "cameras": by_profile.get(rp.id, [])}
             for rp in recording.all_recording_profiles(settings)]
+
+
+@router.put("/recording-profiles/default", dependencies=[Depends(require_admin)])
+def set_default_recording_profile(body: RecordingProfileIn,
+                                  settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
+    """Recording profile of every camera without its own choice (admins). null = back to
+    config.yaml's recording_profile_default. Applies to periods joined from now on."""
+    try:
+        recording.set_default_recording_profile(settings, body.profile)
+    except recording.RecordingError as e:
+        raise HTTPException(400, str(e)) from e
+    default, source = recording.default_recording_profile(settings)
+    return {"default": default.id, "default_source": source}
 
 
 @router.put("/cameras/{camera_id}/recording-profile")
@@ -70,8 +86,8 @@ async def set_recording_profile(camera_id: str, body: RecordingProfileIn,
         raise HTTPException(400, str(e)) from e
     await resync(mtx)
     cam = settings.camera(camera_id)
-    p, source = recording.camera_recording_profile(settings, cam)
-    return {"recording_profile": p.id, "recording_profile_source": source}
+    profile, source = recording.camera_recording_profile(settings, cam)
+    return {"recording_profile": profile.id, "recording_profile_source": source}
 
 
 class CameraIn(BaseModel):
