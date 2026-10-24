@@ -52,7 +52,7 @@ function sourceDetail(source: CameraSource, synthetic: string): string {
     case "rtsp":
       return source.url;
     case "tapo_cloud":
-      return `${source.device_name ?? source.device_id ?? "?"} · ${source.resolution ?? "HD"}`;
+      return `${source.device_name ?? source.device_id ?? "?"} – ${source.resolution ?? "HD"}`;
     case "file":
       return source.path.split("/").pop() ?? source.path;
     case "test":

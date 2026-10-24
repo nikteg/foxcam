@@ -235,7 +235,7 @@ export const en = {
     "The worker can no longer fetch jobs. Jobs it holds go back to the queue when their lease expires.",
 
   // Censor-area editor
-  "mask.title": "Censor areas · {name}",
+  "mask.title": "Censor areas – {name}",
   "mask.helpMouse":
     "Drag on the image to draw a rectangle. Drag a rectangle to move it, drag its corner to resize, and press {key} or click × to remove it.",
   "mask.helpTouch":

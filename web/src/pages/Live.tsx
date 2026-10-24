@@ -37,7 +37,7 @@ export function Live() {
               }
               action={
                 <Caption1 className="muted">
-                  WebRTC ·{" "}
+                  WebRTC –{" "}
                   <Link href={c.hls_url} target="_blank" rel="noreferrer">
                     {t("live.hlsFallback")}
                   </Link>

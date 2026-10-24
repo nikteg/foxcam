@@ -74,9 +74,9 @@ export function EventsGrid({ events }: { events: DetectionEvent[] }) {
               }
               description={
                 <Caption1 className="muted">
-                  {manyProfiles && <>{profileName(e.profile_id)} · </>}
-                  <Time iso={e.first_ts} /> ·{" "}
-                  {t("events.detectionCount", { count: e.detection_count })} ·{" "}
+                  {manyProfiles && <>{profileName(e.profile_id)} – </>}
+                  <Time iso={e.first_ts} /> –{" "}
+                  {t("events.detectionCount", { count: e.detection_count })} –{" "}
                   {duration(e.clip_duration_s)}
                 </Caption1>
               }
@@ -125,7 +125,7 @@ export function EventsGrid({ events }: { events: DetectionEvent[] }) {
                   />
                 }
               >
-                {playing.label} · {playing.camera_id} ·{" "}
+                {playing.label} – {playing.camera_id} –{" "}
                 <span className="nowrap">{localTime(playing.first_ts)}</span>
               </DialogTitle>
               <DialogContent>

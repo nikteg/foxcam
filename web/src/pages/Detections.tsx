@@ -57,8 +57,8 @@ const columns = (t: I18n["t"]): Column<Detection>[] => [
     header: t("col.modelWorker"),
     width: 230,
     cell: (d) => (
-      <Caption1 title={`${d.model ?? "–"} · ${d.worker_id ?? ""}`}>
-        {d.model ?? "–"} <span className="muted">· {d.worker_id}</span>
+      <Caption1 title={`${d.model ?? "–"} – ${d.worker_id ?? ""}`}>
+        {d.model ?? "–"} <span className="muted">– {d.worker_id}</span>
       </Caption1>
     ),
     compare: byString((d) => d.model),
@@ -150,7 +150,7 @@ export function Detections() {
         </div>
         <DetailPanel
           open={!!selected}
-          title={selected ? `${selected.label} · ${percent(selected.confidence, 1)}` : ""}
+          title={selected ? `${selected.label} – ${percent(selected.confidence, 1)}` : ""}
           onClose={() => setFilter("selected", "")}
         >
           {selected && <DetectionDetail detection={selected} />}

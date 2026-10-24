@@ -36,7 +36,7 @@ mise run seed       # with the stack running: a fake camera per sample clip
 | `s3:local` / `s3:stop` | local S3 (SeaweedFS) to try `storage.s3` |
 | `docker:up`, `docker:test`, … | Docker stacks (the test stack runs next to dev on :18000) |
 | `stop` | kill leftovers on the dev ports |
-| `clean` / `reset` / `clean:all` | caches · all data (asks) · back to a fresh checkout (asks) |
+| `clean` / `reset` / `clean:all` | caches – all data (asks) – back to a fresh checkout (asks) |
 | `reset:recordings`, `reset:events`, `reset:detections`, `reset:queue`, `reset:workers`, `reset:cameras`, `reset:profiles`, `reset:tapo` | delete one kind of data and keep the rest (asks; stop the server first) |
 
 Without mise, the same steps by hand:

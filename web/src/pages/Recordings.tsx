@@ -145,7 +145,7 @@ export function Recordings() {
         </div>
         <DetailPanel
           open={!!selected}
-          title={selected ? `${selected.camera_id} · ${localTime(selected.start_at)}` : ""}
+          title={selected ? `${selected.camera_id} – ${localTime(selected.start_at)}` : ""}
           onClose={() => setFilter("selected", "")}
         >
           {selected && <RecordingDetail segment={selected} />}

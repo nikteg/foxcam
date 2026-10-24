@@ -74,7 +74,7 @@ export function StorageCard() {
                   })
                 : t("storage.off")}
               {s.clips && s.delete_local_clips && (
-                <Text className="muted"> · {t("storage.deleteLocal")}</Text>
+                <Text className="muted"> – {t("storage.deleteLocal")}</Text>
               )}
             </dd>
             <dt>{t("storage.recordings")}</dt>
@@ -86,7 +86,7 @@ export function StorageCard() {
                   })
                 : t("storage.off")}
               {s.recordings && s.recordings_days > 0 && (
-                <Text className="muted"> · {t("storage.keepDays", { n: s.recordings_days })}</Text>
+                <Text className="muted"> – {t("storage.keepDays", { n: s.recordings_days })}</Text>
               )}
             </dd>
           </dl>

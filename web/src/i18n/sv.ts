@@ -237,7 +237,7 @@ export const sv: Record<MessageKey, string> = {
     "Arbetaren kan inte längre hämta jobb. Jobb den håller går tillbaka till kön när deras lån går ut.",
 
   // Maskeringsredigeraren
-  "mask.title": "Maskerade områden · {name}",
+  "mask.title": "Maskerade områden – {name}",
   "mask.helpMouse":
     "Dra på bilden för att rita en rektangel. Dra en rektangel för att flytta den, dra i ett hörn för att ändra storlek och tryck på {key} eller klicka på × för att ta bort den.",
   "mask.helpTouch":

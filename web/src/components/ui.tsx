@@ -59,7 +59,7 @@ const APP_NAME = "Media Streamer";
 /** Sets the browser tab title, so history and bookmarks name the page. */
 export function usePageTitle(title: string | undefined) {
   useEffect(() => {
-    document.title = title ? `${title} · ${APP_NAME}` : APP_NAME;
+    document.title = title ? `${title} – ${APP_NAME}` : APP_NAME;
   }, [title]);
 }
 
