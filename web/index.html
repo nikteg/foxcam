@@ -8,7 +8,9 @@
     <!-- "Add to Home Screen" on iPhone/iPad opens full screen without browser chrome -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- default: iOS draws its own status bar above the page (black-translucent draws the
+         page under it, and iOS 26 then blurs the top of the page, the top bar included) -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Foxcam" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
