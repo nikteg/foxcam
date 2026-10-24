@@ -1261,6 +1261,12 @@ Fluent's text styles would otherwise reset the margins. */
   width: 100%;
   align-self: stretch;
 }
+/* Fluent pads a drawer body that comes first; ours always follow the header, but a
+   <form> in between (e.g. camera settings → General) made it look first and jump. */
+.app-drawer .drawer-column .fui-DrawerBody,
+.app-drawer .drawer-column > form > .fui-DrawerBody {
+  padding-top: 0;
+}
 .drawer-column > .fui-TabList {
   padding: 0 var(--spacingHorizontalL);
   flex-shrink: 0;
