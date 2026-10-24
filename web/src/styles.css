@@ -75,7 +75,8 @@ kbd {
 .fui-Text.option-hint {
   display: block;
 }
-.empty {
+/* .fui-Text: Fluent's text styles would otherwise keep it inline. */
+.fui-Text.empty {
   display: block;
   padding: var(--spacingVerticalL) 0;
 }
