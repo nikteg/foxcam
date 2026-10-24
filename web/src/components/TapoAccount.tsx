@@ -44,7 +44,8 @@ export function TapoCameraList() {
   const { t } = useI18n();
   const client = useQueryClient();
   const devices = useQuery({ queryKey: ["tapo", "devices"], queryFn: api.tapoDevices });
-  const [resolution, setResolution] = useState<"HD" | "VGA">("HD");
+  // Per camera on the list: some sites have less upload than others.
+  const [quality, setQuality] = useState<Record<string, "HD" | "VGA">>({});
   const add = useMutation({
     mutationFn: api.addCamera,
     onSuccess: () => {
@@ -68,12 +69,7 @@ export function TapoCameraList() {
       {devices.data?.length === 0 && <Body1>{t("addCamera.noTapoCameras")}</Body1>}
       {devices.data && devices.data.length > 0 && (
         <>
-          <Field label={t("addCamera.streamQuality")} hint={t("addCamera.tapoWarning")}>
-            <Select value={resolution} onChange={(_, d) => setResolution(d.value as "HD" | "VGA")}>
-              <option value="HD">{t("addCamera.qualityHd")}</option>
-              <option value="VGA">{t("addCamera.qualityVga")}</option>
-            </Select>
-          </Field>
+          <Caption1 className="muted">{t("addCamera.tapoWarning")}</Caption1>
           <ul className="device-list">
             {devices.data.map((d) => (
               <li key={d.device_id}>
@@ -84,24 +80,38 @@ export function TapoCameraList() {
                 {d.camera_id ? (
                   <Tag kind="ok">{t("addCamera.addedAs", { id: d.camera_id })}</Tag>
                 ) : (
-                  <Button
-                    size="small"
-                    icon={<Add20Regular />}
-                    disabled={add.isPending}
-                    onClick={() =>
-                      add.mutate({
-                        name: d.name,
-                        source: {
-                          type: "tapo_cloud",
-                          device_id: d.device_id,
-                          device_name: d.name,
-                          resolution,
-                        },
-                      })
-                    }
-                  >
-                    {t("common.add")}
-                  </Button>
+                  <span className="row">
+                    <Select
+                      size="small"
+                      aria-label={t("addCamera.streamQualityFor", { name: d.name })}
+                      title={t("addCamera.streamQualityHint")}
+                      value={quality[d.device_id] ?? "HD"}
+                      onChange={(_, v) =>
+                        setQuality((q) => ({ ...q, [d.device_id]: v.value as "HD" | "VGA" }))
+                      }
+                    >
+                      <option value="HD">HD</option>
+                      <option value="VGA">VGA</option>
+                    </Select>
+                    <Button
+                      size="small"
+                      icon={<Add20Regular />}
+                      disabled={add.isPending}
+                      onClick={() =>
+                        add.mutate({
+                          name: d.name,
+                          source: {
+                            type: "tapo_cloud",
+                            device_id: d.device_id,
+                            device_name: d.name,
+                            resolution: quality[d.device_id] ?? "HD",
+                          },
+                        })
+                      }
+                    >
+                      {t("common.add")}
+                    </Button>
+                  </span>
                 )}
               </li>
             ))}

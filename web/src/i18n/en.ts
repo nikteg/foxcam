@@ -722,6 +722,11 @@ export const en = {
   "addCamera.tapoWarning":
     "Uses TP-Link's cloud relay through an unofficial library. It can break when TP-Link changes their service. For long-term use, a small box at the camera's site pulling RTSP over a VPN is more robust.",
   "addCamera.streamQuality": "Stream quality",
+  "addCamera.streamQualityFor": "Stream quality for {name}",
+  "addCamera.streamQualityHint":
+    "HD is best for detection but needs more upload bandwidth at the camera's site; VGA for slow connections. Can be changed later in the camera's settings.",
+  "cameras.tapoQualityHint":
+    "HD is best for detection but needs more upload bandwidth at the camera's site; VGA for slow connections. The relay restarts with it (a few seconds without recording).",
   "addCamera.qualityHd": "HD (best for detection, more upload bandwidth)",
   "addCamera.qualityVga": "VGA (low bandwidth)",
   "addCamera.findingCameras": "Finding cameras on your account…",

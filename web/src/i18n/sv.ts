@@ -548,6 +548,11 @@ export const sv: Record<MessageKey, string> = {
   "addCamera.tapoWarning":
     "Använder TP-Links molnrelä via ett inofficiellt bibliotek. Det kan sluta fungera om TP-Link ändrar sin tjänst. För långsiktig drift är en liten dator på plats som hämtar RTSP via VPN mer robust.",
   "addCamera.streamQuality": "Strömkvalitet",
+  "addCamera.streamQualityFor": "Strömkvalitet för {name}",
+  "addCamera.streamQualityHint":
+    "HD är bäst för detektion men behöver mer uppladdning där kameran sitter; VGA för långsamma anslutningar. Kan ändras senare i kamerans inställningar.",
+  "cameras.tapoQualityHint":
+    "HD är bäst för detektion men behöver mer uppladdning där kameran sitter; VGA för långsamma anslutningar. Reläet startar om med den (några sekunder utan inspelning).",
   "addCamera.qualityHd": "HD (bäst för detektion, mer uppladdningsbandbredd)",
   "addCamera.qualityVga": "VGA (låg bandbredd)",
   "addCamera.findingCameras": "Söker kameror på ditt konto…",

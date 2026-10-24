@@ -92,11 +92,17 @@ def add_camera(settings: Settings, *, name: str, source: dict[str, Any],
 
 def update_camera(camera_id: str, *, name: str | None = None,
                   segment_seconds: int | None | type[...] = ...,
-                  enabled: bool | None = None) -> CameraConfig:
+                  enabled: bool | None = None,
+                  tapo_resolution: str | None = None) -> CameraConfig:
     with session_scope() as s:
         row = s.get(ManagedCamera, camera_id)
         if row is None:
             raise CameraError("only cameras added in the web UI can be edited here")
+        if tapo_resolution is not None:
+            if row.source.get("type") != "tapo_cloud":
+                raise CameraError("stream quality is only for Tapo cloud cameras")
+            # A new dict (the column is JSON): ingest restarts the relay with it.
+            row.source = {**row.source, "resolution": tapo_resolution}
         if name is not None:
             row.name = name
         if segment_seconds is not ...:

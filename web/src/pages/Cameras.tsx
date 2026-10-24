@@ -12,6 +12,7 @@ import {
   RadioGroup,
   Tab,
   TabList,
+  Select,
 } from "@fluentui/react-components";
 import { Add20Regular, Delete20Regular, EyeOff20Regular } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -176,12 +177,15 @@ function GeneralPanel({
   const canRemove = camera.managed === "ui" && hasRole(camera, "owner");
   const [name, setName] = useState(camera.name);
   const [segment, setSegment] = useState(camera.segment_seconds_override?.toString() ?? "");
+  const tapo = camera.source_config.type === "tapo_cloud" ? camera.source_config : null;
+  const [quality, setQuality] = useState<"HD" | "VGA">(tapo?.resolution ?? "HD");
   const [editingMask, setEditingMask] = useState(false);
   const save = useMutation({
     mutationFn: () =>
       api.updateCamera(camera.id, {
         name,
         ...(segment ? { segment_seconds: Number(segment) } : { clear_segment_seconds: true }),
+        ...(tapo && quality !== (tapo.resolution ?? "HD") ? { tapo_resolution: quality } : {}),
       }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["cameras"] });
@@ -223,6 +227,14 @@ function GeneralPanel({
                 onChange={(_, d) => setSegment(d.value)}
               />
             </Field>
+            {tapo && (
+              <Field label={t("addCamera.streamQuality")} hint={t("cameras.tapoQualityHint")}>
+                <Select value={quality} onChange={(_, d) => setQuality(d.value as "HD" | "VGA")}>
+                  <option value="HD">{t("addCamera.qualityHd")}</option>
+                  <option value="VGA">{t("addCamera.qualityVga")}</option>
+                </Select>
+              </Field>
+            )}
             <Caption1 className="muted">{t("cameras.changeSourceHint")}</Caption1>
           </>
         ) : (

@@ -10,7 +10,7 @@ import asyncio
 import json
 import logging
 import subprocess
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -102,6 +102,8 @@ class CameraPatch(BaseModel):
     segment_seconds: int | None = Field(default=None, ge=5, le=3600)
     clear_segment_seconds: bool = False
     enabled: bool | None = None
+    # Tapo cloud cameras: the relay's stream quality.
+    tapo_resolution: Literal["HD", "VGA"] | None = None
 
 
 def may_add_cameras(p: Principal = Depends(principal),
@@ -144,7 +146,8 @@ async def update_camera(camera_id: str, body: CameraPatch,
         seg = body.segment_seconds
     try:
         cam = await asyncio.to_thread(camera_store.update_camera, camera_id, name=body.name,
-                                      segment_seconds=seg, enabled=body.enabled)
+                                      segment_seconds=seg, enabled=body.enabled,
+                                      tapo_resolution=body.tapo_resolution)
     except camera_store.CameraError as e:
         raise HTTPException(400, str(e)) from e
     await resync(mtx)

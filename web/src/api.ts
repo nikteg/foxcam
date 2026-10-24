@@ -786,6 +786,8 @@ export const api = {
       segment_seconds?: number;
       clear_segment_seconds?: boolean;
       enabled?: boolean;
+      /** Tapo cloud cameras: the relay's stream quality. */
+      tapo_resolution?: "HD" | "VGA";
     },
   ) => request<{ id: string }>("PATCH", `/api/cameras/${encodeURIComponent(id)}`, body),
   deleteCamera: (id: string) =>
