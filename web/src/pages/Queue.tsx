@@ -9,28 +9,18 @@ import {
   TableHeaderCell,
   TableRow,
   Text,
-  Tooltip,
 } from "@fluentui/react-components";
-import { ArrowClockwise16Regular, Delete16Regular, Dismiss16Regular } from "@fluentui/react-icons";
+import { ArrowClockwise16Regular, Dismiss16Regular } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useNavigate } from "react-router";
 
 import { api, type Job, type JobState } from "../api";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
-import {
-  Dot,
-  Empty,
-  PageHeader,
-  QueryState,
-  Stat,
-  Tag,
-  Time,
-  useStateLabel,
-} from "../components/ui";
+import { Empty, PageHeader, QueryState, Stat, Tag, Time, useStateLabel } from "../components/ui";
 import { decimal, duration } from "../format";
 import { useProfileName, useProfiles } from "../components/ProfileSelect";
-import { WorkerAccess } from "../components/WorkerAccess";
+import { WorkersSection } from "../components/WorkersSection";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
 
@@ -47,13 +37,6 @@ export function Queue() {
   const requeue = useMutation({
     mutationFn: api.requeue,
     onSuccess: () => client.invalidateQueries({ queryKey: ["queue"] }),
-  });
-  const removeWorker = useMutation({
-    mutationFn: api.removeWorker,
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ["queue"] });
-      void client.invalidateQueries({ queryKey: ["profiles"] });
-    },
   });
   const navigate = useNavigate();
   const { t } = useI18n();
@@ -136,75 +119,7 @@ export function Queue() {
             </>
           )}
 
-          <Subtitle2 as="h2" className="section">
-            {t("queue.workers")}
-          </Subtitle2>
-          <Table className="table responsive" aria-label={t("queue.workers")}>
-            <TableHeader>
-              <TableRow>
-                <TableHeaderCell>{t("col.worker")}</TableHeaderCell>
-                <TableHeaderCell>{t("queue.info")}</TableHeaderCell>
-                <TableHeaderCell>{t("queue.lastSeen")}</TableHeaderCell>
-                <TableHeaderCell>{t("queue.currentJob")}</TableHeaderCell>
-                <TableHeaderCell>{t("queue.doneCount")}</TableHeaderCell>
-                <TableHeaderCell>{t("queue.failedCount")}</TableHeaderCell>
-                <TableHeaderCell aria-label={t("col.actions")} className="col-actions" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {q.workers.map((w) => (
-                <TableRow key={w.id}>
-                  <TableCell data-label={t("col.worker")}>
-                    <span className="row">
-                      <Dot ok={w.online} />
-                      <Text weight="semibold" wrap={false}>
-                        {w.id}
-                      </Text>
-                    </span>
-                  </TableCell>
-                  <TableCell data-label={t("queue.info")} className="full mono">
-                    {/* One chip per key so values wrap as units, never mid-word. */}
-                    <span className="chips">
-                      {w.tags.map((tag) => (
-                        <Tag key={`tag-${tag}`}>{tag}</Tag>
-                      ))}
-                      {Object.entries(w.info).map(([k, v]) => (
-                        <span key={k}>
-                          <span className="muted">{k}=</span>
-                          {String(v)}
-                        </span>
-                      ))}
-                    </span>
-                  </TableCell>
-                  <TableCell data-label={t("queue.lastSeen")}>
-                    <Time iso={w.last_seen} relative />
-                  </TableCell>
-                  <TableCell data-label={t("queue.currentJob")}>
-                    {w.current_job_id ?? "–"}
-                  </TableCell>
-                  <TableCell data-label={t("queue.doneCount")}>{w.jobs_done}</TableCell>
-                  <TableCell data-label={t("queue.failedCount")}>{w.jobs_failed}</TableCell>
-                  <TableCell className="full">
-                    {!w.online && (
-                      <Tooltip content={t("queue.removeWorkerHint")} relationship="description">
-                        <Button
-                          size="small"
-                          icon={<Delete16Regular />}
-                          disabled={removeWorker.isPending}
-                          onClick={() => removeWorker.mutate(w.id)}
-                        >
-                          {t("common.remove")}
-                        </Button>
-                      </Tooltip>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {q.workers.length === 0 && <Empty>{t("queue.noWorkers")}</Empty>}
-
-          <WorkerAccess onlineIds={new Set(q.workers.filter((w) => w.online).map((w) => w.id))} />
+          <WorkersSection workers={q.workers} />
 
           <Subtitle2 as="h2" className="section row">
             {t("queue.jobs")}

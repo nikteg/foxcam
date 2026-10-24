@@ -257,6 +257,13 @@ table.table {
 .table .col-actions {
   width: 100px;
 }
+.table .col-actions.wide {
+  width: auto;
+}
+.nowrap-actions {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+}
 .mini {
   width: 96px;
   aspect-ratio: 16 / 9;

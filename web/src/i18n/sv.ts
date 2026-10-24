@@ -167,14 +167,13 @@ export const sv: Record<MessageKey, string> = {
   "queue.lastSeen": "Senast sedd",
   "queue.currentJob": "Aktuellt jobb",
   "queue.noWorkers":
-    "Ingen arbetare har anslutit än. Lägg till en nedan för att få startkommandot.",
+    "Ingen arbetare har anslutit än. Använd Lägg till arbetare för att få startkommandot.",
   "queue.jobs": "Jobb",
   "queue.clearFilter": "Rensa filter",
   "queue.noJobs": "Inga jobb.",
   "queue.retry": "Försök igen",
   "queue.doneCount": "Klara",
   "queue.failedCount": "Misslyckade",
-  "workers.access": "Åtkomst för arbetare",
   "workers.add": "Lägg till arbetare",
   "workers.addTitle": "Lägg till en arbetare",
   "workers.addIntro":
@@ -230,6 +229,9 @@ export const sv: Record<MessageKey, string> = {
   "workers.lastUsed": "Senast använd",
   "workers.never": "aldrig",
   "workers.revoke": "Återkalla",
+  "workers.tokenBadge": "Token",
+  "workers.hasToken": "Har en egen åtkomsttoken.",
+  "workers.neverConnected": "aldrig ansluten",
   "workers.revokeTitle": "Återkalla {name}?",
   "workers.revokeBody":
     "Arbetaren kan inte längre hämta jobb. Jobb den håller går tillbaka till kön när deras lån går ut.",
