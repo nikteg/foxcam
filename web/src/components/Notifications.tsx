@@ -43,7 +43,7 @@ import { useI18n, type MessageKey } from "../i18n";
 import { LabelPicker, useLabelSuggestions, useSuggestionList } from "./LabelPicker";
 import { useCameraName } from "./CameraSelect";
 import { useProfileName, useProfiles } from "./ProfileSelect";
-import { ConfigTag, Empty, InfoBanner, QueryState, Tag, Time, Toolbar } from "./ui";
+import { ConfigTag, Empty, Fact, Facts, InfoBanner, QueryState, Tag, Time, Toolbar } from "./ui";
 import {
   Dialog,
   DialogActions,
@@ -170,23 +170,24 @@ function ChannelCard({
           </span>
         }
       />
-      <dl className="facts">
-        <dt>{t("notify.target")}</dt>
-        <dd className="mono">{target}</dd>
-        <dt>{t("notify.when")}</dt>
-        <dd>{c.when.map((o) => t(TRIGGER_LABELS[o])).join(", ")}</dd>
-        <dt>{t("nav.cameras")}</dt>
-        <dd>{c.cameras ? c.cameras.map(cameraName).join(", ") : t("notify.all")}</dd>
+      <Facts>
+        <Fact label={t("notify.target")} className="mono">
+          {target}
+        </Fact>
+        <Fact label={t("notify.when")}>{c.when.map((o) => t(TRIGGER_LABELS[o])).join(", ")}</Fact>
+        <Fact label={t("nav.cameras")}>
+          {c.cameras ? c.cameras.map(cameraName).join(", ") : t("notify.all")}
+        </Fact>
         {c.profiles && (
           <>
-            <dt>{t("profiles.title")}</dt>
-            <dd>{c.profiles.map((p) => profileName(p)).join(", ")}</dd>
+            <Fact label={t("profiles.title")}>
+              {c.profiles.map((p) => profileName(p)).join(", ")}
+            </Fact>
           </>
         )}
         {(c.labels || c.min_confidence > 0 || c.min_agreement > 1) && (
           <>
-            <dt>{t("notify.only")}</dt>
-            <dd>
+            <Fact label={t("notify.only")}>
               {[
                 c.labels?.join(", "),
                 c.min_confidence > 0 && `≥ ${percent(c.min_confidence)}`,
@@ -194,24 +195,25 @@ function ChannelCard({
               ]
                 .filter(Boolean)
                 .join(" – ")}
-            </dd>
+            </Fact>
           </>
         )}
         {c.quiet_hours && (
           <>
-            <dt>{t("notify.quietHours")}</dt>
-            <dd>{c.quiet_hours.replace("-", " – ")}</dd>
+            <Fact label={t("notify.quietHours")}>{c.quiet_hours.replace("-", " – ")}</Fact>
           </>
         )}
         {c.cooldown_minutes > 0 && (
           <>
-            <dt>{t("notify.cooldown")}</dt>
-            <dd>{t("notify.minutes", { n: c.cooldown_minutes })}</dd>
+            <Fact label={t("notify.cooldown")}>
+              {t("notify.minutes", { n: c.cooldown_minutes })}
+            </Fact>
           </>
         )}
-        <dt>{t("notify.image")}</dt>
-        <dd>{c.include_image && c.type !== "webhook" ? t("common.yes") : t("common.no")}</dd>
-      </dl>
+        <Fact label={t("notify.image")}>
+          {c.include_image && c.type !== "webhook" ? t("common.yes") : t("common.no")}
+        </Fact>
+      </Facts>
       {result && (
         <MessageBar intent={result.ok ? "success" : "error"}>
           <MessageBarBody>{result.ok ? t("notify.testOk") : result.detail}</MessageBarBody>

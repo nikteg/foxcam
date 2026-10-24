@@ -396,10 +396,12 @@ div.thumb.placeholder {
   place-items: center;
   color: var(--colorNeutralForeground3);
 }
+/* Label / value rows (components/ui.tsx Facts). */
 .facts {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 2px var(--spacingHorizontalM);
+  align-items: baseline;
+  gap: var(--spacingVerticalS) var(--spacingHorizontalL);
   margin: 0;
   font-size: var(--fontSizeBase300);
 }

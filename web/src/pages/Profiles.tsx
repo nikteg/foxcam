@@ -39,7 +39,7 @@ import {
 } from "../components/DetectorsEditor";
 import { profileWarnings, type ProfileWarning } from "../labelWarnings";
 
-import { ConfigTag, Empty, InfoBanner, QueryState, Tag } from "../components/ui";
+import { ConfigTag, Empty, Fact, Facts, InfoBanner, QueryState, Tag } from "../components/ui";
 import { percent } from "../format";
 import { useI18n } from "../i18n";
 import {
@@ -126,9 +126,8 @@ function ProfileCard({
           </span>
         }
       />
-      <dl className="facts">
-        <dt>{t("profiles.targets")}</dt>
-        <dd>
+      <Facts>
+        <Fact label={t("profiles.targets")}>
           <span className="row wrap tags">
             {p.targets.map((x) => (
               <Tag key={x} kind="target">
@@ -136,11 +135,10 @@ function ProfileCard({
               </Tag>
             ))}
           </span>
-        </dd>
+        </Fact>
         {aliases.length > 0 && (
           <>
-            <dt>{t("profiles.aliases")}</dt>
-            <dd>
+            <Fact label={t("profiles.aliases")}>
               <span className="chips">
                 {aliases.map(([from, to]) => (
                   <span key={from}>
@@ -148,13 +146,11 @@ function ProfileCard({
                   </span>
                 ))}
               </span>
-            </dd>
+            </Fact>
           </>
         )}
-        <dt>{t("profiles.minConfidence")}</dt>
-        <dd>{percent(p.min_confidence)}</dd>
-        <dt>{t("profiles.requires")}</dt>
-        <dd>
+        <Fact label={t("profiles.minConfidence")}>{percent(p.min_confidence)}</Fact>
+        <Fact label={t("profiles.requires")}>
           {p.requires.length ? (
             <span className="row wrap tags">
               {p.requires.map((x) => (
@@ -164,9 +160,8 @@ function ProfileCard({
           ) : (
             <span className="muted">{t("profiles.anyWorker")}</span>
           )}
-        </dd>
-        <dt>{t("detectors.title")}</dt>
-        <dd>
+        </Fact>
+        <Fact label={t("detectors.title")}>
           <ul className="detector-list">
             {p.detectors.map((d) => (
               <li key={d.id}>
@@ -193,27 +188,25 @@ function ProfileCard({
               </li>
             ))}
           </ul>
-        </dd>
-        <dt>{t("profiles.fps")}</dt>
-        <dd>{p.fps ? `${p.fps} fps` : <span className="muted">{t("profiles.allFrames")}</span>}</dd>
+        </Fact>
+        <Fact label={t("profiles.fps")}>
+          {p.fps ? `${p.fps} fps` : <span className="muted">{t("profiles.allFrames")}</span>}
+        </Fact>
         {p.events_days !== null && (
           <>
-            <dt>{t("profiles.keepEvents")}</dt>
-            <dd>
+            <Fact label={t("profiles.keepEvents")}>
               {p.events_days ? t("profiles.days", { n: p.events_days }) : t("profiles.forever")}
-            </dd>
+            </Fact>
           </>
         )}
-        <dt>{t("nav.cameras")}</dt>
-        <dd>
+        <Fact label={t("nav.cameras")}>
           {p.cameras.length ? (
             p.cameras.map(cameraName).join(", ")
           ) : (
             <span className="muted">{t("profiles.noCameras")}</span>
           )}
-        </dd>
-        <dt>{t("profiles.workers")}</dt>
-        <dd>
+        </Fact>
+        <Fact label={t("profiles.workers")}>
           {p.workers_online.length ? (
             <span className="chips">
               {p.workers_online.map((w) => (
@@ -223,10 +216,9 @@ function ProfileCard({
           ) : (
             <span className="muted">{t("profiles.noWorkers")}</span>
           )}
-        </dd>
-        <dt>{t("profiles.waiting")}</dt>
-        <dd>{p.waiting_jobs}</dd>
-      </dl>
+        </Fact>
+        <Fact label={t("profiles.waiting")}>{p.waiting_jobs}</Fact>
+      </Facts>
       {stuck && (
         <MessageBar intent="warning">
           <MessageBarBody>{t("profiles.stuck")}</MessageBarBody>

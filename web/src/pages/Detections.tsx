@@ -16,6 +16,8 @@ import { Feedback } from "../components/Feedback";
 import {
   ConfidenceBar,
   Empty,
+  Fact,
+  Facts,
   InfoBanner,
   Light,
   PageTitle,
@@ -218,33 +220,27 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
       />
       <Caption1 className="muted">{t("detections.frameNote")}</Caption1>
       <Feedback detection={d} withLabels />
-      <dl className="facts">
-        <dt>{t("col.time")}</dt>
-        <dd>
+      <Facts>
+        <Fact label={t("col.time")}>
           <Time iso={d.ts} />
-        </dd>
-        <dt>{t("common.camera")}</dt>
-        <dd>{cameraName(d.camera_id)}</dd>
-        <dt>{t("col.confidence")}</dt>
-        <dd>
+        </Fact>
+        <Fact label={t("common.camera")}>{cameraName(d.camera_id)}</Fact>
+        <Fact label={t("col.confidence")}>
           <ConfidenceBar value={d.confidence} />
-        </dd>
-        <dt>{t("detections.target")}</dt>
-        <dd>{d.is_target ? t("common.yes") : t("common.no")}</dd>
-        <dt>{t("col.light")}</dt>
-        <dd>
+        </Fact>
+        <Fact label={t("detections.target")}>{d.is_target ? t("common.yes") : t("common.no")}</Fact>
+        <Fact label={t("col.light")}>
           <Light night={d.is_night} long />
-        </dd>
-        <dt>{t("detections.box")}</dt>
-        <dd className="mono">{d.bbox ? d.bbox.map((v) => decimal(v, 3)).join("; ") : "–"}</dd>
-        <dt>{t("col.model")}</dt>
-        <dd>{d.model ?? "–"}</dd>
+        </Fact>
+        <Fact label={t("detections.box")} className="mono">
+          {d.bbox ? d.bbox.map((v) => decimal(v, 3)).join("; ") : "–"}
+        </Fact>
+        <Fact label={t("col.model")}>{d.model ?? "–"}</Fact>
         {d.extra.classifications && d.extra.classifications.length > 0 && (
           <>
-            <dt>{t("detections.topGuesses")}</dt>
-            <dd>
+            <Fact label={t("detections.topGuesses")}>
               {d.extra.classifications.map((g) => `${g.label} ${decimal(g.score, 2)}`).join(" – ")}
-            </dd>
+            </Fact>
           </>
         )}
         {/* Everything else the detector reported (e.g. raw_label, its own box label). */}
@@ -252,15 +248,13 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
           .filter(([key]) => key !== "classifications")
           .map(([key, value]) => (
             <Fragment key={key}>
-              <dt className="mono">{key}</dt>
-              <dd className="mono extra-value">
+              <Fact label={key} labelClassName="mono" className="mono extra-value">
                 {typeof value === "string" ? value : JSON.stringify(value)}
-              </dd>
+              </Fact>
             </Fragment>
           ))}
-        <dt>{t("col.worker")}</dt>
-        <dd>{d.worker_id ?? "–"}</dd>
-      </dl>
+        <Fact label={t("col.worker")}>{d.worker_id ?? "–"}</Fact>
+      </Facts>
       {/* key: reload the player when switching detections */}
       <div className="detail-media">
         <VideoPlayer

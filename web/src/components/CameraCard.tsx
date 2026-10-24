@@ -20,7 +20,7 @@ import { hasRole, useMe } from "../auth";
 import { useI18n } from "../i18n";
 import { useProfileName } from "./ProfileSelect";
 import { useRoleName } from "./ShareDialog";
-import { ConfigTag, Dot, Light, Tag, Time, useRouterHref, useSourceLabel } from "./ui";
+import { ConfigTag, Dot, Fact, Facts, Light, Tag, Time, useRouterHref, useSourceLabel } from "./ui";
 
 export function sourceDetail(source: CameraSource, synthetic: string): string {
   switch (source.type) {
@@ -129,37 +129,33 @@ export function CameraCard({
           {!c.enabled && <Tag kind="warn">{t("cameras.disabled")}</Tag>}
         </span>
       )}
-      <dl className="facts">
+      <Facts>
         {manage && (
           <>
-            <dt>{t("cameras.source")}</dt>
-            <dd className="mono">{sourceDetail(c.source_config, t("cameras.synthetic"))}</dd>
+            <Fact label={t("cameras.source")} className="mono">
+              {sourceDetail(c.source_config, t("cameras.synthetic"))}
+            </Fact>
           </>
         )}
-        <dt>{t("camera.lastSegment")}</dt>
-        <dd>
+        <Fact label={t("camera.lastSegment")}>
           <Time iso={c.last_segment_at} />
-        </dd>
-        <dt>{t("camera.segmentLength")}</dt>
-        <dd>
+        </Fact>
+        <Fact label={t("camera.segmentLength")}>
           {c.segment_seconds} s
           {manage && c.segment_seconds_override === null && (
             <span className="muted"> ({t("camera.default")})</span>
           )}
-        </dd>
+        </Fact>
         {manage ? (
           <>
-            <dt>{t("recording.title")}</dt>
-            <dd>
+            <Fact label={t("recording.title")}>
               <span className="row wrap tags">
                 {recordingName(c.recording_profile)}
                 {c.burn_masks && c.rects.length > 0 && <Tag>{t("recording.masksBurnedIn")}</Tag>}
               </span>
-            </dd>
-            <dt>{t("camera.censorAreas")}</dt>
-            <dd>{c.rects.length}</dd>
-            <dt>{t("profiles.title")}</dt>
-            <dd>
+            </Fact>
+            <Fact label={t("camera.censorAreas")}>{c.rects.length}</Fact>
+            <Fact label={t("profiles.title")}>
               {c.profiles.length ? (
                 <span className="row wrap tags">
                   {c.profiles.map((id) => (
@@ -169,15 +165,14 @@ export function CameraCard({
               ) : (
                 <span className="muted">{t("cameras.noProfiles")}</span>
               )}
-            </dd>
+            </Fact>
           </>
         ) : (
           <>
-            <dt>{t("camera.viewers")}</dt>
-            <dd>{c.readers}</dd>
+            <Fact label={t("camera.viewers")}>{c.readers}</Fact>
           </>
         )}
-      </dl>
+      </Facts>
       {manage && (
         <Tooltip
           content={

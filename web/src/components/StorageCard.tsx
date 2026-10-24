@@ -13,7 +13,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { api } from "../api";
 import { useI18n } from "../i18n";
-import { QueryState } from "./ui";
+import { Fact, Facts, QueryState } from "./ui";
 
 /** S3-compatible object storage: what is uploaded, progress and a connection test. */
 export function StorageCard() {
@@ -57,16 +57,15 @@ export function StorageCard() {
               </MessageBarBody>
             </MessageBar>
           )}
-          <dl className="facts">
-            <dt>{t("storage.bucket")}</dt>
-            <dd className="mono">
+          <Facts>
+            <Fact label={t("storage.bucket")} className="mono">
               {s.bucket}
               {s.prefix && `/${s.prefix.replace(/^\/+/, "")}`}
-            </dd>
-            <dt>{t("storage.endpoint")}</dt>
-            <dd className="mono">{s.endpoint_url ?? "AWS S3"}</dd>
-            <dt>{t("storage.clips")}</dt>
-            <dd>
+            </Fact>
+            <Fact label={t("storage.endpoint")} className="mono">
+              {s.endpoint_url ?? "AWS S3"}
+            </Fact>
+            <Fact label={t("storage.clips")}>
               {s.clips
                 ? t("storage.progress", {
                     done: s.clips_uploaded ?? 0,
@@ -76,9 +75,8 @@ export function StorageCard() {
               {s.clips && s.delete_local_clips && (
                 <Text className="muted"> – {t("storage.deleteLocal")}</Text>
               )}
-            </dd>
-            <dt>{t("storage.recordings")}</dt>
-            <dd>
+            </Fact>
+            <Fact label={t("storage.recordings")}>
               {s.recordings
                 ? t("storage.progress", {
                     done: s.recordings_uploaded ?? 0,
@@ -88,8 +86,8 @@ export function StorageCard() {
               {s.recordings && s.recordings_days > 0 && (
                 <Text className="muted"> – {t("storage.keepDays", { n: s.recordings_days })}</Text>
               )}
-            </dd>
-          </dl>
+            </Fact>
+          </Facts>
           {s.last_error && (
             <MessageBar intent="warning">
               <MessageBarBody>

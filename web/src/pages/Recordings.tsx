@@ -27,6 +27,8 @@ import { DetailPanel } from "../components/DetailPanel";
 import { Feedback } from "../components/Feedback";
 import {
   Empty,
+  Fact,
+  Facts,
   Light,
   PageTabs,
   PageTitle,
@@ -340,48 +342,42 @@ function RecordingDetail({
         )}
       </div>
       {confirming && <ReanalyseDialog segment={s} onClose={() => setConfirming(false)} />}
-      <dl className="facts">
-        <dt>{t("col.status")}</dt>
-        <dd className="row wrap">
+      <Facts>
+        <Fact label={t("col.status")} className="row wrap">
           <Tag kind={s.status} title={s.error ?? undefined}>
             {stateLabel(s.status)}
           </Tag>
           {s.pinned && <Tag kind="ok">{t("recordings.keptForEvent")}</Tag>}
-        </dd>
-        <dt>{t("col.start")}</dt>
-        <dd>
+        </Fact>
+        <Fact label={t("col.start")}>
           <Time iso={s.start_at} />
-        </dd>
-        <dt>{t("col.length")}</dt>
-        <dd>{duration(s.duration_s)}</dd>
-        <dt>{t("col.size")}</dt>
-        <dd>{fileSize(s.size_bytes)}</dd>
-        <dt>{t("col.light")}</dt>
-        <dd className="row">
+        </Fact>
+        <Fact label={t("col.length")}>{duration(s.duration_s)}</Fact>
+        <Fact label={t("col.size")}>{fileSize(s.size_bytes)}</Fact>
+        <Fact label={t("col.light")} className="row">
           <Light night={s.is_night} long />
           {s.saturation_avg !== null && (
             <span className="muted">
               ({t("recordings.saturation", { value: decimal(s.saturation_avg, 1) })})
             </span>
           )}
-        </dd>
-        <dt>{t("recordings.sunElevation")}</dt>
-        <dd>{s.sun_elevation !== null ? `${decimal(s.sun_elevation, 1)}°` : "–"}</dd>
-        <dt>{t("recordings.censorMask")}</dt>
-        <dd>
+        </Fact>
+        <Fact label={t("recordings.sunElevation")}>
+          {s.sun_elevation !== null ? `${decimal(s.sun_elevation, 1)}°` : "–"}
+        </Fact>
+        <Fact label={t("recordings.censorMask")}>
           {s.mask_version_id
             ? t("recordings.maskVersion", { version: s.mask_version_id })
             : t("recordings.noMask")}
-        </dd>
-        <dt>{t("recordings.storedIn")}</dt>
-        <dd>
+        </Fact>
+        <Fact label={t("recordings.storedIn")}>
           {s.archive_id !== null ? (
             <Link onClick={() => onOpenHourly(s.archive_id!)}>{t("recordings.storedHourly")}</Link>
           ) : (
             t("recordings.storedOwn")
           )}
-        </dd>
-      </dl>
+        </Fact>
+      </Facts>
 
       <Text weight="semibold">{t("recordings.runs")}</Text>
       {jobs.data?.length === 0 && <Caption1 className="muted">{t("recordings.noRuns")}</Caption1>}

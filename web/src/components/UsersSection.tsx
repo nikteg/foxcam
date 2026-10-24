@@ -25,7 +25,7 @@ import { api, type User } from "../api";
 import { useMe } from "../auth";
 import { useI18n } from "../i18n";
 import { InviteLink, useRoleName } from "./ShareDialog";
-import { Empty, InfoBanner, QueryState, Tag, Time, Toolbar } from "./ui";
+import { Empty, Fact, Facts, InfoBanner, QueryState, Tag, Time, Toolbar } from "./ui";
 import {
   Dialog,
   DialogActions,
@@ -113,18 +113,16 @@ function UserCard({
           </span>
         }
       />
-      <dl className="facts">
-        <dt>{t("users.signIn")}</dt>
-        <dd>
+      <Facts>
+        <Fact label={t("users.signIn")}>
           {[u.has_password ? t("login.password") : null, ...u.providers]
             .filter(Boolean)
             .join(", ") || "–"}
-        </dd>
-        <dt>{t("users.lastLogin")}</dt>
-        <dd>
+        </Fact>
+        <Fact label={t("users.lastLogin")}>
           <Time iso={u.last_login_at} relative />
-        </dd>
-      </dl>
+        </Fact>
+      </Facts>
       {update.error && (
         <MessageBar intent="error">
           <MessageBarBody>{update.error.message}</MessageBarBody>

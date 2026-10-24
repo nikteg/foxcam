@@ -299,6 +299,31 @@ export function Tag({
   );
 }
 
+/** Label / value rows (cards, drawers): <Facts><Fact label="Start">…</Fact></Facts>. */
+export function Facts({ className, children }: { className?: string; children: ReactNode }) {
+  return <dl className={`facts ${className ?? ""}`}>{children}</dl>;
+}
+
+export function Fact({
+  label,
+  className,
+  labelClassName,
+  children,
+}: {
+  label: ReactNode;
+  /** On the value, e.g. "mono" or "row wrap". */
+  className?: string;
+  labelClassName?: string;
+  children?: ReactNode;
+}) {
+  return (
+    <>
+      <dt className={labelClassName}>{label}</dt>
+      <dd className={className}>{children}</dd>
+    </>
+  );
+}
+
 /** "Defined in config.yaml": read-only here. Stands apart from state tags. */
 export function ConfigTag() {
   const { t } = useI18n();

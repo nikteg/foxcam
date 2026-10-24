@@ -6,7 +6,15 @@ import { useIsAdmin, useMe } from "../auth";
 import { Notifications } from "../components/Notifications";
 import { StorageCard } from "../components/StorageCard";
 import { UsersSection } from "../components/UsersSection";
-import { InfoBanner, PageTabs, PageTitle, QueryState, useSubPage } from "../components/ui";
+import {
+  Fact,
+  Facts,
+  InfoBanner,
+  PageTabs,
+  PageTitle,
+  QueryState,
+  useSubPage,
+} from "../components/ui";
 import { Navigate } from "react-router";
 
 import { useI18n } from "../i18n";
@@ -53,16 +61,15 @@ function ConfigValue({ value }: { value: unknown }) {
     const entries = Object.entries(value);
     if (entries.length === 0) return <span className="muted">–</span>;
     return (
-      <dl className="facts config-object">
+      <Facts className="config-object">
         {entries.map(([k, v]) => (
           <div key={k} className="contents">
-            <dt>{k}</dt>
-            <dd className={isObject(v) || Array.isArray(v) ? undefined : "mono"}>
+            <Fact label={k} className={isObject(v) || Array.isArray(v) ? undefined : "mono"}>
               <ConfigValue value={v} />
-            </dd>
+            </Fact>
           </div>
         ))}
-      </dl>
+      </Facts>
     );
   }
   return <>{String(value)}</>;

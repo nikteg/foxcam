@@ -6,7 +6,7 @@ import { api, type ArchiveFile } from "../api";
 import { useCameraName } from "../components/CameraSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
-import { Empty, InfoBanner, QueryState, Tag, Time } from "../components/ui";
+import { Empty, Fact, Facts, InfoBanner, QueryState, Tag, Time } from "../components/ui";
 import { duration, fileSize, localTime } from "../format";
 import { useI18n, type I18n } from "../i18n";
 import { VideoPlayer } from "../components/VideoPlayer";
@@ -164,27 +164,22 @@ export function HourlyFiles({
                   {t("hourly.showSegments")}
                 </Button>
               </div>
-              <dl className="facts">
-                <dt>{t("col.start")}</dt>
-                <dd>
+              <Facts>
+                <Fact label={t("col.start")}>
                   <Time iso={selected.start_at} />
-                </dd>
-                <dt>{t("col.length")}</dt>
-                <dd>{duration(selected.duration_s)}</dd>
-                <dt>{t("col.size")}</dt>
-                <dd>{fileSize(selected.size_bytes)}</dd>
-                <dt>{t("hourly.segments")}</dt>
-                <dd>
+                </Fact>
+                <Fact label={t("col.length")}>{duration(selected.duration_s)}</Fact>
+                <Fact label={t("col.size")}>{fileSize(selected.size_bytes)}</Fact>
+                <Fact label={t("hourly.segments")}>
                   {selected.segments_with_match > 0
                     ? t("hourly.segmentsWithMatch", {
                         n: selected.segments,
                         matches: selected.segments_with_match,
                       })
                     : selected.segments}
-                </dd>
-                <dt>{t("hourly.how")}</dt>
-                <dd>{howMade(selected)}</dd>
-              </dl>
+                </Fact>
+                <Fact label={t("hourly.how")}>{howMade(selected)}</Fact>
+              </Facts>
             </div>
           )}
         </DetailPanel>
