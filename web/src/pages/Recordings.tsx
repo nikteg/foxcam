@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
 
 import { api, type Segment } from "../api";
-import { CameraSelect } from "../components/CameraSelect";
+import { CameraSelect, useCameraName } from "../components/CameraSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
 import { Feedback } from "../components/Feedback";
@@ -13,7 +13,11 @@ import { decimal, duration, fileSize, localTime, percent } from "../format";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
 
-const columns = (t: I18n["t"], stateLabel: (s: string) => string): Column<Segment>[] => [
+const columns = (
+  t: I18n["t"],
+  stateLabel: (s: string) => string,
+  cameraName: (id: string) => string,
+): Column<Segment>[] => [
   {
     id: "thumb",
     header: t("col.preview"),
@@ -32,9 +36,9 @@ const columns = (t: I18n["t"], stateLabel: (s: string) => string): Column<Segmen
   {
     id: "camera",
     header: t("common.camera"),
-    width: 110,
-    cell: (r) => r.camera_id,
-    compare: byString((r) => r.camera_id),
+    width: 150,
+    cell: (r) => cameraName(r.camera_id),
+    compare: byString((r) => cameraName(r.camera_id)),
   },
   {
     id: "length",
@@ -108,6 +112,7 @@ export function Recordings() {
   const selected = fromList ?? single.data;
   const { t } = useI18n();
   const stateLabel = useStateLabel();
+  const cameraName = useCameraName();
 
   return (
     <>
@@ -133,7 +138,7 @@ export function Recordings() {
             <DataTable
               ariaLabel="Recordings"
               items={segments.data}
-              columns={columns(t, stateLabel)}
+              columns={columns(t, stateLabel, cameraName)}
               getRowId={(r) => r.id}
               defaultSort={{ column: "start", direction: "descending" }}
               rowClassName={(r) => (r.has_target ? "target" : undefined)}
@@ -145,7 +150,9 @@ export function Recordings() {
         </div>
         <DetailPanel
           open={!!selected}
-          title={selected ? `${selected.camera_id} – ${localTime(selected.start_at)}` : ""}
+          title={
+            selected ? `${cameraName(selected.camera_id)} – ${localTime(selected.start_at)}` : ""
+          }
           onClose={() => setFilter("selected", "")}
         >
           {selected && <RecordingDetail segment={selected} />}

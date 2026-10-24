@@ -16,6 +16,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 
 import { api, type Job, type JobState } from "../api";
+import { useCameraName } from "../components/CameraSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { Empty, PageHeader, QueryState, Stat, Tag, Time, useStateLabel } from "../components/ui";
 import { decimal, duration } from "../format";
@@ -41,12 +42,14 @@ export function Queue() {
   const navigate = useNavigate();
   const { t } = useI18n();
   const stateLabel = useStateLabel();
+  const cameraName = useCameraName();
   const profileName = useProfileName();
   const profiles = useProfiles();
   const jobColumns = makeJobColumns(
     t,
     stateLabel,
     profileName,
+    cameraName,
     (id) => requeue.mutate(id),
     requeue.isPending,
   );
@@ -158,6 +161,7 @@ function makeJobColumns(
   t: I18n["t"],
   stateLabel: (s: string) => string,
   profileName: (id: string | null) => string,
+  cameraName: (id: string) => string,
   retry: (id: number) => void,
   busy: boolean,
 ): Column<Job>[] {
@@ -172,9 +176,9 @@ function makeJobColumns(
     {
       id: "camera",
       header: t("common.camera"),
-      width: 100,
-      cell: (j) => j.camera_id,
-      compare: byString((j) => j.camera_id),
+      width: 150,
+      cell: (j) => cameraName(j.camera_id),
+      compare: byString((j) => cameraName(j.camera_id)),
     },
     {
       id: "profile",

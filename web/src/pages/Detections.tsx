@@ -3,7 +3,7 @@ import { Folder20Regular } from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 
 import { api, detectionFrameUrl, segmentPlayUrl, type Detection } from "../api";
-import { CameraSelect } from "../components/CameraSelect";
+import { CameraSelect, useCameraName } from "../components/CameraSelect";
 import { ProfileSelect } from "../components/ProfileSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
@@ -21,7 +21,7 @@ import { decimal, percent } from "../format";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
 
-const columns = (t: I18n["t"]): Column<Detection>[] => [
+const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detection>[] => [
   {
     id: "ts",
     header: t("col.time"),
@@ -33,9 +33,9 @@ const columns = (t: I18n["t"]): Column<Detection>[] => [
   {
     id: "camera",
     header: t("common.camera"),
-    width: 110,
-    cell: (d) => d.camera_id,
-    compare: byString((d) => d.camera_id),
+    width: 150,
+    cell: (d) => cameraName(d.camera_id),
+    compare: byString((d) => cameraName(d.camera_id)),
   },
   {
     id: "label",
@@ -96,6 +96,7 @@ export function Detections() {
   });
   const selected = detections.data?.find((d) => String(d.id) === f.selected);
   const { t, rich } = useI18n();
+  const cameraName = useCameraName();
 
   return (
     <>
@@ -138,7 +139,7 @@ export function Detections() {
             <DataTable
               ariaLabel="Detections"
               items={detections.data}
-              columns={columns(t)}
+              columns={columns(t, cameraName)}
               getRowId={(d) => d.id}
               defaultSort={{ column: "ts", direction: "descending" }}
               rowClassName={(d) => (d.is_target ? "target" : undefined)}
@@ -162,6 +163,7 @@ export function Detections() {
 
 function DetectionDetail({ detection: d }: { detection: Detection }) {
   const routerHref = useRouterHref();
+  const cameraName = useCameraName();
   const { t } = useI18n();
   return (
     <div className="detail-stack">
@@ -178,7 +180,7 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
           <Time iso={d.ts} />
         </dd>
         <dt>{t("common.camera")}</dt>
-        <dd>{d.camera_id}</dd>
+        <dd>{cameraName(d.camera_id)}</dd>
         <dt>{t("col.confidence")}</dt>
         <dd>
           <ConfidenceBar value={d.confidence} />

@@ -19,6 +19,7 @@ import { useState } from "react";
 import type { DetectionEvent } from "../api";
 import { duration, localTime, percent } from "../format";
 import { useI18n } from "../i18n";
+import { useCameraName } from "./CameraSelect";
 import { useProfileName, useProfiles } from "./ProfileSelect";
 import { Empty, Light, Tag, Time } from "./ui";
 
@@ -26,6 +27,7 @@ export function EventsGrid({ events }: { events: DetectionEvent[] }) {
   const { t } = useI18n();
   const [playing, setPlaying] = useState<DetectionEvent | null>(null);
   const profileName = useProfileName();
+  const cameraName = useCameraName();
   const manyProfiles = (useProfiles().data?.length ?? 0) > 1;
   if (events.length === 0) return <Empty>{t("events.none")}</Empty>;
 
@@ -47,7 +49,7 @@ export function EventsGrid({ events }: { events: DetectionEvent[] }) {
                     className="thumb"
                     loading="lazy"
                     src={e.thumb_url}
-                    alt={t("events.thumbAlt", { label: e.label, camera: e.camera_id })}
+                    alt={t("events.thumbAlt", { label: e.label, camera: cameraName(e.camera_id) })}
                   />
                   {e.clip_url && (
                     <span className="play-overlay" aria-hidden="true">
@@ -69,7 +71,7 @@ export function EventsGrid({ events }: { events: DetectionEvent[] }) {
                     {percent(e.max_confidence)}
                   </Text>
                   <Light night={e.is_night} />
-                  <Caption1 className="muted">{e.camera_id}</Caption1>
+                  <Caption1 className="muted">{cameraName(e.camera_id)}</Caption1>
                 </span>
               }
               description={
@@ -125,7 +127,7 @@ export function EventsGrid({ events }: { events: DetectionEvent[] }) {
                   />
                 }
               >
-                {playing.label} – {playing.camera_id} –{" "}
+                {playing.label} – {cameraName(playing.camera_id)} –{" "}
                 <span className="nowrap">{localTime(playing.first_ts)}</span>
               </DialogTitle>
               <DialogContent>

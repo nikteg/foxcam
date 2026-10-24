@@ -10,6 +10,8 @@ rtsp: yes
 rtspAddress: :8554
 rtmp: no
 srt: no
+# Media over QUIC (MediaMTX 1.21+): not used; it would also need ports 8892/8893.
+moq: no
 
 hls: yes
 hlsAddress: :8888
