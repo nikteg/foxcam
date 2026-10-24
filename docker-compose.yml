@@ -14,7 +14,7 @@ services:
       - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
       - ${MEDIA_DATA_PATH:-./data}/recordings:/data/recordings
     environment:
-      TZ: UTC # recording file names are parsed as UTC
+      TZ: UTC # recording file names in UTC (they include the offset either way)
     ports:
       - "${RTSP_PORT:-8554}:8554" # RTSP
       - "${HLS_PORT:-8888}:8888" # HLS (live view fallback)

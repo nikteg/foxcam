@@ -96,8 +96,9 @@ events with two clips.
 | `camera_state` | Per-camera private flag, current mask version and profile selection. |
 | `managed_camera` | Cameras added in the web UI (config.yaml cameras are not stored). |
 
-All timestamps are UTC. MediaMTX must run with `TZ=UTC` because recording file names are parsed
-as UTC (`scripts/dev.sh` and `docker-compose.yml` do this).
+All timestamps are UTC. Recording file names carry their UTC offset
+(`2026-10-24_14-00-35-560256+0200.mp4`), so MediaMTX may run in any time zone; this matters on
+Windows, where it always uses the local time zone. Older names without an offset are read as UTC.
 
 ## Retention
 

@@ -15,7 +15,9 @@ from .config import CameraConfig, Settings
 
 log = logging.getLogger(__name__)
 
-RECORD_NAME = "%Y-%m-%d_%H-%M-%S-%f"
+# MediaMTX writes local time; %z (e.g. +0200) makes the name unambiguous. TZ=UTC is not
+# enough: Go ignores TZ on Windows.
+RECORD_NAME = "%Y-%m-%d_%H-%M-%S-%f%z"
 
 
 def _path_conf(settings: Settings, cam: CameraConfig) -> dict[str, Any]:

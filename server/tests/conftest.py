@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -48,7 +48,9 @@ def make_video(path: Path, seconds: float = 2, gray: bool = False, size: str = "
 
 
 def recording_path(settings: Settings, camera: str, start: datetime) -> Path:
-    return settings.recordings_dir / camera / f"{start.strftime(NAME_FORMAT)}.mp4"
+    """Named like MediaMTX does; ``start`` is naive UTC."""
+    name = start.replace(tzinfo=UTC).strftime(NAME_FORMAT)
+    return settings.recordings_dir / camera / f"{name}.mp4"
 
 
 def add_segment(settings: Settings, camera: str = "cam", start: datetime | None = None,

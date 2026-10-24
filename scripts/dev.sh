@@ -30,7 +30,7 @@ start() { # name, command...  (output prefixed with [name])
   "$@" 2>&1 | sed -u "s/^/[$name] /" &
 }
 
-# Recording file names are parsed as UTC, so MediaMTX must run in UTC.
+# Recording file names include the UTC offset; TZ=UTC just keeps them in UTC.
 start mediamtx env TZ=UTC "$MEDIAMTX" mediamtx/mediamtx.yml
 sleep 1
 start server uv run media-streamer serve --host 0.0.0.0 --port 8000

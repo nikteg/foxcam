@@ -3,7 +3,7 @@
 import os
 import subprocess
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from media_streamer import ffmpeg
 from media_streamer.db import session_scope
@@ -33,6 +33,25 @@ def test_scanner_registers_only_finished_files(settings):
         assert [g.start_at for g in segs] == [start, start + timedelta(seconds=5)]
         assert all(g.status == SegmentStatus.NEW and g.duration_s > 1.5 for g in segs)
     assert first.exists()
+
+
+def test_recording_names_are_converted_to_utc(tmp_path):
+    utc = datetime(2026, 10, 24, 12, 0, 35, 560256)
+    assert scanner.parse_start(tmp_path / "2026-10-24_14-00-35-560256+0200.mp4") == utc
+    assert scanner.parse_start(tmp_path / "2026-10-24_12-00-35-560256+0000.mp4") == utc
+    assert scanner.parse_start(tmp_path / "2026-10-24_12-00-35-560256.mp4") == utc  # legacy
+    assert scanner.parse_start(tmp_path / "notes.mp4") is None
+
+
+def test_finished_files_sort_by_time_across_dst(settings):
+    cam_dir = settings.recordings_dir / "cam"
+    cam_dir.mkdir(parents=True)
+    # Clocks go back at 03:00 CEST: 02:50+0200 (00:50Z) comes before 02:10+0100 (01:10Z).
+    names = ["2026-10-25_02-50-00-000000+0200.mp4", "2026-10-25_02-10-00-000000+0100.mp4"]
+    for name in names:
+        (cam_dir / name).touch()
+        _age(cam_dir / name, 600)
+    assert [p.name for p in scanner.finished_files(settings, "cam")] == names
 
 
 @needs_ffmpeg

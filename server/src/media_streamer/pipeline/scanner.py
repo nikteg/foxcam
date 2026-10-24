@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from sqlalchemy import select
@@ -23,13 +23,20 @@ from ..models import Segment, SegmentStatus
 
 log = logging.getLogger(__name__)
 
-NAME_FORMAT = "%Y-%m-%d_%H-%M-%S-%f"
+NAME_FORMAT = "%Y-%m-%d_%H-%M-%S-%f%z"  # mediamtx.RECORD_NAME
+# Older recordings have no offset and were written by MediaMTX running in UTC.
+LEGACY_NAME_FORMAT = "%Y-%m-%d_%H-%M-%S-%f"
 GRACE_SECONDS = 30
 
 
 def parse_start(path: Path) -> datetime | None:
+    """Start time from the file name, as naive UTC (like the rest of the database)."""
     try:
-        return datetime.strptime(path.stem, NAME_FORMAT)
+        return datetime.strptime(path.stem, NAME_FORMAT).astimezone(UTC).replace(tzinfo=None)
+    except ValueError:
+        pass
+    try:
+        return datetime.strptime(path.stem, LEGACY_NAME_FORMAT)
     except ValueError:
         return None
 
@@ -38,7 +45,9 @@ def finished_files(settings: Settings, camera_id: str) -> list[Path]:
     cam_dir = settings.recordings_dir / camera_id
     if not cam_dir.is_dir():
         return []
-    files = sorted(p for p in cam_dir.iterdir() if p.suffix == ".mp4" and parse_start(p))
+    # By time, not name: local-time names don't sort chronologically across DST changes.
+    starts = {p: parse_start(p) for p in cam_dir.iterdir() if p.suffix == ".mp4"}
+    files = sorted((p for p, t in starts.items() if t), key=lambda p: starts[p])
     if not files:
         return []
     limit = settings.segment_seconds_for(camera_id) + GRACE_SECONDS
