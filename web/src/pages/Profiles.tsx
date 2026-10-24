@@ -15,7 +15,6 @@ import {
   Input,
   MessageBar,
   MessageBarBody,
-  Subtitle2,
   Switch,
   Text,
 } from "@fluentui/react-components";
@@ -57,24 +56,13 @@ export function ProfilesSection() {
   const { t, rich } = useI18n();
   const profiles = useProfiles();
   const cameras = useQuery({ queryKey: ["cameras"], queryFn: api.cameras });
-  const [editing, setEditing] = useState<Profile | "new" | null>(null);
+  const [editing, setEditing] = useState<Profile | null>(null);
   const [removing, setRemoving] = useState<Profile | null>(null);
   const cameraName = (id: string) => cameras.data?.find((c) => c.id === id)?.name ?? id;
 
   return (
     <section id="profiles">
-      <Subtitle2 as="h2" className="section">
-        {t("profiles.title")}
-        <Button
-          size="small"
-          appearance="primary"
-          icon={<Add20Regular />}
-          className="section-action"
-          onClick={() => setEditing("new")}
-        >
-          {t("profiles.add")}
-        </Button>
-      </Subtitle2>
+      {/* "Add profile" is in the Cameras page header. */}
       <p className="muted">{rich("profiles.intro", { file: <code>config.yaml</code> })}</p>
       <QueryState error={profiles.error} loading={profiles.isPending} />
       {profiles.data?.length === 0 && <Empty>{t("profiles.none")}</Empty>}
@@ -89,12 +77,7 @@ export function ProfilesSection() {
           />
         ))}
       </div>
-      {editing && (
-        <ProfileDialog
-          profile={editing === "new" ? null : editing}
-          onClose={() => setEditing(null)}
-        />
-      )}
+      {editing && <ProfileDialog profile={editing} onClose={() => setEditing(null)} />}
       {removing && <RemoveProfileDialog profile={removing} onClose={() => setRemoving(null)} />}
     </section>
   );
@@ -229,7 +212,16 @@ function ProfileCard({
   );
 }
 
-function ProfileDialog({ profile, onClose }: { profile: Profile | null; onClose: () => void }) {
+export function ProfileDialog({
+  profile,
+  onClose,
+  onSaved,
+}: {
+  profile: Profile | null;
+  onClose: () => void;
+  /** After a successful save (before closing). */
+  onSaved?: () => void;
+}) {
   const { t } = useI18n();
   const client = useQueryClient();
   const [id, setId] = useState(profile?.id ?? "");
@@ -266,6 +258,7 @@ function ProfileDialog({ profile, onClose }: { profile: Profile | null; onClose:
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["profiles"] });
       void client.invalidateQueries({ queryKey: ["cameras"] });
+      onSaved?.();
       onClose();
     },
   });
@@ -380,7 +373,7 @@ function ProfileDialog({ profile, onClose }: { profile: Profile | null; onClose:
                 hint={
                   <>
                     {t("profiles.requiresHint")}{" "}
-                    {labels.data &&
+                    {!!labels.data?.workers.length &&
                       (matching.length
                         ? t(
                             requires.length ? "profiles.requiresMatching" : "profiles.requiresAny",

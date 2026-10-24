@@ -42,7 +42,7 @@ import { api, type Camera, type CameraSource, type RecordingProfile } from "../a
 import { hasRole, useMe } from "../auth";
 import { AddCameraDialog } from "../components/AddCameraDialog";
 import { ShareDialog, useRoleName } from "../components/ShareDialog";
-import { ProfilesSection } from "./Profiles";
+import { ProfileDialog, ProfilesSection } from "./Profiles";
 import { useProfileName, useProfiles } from "../components/ProfileSelect";
 import { TapoAccountCard } from "../components/TapoAccount";
 import {
@@ -77,6 +77,7 @@ export function Cameras() {
     refetchInterval: 10_000,
   });
   const [adding, setAdding] = useState(false);
+  const [addingProfile, setAddingProfile] = useState(false);
   const [editing, setEditing] = useState<Camera | null>(null);
   const [removing, setRemoving] = useState<Camera | null>(null);
   const [choosing, setChoosing] = useState<Camera | null>(null);
@@ -100,11 +101,23 @@ export function Cameras() {
       <PageHeader
         title={t("nav.cameras")}
         actions={
-          me?.can_add_cameras &&
-          tab === "cameras" && (
-            <Button appearance="primary" icon={<Add20Regular />} onClick={() => setAdding(true)}>
-              {t("addCamera.title")}
-            </Button>
+          (isAdmin || me?.can_add_cameras) && (
+            <div className="row wrap">
+              {isAdmin && (
+                <Button icon={<Add20Regular />} onClick={() => setAddingProfile(true)}>
+                  {t("profiles.add")}
+                </Button>
+              )}
+              {me?.can_add_cameras && (
+                <Button
+                  appearance="primary"
+                  icon={<Add20Regular />}
+                  onClick={() => setAdding(true)}
+                >
+                  {t("addCamera.title")}
+                </Button>
+              )}
+            </div>
           )
         }
       >
@@ -156,6 +169,13 @@ export function Cameras() {
       )}
 
       <AddCameraDialog open={adding} onClose={() => setAdding(false)} />
+      {addingProfile && (
+        <ProfileDialog
+          profile={null}
+          onSaved={() => void navigate("/cameras/profiles")}
+          onClose={() => setAddingProfile(false)}
+        />
+      )}
       {editing && <EditCameraDialog camera={editing} onClose={() => setEditing(null)} />}
       {removing && <RemoveCameraDialog camera={removing} onClose={() => setRemoving(null)} />}
       {choosing && <CameraProfilesDialog camera={choosing} onClose={() => setChoosing(null)} />}
