@@ -138,6 +138,39 @@ export interface Status {
   events_24h: number;
   events_total: number;
   queue: QueueStats;
+  /** The compact process (hourly files); admins only, null for others. */
+  compaction: CompactionStatus | null;
+}
+
+export interface CompactionRun {
+  camera_id: string;
+  start_at: string;
+  segments: number;
+}
+
+export interface CompactionStatus {
+  enabled: boolean;
+  period_minutes: number;
+  /** The compact process sent a heartbeat recently. */
+  running: boolean;
+  heartbeat_at: string | null;
+  host: string | null;
+  current: (CompactionRun & { reencode: boolean; profile: string; started_at: string }) | null;
+  last_built:
+    | (CompactionRun & {
+        encoder: string;
+        bytes_before: number;
+        bytes_after: number;
+        seconds: number;
+        at: string;
+      })
+    | null;
+  last_error: string | null;
+  last_error_at: string | null;
+  archives: number;
+  joined_segments: number;
+  waiting_periods: number;
+  waiting_segments: number;
 }
 
 export interface Segment {
@@ -551,8 +584,13 @@ export const api = {
     request<MaskState>("GET", `/api/cameras/${encodeURIComponent(cameraId)}/mask`),
   saveMask: (cameraId: string, body: { rects: Rect[]; private: boolean; burn_in?: boolean }) =>
     request<MaskState>("PUT", `/api/cameras/${encodeURIComponent(cameraId)}/mask`, body),
-  segments: (q: { camera?: string; day?: string; only_targets?: boolean; limit?: number }) =>
-    request<Segment[]>("GET", withQuery("/api/segments", q)),
+  segments: (q: {
+    camera?: string;
+    day?: string;
+    only_targets?: boolean;
+    status?: string;
+    limit?: number;
+  }) => request<Segment[]>("GET", withQuery("/api/segments", q)),
   segment: (id: number) => request<Segment>("GET", `/api/segments/${id}`),
   segmentJobs: (id: number) => request<SegmentJob[]>("GET", `/api/segments/${id}/jobs`),
   detections: (q: {

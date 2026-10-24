@@ -68,6 +68,9 @@ async def status(settings: Settings = Depends(settings_dep),
         "mediamtx_reachable": bool(live) or not settings.all_cameras(),
         "cameras": await asyncio.to_thread(queries.cameras, settings, live, p),
         **await asyncio.to_thread(queries.overview, settings, p.camera_ids()),
+        # Admins: the compact process (hourly files), see pipeline/compaction.py.
+        "compaction": await asyncio.to_thread(compaction.status, settings)
+        if p.is_admin else None,
     }
 
 
@@ -189,10 +192,11 @@ async def put_mask(camera_id: str, body: MaskBody, settings: Settings = Depends(
 @router.get("/segments")
 def segments(camera: str | None = None, day: str | None = Query(None, description="YYYY-MM-DD"),
              only_targets: bool = False, include_deleted: bool = False,
+             status: str | None = Query(None, description="new, queued, done, private, failed"),
              limit: int = Query(200, le=2000),
              p: Principal = Depends(principal)) -> list[dict[str, Any]]:
     return queries.segments(camera, day, only_targets, include_deleted, limit,
-                            _camera_filter(p, camera))
+                            _camera_filter(p, camera), status)
 
 
 def _segment(p: Principal, segment_id: int) -> Segment:

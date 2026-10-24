@@ -1,4 +1,12 @@
-import { Button, Caption1, Checkbox, Input, Text, Tooltip } from "@fluentui/react-components";
+import {
+  Button,
+  Caption1,
+  Checkbox,
+  Input,
+  Select,
+  Text,
+  Tooltip,
+} from "@fluentui/react-components";
 import { ArrowDownload20Regular, Pin16Filled } from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
@@ -12,6 +20,8 @@ import { Empty, Light, PageHeader, QueryState, Tag, Time, useStateLabel } from "
 import { decimal, duration, fileSize, localTime, percent } from "../format";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
+
+const SEGMENT_STATES = ["new", "queued", "done", "private", "failed"] as const;
 
 const columns = (
   t: I18n["t"],
@@ -89,14 +99,21 @@ const columns = (
 ];
 
 export function Recordings() {
-  const [f, setFilter] = useFilters(["camera", "day", "only_targets", "selected"] as const);
+  const [f, setFilter] = useFilters([
+    "camera",
+    "day",
+    "only_targets",
+    "status",
+    "selected",
+  ] as const);
   const segments = useQuery({
-    queryKey: ["segments", f.camera, f.day, f.only_targets],
+    queryKey: ["segments", f.camera, f.day, f.only_targets, f.status],
     queryFn: () =>
       api.segments({
         camera: f.camera,
         day: f.day,
         only_targets: f.only_targets === "true",
+        status: f.status || undefined,
         limit: 500,
       }),
     refetchInterval: 20_000,
@@ -125,6 +142,18 @@ export function Recordings() {
           aria-label={t("recordings.dayUtc")}
           onChange={(_, d) => setFilter("day", d.value)}
         />
+        <Select
+          value={f.status}
+          aria-label={t("col.status")}
+          onChange={(_, d) => setFilter("status", d.value)}
+        >
+          <option value="">{t("recordings.allStates")}</option>
+          {SEGMENT_STATES.map((st) => (
+            <option key={st} value={st}>
+              {stateLabel(st)}
+            </option>
+          ))}
+        </Select>
         <Checkbox
           label={t("recordings.onlyWithMatch")}
           checked={f.only_targets === "true"}

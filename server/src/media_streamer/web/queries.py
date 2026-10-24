@@ -192,7 +192,8 @@ def segment_dict(g: Segment) -> dict[str, Any]:
 
 def segments(camera_id: str | None = None, day: str | None = None, only_targets: bool = False,
              include_deleted: bool = False, limit: int = 200,
-             camera_ids: set[str] | None = None) -> list[dict[str, Any]]:
+             camera_ids: set[str] | None = None,
+             status: str | None = None) -> list[dict[str, Any]]:
     q = _only(select(Segment), Segment.camera_id, camera_ids) \
         .order_by(Segment.start_at.desc()).limit(limit)
     if camera_id:
@@ -202,6 +203,8 @@ def segments(camera_id: str | None = None, day: str | None = None, only_targets:
         q = q.where(Segment.start_at >= start, Segment.start_at < start + timedelta(days=1))
     if only_targets:
         q = q.where(Segment.has_target.is_(True))
+    if status:
+        q = q.where(Segment.status == status)
     if not include_deleted:
         q = q.where(Segment.deleted_at.is_(None))
     with session_scope() as s:

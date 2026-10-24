@@ -154,3 +154,19 @@ def test_uploads_archives_not_segments(settings, monkeypatch):
         s.add(Archive(camera_id="cam", path="cam/archive/x.mp4", start_at=utcnow()))
     assert uploader.upload_pending(settings) == 1
     assert uploaded == ["recordings/cam/archive/x.mp4"]
+
+
+@needs_ffmpeg
+def test_status_for_the_status_page(settings):
+    ids = _hour_ago(settings, n=3)
+    st = compaction.status(settings)
+    assert (st["running"], st["waiting_periods"], st["waiting_segments"]) == (False, 1, 3)
+
+    compaction.compact_once(settings)
+    compaction._write_state(settings, heartbeat_at=compaction._now_iso())
+    st = compaction.status(settings)
+    assert st["running"] and st["current"] is None
+    assert (st["archives"], st["joined_segments"], st["waiting_periods"]) == (1, 3, 0)
+    last = st["last_built"]
+    assert last["camera_id"] == "cam" and last["segments"] == len(ids)
+    assert last["encoder"] == "copy" and last["bytes_after"] > 0

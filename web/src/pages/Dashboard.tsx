@@ -18,7 +18,8 @@ import {
 } from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 
-import { api, snapshotUrl, type Camera } from "../api";
+import { api, snapshotUrl, type Camera, type CompactionStatus } from "../api";
+import { useCameraName } from "../components/CameraSelect";
 import { EventsGrid } from "../components/EventsGrid";
 import {
   Dot,
@@ -35,7 +36,7 @@ import {
   useStateLabel,
 } from "../components/ui";
 import { useI18n } from "../i18n";
-import { fileSize } from "../format";
+import { duration, fileSize, localTime } from "../format";
 
 export function Dashboard() {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status, refetchInterval: 10_000 });
@@ -104,15 +105,89 @@ export function Dashboard() {
           <Subtitle2 as="h2" className="section">
             {t("dashboard.segments")}
           </Subtitle2>
-          <div className="row wrap">
+          <div className="row wrap tags">
             {Object.entries(s.segments).map(([state, n]) => (
-              <Tag key={state} kind={state}>
-                {stateLabel(state)}: {n}
-              </Tag>
+              <RouterLink
+                key={state}
+                to={`/recordings?status=${state}`}
+                className="tag-link"
+                title={t("dashboard.showRecordings")}
+              >
+                <Tag kind={state}>
+                  {stateLabel(state)}: {n}
+                </Tag>
+              </RouterLink>
             ))}
           </div>
         </>
       )}
+
+      {s?.compaction && <CompactionSection c={s.compaction} />}
+    </>
+  );
+}
+
+/** The compact process: joins finished hours into one file per camera (admins only). */
+function CompactionSection({ c }: { c: CompactionStatus }) {
+  const { t, rich } = useI18n();
+  const cameraName = useCameraName();
+  const run = (r: { camera_id: string; start_at: string }) =>
+    `${cameraName(r.camera_id)} ${localTime(r.start_at)}`;
+  const last = c.last_built;
+  const errorIsNewer = c.last_error && (!last || (c.last_error_at ?? "") > last.at);
+  return (
+    <>
+      <Subtitle2 as="h2" className="section">
+        {t("compaction.title")}
+        {!c.enabled ? (
+          <Tag>{t("compaction.off")}</Tag>
+        ) : c.running ? (
+          <Tag kind="ok">{t("compaction.running")}</Tag>
+        ) : (
+          <Tag kind="bad">{t("compaction.stopped")}</Tag>
+        )}
+      </Subtitle2>
+      {c.enabled && !c.running && (
+        <MessageBar intent="warning" className="block">
+          <MessageBarBody>
+            {rich("compaction.notRunning", { command: <code>media-streamer compact</code> })}
+          </MessageBarBody>
+        </MessageBar>
+      )}
+      {errorIsNewer && (
+        <MessageBar intent="error" className="block">
+          <MessageBarBody>{c.last_error}</MessageBarBody>
+        </MessageBar>
+      )}
+      <dl className="facts">
+        <dt>{t("compaction.now")}</dt>
+        <dd>
+          {c.current
+            ? t(c.current.reencode ? "compaction.reencoding" : "compaction.joining", {
+                what: run(c.current),
+                n: c.current.segments,
+              })
+            : t("compaction.idle")}
+        </dd>
+        <dt>{t("compaction.waiting")}</dt>
+        <dd>
+          {t("compaction.waitingValue", { n: c.waiting_periods, segments: c.waiting_segments })}
+        </dd>
+        <dt>{t("compaction.done")}</dt>
+        <dd>{t("compaction.doneValue", { n: c.archives, segments: c.joined_segments })}</dd>
+        <dt>{t("compaction.last")}</dt>
+        <dd>
+          {last ? (
+            <>
+              {run(last)} – {fileSize(last.bytes_before)} → {fileSize(last.bytes_after)} (
+              {last.encoder === "copy" ? t("compaction.copied") : last.encoder},{" "}
+              {duration(last.seconds)}) <Time iso={last.at} relative />
+            </>
+          ) : (
+            "–"
+          )}
+        </dd>
+      </dl>
     </>
   );
 }

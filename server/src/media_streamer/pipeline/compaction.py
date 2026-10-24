@@ -21,14 +21,18 @@ machine later; the default runs ffmpeg here.
 
 from __future__ import annotations
 
+import json
 import logging
+import os
+import socket
+import threading
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from .. import ffmpeg, hwaccel
 from ..config import RecordingProfileConfig, Settings
@@ -41,6 +45,73 @@ ARCHIVE_DIR = "archive"
 REPLACE_DELAY = timedelta(minutes=2)  # keep originals this long after they were joined
 CACHE_SECONDS = 3600  # segments cut out of archives for playback / download
 KEYFRAME_TOLERANCE = 0.1  # seconds
+STATE_FILE = "compaction-state.json"  # in data_dir; the server shows it on the Status page
+HEARTBEAT_SECONDS = 30
+
+
+# --- status (written by the compact process, read by the server) --------------------------
+
+_state_lock = threading.Lock()
+
+
+def _state_path(settings: Settings) -> Path:
+    return settings.data_dir / STATE_FILE
+
+
+def read_state(settings: Settings) -> dict:
+    try:
+        return json.loads(_state_path(settings).read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def _write_state(settings: Settings, **changes: object) -> None:
+    with _state_lock:
+        state = {**read_state(settings), **changes}
+        path = _state_path(settings)
+        tmp = path.with_name(path.name + ".tmp")
+        try:
+            tmp.write_text(json.dumps(state))
+            tmp.replace(path)
+        except OSError as e:
+            log.debug("cannot write %s: %s", path, e)
+
+
+def _now_iso() -> str:
+    return utcnow().isoformat(timespec="seconds") + "Z"
+
+
+def status(settings: Settings) -> dict:
+    """For the Status page: is the process alive, what is it doing, what is waiting."""
+    cfg = settings.compaction
+    state = read_state(settings)
+    beat = state.get("heartbeat_at")
+    age = (utcnow() - datetime.fromisoformat(beat.rstrip("Z"))).total_seconds() if beat else None
+    finished = _period_start(utcnow() - timedelta(minutes=cfg.delay_minutes),
+                             cfg.period_minutes)
+    with session_scope() as s:
+        archives = s.scalar(select(func.count()).select_from(Archive)
+                            .where(Archive.deleted_at.is_(None)))
+        joined = s.scalar(select(func.count()).select_from(Segment).where(
+            Segment.archive_id.is_not(None), Segment.deleted_at.is_(None)))
+        rows = s.execute(select(Segment.camera_id, Segment.start_at).where(
+            Segment.archive_id.is_(None), Segment.deleted_at.is_(None),
+            Segment.duration_s > 0, Segment.start_at < finished)).all()
+    per_period: dict[tuple[str, datetime], int] = {}
+    for camera_id, start in rows:
+        key = (camera_id, _period_start(start, cfg.period_minutes))
+        per_period[key] = per_period.get(key, 0) + 1
+    # Periods with a single (or incompatible) segment are never joined: not "waiting".
+    waiting = {k: n for k, n in per_period.items() if n >= 2}
+    return {
+        "enabled": cfg.enabled, "period_minutes": cfg.period_minutes,
+        "running": age is not None and age < 3 * HEARTBEAT_SECONDS,
+        "heartbeat_at": beat, "host": state.get("host"),
+        "current": state.get("current"), "last_built": state.get("last_built"),
+        "last_error": state.get("last_error"), "last_error_at": state.get("last_error_at"),
+        "archives": archives or 0, "joined_segments": joined or 0,
+        "waiting_periods": len(waiting), "waiting_segments": sum(waiting.values()),
+    }
 
 
 # --- where a segment's footage is -----------------------------------------------------------
@@ -270,6 +341,10 @@ def build(settings: Settings, plan: Plan, encoder: Encoder = local_encoder) -> i
     dst.parent.mkdir(parents=True, exist_ok=True)
     part = dst.with_name(dst.stem + ".part.mp4")
     started = time.monotonic()
+    _write_state(settings, current={
+        "camera_id": plan.camera_id, "start_at": start.isoformat(timespec="seconds") + "Z",
+        "segments": len(plan.segment_ids), "reencode": plan.profile.transcode,
+        "profile": plan.profile.id, "started_at": _now_iso()})
     try:
         how = encoder(settings, plan, part)
         info = ffmpeg.probe(part)
@@ -281,6 +356,8 @@ def build(settings: Settings, plan: Plan, encoder: Encoder = local_encoder) -> i
         part.unlink(missing_ok=True)
         log.error("[%s] could not join %d segment(s) from %s: %s", plan.camera_id,
                   len(plan.segment_ids), start, e)
+        _write_state(settings, current=None, last_error_at=_now_iso(),
+                     last_error=f"{plan.camera_id} {start:%Y-%m-%d %H:%M}: {e}"[:500])
         return None
     part.rename(dst)
     size = dst.stat().st_size
@@ -302,9 +379,13 @@ def build(settings: Settings, plan: Plan, encoder: Encoder = local_encoder) -> i
             seg.size_bytes = int(size * dur / total)
         arc_id = arc.id
     before = sum(p.stat().st_size for p in plan.files if p.exists())
+    took = time.monotonic() - started
     log.info("[%s] joined %d segment(s) into %s (%s, %.0f MB -> %.0f MB, %.0f s)",
-             plan.camera_id, len(plan.segment_ids), rel, how, before / 1e6, size / 1e6,
-             time.monotonic() - started)
+             plan.camera_id, len(plan.segment_ids), rel, how, before / 1e6, size / 1e6, took)
+    _write_state(settings, current=None, last_built={
+        "camera_id": plan.camera_id, "start_at": start.isoformat(timespec="seconds") + "Z",
+        "segments": len(plan.segment_ids), "encoder": how, "bytes_before": before,
+        "bytes_after": size, "seconds": round(took, 1), "at": _now_iso()})
     return arc_id
 
 
@@ -353,12 +434,22 @@ def run_compaction(settings: Settings, interval: float = 60.0) -> None:
     init_db(settings)
     for part in settings.recordings_dir.glob(f"*/{ARCHIVE_DIR}/*.part.mp4"):
         part.unlink(missing_ok=True)  # left by an interrupted run
+    _write_state(settings, current=None, host=socket.gethostname(), pid=os.getpid())
+
+    def heartbeat() -> None:  # also while an hour-long encode runs
+        while True:
+            _write_state(settings, heartbeat_at=_now_iso())
+            time.sleep(HEARTBEAT_SECONDS)
+
+    threading.Thread(target=heartbeat, name="compaction-heartbeat", daemon=True).start()
     log.info("compaction: every %d min, %d min after the period ends (%s)",
              settings.compaction.period_minutes, settings.compaction.delay_minutes,
              "enabled" if settings.compaction.enabled else "disabled in config")
     while True:
         try:
             compact_once(settings)
-        except Exception:
+        except Exception as e:
             log.exception("compaction failed")
+            _write_state(settings, current=None, last_error_at=_now_iso(),
+                         last_error=str(e)[:500])
         time.sleep(interval)

@@ -30,15 +30,22 @@ import { useI18n } from "../i18n";
 export function RouterLink({
   to,
   className,
+  title,
   children,
 }: {
   to: string;
   className?: string;
+  title?: string;
   children: ReactNode;
 }) {
   const navigate = useNavigate();
   return (
-    <Link href={to} className={className} onClick={(e) => followLink(e, () => navigate(to))}>
+    <Link
+      href={to}
+      className={className}
+      title={title}
+      onClick={(e) => followLink(e, () => navigate(to))}
+    >
       {children}
     </Link>
   );

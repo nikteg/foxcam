@@ -92,6 +92,18 @@ kbd {
 .action-row-end {
   margin-inline-start: auto;
 }
+/* A tag that is a link (e.g. recording states on the Status page). */
+a.tag-link {
+  text-decoration: none;
+  border-radius: var(--borderRadiusCircular);
+}
+a.tag-link:hover .fui-Badge {
+  filter: brightness(1.25);
+}
+a.tag-link:focus-visible {
+  outline: 2px solid var(--colorStrokeFocus2);
+  outline-offset: 2px;
+}
 /* A spinner standing in for content: give it room. */
 .fui-Spinner.loading-block {
   padding: var(--spacingVerticalXL) 0;
