@@ -119,8 +119,9 @@ async def update_runtime_settings(body: RuntimeChange,
                                           body.reset)
     except runtime_settings.SettingError as e:
         raise HTTPException(422, str(e)) from e
-    if "segment_seconds" in changed:
-        # MediaMTX cuts the files (recordSegmentDuration): new length from the next file.
+    if changed & runtime_settings.MEDIAMTX_KEYS:
+        # MediaMTX cuts the files (recordSegmentDuration, from the next file) and runs the
+        # low-data live transcoder (restarted with the new settings).
         try:
             await mtx.sync_paths()
         except Exception as e:  # noqa: BLE001 - saved; applied at the next sync

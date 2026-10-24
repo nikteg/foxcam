@@ -37,6 +37,15 @@ const GENERAL: SettingsGroup[] = [
     title: "runtime.group.archiving",
     keys: ["compaction.enabled", "compaction.delay_minutes"],
   },
+  {
+    title: "runtime.group.live",
+    keys: [
+      "mediamtx.low_data.enabled",
+      "mediamtx.low_data.height",
+      "mediamtx.low_data.fps",
+      "mediamtx.low_data.bitrate_kbit",
+    ],
+  },
 ];
 const DETECTION: SettingsGroup[] = [
   {
@@ -44,6 +53,7 @@ const DETECTION: SettingsGroup[] = [
     keys: [
       "processing.sample_fps",
       "processing.max_width",
+      "processing.concurrency",
       "processing.night_saturation_threshold",
     ],
   },

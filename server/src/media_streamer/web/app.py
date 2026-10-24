@@ -41,12 +41,12 @@ def _web_dist() -> Path:
 
 async def _settings_loop(settings: Settings, mtx: MediaMtx) -> None:
     """Tunables changed in the web UI or with `media-streamer settings` (the API applies its
-    own changes right away). A new segment length goes to MediaMTX, which cuts the files."""
+    own changes right away). Segment length and the low-data live view go to MediaMTX."""
     while True:
         await asyncio.sleep(runtime_settings.REFRESH_SECONDS)
         try:
             changed = await asyncio.to_thread(runtime_settings.refresh, settings)
-            if "segment_seconds" in changed:
+            if changed & runtime_settings.MEDIAMTX_KEYS:
                 await mtx.sync_paths()
         except Exception:
             log.exception("applying settings failed")

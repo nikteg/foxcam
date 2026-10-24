@@ -51,6 +51,27 @@ const META: Record<
     hint: "runtime.maxWidthHint",
     unit: "runtime.unit.px",
   },
+  "processing.concurrency": { label: "runtime.concurrency", hint: "runtime.concurrencyHint" },
+  "mediamtx.low_data.enabled": {
+    label: "runtime.lowDataEnabled",
+    hint: "runtime.lowDataEnabledHint",
+    kind: "bool",
+  },
+  "mediamtx.low_data.height": {
+    label: "runtime.lowDataHeight",
+    hint: "runtime.lowDataHeightHint",
+    unit: "runtime.unit.lines",
+  },
+  "mediamtx.low_data.fps": {
+    label: "runtime.lowDataFps",
+    hint: "runtime.lowDataFpsHint",
+    unit: "runtime.unit.fps",
+  },
+  "mediamtx.low_data.bitrate_kbit": {
+    label: "runtime.lowDataBitrate",
+    hint: "runtime.lowDataBitrateHint",
+    unit: "runtime.unit.kbit",
+  },
   "processing.night_saturation_threshold": {
     label: "runtime.nightThreshold",
     hint: "runtime.nightThresholdHint",

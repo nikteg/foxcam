@@ -28,9 +28,8 @@ from .models import AppSetting
 log = logging.getLogger(__name__)
 
 # Safe to change while running: read each time they are used. Left out on purpose:
-# processing.concurrency (sized once at start), period_minutes (archive boundaries),
-# mediamtx (hardware encoder, low-data live view: running transcoders keep theirs),
-# secrets, auth and storage.
+# compaction.period_minutes (archive boundaries), the mediamtx encoder (every transcoder
+# would restart), secrets, auth and storage.
 EDITABLE: tuple[str, ...] = (
     "public_url",
     "segment_seconds",
@@ -39,6 +38,11 @@ EDITABLE: tuple[str, ...] = (
     "processing.sample_fps",
     "processing.max_width",
     "processing.night_saturation_threshold",
+    "processing.concurrency",
+    "mediamtx.low_data.enabled",
+    "mediamtx.low_data.height",
+    "mediamtx.low_data.fps",
+    "mediamtx.low_data.bitrate_kbit",
     "events.pre_roll_seconds",
     "events.post_roll_seconds",
     "events.merge_gap_seconds",
@@ -51,6 +55,11 @@ EDITABLE: tuple[str, ...] = (
     "retention.events_days",
     "retention.max_disk_gb",
 )
+
+# Part of MediaMTX's path settings: pushed to it when they change (mediamtx.sync_paths).
+MEDIAMTX_KEYS = frozenset({"segment_seconds", "mediamtx.low_data.enabled",
+                           "mediamtx.low_data.height", "mediamtx.low_data.fps",
+                           "mediamtx.low_data.bitrate_kbit"})
 
 REFRESH_SECONDS = 5.0
 

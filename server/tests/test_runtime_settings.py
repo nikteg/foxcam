@@ -115,3 +115,42 @@ def test_cli(settings, capsys):
     assert run("reset", keys=[]) == 0
     assert runtime_settings.stored() == {}
     assert "processing.sample_fps" in capsys.readouterr().out
+
+
+def test_low_data_live_view_changes_go_to_mediamtx(settings):
+    assert mediamtx.low_path("cam") in mediamtx.desired_paths(settings)
+    changed = runtime_settings.update(settings, {"mediamtx.low_data.height": 360,
+                                                 "mediamtx.low_data.fps": 10}, [])
+    assert changed <= runtime_settings.MEDIAMTX_KEYS
+    cmd = mediamtx.desired_paths(settings)[mediamtx.low_path("cam")]["runOnDemand"]
+    assert "360" in cmd
+    runtime_settings.update(settings, {"mediamtx.low_data.enabled": False}, [])
+    assert mediamtx.low_path("cam") not in mediamtx.desired_paths(settings)
+
+
+def test_preprocessing_follows_the_concurrency_setting(settings, monkeypatch):
+    import asyncio
+    import threading
+
+    from media_streamer.pipeline import preprocess, runner
+
+    release = threading.Event()
+    running: list[int] = []
+    monkeypatch.setattr(preprocess, "pending_segment_ids", lambda: list(range(1, 9)))
+
+    def work(_settings, seg_id):
+        running.append(seg_id)
+        release.wait(5)
+
+    monkeypatch.setattr(preprocess, "preprocess_segment", work)
+    runtime_settings.update(settings, {"processing.concurrency": 3}, [])
+
+    async def run():
+        task = asyncio.create_task(runner._preprocess_loop(settings))
+        await asyncio.sleep(0.5)
+        started = len(running)
+        release.set()
+        task.cancel()
+        return started
+
+    assert asyncio.run(run()) == 3

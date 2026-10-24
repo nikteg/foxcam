@@ -167,7 +167,8 @@ The day counts and `max_disk_gb` can also be changed in the web UI (see below).
 
 Admins can change these on the Settings page (General, Detection and Retention tabs) without
 a restart: `public_url`, `segment_seconds`, `compaction.enabled` and `delay_minutes`,
-`processing.sample_fps`, `max_width` and `night_saturation_threshold`, the `events` timings,
+`processing.sample_fps`, `max_width`, `concurrency` and `night_saturation_threshold`, the
+low-data live view (`mediamtx.low_data`), the `events` timings,
 the `queue` lease, attempts and backoff, and the `retention` days and disk cap
 (`runtime_settings.EDITABLE`). Each value set there is an `app_setting` row keyed by its
 config.yaml path, like `recording_profile_default`, and wins over config.yaml (and its
@@ -176,10 +177,11 @@ validated with the bounds of the models in `config.py`.
 
 Every process applies them onto its own settings object: the server right after a change
 (and every 5 s for changes from elsewhere), ingest and compaction on each round of their
-loops. A new `segment_seconds` is pushed to MediaMTX (`recordSegmentDuration`) and applies
-from the next file. Left out on purpose: secrets, auth and storage, and what is only read
-at start (`processing.concurrency`, `compaction.period_minutes`, the `mediamtx` encoder
-and low-data live view).
+loops. Segment length and the low-data live view are pushed to MediaMTX: a new
+`segment_seconds` applies from the next file, and low-data streams being watched restart
+with the new settings. Left out on purpose: secrets, auth and storage,
+`compaction.period_minutes` (archive boundaries) and the `mediamtx` encoder (every
+transcoder would restart).
 
 `media-streamer settings list | set KEY VALUE | reset [KEY...]` does the same from a shell,
 e.g. to undo an https `public_url` that broke signing in over plain http.

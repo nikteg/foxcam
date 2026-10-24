@@ -174,7 +174,7 @@ class ProcessingConfig(BaseModel):
     # Frames per second kept in the masked derivative handed to workers.
     sample_fps: float = Field(default=2.0, gt=0, le=30)
     max_width: int = Field(default=1280, ge=160, le=7680)
-    concurrency: int = 2
+    concurrency: int = Field(default=2, ge=1, le=16)
     # Mean saturation below this => frame considered grayscale (IR night mode).
     night_saturation_threshold: float = Field(default=4.0, ge=0, le=255)
 

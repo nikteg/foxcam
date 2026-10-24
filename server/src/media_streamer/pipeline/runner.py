@@ -23,20 +23,22 @@ async def _loop(name: str, interval: float, fn: Callable[[], object]) -> None:
 
 
 async def _preprocess_loop(settings: Settings) -> None:
-    sem = asyncio.Semaphore(settings.processing.concurrency)
+    # At most processing.concurrency at once, read each round: it can change while running
+    # (Settings page). Lowering it lets the running ones finish.
     in_flight: set[int] = set()
 
     async def one(seg_id: int) -> None:
-        async with sem:
-            try:
-                await asyncio.to_thread(preprocess.preprocess_segment, settings, seg_id)
-            finally:
-                in_flight.discard(seg_id)
+        try:
+            await asyncio.to_thread(preprocess.preprocess_segment, settings, seg_id)
+        finally:
+            in_flight.discard(seg_id)
 
     while True:
         try:
             ids = await asyncio.to_thread(preprocess.pending_segment_ids)
             for seg_id in ids:
+                if len(in_flight) >= settings.processing.concurrency:
+                    break
                 if seg_id not in in_flight:
                     in_flight.add(seg_id)
                     asyncio.create_task(one(seg_id))

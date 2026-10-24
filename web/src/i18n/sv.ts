@@ -331,6 +331,22 @@ export const sv: Record<MessageKey, string> = {
   "runtime.group.events": "Händelser",
   "runtime.group.queue": "Jobbkö",
   "runtime.group.retention": "Hur länge saker sparas",
+  "runtime.unit.lines": "linjer",
+  "runtime.unit.kbit": "kbit/s",
+  "runtime.group.live": "Livebild med lite data",
+  "runtime.concurrency": "Segment som förbereds samtidigt",
+  "runtime.concurrencyHint":
+    "Hur många inspelningar den här servern förbereder för workers parallellt. Fler hinner ikapp bättre efter en kö; färre lämnar CPU till inspelning och livebild på en liten dator.",
+  "runtime.lowDataEnabled": "Erbjud livebild med lite data",
+  "runtime.lowDataEnabledHint":
+    "En mindre kopia av livebilden för långsamma anslutningar. Varje kamera som tittas på så kodas om på den här servern medan någon tittar.",
+  "runtime.lowDataHeight": "Höjd",
+  "runtime.lowDataHeightHint": "Lägre är lättare att koda och skicka, men mindre detaljerat.",
+  "runtime.lowDataFps": "Bilder per sekund",
+  "runtime.lowDataFpsHint": "Färre är lättare, men rörelser blir hackigare.",
+  "runtime.lowDataBitrate": "Bithastighet",
+  "runtime.lowDataBitrateHint":
+    "Data per sekund för varje tittare. Ändringar startar om livebilder med lite data som tittas på.",
   "runtime.publicUrl": "Webbadress",
   "runtime.publicUrlHint":
     "Hur man öppnar den här sidan, t.ex. https://cams.example.org. Används för länkar i aviseringar. En https-adress gör också inloggningskakan säker, så inloggning via vanlig http slutar fungera.",

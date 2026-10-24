@@ -330,6 +330,22 @@ export const en = {
   "runtime.group.events": "Events",
   "runtime.group.queue": "Job queue",
   "runtime.group.retention": "How long things are kept",
+  "runtime.unit.lines": "lines",
+  "runtime.unit.kbit": "kbit/s",
+  "runtime.group.live": "Low-data live view",
+  "runtime.concurrency": "Segments prepared at once",
+  "runtime.concurrencyHint":
+    "How many recordings this server prepares for the workers in parallel. More keeps up better after a backlog; fewer leaves CPU free for recording and live view on a small box.",
+  "runtime.lowDataEnabled": "Offer low-data live view",
+  "runtime.lowDataEnabledHint":
+    "A smaller copy of the live stream for slow connections. Each camera watched this way is re-encoded on this server while someone watches.",
+  "runtime.lowDataHeight": "Height",
+  "runtime.lowDataHeightHint": "Lower is lighter to encode and send, but less detailed.",
+  "runtime.lowDataFps": "Frames per second",
+  "runtime.lowDataFpsHint": "Fewer is lighter, but movement looks choppier.",
+  "runtime.lowDataBitrate": "Bitrate",
+  "runtime.lowDataBitrateHint":
+    "Data per second for each viewer. Changes restart low-data streams that are being watched.",
   "runtime.publicUrl": "Web address",
   "runtime.publicUrlHint":
     "How people open this site, e.g. https://cams.example.org. Used for links in notifications. An https address also makes the sign-in cookie secure, so signing in over plain http stops working.",
