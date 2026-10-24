@@ -13,6 +13,7 @@ from ..accounts import Principal
 from ..config import Settings
 from ..db import session_scope
 from ..models import (
+    Archive,
     CameraState,
     Detection,
     Event,
@@ -183,7 +184,7 @@ def segment_dict(g: Segment) -> dict[str, Any]:
         "deleted": g.deleted_at is not None, "mask_version_id": g.mask_version_id,
         "remote": g.remote_key is not None,
         # Joined into an hourly file by compaction (served cut back out of it).
-        "archived": g.archive_id is not None,
+        "archived": g.archive_id is not None, "archive_id": g.archive_id,
         "thumb_url": f"/api/segments/{g.id}/thumb" if g.thumb_path else None,
         "download_url": None if g.deleted_at and not g.remote_key
         else f"/api/segments/{g.id}/download",
@@ -209,6 +210,42 @@ def segments(camera_id: str | None = None, day: str | None = None, only_targets:
         q = q.where(Segment.deleted_at.is_(None))
     with session_scope() as s:
         return [segment_dict(g) for g in s.scalars(q)]
+
+
+def archives(camera_id: str | None = None, day: str | None = None, limit: int = 200,
+             camera_ids: set[str] | None = None) -> list[dict[str, Any]]:
+    """Hourly files made by compaction, newest first, with their segment counts."""
+    q = _only(select(Archive), Archive.camera_id, camera_ids) \
+        .order_by(Archive.start_at.desc()).limit(limit)
+    if camera_id:
+        q = q.where(Archive.camera_id == camera_id)
+    if day:
+        start = datetime.fromisoformat(day)
+        q = q.where(Archive.start_at >= start, Archive.start_at < start + timedelta(days=1))
+    with session_scope() as s:
+        rows = s.scalars(q).all()
+        counts = dict(s.execute(
+            select(Segment.archive_id, func.count()).where(
+                Segment.archive_id.in_([a.id for a in rows])).group_by(Segment.archive_id)).all())
+        first = dict(s.execute(
+            select(Segment.archive_id, func.min(Segment.id)).where(
+                Segment.archive_id.in_([a.id for a in rows])).group_by(Segment.archive_id)).all())
+        targets = dict(s.execute(
+            select(Segment.archive_id, func.count()).where(
+                Segment.archive_id.in_([a.id for a in rows]), Segment.has_target.is_(True))
+            .group_by(Segment.archive_id)).all())
+        return [{
+            "id": a.id, "camera_id": a.camera_id, "start_at": iso(a.start_at),
+            "duration_s": round(a.duration_s, 1), "size_bytes": a.size_bytes,
+            "profile_id": a.profile_id, "encoder": a.encoder,
+            "segments": counts.get(a.id, 0), "first_segment_id": first.get(a.id),
+            "segments_with_match": targets.get(a.id, 0),
+            "deleted": a.deleted_at is not None, "remote": a.remote_key is not None,
+            "play_url": None if a.deleted_at and not a.remote_key
+            else f"/api/archives/{a.id}/play",
+            "download_url": None if a.deleted_at and not a.remote_key
+            else f"/api/archives/{a.id}/download",
+        } for a in rows]
 
 
 def detection_dict(d: Detection) -> dict[str, Any]:

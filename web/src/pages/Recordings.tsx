@@ -2,14 +2,31 @@ import {
   Button,
   Caption1,
   Checkbox,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
   Input,
+  Link,
+  MessageBar,
+  MessageBarBody,
   Select,
+  Tab,
+  TabList,
   Text,
   Tooltip,
 } from "@fluentui/react-components";
-import { ArrowDownload20Regular, Pin16Filled } from "@fluentui/react-icons";
-import { useQuery } from "@tanstack/react-query";
-import { useRef } from "react";
+import {
+  Archive16Regular,
+  ArrowClockwise20Regular,
+  ArrowDownload20Regular,
+  Pin16Filled,
+} from "@fluentui/react-icons";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { useSearchParams } from "react-router";
 
 import { api, type Segment, type SegmentJob } from "../api";
 import { CameraSelect, useCameraName } from "../components/CameraSelect";
@@ -19,7 +36,9 @@ import { Feedback } from "../components/Feedback";
 import { Empty, Light, PageHeader, QueryState, Tag, Time, useStateLabel } from "../components/ui";
 import { decimal, duration, fileSize, localTime, percent } from "../format";
 import { useI18n, type I18n } from "../i18n";
+import { hasRole, useCameraRole } from "../auth";
 import { useFilters } from "../useFilters";
+import { HourlyFiles } from "./HourlyFiles";
 
 const SEGMENT_STATES = ["new", "queued", "done", "private", "failed"] as const;
 
@@ -86,6 +105,11 @@ const columns = (
             <Pin16Filled />
           </Tooltip>
         )}
+        {r.archived && (
+          <Tooltip content={t("recordings.inHourlyFile")} relationship="label">
+            <Archive16Regular />
+          </Tooltip>
+        )}
       </span>
     ),
   },
@@ -105,7 +129,10 @@ export function Recordings() {
     "only_targets",
     "status",
     "selected",
+    "view",
+    "hour",
   ] as const);
+  const [, setParams] = useSearchParams();
   const segments = useQuery({
     queryKey: ["segments", f.camera, f.day, f.only_targets, f.status],
     queryFn: () =>
@@ -134,66 +161,115 @@ export function Recordings() {
   return (
     <>
       <PageHeader title={t("nav.recordings")} />
-      <div className="filters">
-        <CameraSelect value={f.camera} onChange={(v) => setFilter("camera", v)} />
-        <Input
-          type="date"
-          value={f.day}
-          aria-label={t("recordings.dayUtc")}
-          onChange={(_, d) => setFilter("day", d.value)}
-        />
-        <Select
-          value={f.status}
-          aria-label={t("col.status")}
-          onChange={(_, d) => setFilter("status", d.value)}
-        >
-          <option value="">{t("recordings.allStates")}</option>
-          {SEGMENT_STATES.map((st) => (
-            <option key={st} value={st}>
-              {stateLabel(st)}
-            </option>
-          ))}
-        </Select>
-        <Checkbox
-          label={t("recordings.onlyWithMatch")}
-          checked={f.only_targets === "true"}
-          onChange={(_, d) => setFilter("only_targets", d.checked === true)}
-        />
-      </div>
-      <QueryState error={segments.error} loading={segments.isPending} />
-      <div className="master-detail">
-        <div className="master">
-          {segments.data && segments.data.length > 0 && (
-            <DataTable
-              ariaLabel="Recordings"
-              items={segments.data}
-              columns={columns(t, stateLabel, cameraName)}
-              getRowId={(r) => r.id}
-              defaultSort={{ column: "start", direction: "descending" }}
-              rowClassName={(r) => (r.has_target ? "target" : undefined)}
-              selectedId={selected?.id}
-              onRowClick={(r) => setFilter("selected", String(r.id))}
+      <TabList
+        className="block"
+        selectedValue={f.view === "hourly" ? "hourly" : "segments"}
+        onTabSelect={(_, d) => setFilter("view", d.value === "hourly" ? "hourly" : "")}
+      >
+        <Tab value="segments">{t("recordings.segmentsTab")}</Tab>
+        <Tab value="hourly">{t("hourly.title")}</Tab>
+      </TabList>
+      {f.view === "hourly" ? (
+        <>
+          <div className="filters">
+            <CameraSelect value={f.camera} onChange={(v) => setFilter("camera", v)} />
+            <Input
+              type="date"
+              value={f.day}
+              aria-label={t("recordings.dayUtc")}
+              onChange={(_, d) => setFilter("day", d.value)}
             />
-          )}
-          {segments.data?.length === 0 && <Empty>{t("recordings.none")}</Empty>}
-        </div>
-        <DetailPanel
-          open={!!selected}
-          title={
-            selected ? `${cameraName(selected.camera_id)} – ${localTime(selected.start_at)}` : ""
-          }
-          onClose={() => setFilter("selected", "")}
-        >
-          {selected && <RecordingDetail segment={selected} />}
-        </DetailPanel>
-      </div>
+          </div>
+          <HourlyFiles
+            camera={f.camera}
+            day={f.day}
+            selectedId={Number(f.hour) || null}
+            onSelect={(id) => setFilter("hour", id ? String(id) : "")}
+            onShowSegments={(a) =>
+              setParams({ camera: a.camera_id, day: a.start_at.slice(0, 10) }, { replace: true })
+            }
+          />
+        </>
+      ) : (
+        <>
+          <div className="filters">
+            <CameraSelect value={f.camera} onChange={(v) => setFilter("camera", v)} />
+            <Input
+              type="date"
+              value={f.day}
+              aria-label={t("recordings.dayUtc")}
+              onChange={(_, d) => setFilter("day", d.value)}
+            />
+            <Select
+              value={f.status}
+              aria-label={t("col.status")}
+              onChange={(_, d) => setFilter("status", d.value)}
+            >
+              <option value="">{t("recordings.allStates")}</option>
+              {SEGMENT_STATES.map((st) => (
+                <option key={st} value={st}>
+                  {stateLabel(st)}
+                </option>
+              ))}
+            </Select>
+            <Checkbox
+              label={t("recordings.onlyWithMatch")}
+              checked={f.only_targets === "true"}
+              onChange={(_, d) => setFilter("only_targets", d.checked === true)}
+            />
+          </div>
+          <QueryState error={segments.error} loading={segments.isPending} />
+          <div className="master-detail">
+            <div className="master">
+              {segments.data && segments.data.length > 0 && (
+                <DataTable
+                  ariaLabel="Recordings"
+                  items={segments.data}
+                  columns={columns(t, stateLabel, cameraName)}
+                  getRowId={(r) => r.id}
+                  defaultSort={{ column: "start", direction: "descending" }}
+                  rowClassName={(r) => (r.has_target ? "target" : undefined)}
+                  selectedId={selected?.id}
+                  onRowClick={(r) => setFilter("selected", String(r.id))}
+                />
+              )}
+              {segments.data?.length === 0 && <Empty>{t("recordings.none")}</Empty>}
+            </div>
+            <DetailPanel
+              open={!!selected}
+              title={
+                selected
+                  ? `${cameraName(selected.camera_id)} – ${localTime(selected.start_at)}`
+                  : ""
+              }
+              onClose={() => setFilter("selected", "")}
+            >
+              {selected && (
+                <RecordingDetail
+                  segment={selected}
+                  onOpenHourly={(id) => setParams({ view: "hourly", hour: String(id) })}
+                />
+              )}
+            </DetailPanel>
+          </div>
+        </>
+      )}
     </>
   );
 }
 
-function RecordingDetail({ segment: s }: { segment: Segment }) {
+function RecordingDetail({
+  segment: s,
+  onOpenHourly,
+}: {
+  segment: Segment;
+  onOpenHourly: (archiveId: number) => void;
+}) {
   const video = useRef<HTMLVideoElement>(null);
   const { t } = useI18n();
+  const role = useCameraRole(s.camera_id);
+  const canEdit = role !== undefined && hasRole({ role }, "editor");
+  const [confirming, setConfirming] = useState(false);
   const stateLabel = useStateLabel();
   const detections = useQuery({
     queryKey: ["detections", { segment: s.id }],
@@ -240,7 +316,17 @@ function RecordingDetail({ segment: s }: { segment: Segment }) {
           {stateLabel(s.status)}
         </Tag>
         {s.pinned && <Tag kind="ok">{t("recordings.keptForEvent")}</Tag>}
+        {canEdit && !s.deleted && (
+          <Button
+            icon={<ArrowClockwise20Regular />}
+            disabled={s.status === "new"}
+            onClick={() => setConfirming(true)}
+          >
+            {t("recordings.analyseAgain")}
+          </Button>
+        )}
       </div>
+      {confirming && <ReanalyseDialog segment={s} onClose={() => setConfirming(false)} />}
       <dl className="facts">
         <dt>{t("col.start")}</dt>
         <dd>
@@ -268,7 +354,13 @@ function RecordingDetail({ segment: s }: { segment: Segment }) {
             : t("recordings.noMask")}
         </dd>
         <dt>{t("recordings.storedIn")}</dt>
-        <dd>{s.archived ? t("recordings.storedHourly") : t("recordings.storedOwn")}</dd>
+        <dd>
+          {s.archive_id !== null ? (
+            <Link onClick={() => onOpenHourly(s.archive_id!)}>{t("recordings.storedHourly")}</Link>
+          ) : (
+            t("recordings.storedOwn")
+          )}
+        </dd>
       </dl>
 
       <Text weight="semibold">{t("recordings.runs")}</Text>
@@ -325,5 +417,48 @@ function RunSummary({ job: j }: { job: SegmentJob }) {
       </span>
       {j.error && <Caption1 className="run-error">{j.error}</Caption1>}
     </li>
+  );
+}
+
+/** Confirm, then run detection on the recording again (its detections are replaced). */
+function ReanalyseDialog({ segment: s, onClose }: { segment: Segment; onClose: () => void }) {
+  const { t } = useI18n();
+  const client = useQueryClient();
+  const run = useMutation({
+    mutationFn: () => api.reanalyse(s.id),
+    onSuccess: () => {
+      for (const key of ["segments", "segment", "segment-jobs", "detections", "events", "queue"]) {
+        void client.invalidateQueries({ queryKey: [key] });
+      }
+      onClose();
+    },
+  });
+  return (
+    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
+      <DialogSurface>
+        <DialogBody>
+          <DialogTitle>{t("recordings.analyseAgainTitle")}</DialogTitle>
+          <DialogContent className="form-stack">
+            <Text>{t("recordings.analyseAgainBody")}</Text>
+            {run.error && (
+              <MessageBar intent="error">
+                <MessageBarBody>{run.error.message}</MessageBarBody>
+              </MessageBar>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={onClose}>{t("common.cancel")}</Button>
+            <Button
+              appearance="primary"
+              icon={<ArrowClockwise20Regular />}
+              disabled={run.isPending}
+              onClick={() => run.mutate()}
+            >
+              {t("recordings.analyseAgain")}
+            </Button>
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
   );
 }

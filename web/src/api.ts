@@ -193,6 +193,7 @@ export interface Segment {
   remote: boolean;
   /** Joined into an hourly file by compaction. */
   archived: boolean;
+  archive_id: number | null;
   thumb_url: string | null;
   download_url: string | null;
 }
@@ -219,6 +220,26 @@ export interface DetectionExtra {
   raw_label?: string;
   classifications?: { label: string; score: number }[];
   [key: string]: unknown;
+}
+
+/** An hourly file made by compaction (Recordings → Hourly files). */
+export interface ArchiveFile {
+  id: number;
+  camera_id: string;
+  start_at: string;
+  duration_s: number;
+  size_bytes: number;
+  /** Recording profile it was encoded with; "original" = joined without re-encoding. */
+  profile_id: string | null;
+  /** "copy" or the video encoder, e.g. hevc_videotoolbox. */
+  encoder: string | null;
+  segments: number;
+  first_segment_id: number | null;
+  segments_with_match: number;
+  deleted: boolean;
+  remote: boolean;
+  play_url: string | null;
+  download_url: string | null;
 }
 
 export interface Detection {
@@ -593,6 +614,13 @@ export const api = {
   }) => request<Segment[]>("GET", withQuery("/api/segments", q)),
   segment: (id: number) => request<Segment>("GET", `/api/segments/${id}`),
   segmentJobs: (id: number) => request<SegmentJob[]>("GET", `/api/segments/${id}/jobs`),
+  reanalyse: (id: number) =>
+    request<{ status: string; detections_removed: number }>(
+      "POST",
+      `/api/segments/${id}/reanalyse`,
+    ),
+  archives: (q: { camera?: string; day?: string; limit?: number }) =>
+    request<ArchiveFile[]>("GET", withQuery("/api/archives", q)),
   detections: (q: {
     segment?: number;
     camera?: string;

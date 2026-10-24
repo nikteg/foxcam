@@ -1,0 +1,87 @@
+"""Run detection on a recording again, from scratch.
+
+The masked copy a worker analysed is deleted once its jobs are done, so a retry starts
+over: the segment goes back to ``new``, preprocessing builds a fresh copy (with the
+camera's current censor areas and detection profiles) and queues new jobs. The old
+detections are replaced; events that relied on them are updated, or removed when nothing
+is left (new detections form events again as usual).
+"""
+
+from __future__ import annotations
+
+import logging
+
+from sqlalchemy import delete, select
+
+from ..config import Settings
+from ..db import session_scope
+from ..models import Detection, Event, Job, JobState, Segment, SegmentStatus, utcnow
+
+log = logging.getLogger(__name__)
+
+
+class ReanalyseError(ValueError):
+    pass
+
+
+def reanalyse_segment(settings: Settings, segment_id: int) -> int:
+    """Queue the recording for detection again. Returns how many detections were removed."""
+    with session_scope() as s:
+        seg = s.get(Segment, segment_id)
+        if seg is None:
+            raise ReanalyseError("unknown recording")
+        if seg.deleted_at is not None:
+            raise ReanalyseError("the recording was deleted by retention")
+        if seg.status == SegmentStatus.NEW:
+            return 0  # already on its way
+        busy = s.scalar(select(Job.id).where(Job.segment_id == segment_id,
+                                             Job.state == JobState.LEASED).limit(1))
+        if busy is not None:
+            raise ReanalyseError("a worker is analysing this recording right now")
+        dets = s.scalars(select(Detection).where(Detection.segment_id == segment_id)).all()
+        events = {d.event_id for d in dets if d.event_id is not None}
+        for d in dets:
+            s.delete(d)
+        s.execute(delete(Job).where(Job.segment_id == segment_id))
+        s.flush()
+        for event_id in events:
+            _refresh_event(settings, s, event_id, seg)
+        if seg.derived_path:
+            (settings.data_dir / seg.derived_path).unlink(missing_ok=True)
+        seg.derived_path = None
+        seg.status = SegmentStatus.NEW
+        seg.error = None
+        seg.has_target = False
+        seg.max_confidence = None
+        log.info("recording %s queued for detection again (%d detection(s) removed)",
+                 segment_id, len(dets))
+        return len(dets)
+
+
+def _refresh_event(settings: Settings, s, event_id: int, seg: Segment) -> None:
+    """Recompute an event from its remaining detections, or remove it if none are left."""
+    ev = s.get(Event, event_id)
+    if ev is None:
+        return
+    left = s.scalars(select(Detection).where(Detection.event_id == event_id)).all()
+    if not left:
+        for rel in (ev.clip_path, ev.thumb_path):
+            if rel:
+                (settings.data_dir / rel).unlink(missing_ok=True)
+        segments = list(ev.segments)
+        s.delete(ev)
+        s.flush()
+        for g in segments:  # unpin footage no other event keeps
+            if not s.scalar(select(Event.id).where(Event.segments.contains(g)).limit(1)):
+                g.pinned = False
+        return
+    best = max(left, key=lambda d: d.confidence)
+    ev.first_ts = min(d.ts for d in left)
+    ev.last_ts = max(d.ts for d in left)
+    ev.max_confidence = best.confidence
+    ev.best_detection_id = best.id
+    ev.detection_count = len(left)
+    if not any(d.segment_id == seg.id for d in left) and seg in ev.segments:
+        ev.segments.remove(seg)
+    ev.clip_dirty = True
+    ev.updated_at = utcnow()

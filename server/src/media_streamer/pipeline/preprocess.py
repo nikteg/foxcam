@@ -19,6 +19,7 @@ from ..config import Settings
 from ..db import session_scope
 from ..models import CameraState, Job, MaskVersion, Segment, SegmentStatus
 from ..profiles import camera_profiles
+from .compaction import playable_file
 
 log = logging.getLogger(__name__)
 
@@ -57,9 +58,12 @@ def preprocess_segment(settings: Settings, segment_id: int) -> None:
         if seg is None or seg.status != SegmentStatus.NEW:
             return
         camera_id, rel = seg.camera_id, seg.path
-    src = settings.recordings_dir / rel
     updates: dict = {}
     try:
+        # Its own file, or (analysed again after compaction) cut out of its hourly file.
+        src = playable_file(settings, segment_id)
+        if src is None:
+            raise FileNotFoundError("the recording file is gone")
         stats = ffmpeg.light_stats(src, seg.duration_s)
         elev = sun_elevation(settings, seg)
         if stats:

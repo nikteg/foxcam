@@ -97,13 +97,28 @@ def test_expired_leases_are_reclaimed(settings, two_jobs):
 
 def test_requeue_resets_a_dead_job(settings, two_jobs):
     job_id = two_jobs[0]
+    derived = settings.data_dir / "derived" / "old.mp4"  # the worker copy still exists
+    derived.parent.mkdir(parents=True, exist_ok=True)
+    derived.write_bytes(b"x")
     with session_scope() as s:
         s.get(Job, job_id).state = JobState.DEAD
         s.get(Job, job_id).attempts = 2
-    queue.requeue(job_id)
+    queue.requeue(settings, job_id)
     with session_scope() as s:
         j = s.get(Job, job_id)
         assert (j.state, j.attempts) == (JobState.PENDING, 0)
+
+
+def test_requeue_without_worker_copy_analyses_the_recording_again(settings, two_jobs):
+    job_id = two_jobs[0]  # its derived file was deleted after the jobs were done
+    with session_scope() as s:
+        job = s.get(Job, job_id)
+        job.state, seg_id = JobState.DONE, job.segment_id
+        job.segment.status = SegmentStatus.DONE
+    queue.requeue(settings, job_id)
+    with session_scope() as s:
+        assert s.get(Job, job_id) is None  # replaced by preprocessing
+        assert s.get(Segment, seg_id).status == SegmentStatus.NEW
 
 
 def test_stats(settings, two_jobs):

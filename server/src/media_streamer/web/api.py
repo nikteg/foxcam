@@ -19,8 +19,9 @@ from ..accounts import Principal
 from ..config import Settings
 from ..db import session_scope
 from ..mediamtx import MediaMtx
-from ..models import CameraRole, Detection, Event, Segment
+from ..models import Archive, CameraRole, Detection, Event, Segment
 from ..pipeline import compaction, queue, uploader
+from ..pipeline.reanalyse import ReanalyseError, reanalyse_segment
 from ..storage import StorageError, boto3_available, get_storage
 from . import queries
 from .api_cameras import resync
@@ -222,6 +223,53 @@ def segment(segment_id: int, p: Principal = Depends(principal)) -> dict[str, Any
     return queries.segment_dict(_segment(p, segment_id))
 
 
+@router.post("/segments/{segment_id}/reanalyse")
+def reanalyse(segment_id: int, settings: Settings = Depends(settings_dep),
+              p: Principal = Depends(principal)) -> dict[str, Any]:
+    """Run detection on the recording again (current mask and profiles); its detections
+    are replaced. Editors of the camera."""
+    seg = _segment(p, segment_id)
+    check_camera(p, seg.camera_id, CameraRole.EDITOR)
+    try:
+        removed = reanalyse_segment(settings, segment_id)
+    except ReanalyseError as e:
+        raise HTTPException(409, str(e)) from e
+    return {"status": "queued", "detections_removed": removed}
+
+
+@router.get("/archives")
+def archives(camera: str | None = None, day: str | None = Query(None, description="YYYY-MM-DD"),
+             limit: int = Query(200, le=2000),
+             p: Principal = Depends(principal)) -> list[dict[str, Any]]:
+    """Hourly files made by compaction."""
+    return queries.archives(camera, day, limit, _camera_filter(p, camera))
+
+
+def _archive(p: Principal, archive_id: int) -> Archive:
+    with session_scope() as s:
+        arc = s.get(Archive, archive_id)
+        if arc is None or not p.can(arc.camera_id):
+            raise HTTPException(404, "unknown hourly file")
+        return arc
+
+
+@router.get("/archives/{archive_id}/play")
+def archive_play(archive_id: int, settings: Settings = Depends(settings_dep),
+                 p: Principal = Depends(principal)) -> Response:
+    arc = _archive(p, archive_id)
+    rel = None if arc.deleted_at else arc.path
+    return _serve(settings, settings.recordings_dir, rel, arc.remote_key, "video/mp4")
+
+
+@router.get("/archives/{archive_id}/download")
+def archive_download(archive_id: int, settings: Settings = Depends(settings_dep),
+                     p: Principal = Depends(principal)) -> Response:
+    arc = _archive(p, archive_id)
+    rel = None if arc.deleted_at else arc.path
+    name = f"{arc.camera_id}_{arc.start_at:%Y%m%d_%H%M%S}_hour{arc.id}.mp4"
+    return _serve(settings, settings.recordings_dir, rel, arc.remote_key, "video/mp4", name)
+
+
 @router.get("/segments/{segment_id}/jobs")
 def segment_jobs(segment_id: int, settings: Settings = Depends(settings_dep),
                  p: Principal = Depends(principal)) -> list[dict[str, Any]]:
@@ -343,6 +391,9 @@ def queue_status(state: str | None = None,
 
 
 @router.post("/queue/jobs/{job_id}/requeue", dependencies=[Depends(require_admin)])
-def requeue(job_id: int) -> dict[str, str]:
-    queue.requeue(job_id)
+def requeue(job_id: int, settings: Settings = Depends(settings_dep)) -> dict[str, str]:
+    try:
+        queue.requeue(settings, job_id)
+    except ReanalyseError as e:
+        raise HTTPException(409, str(e)) from e
     return {"status": "ok"}

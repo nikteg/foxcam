@@ -215,20 +215,30 @@ def reap(settings: Settings) -> int:
         return len(expired)
 
 
-def requeue(job_id: int) -> None:
-    """Manual retry from the UI."""
+def requeue(settings: Settings, job_id: int) -> None:
+    """Manual retry from the UI. Once the masked copy is gone (deleted after the jobs were
+    done), the whole recording is analysed again instead (see reanalyse)."""
     with session_scope() as s:
         job = s.get(Job, job_id)
         if job is None or job.state == JobState.LEASED:
             return
-        job.state = JobState.PENDING
-        job.attempts = 0
-        job.available_at = utcnow()
-        job.error = None
-        job.finished_at = None
-        if job.segment.derived_path:
+        derived = job.segment.derived_path
+        if not derived or not (settings.data_dir / derived).exists():
+            segment_id = job.segment_id
+        else:
+            segment_id = None
+        if segment_id is None:
+            job.state = JobState.PENDING
+            job.attempts = 0
+            job.available_at = utcnow()
+            job.error = None
+            job.finished_at = None
             job.segment.status = SegmentStatus.QUEUED
             job.segment.error = None
+    if segment_id is not None:
+        from .reanalyse import reanalyse_segment  # deferred: reanalyse imports models only
+
+        reanalyse_segment(settings, segment_id)
 
 
 def stats() -> dict[str, Any]:
