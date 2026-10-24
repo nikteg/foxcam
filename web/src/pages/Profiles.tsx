@@ -60,7 +60,7 @@ const aliasMap = (rows: AliasRow[]): Record<string, string> =>
     rows.filter((r) => r.from.trim() && r.to.trim()).map((r) => [r.from.trim(), r.to.trim()]),
   );
 
-/** Detection profiles: shown on the Cameras page (anchor #profiles). */
+/** Detection profiles: Cameras → Detection profiles (/cameras/profiles). */
 export function ProfilesSection() {
   const { t, rich } = useI18n();
   const profiles = useProfiles();
@@ -108,9 +108,9 @@ export function ProfilesSection() {
   );
 }
 
-/** Old /profiles links land on the Cameras page section. */
+/** Old /profiles links land on Cameras → Detection profiles. */
 export function Profiles() {
-  return <Navigate to="/cameras#profiles" replace />;
+  return <Navigate to="/cameras/profiles" replace />;
 }
 
 function ProfileCard({

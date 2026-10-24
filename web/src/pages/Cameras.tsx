@@ -18,8 +18,9 @@ import {
   MessageBarBody,
   Radio,
   RadioGroup,
-  Subtitle2,
   Switch,
+  Tab,
+  TabList,
   Text,
   Tooltip,
 } from "@fluentui/react-components";
@@ -34,8 +35,8 @@ import {
   VideoClip20Regular,
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { useLocation } from "react-router";
+import { useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 
 import { api, type Camera, type CameraSource, type RecordingProfile } from "../api";
 import { hasRole, useMe } from "../auth";
@@ -83,18 +84,24 @@ export function Cameras() {
   const [sharing, setSharing] = useState<Camera | null>(null);
   const me = useMe();
   const isAdmin = me?.is_admin ?? false;
-  const { hash } = useLocation();
-  const loaded = !cameras.isPending;
-  useEffect(() => {
-    if (hash && loaded) document.getElementById(hash.slice(1))?.scrollIntoView();
-  }, [hash, loaded]);
+  // Sub-pages with their own URL (links work even while parts are still loading).
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const tab = !isAdmin
+    ? "cameras"
+    : pathname.endsWith("/profiles")
+      ? "profiles"
+      : pathname.endsWith("/integrations")
+        ? "integrations"
+        : "cameras";
 
   return (
     <>
       <PageHeader
         title={t("nav.cameras")}
         actions={
-          me?.can_add_cameras && (
+          me?.can_add_cameras &&
+          tab === "cameras" && (
             <Button appearance="primary" icon={<Add20Regular />} onClick={() => setAdding(true)}>
               {t("addCamera.title")}
             </Button>
@@ -107,36 +114,46 @@ export function Cameras() {
       </PageHeader>
 
       {isAdmin && (
+        <TabList
+          className="block"
+          selectedValue={tab}
+          onTabSelect={(_, d) =>
+            void navigate(d.value === "cameras" ? "/cameras" : `/cameras/${String(d.value)}`)
+          }
+        >
+          <Tab value="cameras">{t("nav.cameras")}</Tab>
+          <Tab value="profiles">{t("profiles.title")}</Tab>
+          <Tab value="integrations">{t("cameras.integrations")}</Tab>
+        </TabList>
+      )}
+
+      {tab === "integrations" && (
+        <div className="cards">
+          <TapoAccountCard />
+        </div>
+      )}
+
+      {tab === "profiles" && <ProfilesSection />}
+
+      {tab === "cameras" && (
         <>
-          <Subtitle2 as="h2" className="section">
-            {t("cameras.integrations")}
-          </Subtitle2>
+          <QueryState error={cameras.error} loading={cameras.isPending} />
+          {cameras.data?.length === 0 && <Empty>{t("cameras.none")}</Empty>}
           <div className="cards">
-            <TapoAccountCard />
+            {cameras.data?.map((c) => (
+              <CameraCard
+                key={c.id}
+                camera={c}
+                onEdit={() => setEditing(c)}
+                onRemove={() => setRemoving(c)}
+                onProfiles={() => setChoosing(c)}
+                onRecording={() => setRecordingFor(c)}
+                onShare={me?.enabled ? () => setSharing(c) : undefined}
+              />
+            ))}
           </div>
         </>
       )}
-
-      <Subtitle2 as="h2" className="section">
-        {t("nav.cameras")}
-      </Subtitle2>
-      <QueryState error={cameras.error} loading={cameras.isPending} />
-      {cameras.data?.length === 0 && <Empty>{t("cameras.none")}</Empty>}
-      <div className="cards">
-        {cameras.data?.map((c) => (
-          <CameraCard
-            key={c.id}
-            camera={c}
-            onEdit={() => setEditing(c)}
-            onRemove={() => setRemoving(c)}
-            onProfiles={() => setChoosing(c)}
-            onRecording={() => setRecordingFor(c)}
-            onShare={me?.enabled ? () => setSharing(c) : undefined}
-          />
-        ))}
-      </div>
-
-      {isAdmin && <ProfilesSection />}
 
       <AddCameraDialog open={adding} onClose={() => setAdding(false)} />
       {editing && <EditCameraDialog camera={editing} onClose={() => setEditing(null)} />}

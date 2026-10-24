@@ -41,6 +41,8 @@ const router = createBrowserRouter([
       { path: "settings", Component: Settings },
       { path: "account", Component: Account },
       { path: "cameras", Component: Cameras },
+      { path: "cameras/profiles", Component: Cameras },
+      { path: "cameras/integrations", Component: Cameras },
       { path: "profiles", Component: Profiles },
       { path: "cameras/:cameraId/mask", Component: MaskEditor },
       { path: "*", Component: NotFound },

@@ -108,7 +108,7 @@ export function Detections() {
             as="a"
             appearance="subtle"
             icon={<ScanObject20Regular />}
-            {...routerHref("/cameras#profiles")}
+            {...routerHref("/cameras/profiles")}
           >
             {t("profiles.title")}
           </Button>
