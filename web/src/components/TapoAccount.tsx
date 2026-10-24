@@ -8,10 +8,16 @@ import {
   Input,
   MessageBar,
   MessageBarBody,
+  Select,
   Spinner,
   Text,
 } from "@fluentui/react-components";
-import { Cloud24Regular, PlugConnected20Regular, SignOut20Regular } from "@fluentui/react-icons";
+import {
+  Add20Regular,
+  Cloud24Regular,
+  PlugConnected20Regular,
+  SignOut20Regular,
+} from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -29,6 +35,76 @@ export function TapoNotInstalled() {
         {rich("tapo.notInstalled", { command: <code>{INSTALL_COMMAND}</code> })}
       </MessageBarBody>
     </MessageBar>
+  );
+}
+
+/** Cameras on the signed-in Tapo account, each with an Add button (or where it was added). */
+export function TapoCameraList() {
+  const { t } = useI18n();
+  const client = useQueryClient();
+  const devices = useQuery({ queryKey: ["tapo", "devices"], queryFn: api.tapoDevices });
+  const [resolution, setResolution] = useState<"HD" | "VGA">("HD");
+  const add = useMutation({
+    mutationFn: api.addCamera,
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["cameras"] });
+      void client.invalidateQueries({ queryKey: ["status"] });
+      void client.invalidateQueries({ queryKey: ["tapo", "devices"] });
+    },
+  });
+  const error = devices.error ?? add.error;
+
+  return (
+    <div className="form-stack">
+      {devices.isPending && <Spinner size="small" label={t("addCamera.findingCameras")} />}
+      {error && (
+        <MessageBar intent="error">
+          <MessageBarBody>{error.message}</MessageBarBody>
+        </MessageBar>
+      )}
+      {devices.data?.length === 0 && <Body1>{t("addCamera.noTapoCameras")}</Body1>}
+      {devices.data && devices.data.length > 0 && (
+        <>
+          <Field label={t("addCamera.streamQuality")} hint={t("addCamera.tapoWarning")}>
+            <Select value={resolution} onChange={(_, d) => setResolution(d.value as "HD" | "VGA")}>
+              <option value="HD">{t("addCamera.qualityHd")}</option>
+              <option value="VGA">{t("addCamera.qualityVga")}</option>
+            </Select>
+          </Field>
+          <ul className="device-list">
+            {devices.data.map((d) => (
+              <li key={d.device_id}>
+                <span className="device-name">
+                  <Text weight="semibold">{d.name}</Text>
+                  <Caption1 className="muted">{d.model}</Caption1>
+                </span>
+                {d.camera_id ? (
+                  <Tag kind="ok">{t("addCamera.addedAs", { id: d.camera_id })}</Tag>
+                ) : (
+                  <Button
+                    icon={<Add20Regular />}
+                    disabled={add.isPending}
+                    onClick={() =>
+                      add.mutate({
+                        name: d.name,
+                        source: {
+                          type: "tapo_cloud",
+                          device_id: d.device_id,
+                          device_name: d.name,
+                          resolution,
+                        },
+                      })
+                    }
+                  >
+                    {t("common.add")}
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -166,17 +242,20 @@ export function TapoAccountCard() {
             <TapoSignIn />
           </>
         ) : s.connected ? (
-          <div className="row wrap">
-            <Body1>{rich("tapo.signedInAs", { email: <b>{s.email ?? "?"}</b> })}</Body1>
-            <Button
-              size="small"
-              icon={<SignOut20Regular />}
-              disabled={logout.isPending}
-              onClick={() => logout.mutate()}
-            >
-              {t("tapo.signOut")}
-            </Button>
-          </div>
+          <>
+            <div className="row wrap">
+              <Body1>{rich("tapo.signedInAs", { email: <b>{s.email ?? "?"}</b> })}</Body1>
+              <Button
+                size="small"
+                icon={<SignOut20Regular />}
+                disabled={logout.isPending}
+                onClick={() => logout.mutate()}
+              >
+                {t("tapo.signOut")}
+              </Button>
+            </div>
+            <TapoCameraList />
+          </>
         ) : (
           <TapoSignIn />
         ))}

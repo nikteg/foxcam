@@ -1,5 +1,4 @@
 import {
-  Body1,
   Button,
   Caption1,
   CompoundButton,
@@ -9,14 +8,12 @@ import {
   DialogContent,
   DialogSurface,
   DialogTitle,
-  Divider,
   Field,
   Input,
   MessageBar,
   MessageBarBody,
   Select,
   Spinner,
-  Text,
 } from "@fluentui/react-components";
 import {
   Add20Regular,
@@ -33,8 +30,7 @@ import { useState, type ReactElement } from "react";
 
 import { api, type CameraSource, type ProbeResult } from "../api";
 import { useI18n, type MessageKey } from "../i18n";
-import { TapoNotInstalled, TapoSignIn } from "./TapoAccount";
-import { Tag } from "./ui";
+import { TapoCameraList, TapoNotInstalled, TapoSignIn } from "./TapoAccount";
 
 type Kind = "tapo" | "rtsp" | "file" | "test";
 
@@ -174,13 +170,6 @@ function TapoStep({ onDone }: { onDone: () => void }) {
   const { t } = useI18n();
   const status = useQuery({ queryKey: ["tapo", "status"], queryFn: api.tapoStatus });
   const connected = (status.data?.connected && !status.data.expired) ?? false;
-  const devices = useQuery({
-    queryKey: ["tapo", "devices"],
-    queryFn: api.tapoDevices,
-    enabled: connected,
-  });
-  const [resolution, setResolution] = useState<"HD" | "VGA">("HD");
-  const add = useAddCamera();
 
   if (status.isPending) return <Spinner size="small" />;
   if (status.data && !status.data.available) return <TapoNotInstalled />;
@@ -188,50 +177,7 @@ function TapoStep({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="form-stack">
-      <MessageBar intent="info">
-        <MessageBarBody>{t("addCamera.tapoWarning")}</MessageBarBody>
-      </MessageBar>
-      <Field label={t("addCamera.streamQuality")}>
-        <Select value={resolution} onChange={(_, d) => setResolution(d.value as "HD" | "VGA")}>
-          <option value="HD">{t("addCamera.qualityHd")}</option>
-          <option value="VGA">{t("addCamera.qualityVga")}</option>
-        </Select>
-      </Field>
-      <Divider />
-      {devices.isPending && <Spinner size="small" label={t("addCamera.findingCameras")} />}
-      <ErrorBar error={devices.error ?? add.error} />
-      {devices.data?.length === 0 && <Body1>{t("addCamera.noTapoCameras")}</Body1>}
-      <ul className="device-list">
-        {devices.data?.map((d) => (
-          <li key={d.device_id}>
-            <span className="device-name">
-              <Text weight="semibold">{d.name}</Text>
-              <Caption1 className="muted">{d.model}</Caption1>
-            </span>
-            {d.camera_id ? (
-              <Tag kind="ok">{t("addCamera.addedAs", { id: d.camera_id })}</Tag>
-            ) : (
-              <Button
-                icon={<Add20Regular />}
-                disabled={add.isPending}
-                onClick={() =>
-                  add.mutate({
-                    name: d.name,
-                    source: {
-                      type: "tapo_cloud",
-                      device_id: d.device_id,
-                      device_name: d.name,
-                      resolution,
-                    },
-                  })
-                }
-              >
-                {t("common.add")}
-              </Button>
-            )}
-          </li>
-        ))}
-      </ul>
+      <TapoCameraList />
       <div className="row">
         <Button appearance="primary" onClick={onDone}>
           {t("common.done")}

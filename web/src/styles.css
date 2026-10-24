@@ -853,6 +853,12 @@ details.helper summary {
 .integration-card {
   max-width: 640px;
 }
+/* Let fields shrink to the card instead of growing to their longest option. */
+.integration-card .form-stack > *,
+.integration-card .fui-Select {
+  min-width: 0;
+  max-width: 100%;
+}
 
 .fui-Badge {
   white-space: nowrap;

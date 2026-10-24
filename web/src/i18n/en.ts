@@ -415,7 +415,7 @@ export const en = {
     "Waiting jobs of this profile are cancelled. Detections and events already found are kept.",
 
   "cameras.profilesIntro":
-    "{n} {n:profile|profiles} decide what each camera's recordings are analysed for.",
+    "{n} {n:profile decides|profiles decide} what each camera's recordings are analysed for.",
   "cameras.manageProfiles": "Manage detection profiles",
   "cameras.noProfiles": "none (not analysed)",
   "cameras.detect": "Detection",
