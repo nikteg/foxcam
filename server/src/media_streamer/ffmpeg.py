@@ -88,9 +88,12 @@ def light_stats(src: Path, duration_s: float, samples: int = 6) -> LightStats | 
 
 
 def thumbnail(src: Path, dst: Path, at_s: float = 0.0, width: int = 480,
-              box: Rect | None = None) -> None:
+              box: Rect | None = None, masks: list[Rect] | None = None) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
     vf = []
+    for x, y, w, h in masks or []:  # censor areas, e.g. for images leaving the server
+        vf.append(f"drawbox=x=iw*{x:.5f}:y=ih*{y:.5f}:w=iw*{w:.5f}:h=ih*{h:.5f}"
+                  ":color=black:t=fill")
     if box:
         x, y, w, h = box
         vf.append(f"drawbox=x=iw*{x:.5f}:y=ih*{y:.5f}:w=iw*{w:.5f}:h=ih*{h:.5f}"

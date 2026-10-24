@@ -6,7 +6,7 @@ import asyncio
 import logging
 from collections.abc import Callable
 
-from .. import profiles
+from .. import notify, profiles
 from ..config import Settings
 from . import events, preprocess, queue, retention, scanner, uploader
 
@@ -63,4 +63,5 @@ def start_background(settings: Settings) -> list[asyncio.Task[None]]:
         asyncio.create_task(_loop("events", 10, lambda: _events_tick(settings))),
         asyncio.create_task(_loop("retention", 600, lambda: retention.run_retention(settings))),
         asyncio.create_task(_loop("uploader", 30, lambda: uploader.upload_pending(settings))),
+        asyncio.create_task(_loop("notifier", 5, lambda: notify.deliver_pending(settings))),
     ]

@@ -18,6 +18,9 @@ dependencies = [
 tapo-cloud = ["ontapo>=0.1.0"]
 # Upload clips/recordings to S3-compatible object storage (AWS, R2, B2, MinIO…).
 s3 = ["boto3>=1.35"]
+# Notifications to ~100 services (Telegram, Discord, Pushover, Gotify, e-mail…) via Apprise.
+# ntfy and webhooks work without it.
+notify = ["apprise>=1.9"]
 
 [project.scripts]
 media-streamer = "media_streamer.cli:main"

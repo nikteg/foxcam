@@ -3,13 +3,6 @@
 ## Planned
 
 - **Authentication** – viewer/admin roles behind a login proxy. Design: [AUTH.md](AUTH.md).
-- **Notifications** when a fox event is created (or ends, with the clip):
-  - push via [ntfy](https://ntfy.sh) (self-hosted or ntfy.sh), Home Assistant webhook, or
-    Telegram bot;
-  - per-camera quiet hours and a minimum confidence;
-  - payload: label, confidence, camera, time, thumbnail, link to the event in the UI.
-  - Implementation sketch: a `notifications` section in `config.yaml` and a hook called from
-    `pipeline/events.py` when an event's clip is built for the first time.
 - **Fine-tuning workflow** – turn ✅/❌ feedback into a YOLO/RF-DETR dataset (crops + labels),
   a training script for the GPU box, and side-by-side model comparison on `samples/`.
 - **Remote recorder at the cabin** – documented Raspberry Pi + Tailscale setup that pulls RTSP
@@ -19,6 +12,9 @@
   the CLI); today every job pays ~25 s of model loading.
 
 ## Ideas
+
+- Notification templates (custom title/body per channel) and digest mode (one summary per
+  night instead of one message per event).
 
 - Motion pre-filter (skip segments without motion before queueing) to save GPU time.
 - Night-only schedule per camera (don't queue daylight segments).

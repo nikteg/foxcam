@@ -16,7 +16,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /app
 COPY server/pyproject.toml ./
 COPY server/src ./src
-RUN uv pip install --system ".[tapo-cloud,s3]"
+RUN uv pip install --system ".[tapo-cloud,s3,notify]"
 COPY --from=web /web/dist /app/web-dist
 
 ENV MEDIA_STREAMER_CONFIG=/app/config.yaml \

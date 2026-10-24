@@ -218,6 +218,71 @@ class StorageConfig(BaseModel):
     s3: S3Config = S3Config()
 
 
+NOTIFY_TRIGGERS = ("event.new", "event.clip")
+_HHMM = r"([01]\d|2[0-3]):[0-5]\d"
+
+
+class ChannelConfig(BaseModel):
+    """Where to send event notifications (see docs/NOTIFICATIONS.md).
+
+    - ``ntfy``: push via an ntfy server (ntfy.sh or self-hosted), image attached.
+    - ``webhook``: POST JSON to any URL (Home Assistant, n8n, your code), optionally signed.
+    - ``apprise``: any of ~100 services (Telegram, Discord, Pushover, Gotify, Slack, e-mail,
+      …) through an Apprise URL. Needs the ``notify`` extra.
+    """
+
+    id: str = Field(pattern=PROFILE_ID, max_length=40)
+    name: str | None = None
+    type: Literal["ntfy", "webhook", "apprise"]
+    enabled: bool = True
+    # event.new = as soon as an event starts; event.clip = when its clip is ready.
+    # (Not called "on": YAML reads a bare `on:` key as the boolean true.)
+    when: list[Literal["event.new", "event.clip"]] = Field(default=["event.new"], min_length=1)
+    # Filters; None = all.
+    cameras: list[str] | None = None
+    profiles: list[str] | None = None
+    labels: list[str] | None = None
+    min_confidence: float = Field(default=0, ge=0, le=1)
+    # e.g. "22:00-07:00": no notifications in that window (notifications.timezone).
+    quiet_hours: str | None = Field(default=None, pattern=rf"^{_HHMM}-{_HHMM}$")
+    # At most one notification per camera within this many minutes.
+    cooldown_minutes: float = Field(default=0, ge=0)
+    # Attach the frame with the detection box (censor areas blacked out).
+    include_image: bool = True
+    # ntfy
+    server: str = "https://ntfy.sh"
+    topic: str | None = None
+    token: str | None = None
+    username: str | None = None
+    password: str | None = None
+    priority: int = Field(default=3, ge=1, le=5)
+    tags: list[str] = []
+    # webhook (url) / apprise (url)
+    url: str | None = None
+    # webhook: HMAC-SHA256 of the body in X-Media-Streamer-Signature: sha256=<hex>
+    secret: str | None = None
+    headers: dict[str, str] = {}
+    managed: Literal["config", "ui"] = "config"
+
+    @property
+    def display_name(self) -> str:
+        return self.name or self.id
+
+    def model_post_init(self, _ctx: object) -> None:
+        if self.type == "ntfy" and not self.topic:
+            raise ValueError("ntfy channels need a topic")
+        if self.type in ("webhook", "apprise") and not self.url:
+            raise ValueError(f"{self.type} channels need a url")
+        if self.type == "webhook" and not self.url.startswith(("http://", "https://")):
+            raise ValueError("webhook url must start with http:// or https://")
+
+
+class NotificationsConfig(BaseModel):
+    channels: list[ChannelConfig] = []
+    # IANA zone for quiet hours, e.g. Europe/Stockholm. None = the server's local time.
+    timezone: str | None = None
+
+
 class LocationConfig(BaseModel):
     latitude: float | None = None
     longitude: float | None = None
@@ -249,6 +314,10 @@ class Settings(BaseModel):
     retention: RetentionConfig = RetentionConfig()
     location: LocationConfig = LocationConfig()
     storage: StorageConfig = StorageConfig()
+    notifications: NotificationsConfig = NotificationsConfig()
+    # How users reach the web UI, e.g. http://192.168.1.10:8000 or https://cams.example.org.
+    # Used for links (and image/clip URLs) in notifications.
+    public_url: str | None = None
 
     def model_post_init(self, _ctx: object) -> None:
         self.data_dir = self.data_dir.resolve()
@@ -277,6 +346,10 @@ class Settings(BaseModel):
             self.profiles = [ProfileConfig(
                 id=DEFAULT_PROFILE, name="Fox", targets=self.detection.target_labels,
                 min_confidence=self.detection.min_confidence, default=True)]
+        self.public_url = self.public_url.rstrip("/") if self.public_url else None
+        cids = [c.id for c in self.notifications.channels]
+        if len(cids) != len(set(cids)):
+            raise ValueError("notification channel ids must be unique")
         pids = [p.id for p in self.profiles]
         if len(pids) != len(set(pids)):
             raise ValueError("profile ids must be unique")
@@ -333,6 +406,10 @@ def load_settings(path: str | os.PathLike[str] | None = None) -> Settings:
             f"config file {path} not found (copy config.example.yaml to config.yaml)"
         )
     raw = yaml.safe_load(_expand_env(path.read_text())) or {}
+    for ch in (raw.get("notifications") or {}).get("channels") or []:
+        if isinstance(ch, dict) and True in ch:  # YAML 1.1 reads a bare `on:` key as true
+            raise ValueError(f"notification channel {ch.get('id')!r}: use `when:` instead of "
+                             "`on:` (YAML reads `on` as true)")
     return Settings.model_validate(raw)
 
 

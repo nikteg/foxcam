@@ -36,6 +36,9 @@ anything else, and keep the clips.
   queue and camera management, on phone, tablet and desktop, in English and Swedish.
 - **Tapo cloud cameras.** Stream cameras you can't reach on the LAN (say, at the summer
   house) through the TP-Link cloud, like the Tapo app does.
+- **Notifications and webhooks.** Push to your phone with ntfy, call Home Assistant or any
+  webhook (HMAC-signed JSON), or notify Telegram, Discord, Pushover and ~100 more via
+  Apprise — with an image of the detection, quiet hours and per-camera cooldown.
 - **Optional S3.** Copy clips and recordings to AWS S3, Cloudflare R2, Backblaze B2,
   MinIO…, served through short-lived signed links.
 
@@ -198,6 +201,8 @@ detection profiles, censor areas and worker tokens can also be managed in the UI
 | `events` | pre/post roll, merge gap |
 | `retention` | how long to keep footage, events and unprocessed segments; disk cap |
 | `storage.s3` | S3-compatible bucket for clips and recordings |
+| `notifications` | ntfy / webhook / Apprise channels, filters, quiet hours ([guide](docs/NOTIFICATIONS.md)) |
+| `public_url` | how you open the UI; used for links in notifications |
 | `location` | coordinates (sun elevation) and country (SpeciesNet geofencing) |
 
 ## Development
@@ -230,8 +235,9 @@ detection profiles, censor areas and worker tokens can also be managed in the UI
 | [Worker setup](docs/WORKER_SETUP.md) | GPU workers on Windows/WSL, Docker and Linux |
 | [Worker protocol](docs/WORKER_PROTOCOL.md) | HTTP API for workers and SaaS adapters |
 | [Models](docs/MODELS.md) | detection models compared on fox footage |
+| [Notifications](docs/NOTIFICATIONS.md) | ntfy, webhooks (payload, signatures, Home Assistant) and Apprise |
 | [Authentication](docs/AUTH.md) | design for UI login (not implemented yet) |
-| [Roadmap](docs/ROADMAP.md) | notifications and other planned work |
+| [Roadmap](docs/ROADMAP.md) | planned work |
 
 ## Security
 

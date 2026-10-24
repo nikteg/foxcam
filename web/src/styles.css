@@ -896,3 +896,9 @@ details.helper summary {
 .fui-CardHeader__description {
   margin-top: var(--spacingVerticalS);
 }
+
+.section-sub {
+  display: block;
+  margin-top: var(--spacingVerticalL);
+  margin-bottom: var(--spacingVerticalXS);
+}

@@ -46,6 +46,9 @@
    recordings with pre/post roll, plus a thumbnail with the box drawn. Event segments are pinned.
 5. **Retention** (every 10 min): see below.
 6. **Upload** (every 30 s, only with `storage.s3.enabled`): see [Object storage](#object-storage-s3).
+7. **Notify** (every 5 s): new events and finished clips are queued per matching channel in
+   the `notification` outbox and sent to ntfy / webhooks / Apprise, with retries
+   ([NOTIFICATIONS.md](NOTIFICATIONS.md)).
 
 ## Detection profiles
 
@@ -92,6 +95,8 @@ events with two clips.
 | `event` | Merged sighting of one label for one profile: time range, best detection, clip and thumbnail paths. |
 | `worker` | Last-seen info and tags per worker id (shown in the queue tab). |
 | `detection_profile` | Detection profiles added in the web UI. |
+| `notification_channel` | Notification channels added in the web UI. |
+| `notification` | Outbox: one row per channel, event and trigger; status, attempts, error. |
 | `mask_version` | Immutable censor-rectangle sets; segments reference the version they were censored with. |
 | `camera_state` | Per-camera private flag, current mask version and profile selection. |
 | `managed_camera` | Cameras added in the web UI (config.yaml cameras are not stored). |
@@ -154,6 +159,7 @@ server/src/media_streamer/
   ffmpeg.py          probe, censored derivative, light stats, thumbnails, clips
   pipeline/          scanner, preprocess, queue, events, retention, uploader, runner
   storage.py         S3-compatible object storage client (boto3)
+  notify.py          notification channels, outbox and senders (ntfy, webhook, Apprise)
   ingest/            publishers for tapo_cloud / file / test sources
   tapo_account.py    Tapo cloud sign-in (MFA) and device discovery for the UI
   web/               FastAPI app, worker API, public API, camera API

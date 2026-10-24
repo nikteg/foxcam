@@ -5,7 +5,18 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any, ClassVar
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Table
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -259,3 +270,40 @@ class Event(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     segments: Mapped[list[Segment]] = relationship(secondary=event_segments)
+
+
+class NotificationChannel(Base):
+    """A notification channel added in the web UI (config.yaml channels are not stored)."""
+
+    __tablename__ = "notification_channel"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    # Same fields as a config.yaml channel (see config.ChannelConfig).
+    config: Mapped[dict[str, Any]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class NotificationStatus:
+    PENDING = "pending"  # waiting to be sent (or retried)
+    SENT = "sent"
+    FAILED = "failed"  # gave up after retries
+    SKIPPED = "skipped"  # quiet hours / cooldown
+
+
+class Notification(Base):
+    """One notification for one channel: an outbox row, retried until sent."""
+
+    __tablename__ = "notification"
+    __table_args__ = (UniqueConstraint("channel_id", "event_id", "kind"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    channel_id: Mapped[str] = mapped_column(String, index=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("event.id", ondelete="CASCADE"), index=True)
+    camera_id: Mapped[str] = mapped_column(String)
+    kind: Mapped[str] = mapped_column(String)  # event.new | event.clip
+    status: Mapped[str] = mapped_column(String, default=NotificationStatus.PENDING, index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    error: Mapped[str | None] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime)

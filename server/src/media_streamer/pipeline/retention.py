@@ -16,6 +16,7 @@ from datetime import timedelta
 
 from sqlalchemy import func, select
 
+from .. import notify
 from ..config import Settings
 from ..db import session_scope
 from ..models import Event, Job, JobState, Segment, SegmentStatus, event_segments, utcnow
@@ -152,6 +153,7 @@ def run_retention(settings: Settings) -> dict[str, int]:
         "segments_age": _expire_by_age(settings),
         "segments_disk": _enforce_disk_cap(settings),
         "remote_recordings": _expire_remote_recordings(settings),
+        "notifications": notify.cleanup(),
     }
     if any(result.values()):
         log.info("retention: %s", result)

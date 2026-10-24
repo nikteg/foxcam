@@ -268,6 +268,11 @@ def public_settings(settings: Settings) -> dict[str, Any]:
     """Config as shown in the UI, with secrets removed."""
     cfg = settings.model_dump(mode="json")
     cfg["worker_token"] = "***" if settings.worker_token else None
+    for ch in cfg["notifications"]["channels"]:
+        for secret in ("token", "password", "secret"):
+            ch[secret] = "***" if ch.get(secret) else None
+        if ch.get("type") == "apprise" and ch.get("url"):
+            ch["url"] = ch["url"].split("://", 1)[0] + "://…"
     s3 = cfg["storage"]["s3"]
     for secret in ("access_key_id", "secret_access_key"):
         s3[secret] = "***" if s3[secret] else None

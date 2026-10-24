@@ -253,6 +253,65 @@ export interface StorageStatus {
   last_error?: string | null;
 }
 
+export type ChannelType = "ntfy" | "webhook" | "apprise";
+export type NotifyTrigger = "event.new" | "event.clip";
+
+/** A notification channel as sent to the server (secrets: empty = keep stored value). */
+export interface ChannelInput {
+  id: string;
+  name: string | null;
+  type: ChannelType;
+  enabled: boolean;
+  when: NotifyTrigger[];
+  cameras: string[] | null;
+  profiles: string[] | null;
+  labels: string[] | null;
+  min_confidence: number;
+  quiet_hours: string | null;
+  cooldown_minutes: number;
+  include_image: boolean;
+  server: string;
+  topic: string | null;
+  token: string | null;
+  username: string | null;
+  password: string | null;
+  priority: number;
+  tags: string[];
+  url: string | null;
+  secret: string | null;
+  headers: Record<string, string>;
+}
+
+/** As returned by the server: secrets replaced by has_* flags. */
+export interface Channel extends Omit<ChannelInput, "token" | "password" | "secret"> {
+  managed: "config" | "ui";
+  display_name: string;
+  has_token: boolean;
+  has_password: boolean;
+  has_secret: boolean;
+}
+
+export interface NotificationsOverview {
+  channels: Channel[];
+  public_url: string | null;
+  timezone: string | null;
+  apprise: boolean;
+}
+
+export interface Delivery {
+  id: number;
+  channel_id: string;
+  event_id: number;
+  camera_id: string;
+  label: string | null;
+  kind: NotifyTrigger;
+  status: "pending" | "sent" | "failed" | "skipped";
+  attempts: number;
+  error: string | null;
+  created_at: string;
+  sent_at: string | null;
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -379,6 +438,20 @@ export const api = {
     request<WorkerToken>("PUT", `/api/workers/tokens/${id}/tags`, { tags }),
   removeWorker: (id: string) =>
     request<{ status: string }>("DELETE", `/api/workers/${encodeURIComponent(id)}`),
+  notifications: () => request<NotificationsOverview>("GET", "/api/notifications"),
+  deliveries: () => request<Delivery[]>("GET", "/api/notifications/deliveries?limit=15"),
+  createChannel: (body: ChannelInput) =>
+    request<{ id: string }>("POST", "/api/notifications/channels", body),
+  updateChannel: (body: ChannelInput) =>
+    request<{ id: string }>(
+      "PUT",
+      `/api/notifications/channels/${encodeURIComponent(body.id)}`,
+      body,
+    ),
+  deleteChannel: (id: string) =>
+    request<{ status: string }>("DELETE", `/api/notifications/channels/${encodeURIComponent(id)}`),
+  testChannel: (id: string) =>
+    request<ProbeResult>("POST", `/api/notifications/channels/${encodeURIComponent(id)}/test`),
   requeue: (jobId: number) =>
     request<{ status: string }>("POST", `/api/queue/jobs/${jobId}/requeue`),
 };

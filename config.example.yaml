@@ -115,6 +115,27 @@ storage:
     recordings_days: 0        # delete archived recordings from the bucket after N days; 0 = never
     presign_seconds: 3600
 
+# Link target for notifications: how you open the web UI.
+# public_url: http://192.168.1.10:8000
+
+# Notifications when an event starts (event.new) or its clip is ready (event.clip).
+# Channels can also be added in the web UI (Settings -> Notifications). docs/NOTIFICATIONS.md
+# notifications:
+#   timezone: Europe/Stockholm      # quiet hours and times in messages
+#   channels:
+#     - id: phone
+#       type: ntfy                  # push via ntfy.sh or a self-hosted ntfy
+#       topic: foxes-at-the-cabin-7f3k
+#       when: [event.new, event.clip]   # note: `when`, not `on` (YAML reads on as true)
+#       quiet_hours: "23:00-06:00"
+#     - id: home-assistant
+#       type: webhook                # JSON POST, optionally HMAC-signed
+#       url: http://homeassistant.local:8123/api/webhook/media-streamer-events
+#       secret: ${WEBHOOK_SECRET:-}
+#     - id: telegram
+#       type: apprise               # ~100 services; needs the notify extra
+#       url: tgram://${TELEGRAM_BOT_TOKEN:-}/${TELEGRAM_CHAT_ID:-}
+
 location:
   # Used for sun elevation (day/night fallback) and as a hint to workers (SpeciesNet geofence).
   latitude: null

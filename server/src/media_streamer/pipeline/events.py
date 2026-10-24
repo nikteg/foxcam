@@ -16,7 +16,7 @@ from pathlib import Path
 
 from sqlalchemy import func, select
 
-from .. import ffmpeg
+from .. import ffmpeg, notify
 from ..config import Settings
 from ..db import session_scope
 from ..models import Detection, Event, Segment, utcnow
@@ -59,6 +59,8 @@ def assign_events(settings: Settings) -> int:
                     event.best_detection_id = best.id
             for d in dets:
                 d.event_id = event.id
+            # New events notify at once; a later rise above a channel's min_confidence too.
+            notify.enqueue(s, settings, event, "event.new")
             event.detection_count += len(dets)
             seg = s.get(Segment, segment_id)
             if seg not in event.segments:
@@ -149,5 +151,6 @@ def _build_clip(settings: Settings, event_id: int) -> bool:
         # The clip changed: upload it again (same key, overwritten).
         ev.clip_remote_key = None
         ev.thumb_remote_key = None
+        notify.enqueue(s, settings, ev, "event.clip")  # first clip only (once per channel)
         log.info("event %s: clip %s (%.0fs)", ev.id, clip_rel, duration)
     return True
