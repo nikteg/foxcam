@@ -18,6 +18,7 @@ services:
     # add docker-compose.vaapi.yml (Intel / AMD) or docker-compose.nvidia.yml.
     build: { context: ., dockerfile: server/Dockerfile }
     image: media-streamer:local
+    pull_policy: build # built here, never pulled (Komodo pulls before deploying)
     # Started through media-streamer: it sets the password the server, ingest and the
     # transcoders sign in with (see mediamtx.yml). Whichever container starts first creates
     # it in data/mediamtx/. MediaMTX faces the network, so it gets only that folder and the
@@ -39,6 +40,7 @@ services:
   server:
     build: { context: ., dockerfile: server/Dockerfile }
     image: media-streamer:local
+    pull_policy: build # built here, never pulled (Komodo pulls before deploying)
     restart: unless-stopped
     command: ["serve"]
     depends_on: [mediamtx]
@@ -62,6 +64,7 @@ services:
   ingest:
     build: { context: ., dockerfile: server/Dockerfile }
     image: media-streamer:local
+    pull_policy: build # built here, never pulled (Komodo pulls before deploying)
     restart: unless-stopped
     command: ["ingest"]
     depends_on: [mediamtx]
@@ -78,6 +81,7 @@ services:
     # recording profile says so (GPU via docker-compose.vaapi.yml / .nvidia.yml).
     build: { context: ., dockerfile: server/Dockerfile }
     image: media-streamer:local
+    pull_policy: build # built here, never pulled (Komodo pulls before deploying)
     restart: unless-stopped
     command: ["compact"]
     volumes:
