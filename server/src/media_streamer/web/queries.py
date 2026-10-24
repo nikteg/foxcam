@@ -214,7 +214,7 @@ def events(camera_id: str | None = None, limit: int = 100,
 
 def queue_view(limit: int = 100, state: str | None = None) -> dict[str, Any]:
     now = utcnow()
-    q = select(Job).order_by(Job.created_at.desc()).limit(limit)
+    q = select(Job).order_by(Job.created_at.desc(), Job.id.desc()).limit(limit)
     if state:
         q = q.where(Job.state == state)
     with session_scope() as s:

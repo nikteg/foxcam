@@ -68,11 +68,12 @@ def lease(settings: Settings, worker_id: str, info: dict[str, Any] | None = None
     with session_scope() as s:
         # Single UPDATE ... RETURNING => atomic claim even with several workers.
         # Newest first: fresh footage is the most interesting when catching up on a backlog.
+        # Ties on created_at (coarse clocks, e.g. Windows) fall back to insertion order.
         next_id = (
             select(Job.id)
             .where(Job.state.in_([JobState.PENDING, JobState.FAILED]), Job.available_at <= now,
                    Job.profile_id.in_(profiles))
-            .order_by(Job.priority.desc(), Job.created_at.desc())
+            .order_by(Job.priority.desc(), Job.created_at.desc(), Job.id.desc())
             .limit(1)
             .scalar_subquery()
         )
