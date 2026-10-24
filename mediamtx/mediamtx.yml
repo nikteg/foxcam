@@ -38,9 +38,10 @@ webrtcLocalTCPAddress: :8189
 authMethod: internal
 authInternalUsers:
   # Keep this user first. Start MediaMTX with `media-streamer mediamtx`, which sets its
-  # password (MTX_AUTHINTERNALUSERS_0_PASS) to the one in data/mediamtx-password or
+  # password (MTX_AUTHINTERNALUSERS_0_PASS) to the one in data/mediamtx/password or
   # config.yaml (mediamtx.password). The hash below matches no password: started any
   # other way, nobody gets video.
+  # The control API too: a path's runOnInit runs a command, so it is never anonymous.
   - user: media-streamer
     pass: sha256:Q0WQ2LdOSsIiQl8FqEhUZbnnPWAMoWFfRiYDYgeQ4R8=
     ips: ["127.0.0.1", "::1"]
@@ -48,12 +49,12 @@ authInternalUsers:
       - action: publish
       - action: read
       - action: playback
-  # The control API (the server configures paths): local processes only.
+      - action: api
+  # Metrics (counters, no secrets): local processes only.
   - user: any
     pass:
     ips: ["127.0.0.1", "::1"]
     permissions:
-      - action: api
       - action: metrics
   # To watch over RTSP from another device (VLC, Home Assistant), add a user with a
   # password and read access, e.g. rtsp://viewer:<password>@<host>:8554/<camera>:

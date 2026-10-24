@@ -106,15 +106,18 @@ user's access to that camera before forwarding. Only the camera's own stream and
 low-data copy are reachable, never `<camera>/raw` (the picture before burned-in censor
 areas).
 
-MediaMTX's API, HLS and WebRTC servers listen on 127.0.0.1, and video (publish, read)
-needs the `media-streamer` login: the server, ingest and the transcoders MediaMTX starts
-sign in with a password kept in `data/mediamtx-password` (or `mediamtx.password` in
-config.yaml). Being on the same machine is not enough, because a camera's source URL can
-point back at MediaMTX (`rtsp://127.0.0.1:8554/<other camera>/raw`). Start MediaMTX with
-`media-streamer mediamtx [mediamtx.yml] [--binary PATH]`, which hands it the password (`mise
-run mediamtx`, `scripts/dev.sh` and docker-compose.yml do). In Docker, the server and
-ingest share MediaMTX's network namespace for the API. WebRTC media flows directly between the browser and MediaMTX's port
-8189, only for sessions set up through the server.
+MediaMTX's API, HLS and WebRTC servers listen on 127.0.0.1, and video (publish, read) and
+the control API both need the `media-streamer` login: the server, ingest and the
+transcoders MediaMTX starts sign in with a password kept in `data/mediamtx/password` (or
+`mediamtx.password` in config.yaml). Being on the same machine is not enough: a camera's
+source URL can point back at MediaMTX (`rtsp://127.0.0.1:8554/<other camera>/raw`), and
+the API can add paths whose `runOnInit` runs a command. Only metrics stay open to local
+processes. Start MediaMTX with `media-streamer mediamtx [mediamtx.yml] [--binary PATH]
+[--password-file FILE]`, which hands it the password (`mise run mediamtx`, `scripts/dev.sh`
+and docker-compose.yml do). In Docker, the server and ingest share MediaMTX's network
+namespace for the API, and the MediaMTX container only gets `data/mediamtx/` (the
+password) and `data/recordings/`. WebRTC media flows directly between the browser and
+MediaMTX's port 8189, only for sessions set up through the server.
 
 To watch over RTSP from another device (VLC, Home Assistant), add a user with a password
 and `read` permission to `mediamtx.yml` (an example is in the file) and publish port 8554.

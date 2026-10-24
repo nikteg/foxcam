@@ -87,6 +87,15 @@ def _user_command(settings, args: argparse.Namespace) -> int:
     return 0
 
 
+def _exec_mediamtx(args: argparse.Namespace, password: str) -> None:
+    """Replace this process with MediaMTX, which then knows the internal login."""
+    from . import mediamtx_auth
+
+    env = {**os.environ, **mediamtx_auth.process_env(password)}
+    os.execvpe(args.binary, [args.binary, args.mediamtx_config], env)
+    raise SystemExit(127)  # only reached if exec did not replace the process
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="media-streamer")
     parser.add_argument("-c", "--config", help="config file (default: $MEDIA_STREAMER_CONFIG "
@@ -106,6 +115,9 @@ def main() -> None:
                                           "(the password the server and ingest use)")
     mtx.add_argument("mediamtx_config", nargs="?", default="mediamtx/mediamtx.yml")
     mtx.add_argument("--binary", default="mediamtx", help="the MediaMTX executable")
+    mtx.add_argument("--password-file", metavar="FILE",
+                     help="read (or create) the password here instead of from the config "
+                          "and data folder; then no config is needed (Docker)")
     sub.add_parser("ingest", help="publish non-RTSP sources (tapo_cloud, test, file) to MediaMTX")
     comp = sub.add_parser("compact", help="join finished segments into hourly files (and "
                                           "re-encode them per recording profile)")
@@ -177,6 +189,13 @@ def main() -> None:
     hw.add_argument("--device", help="Linux render node (default /dev/dri/renderD128)")
 
     args = parser.parse_args()
+    if args.cmd == "mediamtx" and args.password_file:
+        # Needs nothing but the password: the container gets no config or database.
+        from pathlib import Path
+
+        from . import mediamtx_auth
+
+        _exec_mediamtx(args, mediamtx_auth.stored(Path(args.password_file)))
     if args.cmd in ("transcode", "hwaccel"):  # no config needed (runs inside MediaMTX)
         logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
                             format="%(asctime)s %(levelname)-7s %(name)s: %(message)s")
@@ -208,8 +227,7 @@ def main() -> None:
     elif args.cmd == "mediamtx":
         from . import mediamtx_auth
 
-        env = {**os.environ, **mediamtx_auth.process_env(settings)}
-        os.execvpe(args.binary, [args.binary, args.mediamtx_config], env)
+        _exec_mediamtx(args, mediamtx_auth.password(settings))
     elif args.cmd == "ingest":
         import signal
 

@@ -377,15 +377,17 @@ def latest_segment_id(camera_id: str) -> int | None:
 
 
 def _redact_url(url: str) -> str:
-    """Without the login. The host follows the last @ before the path (a password may
-    contain @ too)."""
+    """Without the login. Passwords may contain unencoded @ and /: the login runs to the
+    last @ before the first / that follows an @ (the start of the path)."""
     if "://" not in url:
         return url
     scheme, rest = url.split("://", 1)
-    netloc, slash, path = rest.partition("/")
-    if "@" not in netloc:
+    first_at = rest.find("@")
+    if first_at < 0:
         return url
-    return f"{scheme}://***@{netloc.rsplit('@', 1)[1]}{slash}{path}"
+    slash = rest.find("/", first_at)
+    authority, path = (rest, "") if slash < 0 else (rest[:slash], rest[slash:])
+    return f"{scheme}://***@{authority.rsplit('@', 1)[1]}{path}"
 
 
 def _public_source(source: dict[str, Any]) -> dict[str, Any]:

@@ -150,7 +150,7 @@ class MediaMtxConfig(BaseModel):
     webrtc_url: str = "http://localhost:8889"
     hls_url: str = "http://localhost:8888"
     # Password of the `media-streamer` user in mediamtx.yml. None = a random one kept in
-    # <data_dir>/mediamtx-password ($MEDIA_MTX_PASSWORD wins); `media-streamer mediamtx`
+    # <data_dir>/mediamtx/password ($MEDIA_MTX_PASSWORD wins); `media-streamer mediamtx`
     # starts MediaMTX with it. Only needed here when MediaMTX runs elsewhere.
     password: str | None = None
     # Recording directory as seen by the MediaMTX process. Defaults to ``recordings_dir``.

@@ -18,15 +18,16 @@ services:
     build: { context: ., dockerfile: server/Dockerfile }
     image: media-streamer:local
     # Started through media-streamer: it sets the password the server, ingest and the
-    # transcoders sign in with (data/mediamtx-password, see mediamtx.yml).
-    command: ["mediamtx", "/mediamtx.yml"]
+    # transcoders sign in with (see mediamtx.yml). Whichever container starts first creates
+    # it in data/mediamtx/. MediaMTX faces the network, so it gets only that folder and the
+    # recordings: no config.yaml, database or other secrets.
+    command: ["mediamtx", "/mediamtx.yml", "--password-file", "/data/mediamtx/password"]
     restart: unless-stopped
     volumes:
       - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
-      - ${MEDIA_CONFIG:-./config.yaml}:/app/config.yaml:ro
-      - ${MEDIA_DATA_PATH:-./data}:/data
+      - ${MEDIA_DATA_PATH:-./data}/mediamtx:/data/mediamtx
+      - ${MEDIA_DATA_PATH:-./data}/recordings:/data/recordings
     environment:
-      MEDIA_DATA_DIR: /data
       TZ: UTC # recording file names in UTC (they include the offset either way)
     ports:
       - "${HTTP_PORT:-8000}:8000" # web UI, API and live view (the server, see below)

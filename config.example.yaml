@@ -39,7 +39,7 @@ mediamtx:
   webrtc_url: ${MEDIAMTX_WEBRTC_URL:-http://localhost:8889}
   hls_url: ${MEDIAMTX_HLS_URL:-http://localhost:8888}
   # Password the server, ingest and transcoders use with MediaMTX (user media-streamer in
-  # mediamtx.yml). Unset = a random one in data/mediamtx-password; start MediaMTX with
+  # mediamtx.yml). Unset = a random one in data/mediamtx/password; start MediaMTX with
   # `media-streamer mediamtx` to hand it over. Only set it when MediaMTX runs elsewhere
   # (there: MTX_AUTHINTERNALUSERS_0_PASS=<the same>).
   # password: ${MEDIA_MTX_PASSWORD}

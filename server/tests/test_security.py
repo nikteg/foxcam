@@ -3,6 +3,7 @@ sources users may add, sign-up and e-mail verification, reused camera ids, proxi
 
 from __future__ import annotations
 
+import base64
 import subprocess
 from pathlib import Path
 
@@ -89,10 +90,10 @@ def test_live_rest_patterns():
 def test_mediamtx_password_is_random_stable_and_private(settings):
     pw = mediamtx_auth.password(settings)
     assert len(pw) >= 24 and mediamtx_auth.password(settings) == pw
-    path = settings.data_dir / mediamtx_auth.FILE
-    assert path.stat().st_mode & 0o077 == 0
-    assert mediamtx_auth.process_env(settings) == {"MTX_AUTHINTERNALUSERS_0_PASS": pw,
-                                                    "MEDIA_MTX_PASSWORD": pw}
+    path = settings.data_dir / "mediamtx" / "password"
+    assert path.stat().st_mode & 0o077 == 0 and path.parent.stat().st_mode & 0o077 == 0
+    assert mediamtx_auth.process_env(pw) == {"MTX_AUTHINTERNALUSERS_0_PASS": pw,
+                                             "MEDIA_MTX_PASSWORD": pw}
     settings.mediamtx.password = "from config"
     assert mediamtx_auth.password(settings) == "from config"
     # Never shown in the UI's configuration view.
@@ -119,10 +120,66 @@ def test_mediamtx_yml_trusts_no_address_with_video():
     users = conf["authInternalUsers"]
     # media-streamer first (MTX_AUTHINTERNALUSERS_0_PASS), with a password hash.
     assert users[0]["user"] == mediamtx_auth.USER and users[0]["pass"].startswith("sha256:")
+    assert "api" in {p["action"] for p in users[0]["permissions"]}
     for u in users:
         actions = {p["action"] for p in u["permissions"]}
-        if u["user"] == "any":
-            assert actions <= {"api", "metrics"}, u
+        if u["user"] == "any":  # no video, and no control API (runOnInit runs commands)
+            assert actions <= {"metrics"}, u
+
+
+def test_the_password_moves_to_its_own_folder(settings):
+    old = settings.data_dir / "mediamtx-password"
+    old.write_text("from-before\n")
+    assert mediamtx_auth.password(settings) == "from-before"
+    assert not old.exists()
+    assert (settings.data_dir / "mediamtx" / "password").read_text().strip() == "from-before"
+
+
+def test_the_control_api_client_signs_in(settings):
+    import asyncio
+
+    from media_streamer.mediamtx import MediaMtx
+
+    seen: list[httpx.Request] = []
+
+    def api(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={"items": []})
+
+    mtx = MediaMtx(settings)
+    mtx.client._transport = httpx.MockTransport(api)
+    asyncio.run(mtx.paths())
+    pw = mediamtx_auth.password(settings)
+    expected = "Basic " + base64.b64encode(f"media-streamer:{pw}".encode()).decode()
+    assert seen[0].headers["authorization"] == expected
+    asyncio.run(mtx.aclose())
+
+
+def test_launcher_with_a_password_file_needs_no_config(tmp_path, monkeypatch):
+    import sys
+
+    from media_streamer import cli
+
+    calls = []
+    monkeypatch.setattr(cli.os, "execvpe", lambda *a: calls.append(a))
+    monkeypatch.setenv("MEDIA_STREAMER_CONFIG", str(tmp_path / "missing.yaml"))
+    pw_file = tmp_path / "mediamtx" / "password"
+    monkeypatch.setattr(sys, "argv", ["media-streamer", "mediamtx", "m.yml", "--binary",
+                                      "/bin/mtx", "--password-file", str(pw_file)])
+    with pytest.raises(SystemExit):
+        cli.main()
+    binary, argv, env = calls[0]
+    pw = pw_file.read_text().strip()
+    assert (binary, argv) == ("/bin/mtx", ["/bin/mtx", "m.yml"])
+    assert env["MTX_AUTHINTERNALUSERS_0_PASS"] == pw == env["MEDIA_MTX_PASSWORD"]
+
+
+def test_the_mediamtx_container_gets_no_secrets_but_its_password():
+    compose = yaml.safe_load((Path(__file__).parents[2] / "docker-compose.yml").read_text())
+    mtx = compose["services"]["mediamtx"]
+    targets = {v.removesuffix(":ro").rsplit(":", 1)[1] for v in mtx["volumes"]}
+    assert targets == {"/mediamtx.yml", "/data/mediamtx", "/data/recordings"}
+    assert "--password-file" in mtx["command"]
 
 
 @pytest.mark.parametrize("url", [
@@ -256,6 +313,74 @@ def test_an_invite_can_only_be_used_once(settings):
     assert e.value.status == 410
 
 
+def _invite(settings) -> str:
+    admin = accounts.create_user(settings, "admin@example.org", PASSWORD, is_admin=True)["id"]
+    _, token = accounts.create_invite(accounts.principal_for(admin),
+                                      [{"camera_id": "cam", "role": "viewer"}])
+    return token
+
+
+def _race(n: int, sign_up) -> tuple[list[int], list[accounts.AccountError]]:
+    """Run ``sign_up(i)`` in n threads at once."""
+    import threading
+
+    barrier = threading.Barrier(n)
+    ok: list[int] = []
+    failed: list[accounts.AccountError] = []
+
+    def run(i: int) -> None:
+        barrier.wait()
+        try:
+            ok.append(sign_up(i))
+        except accounts.AccountError as e:
+            failed.append(e)
+
+    threads = [threading.Thread(target=run, args=(i,)) for i in range(n)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    return ok, failed
+
+
+def test_one_invite_link_makes_one_account_even_at_once(settings):
+    token = _invite(settings)
+    before = accounts.user_count()
+    ok, failed = _race(6, lambda i: accounts.register(
+        settings, f"guest{i}@example.org", PASSWORD, None, token))
+    assert len(ok) == 1 and len(failed) == 5
+    assert all(e.status == 410 for e in failed)
+    # No stray accounts: the losers' sign-ups were rolled back with their claims.
+    assert accounts.user_count() == before + 1
+    assert accounts.camera_access("cam")[0]["user_id"] == ok[0]
+
+
+def test_one_invite_link_makes_one_oauth_account_even_at_once(settings):
+    token = _invite(settings)
+    before = accounts.user_count()
+    ok, failed = _race(4, lambda i: accounts.oauth_user(
+        settings, "google", f"sub-{i}", f"guest{i}@example.org", True, None, token))
+    assert len(ok) == 1 and [e.status for e in failed] == [410] * 3
+    assert accounts.user_count() == before + 1
+    from media_streamer.models import OAuthIdentity
+
+    with session_scope() as s:
+        assert s.query(OAuthIdentity).count() == 1
+
+
+def test_a_used_or_unknown_invite_creates_nothing(settings):
+    token = _invite(settings)
+    accounts.register(settings, "first@example.org", PASSWORD, None, token)
+    before = accounts.user_count()
+    for bad, status in ((token, 410), ("inv_nope", 404)):
+        with pytest.raises(accounts.AccountError) as e:
+            accounts.register(settings, "second@example.org", PASSWORD, None, bad)
+        assert e.value.status == status
+        with pytest.raises(accounts.AccountError):
+            accounts.oauth_user(settings, "github", "x", "second@example.org", True, None, bad)
+    assert accounts.user_count() == before
+
+
 # --- 6. reused camera ids -------------------------------------------------------------
 
 def test_a_removed_cameras_id_is_not_handed_to_someone_else(settings):
@@ -329,3 +454,5 @@ def test_security_headers_and_no_public_api_docs(settings):
 def test_redact_url_hides_passwords_with_at_signs():
     assert _redact_url("rtsp://admin:p@ss@192.168.1.5/s@1") == "rtsp://***@192.168.1.5/s@1"
     assert _redact_url("rtsp://192.168.1.5/stream") == "rtsp://192.168.1.5/stream"
+    assert _redact_url("rtsp://u:pa/ss@cam.lan:554/s1") == "rtsp://***@cam.lan:554/s1"
+    assert _redact_url("rtsp://u:a/b@c@cam.lan") == "rtsp://***@cam.lan"

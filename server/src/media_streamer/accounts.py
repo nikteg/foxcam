@@ -136,14 +136,20 @@ def create_user(settings: Settings, email: str, password: str | None = None,
     email = normalize_email(email)
     pw_hash = hash_password(password) if password is not None else None
     with session_scope() as s:
-        if s.scalar(select(User).where(User.email == email)) is not None:
-            raise AccountError("an account with this e-mail already exists", 409)
-        u = User(email=email, name=(name or "").strip() or None, password_hash=pw_hash,
-                 email_verified=email_verified,
-                 is_admin=is_admin or (email_verified and _admin_by_config(settings, email)))
-        s.add(u)
-        s.flush()
-        return user_info(u)
+        return user_info(_new_user(s, settings, email, pw_hash, name, is_admin,
+                                   email_verified))
+
+
+def _new_user(s, settings: Settings, email: str, pw_hash: str | None, name: str | None,
+              is_admin: bool, email_verified: bool) -> User:
+    if s.scalar(select(User).where(User.email == email)) is not None:
+        raise AccountError("an account with this e-mail already exists", 409)
+    u = User(email=email, name=(name or "").strip() or None, password_hash=pw_hash,
+             email_verified=email_verified,
+             is_admin=is_admin or (email_verified and _admin_by_config(settings, email)))
+    s.add(u)
+    s.flush()
+    return u
 
 
 def authenticate(settings: Settings, email: str, password: str) -> int:
@@ -490,25 +496,40 @@ def invite_preview(settings: Settings, token: str) -> dict[str, Any]:
 def accept_invite(token: str, user_id: int) -> list[str]:
     """Grants what the invite gives (never lowers an existing role). Returns camera ids."""
     with session_scope() as s:
-        inv = _open_invite(s, token)
+        inv = _claim_invite(s, token)
         u = s.get(User, user_id)
         if u is None:
-            raise AccountError("unknown user", 404)
-        # Claim it first, atomically: two requests at once can't both use it.
-        claimed = s.execute(update(Invite).where(Invite.id == inv.id, Invite.used_at.is_(None))
-                            .values(used_at=utcnow(), used_by=user_id)).rowcount
-        if claimed != 1:
-            raise AccountError("this invite link has already been used", 410)
-        for c in inv.cameras or []:
-            row = s.get(CameraAccess, (c["camera_id"], user_id))
-            if row is None:
-                s.add(CameraAccess(camera_id=c["camera_id"], user_id=user_id, role=c["role"],
-                                   granted_by=inv.created_by))
-            elif not CameraRole.at_least(row.role, c["role"]):
-                row.role = c["role"]
-        if inv.is_admin:
-            u.is_admin = True
-        return [c["camera_id"] for c in inv.cameras or []]
+            raise AccountError("unknown user", 404)  # rolls the claim back
+        return _grant_invite(s, inv, u)
+
+
+def _claim_invite(s, token: str) -> Invite:
+    """Marks the invite used, atomically, as the transaction's first statement: of two
+    requests with the same link only one gets it (the other waits for the write lock,
+    then finds it used). Everything else the caller does in the same transaction (the
+    new account, the grants) is rolled back with the claim when it fails."""
+    now = utcnow()
+    claimed = s.execute(update(Invite).where(
+        Invite.token_hash == _sha256(token or ""), Invite.used_at.is_(None),
+        Invite.expires_at >= now).values(used_at=now)).rowcount
+    if claimed != 1:
+        _open_invite(s, token)  # says why: unknown, used or expired
+        raise AccountError("this invite link has already been used", 410)
+    return s.scalar(select(Invite).where(Invite.token_hash == _sha256(token)))
+
+
+def _grant_invite(s, inv: Invite, u: User) -> list[str]:
+    inv.used_by = u.id
+    for c in inv.cameras or []:
+        row = s.get(CameraAccess, (c["camera_id"], u.id))
+        if row is None:
+            s.add(CameraAccess(camera_id=c["camera_id"], user_id=u.id, role=c["role"],
+                               granted_by=inv.created_by))
+        elif not CameraRole.at_least(row.role, c["role"]):
+            row.role = c["role"]
+    if inv.is_admin:
+        u.is_admin = True
+    return [c["camera_id"] for c in inv.cameras or []]
 
 
 def list_invites(principal: Principal) -> list[dict[str, Any]]:
@@ -536,17 +557,18 @@ def register(settings: Settings, email: str, password: str, name: str | None,
     if not settings.auth.password_login:
         raise AccountError("sign-up with a password is turned off", 403)
     email = normalize_email(email)
-    if invite:
-        with session_scope() as s:
-            _open_invite(s, invite)  # fail before creating the account
-    elif settings.auth.registration != "open":
+    if not invite and settings.auth.registration != "open":
         # admin_emails don't skip the invite here: nothing proves the address is theirs
         # (they sign up through OAuth, or with `media-streamer user add`).
         raise AccountError("you need an invite link to create an account", 403)
-    uid = create_user(settings, email, password, name, email_verified=False)["id"]
-    if invite:
-        accept_invite(invite, uid)
-    return uid
+    pw_hash = hash_password(password)  # slow: before taking the write lock
+    # One transaction: the invite claimed, the account made and granted, or none of it.
+    with session_scope() as s:
+        inv = _claim_invite(s, invite) if invite else None
+        u = _new_user(s, settings, email, pw_hash, name, False, email_verified=False)
+        if inv is not None:
+            _grant_invite(s, inv, u)
+        return u.id
 
 
 def oauth_user(settings: Settings, provider: str, subject: str, email: str | None,
@@ -554,7 +576,9 @@ def oauth_user(settings: Settings, provider: str, subject: str, email: str | Non
     """The account for an external identity: linked before, matched by verified e-mail, or
     created (when registration allows it)."""
     email = normalize_email(email) if email else None
+    # One transaction: the invite is claimed first and only kept with the sign-in.
     with session_scope() as s:
+        inv = _claim_invite(s, invite) if invite else None
         ident = s.scalar(select(OAuthIdentity).where(OAuthIdentity.provider == provider,
                                                      OAuthIdentity.subject == subject))
         u = s.get(User, ident.user_id) if ident else None
@@ -572,10 +596,8 @@ def oauth_user(settings: Settings, provider: str, subject: str, email: str | Non
         if u is None:
             if not email or not email_verified:
                 raise AccountError("the provider did not confirm an e-mail address", 403)
-            if invite:
-                _open_invite(s, invite)
-            elif not (settings.auth.registration == "open"
-                      or _admin_by_config(settings, email)):
+            if inv is None and not (settings.auth.registration == "open"
+                                    or _admin_by_config(settings, email)):
                 raise AccountError("there is no account for this e-mail; ask for an invite "
                                    "link", 403)
             u = User(email=email, name=(name or "").strip() or None, email_verified=True,
@@ -585,11 +607,10 @@ def oauth_user(settings: Settings, provider: str, subject: str, email: str | Non
             s.add(OAuthIdentity(user_id=u.id, provider=provider, subject=subject, email=email))
         if u.disabled:
             raise AccountError("this account is disabled", 403)
+        if inv is not None:
+            _grant_invite(s, inv, u)
         _logged_in(settings, u)
-        uid = u.id
-    if invite:
-        accept_invite(invite, uid)
-    return uid
+        return u.id
 
 
 def link_identity(user_id: int, provider: str, subject: str, email: str | None,

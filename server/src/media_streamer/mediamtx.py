@@ -13,7 +13,7 @@ from typing import Any
 
 import httpx
 
-from . import recording
+from . import mediamtx_auth, recording
 from .config import CameraConfig, Settings
 from .hwaccel import Encode
 
@@ -95,7 +95,9 @@ def desired_paths(settings: Settings) -> dict[str, dict[str, Any]]:
 class MediaMtx:
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.client = httpx.AsyncClient(base_url=settings.mediamtx.api_url, timeout=5)
+        # The control API needs the internal login too (mediamtx_auth.py).
+        self.client = httpx.AsyncClient(base_url=settings.mediamtx.api_url, timeout=5,
+                                        auth=mediamtx_auth.api_auth(settings))
 
     async def aclose(self) -> None:
         await self.client.aclose()
