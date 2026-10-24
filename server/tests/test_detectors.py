@@ -368,3 +368,71 @@ def test_confirming_detector_gates_events_and_the_target_flag(settings):
         assert ev.confirmed is True and ev.agreement == 2
         assert [n.channel_id for n in s.query(Notification)] == ["phone"]
     assert _jobs(seg2)[2] is True
+
+
+# --- part 4: comparing models ---------------------------------------------------------
+
+def test_model_stats_compare_detectors(wildlife):
+    from media_streamer.web.queries import set_feedback
+
+    seg = _two_model_results(wildlife, yolo=(("fox", 0.6), ("cat", 0.9)), sn=(("fox", 0.8),))
+    other = _queued_segment(wildlife, utc_later(wildlife, seg))
+    for worker, tags, dets in (("y", ["gpu", "open-vocabulary"], [DET(100, "fox", 0.7)]),
+                               ("s", ["gpu", "speciesnet"], [])):
+        job = queue.lease(wildlife, worker, tags=tags)
+        queue.complete(wildlife, job.id, job.lease_token, dets, worker, 20)
+    with session_scope() as s:
+        yolo_fox = [d.id for d in s.query(Detection).filter(
+            Detection.detector_id == "yolo", Detection.label == "fox")]
+    set_feedback(yolo_fox[0], True)
+    set_feedback(yolo_fox[1], False)
+
+    with app_client(wildlife) as c:
+        rows = {r["detector_id"]: r for r in c.get("/api/models/stats").json()}
+        assert c.get("/api/models/stats?days=1").status_code == 200
+    y, s_ = rows["yolo"], rows["speciesnet"]
+    assert (y["model"], y["detections"], y["targets"], y["jobs_done"]) == ("y", 3, 2, 2)
+    assert (y["feedback_correct"], y["feedback_wrong"], y["precision"]) == (1, 1, 0.5)
+    assert y["avg_processing_ms"] == 15  # 10 and 20
+    # YOLO found a fox on two recordings; SpeciesNet agreed on one of them.
+    assert (y["segments_with_target"], y["segments_agreed"], y["agreement_rate"]) == (2, 1, 0.5)
+    assert (s_["segments_with_target"], s_["agreement_rate"]) == (1, 1.0)
+    assert other
+
+
+def utc_later(settings, seg_id):
+    with session_scope() as s:
+        return s.get(Segment, seg_id).start_at + timedelta(seconds=60)
+
+
+def test_raw_results_are_kept_for_admins(wildlife):
+    seg_id = _queued_segment(wildlife)
+    with app_client(wildlife) as c:
+        job = c.post("/api/worker/lease", json={"worker_id": "y", "tags": [
+            "gpu", "open-vocabulary"]}).json()
+        big = "x" * 300_000
+        r = c.post(f"/api/worker/jobs/{job['job_id']}/result", json={
+            "lease_token": job["lease_token"], "model": "m", "detections": [
+                {"offset_ms": 1, "label": "fox", "confidence": 0.9, "extra": {"note": "hi"}}]})
+        assert r.status_code == 200
+        [run] = [j for j in c.get(f"/api/segments/{seg_id}/jobs").json()
+                 if j["detector_id"] == "yolo"]
+        assert run["raw_result"]["model"] == "m" and "lease_token" not in run["raw_result"]
+        assert run["raw_result"]["detections"][0]["extra"] == {"note": "hi"}
+    capped = queue.raw_result({"blob": big})
+    assert capped["truncated"] and capped["text"].endswith("…[truncated]")
+    assert len(capped["text"]) < 270_000
+
+
+def test_raw_results_are_not_shown_to_viewers(wildlife):
+    seg_id = _queued_segment(wildlife)
+    from fastapi.testclient import TestClient
+    from media_streamer import accounts
+    from media_streamer.web.app import create_app
+
+    from .conftest import sign_in
+
+    with TestClient(create_app(wildlife, background=False)) as c:
+        accounts.grant("cam", sign_in(c, wildlife, "viewer@example.org"), "viewer")
+        jobs = c.get(f"/api/segments/{seg_id}/jobs").json()
+    assert jobs and all("raw_result" not in j for j in jobs)

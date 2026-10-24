@@ -239,6 +239,32 @@ export interface SegmentJob {
   finished_at: string | null;
   detections: number;
   targets: number;
+  /** Admins only: what the worker posted (``{truncated, bytes, text}`` when too big). */
+  raw_result?: unknown;
+}
+
+/** One row of GET /api/models/stats: a profile's detector running one model. */
+export interface ModelStats {
+  profile_id: string;
+  profile_name: string;
+  detector_id: string;
+  detector_name: string;
+  model: string | null;
+  detections: number;
+  targets: number;
+  feedback_correct: number;
+  feedback_wrong: number;
+  /** Correct / rated, from feedback; null = nothing rated. */
+  precision: number | null;
+  jobs_done: number;
+  jobs_dead: number;
+  jobs_skipped: number;
+  avg_processing_ms: number | null;
+  /** Recordings where it found a target and another detector of the profile looked. */
+  segments_with_target: number;
+  /** ... of which another detector found one too. */
+  segments_agreed: number;
+  agreement_rate: number | null;
 }
 
 export interface DetectionExtra {
@@ -700,6 +726,8 @@ export const api = {
     request<{ status: string }>("POST", `/api/detections/${id}/feedback`, { correct }),
   events: (q: { camera?: string; profile?: string; min_agreement?: number; limit?: number }) =>
     request<DetectionEvent[]>("GET", withQuery("/api/events", q)),
+  modelStats: (days?: number) =>
+    request<ModelStats[]>("GET", withQuery("/api/models/stats", { days })),
   queue: (q: { state?: string; limit?: number }) =>
     request<QueueView>("GET", withQuery("/api/queue", q)),
   addCamera: (body: {

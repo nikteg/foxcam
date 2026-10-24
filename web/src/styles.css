@@ -1259,3 +1259,23 @@ Fluent's text styles would otherwise reset the margins. */
   flex-direction: column;
   gap: var(--spacingVerticalXS);
 }
+
+/* Recordings: a run's raw worker result (admins). */
+.raw-result summary {
+  cursor: pointer;
+  color: var(--colorNeutralForeground3);
+}
+.raw-result pre {
+  max-height: 320px;
+  overflow: auto;
+  margin: var(--spacingVerticalXS) 0 0;
+  padding: var(--spacingVerticalS) var(--spacingHorizontalM);
+  background: var(--colorNeutralBackground3);
+  border-radius: var(--borderRadiusMedium);
+  font-size: var(--fontSizeBase200);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.extra-value {
+  word-break: break-word;
+}

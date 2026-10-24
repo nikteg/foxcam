@@ -331,7 +331,7 @@ def capture(tmp: Path) -> list[str]:
         shot(page, "detections", f"/detections?selected={det['id']}")
         shot(page, "recordings", f"/recordings?selected={det['segment_id']}")
         shot(page, "mask-editor", "/cameras/street/mask")
-        shot(page, "profiles", "/cameras#profiles", element="section#profiles")
+        shot(page, "profiles", "/cameras/profiles", element="section#profiles")
         shot(page, "queue", "/jobs")
         phone = browser.new_context(color_scheme="dark", **PHONE)
         phone.add_cookies(cookie)

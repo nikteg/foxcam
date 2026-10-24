@@ -93,6 +93,9 @@ server applies the profile's aliases and threshold to decide what is a target.
 
 Newest segments are handed out first, so fresh footage is processed first after an outage.
 
+The result body you post (without the lease token) is kept on the job for debugging, up to
+256 kB (beyond that only its start), and shown to admins on the recording.
+
 ### Input
 
 `GET input_url` with header `X-Lease-Token: <lease_token>` (or `?lease_token=`). Returns an H.264

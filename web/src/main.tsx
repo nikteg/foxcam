@@ -39,6 +39,7 @@ const router = createBrowserRouter([
       { path: "recordings/joined", Component: Recordings },
       { path: "jobs", Component: Queue },
       { path: "jobs/workers", Component: Queue },
+      { path: "jobs/models", Component: Queue },
       { path: "settings", Component: Settings },
       { path: "settings/:subPage", Component: Settings },
       { path: "account", Component: Account },

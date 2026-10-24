@@ -237,9 +237,15 @@ class Job(Base):
     error: Mapped[str | None] = mapped_column(String)
     model: Mapped[str | None] = mapped_column(String)
     processing_ms: Mapped[int | None] = mapped_column(Integer)
+    # The worker's result as posted (without the lease token), for debugging; at most
+    # RAW_RESULT_MAX bytes, else {"truncated": true, "bytes": n, "text": "<start>…"}.
+    raw_result: Mapped[Any | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     segment: Mapped[Segment] = relationship()
+
+
+RAW_RESULT_MAX = 256 * 1024
 
 
 class Worker(Base):

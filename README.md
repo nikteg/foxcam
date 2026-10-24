@@ -28,6 +28,9 @@ anything else, and keep the clips.
   and person; …) and *which* workers may do it. Open-vocabulary models (YOLO-World) are
   prompted with each job's targets, so a new profile needs no new model and no worker
   restart; SpeciesNet knows ~2000 species.
+- **Several models per profile.** Let YOLO-World and SpeciesNet both look (one event, with
+  which models saw it), or chain them so an expensive model only confirms a cheap one's
+  finds; notify only when models agree, and compare them under Jobs → Models.
 - **Privacy built in.** Draw censor rectangles per camera; they are burned into the pixels
   before a worker sees a frame, and optionally into recordings and live view as well.
   Private cameras are never sent anywhere.
@@ -77,7 +80,7 @@ anything else, and keep the clips.
   </tr>
   <tr>
     <td><b>Detection profiles</b> – what to look for and which workers may do it (Cameras page)</td>
-    <td><b>Jobs</b> – the detection queue per profile, workers with their tags and tokens</td>
+    <td><b>Jobs</b> – the detection queue per profile, workers with their tags and tokens, models compared</td>
   </tr>
 </table>
 

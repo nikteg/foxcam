@@ -16,6 +16,7 @@ When nothing was found (or the job gave up) the follow-up is recorded as ``skipp
 
 from __future__ import annotations
 
+import json
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -26,7 +27,16 @@ from sqlalchemy.orm import object_session
 
 from ..config import Settings
 from ..db import session_scope
-from ..models import Detection, Job, JobState, Segment, SegmentStatus, Worker, utcnow
+from ..models import (
+    RAW_RESULT_MAX,
+    Detection,
+    Job,
+    JobState,
+    Segment,
+    SegmentStatus,
+    Worker,
+    utcnow,
+)
 from ..profiles import eligible_profiles
 
 
@@ -137,8 +147,18 @@ def heartbeat(settings: Settings, job_id: int, token: str) -> datetime:
     return expires
 
 
+def raw_result(body: dict[str, Any]) -> Any:
+    """The result as stored on the job: whole, or its start when it is too big."""
+    text = json.dumps(body, ensure_ascii=False)
+    if len(text.encode()) <= RAW_RESULT_MAX:
+        return body
+    return {"truncated": True, "bytes": len(text.encode()),
+            "text": text.encode()[:RAW_RESULT_MAX].decode(errors="ignore") + " …[truncated]"}
+
+
 def complete(settings: Settings, job_id: int, token: str, detections: list[DetectionIn],
-             model: str | None, processing_ms: int | None) -> None:
+             model: str | None, processing_ms: int | None,
+             raw: dict[str, Any] | None = None) -> None:
     with session_scope() as s:
         job = _get_leased(s, job_id, token)
         seg = job.segment
@@ -166,6 +186,7 @@ def complete(settings: Settings, job_id: int, token: str, detections: list[Detec
         job.finished_at = utcnow()
         job.model = model
         job.processing_ms = processing_ms
+        job.raw_result = raw_result(raw) if raw is not None else None
         job.lease_token = None
         worker = s.get(Worker, job.leased_by) if job.leased_by else None
         if worker:

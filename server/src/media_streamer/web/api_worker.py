@@ -172,7 +172,8 @@ def result(job_id: int, body: ResultBody,
            settings: Settings = Depends(settings_dep)) -> dict[str, str]:
     dets = [queue.DetectionIn(**d.model_dump()) for d in body.detections]
     try:
-        queue.complete(settings, job_id, body.lease_token, dets, body.model, body.processing_ms)
+        queue.complete(settings, job_id, body.lease_token, dets, body.model, body.processing_ms,
+                       raw=body.model_dump(mode="json", exclude={"lease_token"}))
     except queue.LeaseError as e:
         raise _lease_error(e) from e
     return {"status": "ok"}

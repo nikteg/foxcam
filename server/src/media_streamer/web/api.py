@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -14,12 +15,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field, field_validator
 
-from .. import ffmpeg, mediamtx_auth, recording
+from .. import ffmpeg, mediamtx_auth, model_stats, recording
 from ..accounts import Principal
 from ..config import Settings
 from ..db import session_scope
 from ..mediamtx import MediaMtx
-from ..models import Archive, CameraRole, Detection, Event, Segment
+from ..models import Archive, CameraRole, Detection, Event, Segment, utcnow
 from ..pipeline import compaction, queue, uploader
 from ..pipeline.reanalyse import ReanalyseError, reanalyse_segment
 from ..storage import StorageError, boto3_available, get_storage
@@ -275,7 +276,7 @@ def segment_jobs(segment_id: int, settings: Settings = Depends(settings_dep),
                  p: Principal = Depends(principal)) -> list[dict[str, Any]]:
     """Detection runs of a segment (one per profile) with their detection counts."""
     _segment(p, segment_id)
-    return queries.segment_jobs(settings, segment_id)
+    return queries.segment_jobs(settings, segment_id, raw=p.is_admin)
 
 
 @router.get("/segments/{segment_id}/download")
@@ -385,6 +386,15 @@ def event_thumb(event_id: int, settings: Settings = Depends(settings_dep),
                 p: Principal = Depends(principal)) -> Response:
     ev = _event(p, event_id)
     return _serve(settings, settings.data_dir, ev.thumb_path, ev.thumb_remote_key, "image/jpeg")
+
+
+@router.get("/models/stats", dependencies=[Depends(require_admin)])
+def models_stats(days: float | None = Query(None, gt=0, description="last N days; none = all"),
+                 settings: Settings = Depends(settings_dep)) -> list[dict[str, Any]]:
+    """Per profile, detector and model: detections, targets, feedback precision, average
+    processing time, job outcomes and agreement with the profile's other detectors."""
+    since = utcnow() - timedelta(days=days) if days else None
+    return model_stats.model_stats(settings, since)
 
 
 @router.get("/queue", dependencies=[Depends(require_admin)])

@@ -47,6 +47,7 @@ import {
 import { decimal, duration } from "../format";
 import { useProfileName, useProfiles } from "../components/ProfileSelect";
 import { AddWorkerDialog } from "../components/AddWorkerDialog";
+import { ModelsSection } from "../components/ModelsSection";
 import { WorkersSection } from "../components/WorkersSection";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
@@ -92,7 +93,7 @@ export function Queue() {
   );
   const q = queue.data;
   const avgMs = q?.stats.avg_processing_ms_last_hour;
-  const tab = useSubPage("/jobs", ["queue", "workers"] as const);
+  const tab = useSubPage("/jobs", ["queue", "workers", "models"] as const);
   const [addingWorker, setAddingWorker] = useState(false);
 
   return (
@@ -119,10 +120,12 @@ export function Queue() {
             tabs={[
               { id: "queue", label: t("queue.queueTab") },
               { id: "workers", label: t("queue.workers") },
+              { id: "models", label: t("models.tab") },
             ]}
           />
 
           {tab === "workers" && <WorkersSection workers={q.workers} />}
+          {tab === "models" && <ModelsSection />}
 
           {tab === "queue" && (
             <>

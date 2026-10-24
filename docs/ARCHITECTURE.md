@@ -133,7 +133,7 @@ Events page can filter on "seen by ≥ N models", and notification channels can 
 | Table | Holds |
 |---|---|
 | `segment` | One recording file: camera, start (UTC), duration, status, light tags, mask version used, fox flag, pinned, `deleted_at`. |
-| `job` | Work item per segment, profile and detector: state (`pending/leased/done/failed/dead`, `skipped` for cascade detectors that did not run), lease token and expiry, attempts, model, timing. |
+| `job` | Work item per segment, profile and detector (with the worker's raw result, ≤ 256 kB, for debugging): state (`pending/leased/done/failed/dead`, `skipped` for cascade detectors that did not run), lease token and expiry, attempts, model, timing. |
 | `detection` | Worker result: profile, detector, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, event. |
 | `event` | Merged sighting of one label for one profile: time range, best detection, detectors that saw it and how many (`agreement`), clip and thumbnail paths. |
 | `worker` | Last-seen info and tags per worker id (shown in the queue tab). |

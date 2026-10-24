@@ -151,7 +151,8 @@ def overview(settings: Settings, camera_ids: set[str] | None = None) -> dict[str
     }
 
 
-def segment_jobs(settings: Settings, segment_id: int) -> list[dict[str, Any]]:
+def segment_jobs(settings: Settings, segment_id: int,
+                 raw: bool = False) -> list[dict[str, Any]]:
     """One row per detection run (job) of a segment, with its detection counts, so "ran
     and found nothing" can be told apart from "never ran"."""
     with session_scope() as s:
@@ -173,6 +174,8 @@ def segment_jobs(settings: Settings, segment_id: int) -> list[dict[str, Any]]:
                 "attempts": j.attempts, "error": j.error, "processing_ms": j.processing_ms,
                 "finished_at": iso(j.finished_at), "detections": total,
                 "targets": int(targets),
+                # Admins only: what the worker posted (debugging).
+                **({"raw_result": j.raw_result} if raw else {}),
             })
         return out
 

@@ -1,6 +1,7 @@
 import { Button, Caption1, Checkbox, Input, Link, Select, Text } from "@fluentui/react-components";
 import { Folder20Regular, ScanObject20Regular } from "@fluentui/react-icons";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { Fragment } from "react";
 
 import { api, detectionFrameUrl, segmentPlayUrl, type Detection } from "../api";
 import { CameraSelect, useCameraName } from "../components/CameraSelect";
@@ -231,6 +232,17 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
             </dd>
           </>
         )}
+        {/* Everything else the detector reported (e.g. raw_label, its own box label). */}
+        {Object.entries(d.extra)
+          .filter(([key]) => key !== "classifications")
+          .map(([key, value]) => (
+            <Fragment key={key}>
+              <dt className="mono">{key}</dt>
+              <dd className="mono extra-value">
+                {typeof value === "string" ? value : JSON.stringify(value)}
+              </dd>
+            </Fragment>
+          ))}
         <dt>{t("col.worker")}</dt>
         <dd>{d.worker_id ?? "–"}</dd>
       </dl>
