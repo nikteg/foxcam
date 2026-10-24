@@ -8,12 +8,14 @@ import {
   Subtitle2,
   Text,
 } from "@fluentui/react-components";
-import { Camera20Regular } from "@fluentui/react-icons";
+import { Camera20Regular, Person20Regular } from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../api";
+import { useIsAdmin, useMe } from "../auth";
 import { Notifications } from "../components/Notifications";
 import { StorageCard } from "../components/StorageCard";
+import { UsersSection } from "../components/UsersSection";
 import { PageHeader, QueryState, useRouterHref } from "../components/ui";
 import { LANGUAGE_NAMES, useI18n, type Lang } from "../i18n";
 import { THEME_MODES, useThemeMode, type ThemeMode } from "../theme";
@@ -22,7 +24,13 @@ const show = (v: unknown) =>
   v === null || v === undefined ? "–" : typeof v === "object" ? JSON.stringify(v) : String(v);
 
 export function Settings() {
-  const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
+  const isAdmin = useIsAdmin();
+  const me = useMe();
+  const settings = useQuery({
+    queryKey: ["settings"],
+    queryFn: api.settings,
+    enabled: isAdmin,
+  });
   const routerHref = useRouterHref();
   const { t, rich, lang, setLang } = useI18n();
   const { mode, setMode } = useThemeMode();
@@ -64,6 +72,17 @@ export function Settings() {
         </RadioGroup>
       </Field>
 
+      {me?.user && (
+        <>
+          <Subtitle2 as="h2" className="section">
+            {t("account.title")}
+          </Subtitle2>
+          <Button as="a" icon={<Person20Regular />} {...routerHref("/account")}>
+            {t("settings.manageAccount", { name: me.user.display_name })}
+          </Button>
+        </>
+      )}
+
       <Subtitle2 as="h2" className="section">
         {t("nav.cameras")}
       </Subtitle2>
@@ -71,19 +90,27 @@ export function Settings() {
         {t("settings.manageCameras")}
       </Button>
 
-      <Subtitle2 as="h2" className="section">
-        {t("settings.storage")}
-      </Subtitle2>
-      <StorageCard />
+      {isAdmin && me?.enabled && <UsersSection />}
 
-      <Notifications />
+      {isAdmin && (
+        <>
+          <Subtitle2 as="h2" className="section">
+            {t("settings.storage")}
+          </Subtitle2>
+          <StorageCard />
 
-      <Subtitle2 as="h2" className="section">
-        {t("settings.configuration")}
-      </Subtitle2>
-      <p className="muted">{rich("settings.configIntro", { file: <code>config.yaml</code> })}</p>
-      <QueryState error={settings.error} loading={settings.isPending} />
-      {cfg && (
+          <Notifications />
+
+          <Subtitle2 as="h2" className="section">
+            {t("settings.configuration")}
+          </Subtitle2>
+          <p className="muted">
+            {rich("settings.configIntro", { file: <code>config.yaml</code> })}
+          </p>
+          <QueryState error={settings.error} loading={settings.isPending} />
+        </>
+      )}
+      {isAdmin && cfg && (
         <div className="cards">
           {Object.entries(cfg)
             .filter(([key]) => key !== "cameras")

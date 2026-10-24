@@ -2,7 +2,6 @@
 
 ## Planned
 
-- **Authentication** – viewer/admin roles behind a login proxy. Design: [AUTH.md](AUTH.md).
 - **Fine-tuning workflow** – turn ✅/❌ feedback into a YOLO/RF-DETR dataset (crops + labels),
   a training script for the GPU box, and side-by-side model comparison on `samples/`.
 - **Remote recorder at the cabin** – documented Raspberry Pi + Tailscale setup that pulls RTSP
@@ -24,3 +23,5 @@
 - Editable `config.yaml` settings from the UI (segment length, retention).
 - Swedish translations for server-side error messages.
 - Per-camera privacy schedules (e.g. private while people are at the cabin).
+- Per-user notifications (each account picks its own channels for the cameras it sees).
+- Passkeys / TOTP as a second factor for password logins; password reset by e-mail.

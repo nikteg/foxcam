@@ -144,9 +144,10 @@ class MediaMtxConfig(BaseModel):
     api_url: str = "http://localhost:9997"
     # RTSP URL prefix used by ingest publishers and for snapshots (as seen by this server).
     rtsp_url: str = "rtsp://localhost:8554"
-    # URLs as seen by the *browser* for live view.
-    webrtc_public_url: str = "http://localhost:8889"
-    hls_public_url: str = "http://localhost:8888"
+    # MediaMTX's WebRTC and HLS servers as seen by this server. Browsers never talk to
+    # them directly: live view goes through /api/live/..., which checks the login.
+    webrtc_url: str = "http://localhost:8889"
+    hls_url: str = "http://localhost:8888"
     # Recording directory as seen by the MediaMTX process. Defaults to ``recordings_dir``.
     record_dir: str | None = None
     low_data: LowDataConfig = LowDataConfig()
@@ -350,6 +351,66 @@ class LocationConfig(BaseModel):
     country: str | None = None
 
 
+class OAuthProviderConfig(BaseModel):
+    """Sign in with an external account (see docs/AUTH.md).
+
+    ``google``, ``microsoft`` and ``github`` need only the client id and secret; ``oidc``
+    works with any OpenID Connect provider (Authentik, Keycloak, Authelia, Auth0, …) given
+    its ``issuer``. The redirect URL to register at the provider is
+    ``<base url>/api/auth/oauth/<id>/callback``.
+    """
+
+    id: str = Field(pattern=PROFILE_ID, max_length=40)
+    name: str | None = None
+    type: Literal["google", "microsoft", "github", "oidc"] = "oidc"
+    client_id: str
+    client_secret: str
+    # OpenID Connect issuer (oidc; microsoft: defaults to the `common` tenant).
+    issuer: str | None = None
+    scopes: list[str] | None = None
+    # Only accounts with an e-mail address in these domains may sign in (empty = any).
+    allowed_domains: list[str] = []
+
+    @property
+    def display_name(self) -> str:
+        return self.name or {"google": "Google", "microsoft": "Microsoft",
+                             "github": "GitHub"}.get(self.type, self.id)
+
+    def model_post_init(self, _ctx: object) -> None:
+        if self.type == "oidc" and not self.issuer:
+            raise ValueError(f"oauth provider {self.id!r}: oidc needs an issuer")
+
+
+class AuthConfig(BaseModel):
+    """Accounts and logins. Everything except the worker API needs a signed-in user."""
+
+    # False = no logins at all: everyone who reaches the server is an admin. Only for a
+    # trusted network.
+    enabled: bool = True
+    # Sign in with e-mail and password (accounts can also use OAuth only).
+    password_login: bool = True
+    # Who may create an account: invite = only with an invite link (default),
+    # open = anyone who reaches the server, closed = nobody (admins add users).
+    registration: Literal["invite", "open", "closed"] = "invite"
+    # These accounts are admins, and may sign up through OAuth even when registration is
+    # closed (handy to bootstrap the first admin without a password).
+    admin_emails: list[str] = []
+    # Stay signed in this long since the last visit.
+    session_days: float = Field(default=30, gt=0)
+    # Users (not only admins) may add cameras; they own them and can share them.
+    users_can_add_cameras: bool = True
+    oauth: list[OAuthProviderConfig] = []
+    # How browsers reach the server, for OAuth redirect URLs. None = public_url, else the
+    # address of the request.
+    base_url: str | None = None
+
+    def model_post_init(self, _ctx: object) -> None:
+        self.admin_emails = [e.strip().lower() for e in self.admin_emails if e.strip()]
+        ids = [p.id for p in self.oauth]
+        if len(ids) != len(set(ids)):
+            raise ValueError("oauth provider ids must be unique")
+
+
 class Settings(BaseModel):
     data_dir: Path = Path("./data")
     recordings_dir: Path | None = None
@@ -379,6 +440,7 @@ class Settings(BaseModel):
     location: LocationConfig = LocationConfig()
     storage: StorageConfig = StorageConfig()
     notifications: NotificationsConfig = NotificationsConfig()
+    auth: AuthConfig = AuthConfig()
     # How users reach the web UI, e.g. http://192.168.1.10:8000 or https://cams.example.org.
     # Used for links (and image/clip URLs) in notifications.
     public_url: str | None = None

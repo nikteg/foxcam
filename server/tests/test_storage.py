@@ -1,14 +1,12 @@
 from datetime import timedelta
 
 import pytest
-from fastapi.testclient import TestClient
 from media_streamer.db import session_scope
 from media_streamer.models import Event, Segment, SegmentStatus, utcnow
 from media_streamer.pipeline import retention, uploader
 from media_streamer.storage import get_storage
-from media_streamer.web.app import create_app
 
-from .conftest import add_segment, needs_ffmpeg
+from .conftest import add_segment, app_client, needs_ffmpeg
 
 moto = pytest.importorskip("moto")
 BUCKET = "fox-clips"
@@ -63,7 +61,7 @@ def test_clips_upload_and_serve_from_bucket(settings, s3):
     assert uploader.upload_pending(settings) == 0  # nothing left
     assert uploader.stats(settings)["clips_uploaded"] == 1
 
-    with TestClient(create_app(settings, background=False)) as c:
+    with app_client(settings) as c:
         listed = c.get("/api/events").json()[0]
         assert listed["clip_url"] and listed["remote"]
         r = c.get(f"/api/events/{ev_id}/clip?download=true", follow_redirects=False)
@@ -81,7 +79,7 @@ def test_clips_upload_and_serve_from_bucket(settings, s3):
 def test_local_file_preferred_while_present(settings, s3):
     ev_id = _event_with_clip(settings)
     uploader.upload_pending(settings)
-    with TestClient(create_app(settings, background=False)) as c:
+    with app_client(settings) as c:
         r = c.get(f"/api/events/{ev_id}/clip", follow_redirects=False)
         assert r.status_code == 200 and r.content == b"clip"
 
@@ -133,7 +131,7 @@ def test_deleted_recording_served_from_archive(settings, s3):
         seg = s.get(Segment, seg_id)
         (settings.recordings_dir / seg.path).unlink()
         seg.deleted_at = utcnow()
-    with TestClient(create_app(settings, background=False)) as c:
+    with app_client(settings) as c:
         [item] = c.get("/api/segments?include_deleted=true").json()
         assert item["deleted"] and item["remote"] and item["download_url"]
         r = c.get(f"/api/segments/{seg_id}/download", follow_redirects=False)

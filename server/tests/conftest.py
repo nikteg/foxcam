@@ -2,14 +2,19 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
+from media_streamer import accounts
 from media_streamer.config import Settings
 from media_streamer.db import init_db, session_scope
 from media_streamer.models import Detection, Job, JobState, Segment, SegmentStatus, utcnow
 from media_streamer.pipeline.scanner import NAME_FORMAT
+from media_streamer.web.app import create_app
 
 needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg not installed")
 
@@ -94,3 +99,27 @@ def add_detection(segment_id: int, job_id: int, offset_ms: int, label: str = "fo
         s.add(d)
         s.flush()
         return d.id
+
+
+PASSWORD = "correct horse battery"
+
+
+def sign_in(client: TestClient, settings: Settings, email: str, admin: bool = False) -> int:
+    """Create the account if needed and sign the client in. Returns the user id."""
+    try:
+        uid = accounts.create_user(settings, email, PASSWORD, is_admin=admin)["id"]
+    except accounts.AccountError:
+        uid = None
+    r = client.post("/api/auth/login", json={"email": email, "password": PASSWORD})
+    assert r.status_code == 200, r.text
+    return uid or r.json()["user"]["id"]
+
+
+@contextmanager
+def app_client(settings: Settings, email: str | None = "admin@example.org",
+               admin: bool = True) -> Iterator[TestClient]:
+    """The web app, signed in as an admin (email None = not signed in)."""
+    with TestClient(create_app(settings, background=False)) as c:
+        if email:
+            sign_in(c, settings, email, admin)
+        yield c

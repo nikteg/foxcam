@@ -11,16 +11,14 @@ from datetime import timedelta
 
 import httpx
 import pytest
-from fastapi.testclient import TestClient
 from media_streamer import notify
 from media_streamer.config import ChannelConfig
 from media_streamer.db import session_scope
 from media_streamer.models import Event, Notification, NotificationStatus, SegmentStatus, utcnow
 from media_streamer.pipeline import events
-from media_streamer.web.app import create_app
 from media_streamer.web.queries import save_camera_state
 
-from .conftest import add_detection, add_job, add_segment, needs_ffmpeg
+from .conftest import add_detection, add_job, add_segment, app_client, needs_ffmpeg
 
 
 class Recorder:
@@ -202,7 +200,7 @@ def test_channel_validation():
 
 def test_notifications_api(settings, monkeypatch):
     _channel(settings, id="from-config", type="ntfy", topic="t", token="secret-token")
-    with TestClient(create_app(settings, background=False)) as c:
+    with app_client(settings) as c:
         body = {"id": "phone", "type": "ntfy", "topic": "foxes", "token": "tk_abc",
                 "when": ["event.new", "event.clip"], "quiet_hours": "", "name": " "}
         assert c.post("/api/notifications/channels", json=body).status_code == 201

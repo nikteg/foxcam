@@ -5,6 +5,8 @@ import { createBrowserRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
 
 import { Layout, NotFound } from "./App";
+import { Account } from "./pages/Account";
+import { InvitePage, LoginPage } from "./pages/Login";
 import { I18nProvider } from "./i18n";
 import { Cameras } from "./pages/Cameras";
 import { Dashboard } from "./pages/Dashboard";
@@ -24,6 +26,8 @@ const queryClient = new QueryClient({
 });
 
 const router = createBrowserRouter([
+  { path: "/login", Component: LoginPage },
+  { path: "/invite/:token", Component: InvitePage },
   {
     path: "/",
     Component: Layout,
@@ -35,6 +39,7 @@ const router = createBrowserRouter([
       { path: "recordings", Component: Recordings },
       { path: "queue", Component: Queue },
       { path: "settings", Component: Settings },
+      { path: "account", Component: Account },
       { path: "cameras", Component: Cameras },
       { path: "profiles", Component: Profiles },
       { path: "cameras/:cameraId/mask", Component: MaskEditor },

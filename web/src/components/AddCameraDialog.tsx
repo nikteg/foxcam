@@ -28,6 +28,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactElement, type ReactNode } from "react";
 
 import { api, type CameraSource, type ProbeResult } from "../api";
+import { useIsAdmin } from "../auth";
 import { useI18n, type MessageKey } from "../i18n";
 import { TapoCameraList, TapoNotInstalled, TapoSignIn } from "./TapoAccount";
 import { ActionRow } from "./ui";
@@ -86,6 +87,8 @@ export function AddCameraDialog({ open, onClose }: { open: boolean; onClose: () 
 
 function ChooseKind({ onChoose }: { onChoose: (k: Kind) => void }) {
   const { t } = useI18n();
+  // The Tapo account belongs to the server: only admins add cameras from it.
+  const isAdmin = useIsAdmin();
   const option = (kind: Kind, icon: ReactElement, secondary: MessageKey) => (
     <CompoundButton
       className="kind-option"
@@ -98,7 +101,7 @@ function ChooseKind({ onChoose }: { onChoose: (k: Kind) => void }) {
   );
   return (
     <div className="kind-grid">
-      {option("tapo", <Cloud24Regular />, "addCamera.kind.tapoHelp")}
+      {isAdmin && option("tapo", <Cloud24Regular />, "addCamera.kind.tapoHelp")}
       {option("rtsp", <Globe24Regular />, "addCamera.kind.rtspHelp")}
       {option("file", <Document24Regular />, "addCamera.kind.fileHelp")}
       {option("test", <Video24Regular />, "addCamera.kind.testHelp")}

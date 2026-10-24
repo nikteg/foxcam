@@ -311,3 +311,91 @@ class Notification(Base):
     error: Mapped[str | None] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class User(Base):
+    """A person who signs in to the web UI (see accounts.py)."""
+
+    __tablename__ = "user_account"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # Stored lower-case; the login name.
+    email: Mapped[str] = mapped_column(String, unique=True)
+    name: Mapped[str | None] = mapped_column(String)
+    # scrypt hash (accounts._hash_password); None = OAuth sign-in only.
+    password_hash: Mapped[str | None] = mapped_column(String)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    disabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class OAuthIdentity(Base):
+    """An external account (Google, GitHub, an OIDC provider) linked to a user."""
+
+    __tablename__ = "oauth_identity"
+    __table_args__ = (UniqueConstraint("provider", "subject"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user_account.id", ondelete="CASCADE"), index=True)
+    provider: Mapped[str] = mapped_column(String)
+    subject: Mapped[str] = mapped_column(String)
+    email: Mapped[str | None] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class UserSession(Base):
+    """A signed-in browser. The cookie holds the token; only its SHA-256 is stored."""
+
+    __tablename__ = "user_session"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user_account.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String, unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    user_agent: Mapped[str | None] = mapped_column(String)
+
+
+class CameraRole:
+    VIEWER = "viewer"  # live view, recordings, events, detections
+    EDITOR = "editor"  # + censor areas, profiles, recording settings, feedback, rename
+    OWNER = "owner"  # + sharing and removing the camera
+
+    ORDER = (VIEWER, EDITOR, OWNER)
+
+    @classmethod
+    def at_least(cls, role: str | None, wanted: str) -> bool:
+        return role in cls.ORDER and cls.ORDER.index(role) >= cls.ORDER.index(wanted)
+
+
+class CameraAccess(Base):
+    """A user's role on one camera (admins can do everything without a row)."""
+
+    __tablename__ = "camera_access"
+
+    camera_id: Mapped[str] = mapped_column(String, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user_account.id", ondelete="CASCADE"),
+                                         primary_key=True, index=True)
+    role: Mapped[str] = mapped_column(String, default=CameraRole.VIEWER)
+    granted_by: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class Invite(Base):
+    """A single-use link that creates an account and/or grants access to cameras."""
+
+    __tablename__ = "invite"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String, unique=True)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("user_account.id", ondelete="CASCADE"))
+    # [{"camera_id": ..., "role": ...}]
+    cameras: Mapped[list[Any]] = mapped_column(JSON, default=list)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    note: Mapped[str | None] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime)
+    used_by: Mapped[int | None] = mapped_column(Integer)

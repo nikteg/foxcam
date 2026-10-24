@@ -8,6 +8,7 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { api, type Detection } from "../api";
+import { hasRole, useCameraRole } from "../auth";
 import { useI18n } from "../i18n";
 
 /** ✓ / ✗ training feedback for a detection; clicking the active choice clears it. */
@@ -28,6 +29,9 @@ export function Feedback({
   const value = mutation.isPending ? mutation.variables : detection.feedback;
   const toggle = (want: boolean) => mutation.mutate(value === want ? null : want);
   const size = withLabels ? "medium" : "small";
+  // Labelling is for editors of the camera; viewers see the choice but cannot change it.
+  const role = useCameraRole(detection.camera_id);
+  const readOnly = !hasRole(role ? { role } : undefined, "editor");
   return (
     <span className="row">
       <Tooltip content={t("feedback.correct")} relationship="label">
@@ -42,6 +46,7 @@ export function Feedback({
               <CheckmarkCircle20Regular />
             )
           }
+          disabled={readOnly}
           onClick={() => toggle(true)}
         >
           {withLabels && t("feedback.correct")}
@@ -59,6 +64,7 @@ export function Feedback({
               <DismissCircle20Regular />
             )
           }
+          disabled={readOnly}
           onClick={() => toggle(false)}
         >
           {withLabels && t("feedback.wrong")}

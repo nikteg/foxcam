@@ -2,7 +2,7 @@ import { Caption1, Card, CardHeader, Link, Switch, Text } from "@fluentui/react-
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { api, browserUrl } from "../api";
+import { api } from "../api";
 import { CameraSelect } from "../components/CameraSelect";
 import { Dot, Empty, PageHeader, QueryState } from "../components/ui";
 import { useI18n } from "../i18n";
@@ -68,20 +68,20 @@ export function Live() {
                 action={
                   <Caption1 className="muted">
                     {low ? t("live.lowDataTag") : "WebRTC"} –{" "}
-                    <Link href={browserUrl(hls)} target="_blank" rel="noreferrer">
+                    <Link href={hls} target="_blank" rel="noreferrer">
                       {t("live.hlsFallback")}
                     </Link>
                   </Caption1>
                 }
               />
               {c.online ? (
-                // MediaMTX's built-in WebRTC player. It is served from another origin (port), so
-                // allow-same-origin does not grant it access to this app.
+                // MediaMTX's built-in WebRTC player, served through the server's login-checking
+                // proxy (/api/live/...) on this origin.
                 <iframe
                   className="live-frame"
                   title={t("live.frameTitle", { name: c.name })}
                   key={webrtc}
-                  src={`${browserUrl(webrtc)}?controls=true&muted=true&autoplay=true`}
+                  src={`${webrtc}?controls=true&muted=true&autoplay=true`}
                   // oxlint-disable-next-line react/iframe-missing-sandbox -- cross-origin player
                   sandbox="allow-scripts allow-same-origin"
                   allow="autoplay; fullscreen"

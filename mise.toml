@@ -100,6 +100,18 @@ run = "MEDIA_WORKER_TOKEN=${MEDIA_WORKER_TOKEN:-$(uv run media-streamer worker-t
 description = "Create a worker access token: mise run worker:token -- <name> [--tags gpu]"
 run = "uv run media-streamer worker-token"
 
+[tasks."user:add"]
+description = "Create an account: mise run user:add -- <e-mail> [--admin] (asks for the password)"
+run = "uv run media-streamer user add"
+
+[tasks."user:password"]
+description = "Set a password: mise run user:password -- <e-mail>"
+run = "uv run media-streamer user password"
+
+[tasks."user:list"]
+description = "List the accounts"
+run = "uv run media-streamer user list"
+
 [tasks."tapo:login"]
 description = "Sign in to the Tapo cloud (password typed locally, never stored)"
 run = "uv run media-streamer tapo-login"
@@ -189,8 +201,8 @@ run = "docker compose logs -f"
 [tasks."docker:test"]
 description = "Second Docker stack on :18000 with its own data (out/docker-data), next to dev"
 run = """
-MEDIA_DATA_PATH=./out/docker-data HTTP_PORT=18000 RTSP_PORT=18554 HLS_PORT=18888 \
-WEBRTC_PORT=18889 WEBRTC_ICE_PORT=18189 docker compose -p media-streamer-test up --build -d
+MEDIA_DATA_PATH=./out/docker-data HTTP_PORT=18000 WEBRTC_ICE_PORT=18189 \
+docker compose -p media-streamer-test up --build -d
 echo "http://localhost:18000  (stop: mise run docker:test-down)"
 """
 
@@ -264,6 +276,12 @@ description = "Profiles added in the UI and per-camera profile choices"
 depends = ["server-stopped"]
 confirm = "Delete profiles?"
 run = "uv run media-streamer reset profiles --yes"
+
+[tasks."reset:users"]
+description = "All accounts, sessions, shares and invite links (setup code again on next start)"
+depends = ["server-stopped"]
+confirm = "Delete users?"
+run = "uv run media-streamer reset users --yes"
 
 [tasks."reset:tapo"]
 description = "The saved Tapo cloud session"

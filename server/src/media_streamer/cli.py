@@ -32,6 +32,55 @@ def _hw_command(args: argparse.Namespace) -> int:
                        ffmpeg=args.ffmpeg, device=args.device)
 
 
+def _ask_password() -> str:
+    import getpass
+
+    pw = getpass.getpass("Password: ")
+    if pw != getpass.getpass("Again: "):
+        raise SystemExit("error: the passwords differ")
+    return pw
+
+
+def _user_command(settings, args: argparse.Namespace) -> int:
+    from sqlalchemy import select
+
+    from . import accounts
+    from .db import session_scope
+    from .models import User
+
+    def user_id(email: str) -> int:
+        with session_scope() as s:
+            uid = s.scalar(select(User.id).where(User.email == email.strip().lower()))
+        if uid is None:
+            raise SystemExit(f"error: no account {email}")
+        return uid
+
+    try:
+        if args.user_cmd == "add":
+            pw = None if args.no_password else _ask_password()
+            info = accounts.create_user(settings, args.email, pw, args.name, args.admin)
+            (settings.data_dir / "setup-code").unlink(missing_ok=True)
+            print(f"created {info['email']}{' (admin)' if info['is_admin'] else ''}")
+        elif args.user_cmd == "password":
+            accounts.set_password(user_id(args.email), _ask_password())
+            print("password set; the account was signed out everywhere")
+        elif args.user_cmd == "list":
+            for u in accounts.list_users():
+                flags = [f for f, on in (("admin", u["is_admin"]), ("disabled", u["disabled"]),
+                                         ("password", u["has_password"])) if on]
+                flags += u["providers"]
+                print(f"{u['email']:<40} {u['name'] or '':<24} {', '.join(flags)}")
+        elif args.user_cmd == "remove":
+            accounts.delete_user(user_id(args.email))
+            print(f"removed {args.email}")
+        elif args.user_cmd == "admin":
+            accounts.update_user(user_id(args.email), is_admin=not args.off)
+            print(f"{args.email} is {'no longer ' if args.off else ''}an admin")
+    except accounts.AccountError as e:
+        raise SystemExit(f"error: {e}") from None
+    return 0
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="media-streamer")
     parser.add_argument("-c", "--config", help="config file (default: $MEDIA_STREAMER_CONFIG "
@@ -60,13 +109,29 @@ def main() -> None:
     tok.add_argument("--tags", default="", help="comma separated capability tags")
     tok.add_argument("--save", metavar="FILE",
                      help="keep the token in FILE and reuse it while it is valid (dev tooling)")
+    user = sub.add_parser("user", help="manage accounts (add, password, list, remove)")
+    user_sub = user.add_subparsers(dest="user_cmd", required=True)
+    u_add = user_sub.add_parser("add", help="create an account (asks for the password)")
+    u_add.add_argument("email")
+    u_add.add_argument("--name")
+    u_add.add_argument("--admin", action="store_true")
+    u_add.add_argument("--no-password", action="store_true",
+                       help="sign in with OAuth only")
+    u_pw = user_sub.add_parser("password", help="set an account's password")
+    u_pw.add_argument("email")
+    user_sub.add_parser("list", help="list accounts")
+    u_rm = user_sub.add_parser("remove", help="delete an account")
+    u_rm.add_argument("email")
+    u_admin = user_sub.add_parser("admin", help="make an account an admin (--off: undo)")
+    u_admin.add_argument("email")
+    u_admin.add_argument("--off", action="store_true")
     reset = sub.add_parser("reset", help="delete one kind of data, keep the rest "
                                          "(stop the server first)")
     reset.add_argument("scopes", nargs="+", metavar="SCOPE",
                        choices=["recordings", "events", "detections", "queue", "workers",
-                                "cameras", "profiles", "tapo"],
+                                "cameras", "profiles", "users", "tapo"],
                        help="recordings | events | detections | queue | workers | cameras | "
-                            "profiles | tapo")
+                            "profiles | users | tapo")
     reset.add_argument("-y", "--yes", action="store_true", help="don't ask")
     rm = sub.add_parser("remove-cameras",
                         help="remove cameras and their recordings, events and settings "
@@ -166,6 +231,11 @@ def main() -> None:
                 print(worker_tokens.create(args.name, tags=tags)[1])
         except worker_tokens.TokenError as e:
             raise SystemExit(f"error: {e}") from None
+    elif args.cmd == "user":
+        from .db import init_db
+
+        init_db(settings)
+        raise SystemExit(_user_command(settings, args))
     elif args.cmd == "reset":
         from . import reset as reset_mod
         from .db import init_db

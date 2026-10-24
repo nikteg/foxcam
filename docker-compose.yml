@@ -4,8 +4,11 @@
 #   docker compose up --build
 #
 # Optional environment (e.g. in .env): MEDIA_CONFIG (config file), MEDIA_DATA_PATH (data
-# folder), PUBLIC_HOST_URL (how browsers reach this box), *_PORT (host ports),
-# MEDIA_WORKER_TOKEN.
+# folder), *_PORT (host ports), MEDIA_WORKER_TOKEN.
+#
+# server and ingest share MediaMTX's network namespace: MediaMTX trusts only local
+# processes, and browsers reach live view through the server (behind the login). The
+# first start prints a setup code for the first account: docker compose logs server
 services:
   mediamtx:
     # Same image as the server: MediaMTX runs `media-streamer transcode` (masks, recording
@@ -22,10 +25,10 @@ services:
     environment:
       TZ: UTC # recording file names in UTC (they include the offset either way)
     ports:
-      - "${RTSP_PORT:-8554}:8554" # RTSP
-      - "${HLS_PORT:-8888}:8888" # HLS (live view fallback)
-      - "${WEBRTC_PORT:-8889}:8889" # WebRTC (live view)
+      - "${HTTP_PORT:-8000}:8000" # web UI, API and live view (the server, see below)
       - "${WEBRTC_ICE_PORT:-8189}:8189/tcp" # WebRTC media (over TCP, see mediamtx.yml)
+      # RTSP for other players; needs a user with a password in mediamtx.yml:
+      # - "${RTSP_PORT:-8554}:8554"
 
   server:
     build: { context: ., dockerfile: server/Dockerfile }
@@ -33,22 +36,17 @@ services:
     restart: unless-stopped
     command: ["serve"]
     depends_on: [mediamtx]
+    network_mode: service:mediamtx # port 8000 is published by the mediamtx service
     volumes:
       - ${MEDIA_CONFIG:-./config.yaml}:/app/config.yaml:ro
       - ${MEDIA_DATA_PATH:-./data}:/data
       - ./samples:/app/samples:ro
     environment:
       MEDIA_DATA_DIR: /data
-      MEDIAMTX_API_URL: http://mediamtx:9997
-      MEDIAMTX_RTSP_URL: rtsp://mediamtx:8554
-      MEDIAMTX_WEBRTC_PUBLIC_URL: ${PUBLIC_HOST_URL:-http://localhost}:${WEBRTC_PORT:-8889}
-      MEDIAMTX_HLS_PUBLIC_URL: ${PUBLIC_HOST_URL:-http://localhost}:${HLS_PORT:-8888}
       MEDIA_WORKER_TOKEN: ${MEDIA_WORKER_TOKEN:-}
       # S3 credentials, if not in config.yaml (storage.s3).
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-    ports:
-      - "${HTTP_PORT:-8000}:8000"
 
   ingest:
     build: { context: ., dockerfile: server/Dockerfile }
@@ -56,10 +54,10 @@ services:
     restart: unless-stopped
     command: ["ingest"]
     depends_on: [mediamtx]
+    network_mode: service:mediamtx
     volumes:
       - ${MEDIA_CONFIG:-./config.yaml}:/app/config.yaml:ro
       - ${MEDIA_DATA_PATH:-./data}:/data
       - ./samples:/app/samples:ro
     environment:
       MEDIA_DATA_DIR: /data
-      MEDIAMTX_RTSP_URL: rtsp://mediamtx:8554

@@ -10,9 +10,10 @@ from pydantic import BaseModel, Field
 
 from .. import notify
 from ..config import PROFILE_ID, Settings
-from .deps import settings_dep
+from .deps import require_admin, settings_dep
 
-router = APIRouter(prefix="/api/notifications", tags=["notifications"])
+router = APIRouter(prefix="/api/notifications", tags=["notifications"],
+                   dependencies=[Depends(require_admin)])
 
 
 class ChannelIn(BaseModel):

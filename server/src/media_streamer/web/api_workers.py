@@ -11,10 +11,11 @@ from .. import worker_tokens
 from ..config import Settings
 from ..db import session_scope
 from ..models import Worker, utcnow
-from .deps import settings_dep
+from .deps import require_admin, settings_dep
 from .queries import WORKER_ONLINE_SECONDS
 
-router = APIRouter(prefix="/api/workers", tags=["workers"])
+router = APIRouter(prefix="/api/workers", tags=["workers"],
+                   dependencies=[Depends(require_admin)])
 
 
 class TokenIn(BaseModel):

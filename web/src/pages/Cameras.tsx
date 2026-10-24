@@ -27,6 +27,7 @@ import {
   Add20Regular,
   Delete20Regular,
   Edit20Regular,
+  People20Regular,
   ScanObject20Regular,
   EyeOff20Regular,
   Video20Regular,
@@ -37,7 +38,9 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router";
 
 import { api, type Camera, type CameraSource, type RecordingProfile } from "../api";
+import { hasRole, useMe } from "../auth";
 import { AddCameraDialog } from "../components/AddCameraDialog";
+import { ShareDialog, useRoleName } from "../components/ShareDialog";
 import { ProfilesSection } from "./Profiles";
 import { useProfileName, useProfiles } from "../components/ProfileSelect";
 import { TapoAccountCard } from "../components/TapoAccount";
@@ -77,6 +80,9 @@ export function Cameras() {
   const [removing, setRemoving] = useState<Camera | null>(null);
   const [choosing, setChoosing] = useState<Camera | null>(null);
   const [recordingFor, setRecordingFor] = useState<Camera | null>(null);
+  const [sharing, setSharing] = useState<Camera | null>(null);
+  const me = useMe();
+  const isAdmin = me?.is_admin ?? false;
   const { hash } = useLocation();
   const loaded = !cameras.isPending;
   useEffect(() => {
@@ -88,20 +94,28 @@ export function Cameras() {
       <PageHeader
         title={t("nav.cameras")}
         actions={
-          <Button appearance="primary" icon={<Add20Regular />} onClick={() => setAdding(true)}>
-            {t("addCamera.title")}
-          </Button>
+          me?.can_add_cameras && (
+            <Button appearance="primary" icon={<Add20Regular />} onClick={() => setAdding(true)}>
+              {t("addCamera.title")}
+            </Button>
+          )
         }
       >
-        {rich("cameras.intro", { file: <code>config.yaml</code> })}
+        {isAdmin
+          ? rich("cameras.intro", { file: <code>config.yaml</code> })
+          : t("cameras.introUser")}
       </PageHeader>
 
-      <Subtitle2 as="h2" className="section">
-        {t("cameras.integrations")}
-      </Subtitle2>
-      <div className="cards">
-        <TapoAccountCard />
-      </div>
+      {isAdmin && (
+        <>
+          <Subtitle2 as="h2" className="section">
+            {t("cameras.integrations")}
+          </Subtitle2>
+          <div className="cards">
+            <TapoAccountCard />
+          </div>
+        </>
+      )}
 
       <Subtitle2 as="h2" className="section">
         {t("nav.cameras")}
@@ -117,11 +131,12 @@ export function Cameras() {
             onRemove={() => setRemoving(c)}
             onProfiles={() => setChoosing(c)}
             onRecording={() => setRecordingFor(c)}
+            onShare={me?.enabled ? () => setSharing(c) : undefined}
           />
         ))}
       </div>
 
-      <ProfilesSection />
+      {isAdmin && <ProfilesSection />}
 
       <AddCameraDialog open={adding} onClose={() => setAdding(false)} />
       {editing && <EditCameraDialog camera={editing} onClose={() => setEditing(null)} />}
@@ -130,6 +145,7 @@ export function Cameras() {
       {recordingFor && (
         <RecordingProfileDialog camera={recordingFor} onClose={() => setRecordingFor(null)} />
       )}
+      {sharing && <ShareDialog camera={sharing} onClose={() => setSharing(null)} />}
     </>
   );
 }
@@ -140,12 +156,15 @@ function CameraCard({
   onRemove,
   onProfiles,
   onRecording,
+  onShare,
 }: {
   camera: Camera;
   onEdit: () => void;
   onRemove: () => void;
   onProfiles: () => void;
   onRecording: () => void;
+  /** Undefined when accounts are turned off. */
+  onShare?: () => void;
 }) {
   const { t } = useI18n();
   const profileName = useProfileName();
@@ -157,7 +176,10 @@ function CameraCard({
     mutationFn: (enabled: boolean) => api.updateCamera(c.id, { enabled }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["cameras"] }),
   });
-  const editable = c.managed === "ui";
+  const roleName = useRoleName();
+  const canEdit = hasRole(c, "editor");
+  const isOwner = hasRole(c, "owner");
+  const editable = c.managed === "ui" && canEdit;
 
   return (
     <Card>
@@ -172,7 +194,8 @@ function CameraCard({
         description={
           <span className="row wrap tags">
             <Tag>{sourceLabel(c.source_config.type)}</Tag>
-            {!editable && <Tag kind="pending">config.yaml</Tag>}
+            {c.managed === "config" && <Tag kind="pending">config.yaml</Tag>}
+            {onShare && c.role !== "owner" && <Tag>{roleName(c.role)}</Tag>}
             {!c.enabled && <Tag kind="warn">{t("cameras.disabled")}</Tag>}
             {c.private && <Tag kind="private">{t("state.private")}</Tag>}
           </span>
@@ -211,7 +234,13 @@ function CameraCard({
         </dd>
       </dl>
       <Tooltip
-        content={editable ? t("cameras.disableHint") : t("cameras.configHint")}
+        content={
+          editable
+            ? t("cameras.disableHint")
+            : c.managed === "config"
+              ? t("cameras.configHint")
+              : t("cameras.editorsOnly")
+        }
         relationship="description"
       >
         <Switch
@@ -230,29 +259,38 @@ function CameraCard({
         >
           {t("nav.live")}
         </Button>
-        <Button
-          as="a"
-          size="small"
-          icon={<EyeOff20Regular />}
-          {...routerHref(`/cameras/${c.id}/mask`)}
-        >
-          {t("camera.censorAreas")}
-        </Button>
-        <Button size="small" icon={<ScanObject20Regular />} onClick={onProfiles}>
-          {t("cameras.detect")}
-        </Button>
-        <Button size="small" icon={<VideoClip20Regular />} onClick={onRecording}>
-          {t("recording.title")}
-        </Button>
-        {editable && (
+        {canEdit && (
           <>
-            <Button size="small" icon={<Edit20Regular />} onClick={onEdit}>
-              {t("common.edit")}
+            <Button
+              as="a"
+              size="small"
+              icon={<EyeOff20Regular />}
+              {...routerHref(`/cameras/${c.id}/mask`)}
+            >
+              {t("camera.censorAreas")}
             </Button>
-            <Button size="small" icon={<Delete20Regular />} onClick={onRemove}>
-              {t("common.remove")}
+            <Button size="small" icon={<ScanObject20Regular />} onClick={onProfiles}>
+              {t("cameras.detect")}
+            </Button>
+            <Button size="small" icon={<VideoClip20Regular />} onClick={onRecording}>
+              {t("recording.title")}
             </Button>
           </>
+        )}
+        {onShare && isOwner && (
+          <Button size="small" icon={<People20Regular />} onClick={onShare}>
+            {t("share.button")}
+          </Button>
+        )}
+        {editable && (
+          <Button size="small" icon={<Edit20Regular />} onClick={onEdit}>
+            {t("common.edit")}
+          </Button>
+        )}
+        {editable && isOwner && (
+          <Button size="small" icon={<Delete20Regular />} onClick={onRemove}>
+            {t("common.remove")}
+          </Button>
         )}
       </CardFooter>
     </Card>

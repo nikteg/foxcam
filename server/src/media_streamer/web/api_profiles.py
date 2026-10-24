@@ -9,10 +9,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from .. import profiles
+from ..accounts import Principal
 from ..config import PROFILE_ID, Settings
 from ..db import session_scope
-from ..models import Job, JobState, Worker, WorkerToken, utcnow
-from .deps import settings_dep
+from ..models import CameraRole, Job, JobState, Worker, WorkerToken, utcnow
+from .deps import camera_for, principal, require_admin, settings_dep
 from .queries import WORKER_ONLINE_SECONDS
 
 router = APIRouter(prefix="/api", tags=["profiles"])
@@ -40,7 +41,7 @@ def _error(e: profiles.ProfileError) -> HTTPException:
     return HTTPException(400, str(e))
 
 
-def profile_list(settings: Settings) -> list[dict[str, Any]]:
+def profile_list(settings: Settings, viewer: Principal) -> list[dict[str, Any]]:
     now = utcnow()
     with session_scope() as s:
         workers = [(w.id, set(w.tags or [])) for w in s.scalars(select(Worker))
@@ -49,7 +50,7 @@ def profile_list(settings: Settings) -> list[dict[str, Any]]:
         for pid in s.scalars(select(Job.profile_id).where(
                 Job.state.in_([JobState.PENDING, JobState.FAILED]))):
             waiting[pid] = waiting.get(pid, 0) + 1
-    cams = settings.all_cameras(include_disabled=True)
+    cams = [c for c in settings.all_cameras(include_disabled=True) if viewer.can(c.id)]
     by_camera = {c.id: {p.id for p in profiles.camera_profiles(settings, c.id)} for c in cams}
     out = []
     for p in settings.all_profiles(include_disabled=True):
@@ -64,11 +65,12 @@ def profile_list(settings: Settings) -> list[dict[str, Any]]:
 
 
 @router.get("/profiles")
-def list_profiles(settings: Settings = Depends(settings_dep)) -> list[dict[str, Any]]:
-    return profile_list(settings)
+def list_profiles(settings: Settings = Depends(settings_dep),
+                  p: Principal = Depends(principal)) -> list[dict[str, Any]]:
+    return profile_list(settings, p)
 
 
-@router.post("/profiles", status_code=201)
+@router.post("/profiles", status_code=201, dependencies=[Depends(require_admin)])
 def create_profile(body: ProfileIn, settings: Settings = Depends(settings_dep)) -> dict:
     try:
         p = profiles.save_profile(settings, body.model_dump(), create=True)
@@ -77,7 +79,7 @@ def create_profile(body: ProfileIn, settings: Settings = Depends(settings_dep)) 
     return {"id": p.id}
 
 
-@router.put("/profiles/{profile_id}")
+@router.put("/profiles/{profile_id}", dependencies=[Depends(require_admin)])
 def update_profile(profile_id: str, body: ProfileIn,
                    settings: Settings = Depends(settings_dep)) -> dict:
     if body.id != profile_id:
@@ -91,7 +93,7 @@ def update_profile(profile_id: str, body: ProfileIn,
     return {"id": p.id}
 
 
-@router.delete("/profiles/{profile_id}")
+@router.delete("/profiles/{profile_id}", dependencies=[Depends(require_admin)])
 def delete_profile(profile_id: str, settings: Settings = Depends(settings_dep)) -> dict:
     try:
         cancelled = profiles.delete_profile(settings, profile_id)
@@ -102,9 +104,9 @@ def delete_profile(profile_id: str, settings: Settings = Depends(settings_dep)) 
 
 @router.put("/cameras/{camera_id}/profiles")
 def set_camera_profiles(camera_id: str, body: CameraProfilesIn,
-                        settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
-    if settings.camera(camera_id) is None:
-        raise HTTPException(404, "unknown camera")
+                        settings: Settings = Depends(settings_dep),
+                        p: Principal = Depends(principal)) -> dict[str, Any]:
+    camera_for(p, settings, camera_id, CameraRole.EDITOR)
     try:
         profiles.set_camera_profiles(settings, camera_id, body.profiles)
     except profiles.ProfileError as e:
@@ -112,7 +114,7 @@ def set_camera_profiles(camera_id: str, body: CameraProfilesIn,
     return {"profiles": [p.id for p in profiles.camera_profiles(settings, camera_id)]}
 
 
-@router.get("/worker-tags")
+@router.get("/worker-tags", dependencies=[Depends(require_admin)])
 def known_tags(settings: Settings = Depends(settings_dep)) -> list[str]:
     """Tags seen on workers, tokens and profiles (suggestions for the UI)."""
     tags: set[str] = set()

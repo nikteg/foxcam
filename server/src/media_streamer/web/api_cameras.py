@@ -1,4 +1,8 @@
-"""Camera management (add / edit / remove / test) and the Tapo account integration."""
+"""Camera management (add / edit / remove / test) and the Tapo account integration.
+
+Whoever adds a camera owns it (see accounts.py); editors change its settings, owners
+remove it. The Tapo account is the server's, so only admins manage it.
+"""
 
 from __future__ import annotations
 
@@ -11,10 +15,12 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from .. import camera_store, recording, tapo_account
+from .. import accounts, camera_store, recording, tapo_account
+from ..accounts import Principal
 from ..config import Settings, Source
 from ..mediamtx import MediaMtx
-from .deps import mediamtx_dep, settings_dep
+from ..models import CameraRole
+from .deps import camera_for, mediamtx_dep, principal, require_admin, settings_dep
 from .queries import _redact_url
 
 log = logging.getLogger(__name__)
@@ -35,9 +41,12 @@ class RecordingProfileIn(BaseModel):
 
 
 @router.get("/recording-profiles")
-def list_recording_profiles(settings: Settings = Depends(settings_dep)) -> list[dict[str, Any]]:
+def list_recording_profiles(settings: Settings = Depends(settings_dep),
+                            p: Principal = Depends(principal)) -> list[dict[str, Any]]:
     by_profile: dict[str, list[str]] = {}
     for cam in settings.all_cameras(include_disabled=True):
+        if not p.can(cam.id):
+            continue
         p, _ = recording.camera_recording_profile(settings, cam)
         by_profile.setdefault(p.id, []).append(cam.id)
     return [{**p.model_dump(), "display_name": p.display_name,
@@ -49,11 +58,11 @@ def list_recording_profiles(settings: Settings = Depends(settings_dep)) -> list[
 @router.put("/cameras/{camera_id}/recording-profile")
 async def set_recording_profile(camera_id: str, body: RecordingProfileIn,
                                 settings: Settings = Depends(settings_dep),
-                                mtx: MediaMtx = Depends(mediamtx_dep)) -> dict[str, Any]:
+                                mtx: MediaMtx = Depends(mediamtx_dep),
+                                p: Principal = Depends(principal)) -> dict[str, Any]:
     """Takes effect within seconds: MediaMTX starts / stops the re-encode, and the
     current recording segment ends."""
-    if settings.camera(camera_id) is None:
-        raise HTTPException(404, "unknown camera")
+    camera_for(p, settings, camera_id, CameraRole.EDITOR)
     try:
         await asyncio.to_thread(recording.set_camera_recording_profile, settings, camera_id,
                                 body.profile)
@@ -79,22 +88,38 @@ class CameraPatch(BaseModel):
     enabled: bool | None = None
 
 
+def may_add_cameras(p: Principal = Depends(principal),
+                    settings: Settings = Depends(settings_dep)) -> Principal:
+    if not (p.is_admin or settings.auth.users_can_add_cameras):
+        raise HTTPException(403, "only admins can add cameras")
+    return p
+
+
 @router.post("/cameras", status_code=201)
 async def add_camera(body: CameraIn, settings: Settings = Depends(settings_dep),
-                     mtx: MediaMtx = Depends(mediamtx_dep)) -> dict[str, Any]:
+                     mtx: MediaMtx = Depends(mediamtx_dep),
+                     p: Principal = Depends(may_add_cameras)) -> dict[str, Any]:
+    if body.source.type == "tapo_cloud" and not p.is_admin:
+        raise HTTPException(403, "only admins can add cameras from the server's Tapo account")
     try:
         cam = await asyncio.to_thread(
             camera_store.add_camera, settings, name=body.name, camera_id=body.id,
             source=body.source.model_dump(), segment_seconds=body.segment_seconds)
     except camera_store.CameraError as e:
         raise HTTPException(400, str(e)) from e
+    accounts.forget_camera(cam.id)  # shares left over from an older camera with this id
+    if p.user_id is not None:
+        accounts.grant(cam.id, p.user_id, CameraRole.OWNER)
     await resync(mtx)
     return {"id": cam.id}
 
 
 @router.patch("/cameras/{camera_id}")
 async def update_camera(camera_id: str, body: CameraPatch,
-                        mtx: MediaMtx = Depends(mediamtx_dep)) -> dict[str, Any]:
+                        mtx: MediaMtx = Depends(mediamtx_dep),
+                        settings: Settings = Depends(settings_dep),
+                        p: Principal = Depends(principal)) -> dict[str, Any]:
+    camera_for(p, settings, camera_id, CameraRole.EDITOR)
     seg: int | None | type[...] = ...
     if body.clear_segment_seconds:
         seg = None
@@ -110,16 +135,20 @@ async def update_camera(camera_id: str, body: CameraPatch,
 
 
 @router.delete("/cameras/{camera_id}")
-async def delete_camera(camera_id: str, mtx: MediaMtx = Depends(mediamtx_dep)) -> dict[str, str]:
+async def delete_camera(camera_id: str, mtx: MediaMtx = Depends(mediamtx_dep),
+                        settings: Settings = Depends(settings_dep),
+                        p: Principal = Depends(principal)) -> dict[str, str]:
+    camera_for(p, settings, camera_id, CameraRole.OWNER)
     try:
         await asyncio.to_thread(camera_store.delete_camera, camera_id)
     except camera_store.CameraError as e:
         raise HTTPException(400, str(e)) from e
+    accounts.forget_camera(camera_id)
     await resync(mtx)
     return {"status": "ok"}
 
 
-@router.get("/cameras-sample-files")
+@router.get("/cameras-sample-files", dependencies=[Depends(may_add_cameras)])
 def sample_files(settings: Settings = Depends(settings_dep)) -> list[str]:
     return camera_store.sample_files(settings)
 
@@ -149,9 +178,12 @@ def _ffprobe(url_or_path: str, rtsp: bool) -> dict[str, Any]:
 
 
 @router.post("/cameras/probe")
-async def probe(body: ProbeIn, settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
+async def probe(body: ProbeIn, settings: Settings = Depends(settings_dep),
+                p: Principal = Depends(may_add_cameras)) -> dict[str, Any]:
     """Check that a source works before adding it."""
     src = body.source
+    if src.type == "tapo_cloud" and not p.is_admin:
+        raise HTTPException(403, "only admins can use the server's Tapo account")
     if src.type == "rtsp":
         result = await asyncio.to_thread(_ffprobe, src.url, True)
         # ffmpeg errors echo the URL; never send the camera password back.
@@ -191,12 +223,12 @@ def _tapo_error(e: tapo_account.TapoError) -> HTTPException:
     return HTTPException(e.status, str(e))
 
 
-@router.get("/integrations/tapo")
+@router.get("/integrations/tapo", dependencies=[Depends(require_admin)])
 def tapo_status(settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
     return tapo_account.status(settings)
 
 
-@router.post("/integrations/tapo/login")
+@router.post("/integrations/tapo/login", dependencies=[Depends(require_admin)])
 async def tapo_login(body: TapoLoginIn, settings: Settings = Depends(settings_dep)) -> dict:
     try:
         return await tapo_account.login(settings, body.email.strip(), body.password)
@@ -204,7 +236,7 @@ async def tapo_login(body: TapoLoginIn, settings: Settings = Depends(settings_de
         raise _tapo_error(e) from e
 
 
-@router.post("/integrations/tapo/mfa")
+@router.post("/integrations/tapo/mfa", dependencies=[Depends(require_admin)])
 async def tapo_mfa(body: TapoMfaIn, settings: Settings = Depends(settings_dep)) -> dict:
     try:
         return await tapo_account.submit_mfa(settings, body.login_id, body.code)
@@ -212,7 +244,7 @@ async def tapo_mfa(body: TapoMfaIn, settings: Settings = Depends(settings_dep)) 
         raise _tapo_error(e) from e
 
 
-@router.get("/integrations/tapo/devices")
+@router.get("/integrations/tapo/devices", dependencies=[Depends(require_admin)])
 async def tapo_devices(settings: Settings = Depends(settings_dep)) -> list[dict[str, Any]]:
     try:
         return await tapo_account.devices(settings)
@@ -220,7 +252,7 @@ async def tapo_devices(settings: Settings = Depends(settings_dep)) -> list[dict[
         raise _tapo_error(e) from e
 
 
-@router.post("/integrations/tapo/logout")
+@router.post("/integrations/tapo/logout", dependencies=[Depends(require_admin)])
 def tapo_logout(settings: Settings = Depends(settings_dep)) -> dict[str, str]:
     tapo_account.logout(settings)
     return {"status": "ok"}

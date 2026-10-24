@@ -1,17 +1,15 @@
 """HTTP API: worker protocol, masks, camera management."""
 
 import pytest
-from fastapi.testclient import TestClient
 from media_streamer.db import session_scope
 from media_streamer.models import JobState, Segment, SegmentStatus
-from media_streamer.web.app import create_app
 
-from .conftest import add_detection, add_job, add_segment, make_video, needs_ffmpeg
+from .conftest import add_detection, add_job, add_segment, app_client, make_video, needs_ffmpeg
 
 
 @pytest.fixture
 def client(settings):
-    with TestClient(create_app(settings, background=False)) as c:
+    with app_client(settings) as c:
         yield c
 
 
@@ -128,7 +126,7 @@ def test_worker_api_is_locked_by_default(tmp_path):
     s = Settings.model_validate({"data_dir": str(tmp_path),
                                  "mediamtx": {"api_url": "http://127.0.0.1:1"}})
     assert s.open_worker_access is False
-    with TestClient(create_app(s, background=False)) as c:
+    with app_client(s) as c:
         assert c.get("/api/workers/auth").json()["mode"] == "locked"
         r = c.post("/api/worker/lease", json={"worker_id": "stranger"})
         assert r.status_code == 401 and "token" in r.json()["detail"]

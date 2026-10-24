@@ -34,9 +34,10 @@ cameras: []
 mediamtx:
   api_url: ${MEDIAMTX_API_URL:-http://localhost:9997}
   rtsp_url: ${MEDIAMTX_RTSP_URL:-rtsp://localhost:8554}
-  # As reachable from the viewer's browser:
-  webrtc_public_url: ${MEDIAMTX_WEBRTC_PUBLIC_URL:-http://localhost:8889}
-  hls_public_url: ${MEDIAMTX_HLS_PUBLIC_URL:-http://localhost:8888}
+  # MediaMTX's WebRTC / HLS servers as seen by this server. Browsers watch live view
+  # through the server (behind the login), never directly.
+  webrtc_url: ${MEDIAMTX_WEBRTC_URL:-http://localhost:8889}
+  hls_url: ${MEDIAMTX_HLS_URL:-http://localhost:8888}
   # Where MediaMTX writes recordings, as seen by the MediaMTX process.
   # Leave unset when MediaMTX and the server see the same path.
   record_dir: ${MEDIAMTX_RECORD_DIR:-}
@@ -140,6 +141,39 @@ storage:
 
 # Link target for notifications: how you open the web UI.
 # public_url: http://192.168.1.10:8000
+
+# Accounts (docs/AUTH.md). Everything except the worker API needs a login; the first start
+# prints a setup code for creating the first admin in the web UI.
+auth:
+  enabled: true
+  password_login: true
+  # invite: only with an invite link (cameras are shared with links or by e-mail)
+  # open: anyone who reaches the server may sign up | closed: admins add users
+  registration: invite
+  # Always admins; may also sign up through OAuth without an invite (first admin without
+  # a password).
+  admin_emails: []
+  session_days: 30
+  # Users may add their own cameras (they own them and decide who else sees them).
+  users_can_add_cameras: true
+  # Sign in with Google / Microsoft / GitHub / any OpenID Connect provider. Register the
+  # redirect URL <how you open the UI>/api/auth/oauth/<id>/callback at the provider.
+  oauth: []
+  #  - id: google
+  #    type: google
+  #    client_id: ${GOOGLE_CLIENT_ID:-}
+  #    client_secret: ${GOOGLE_CLIENT_SECRET:-}
+  #  - id: github
+  #    type: github
+  #    client_id: ${GITHUB_CLIENT_ID:-}
+  #    client_secret: ${GITHUB_CLIENT_SECRET:-}
+  #  - id: authentik
+  #    type: oidc
+  #    name: Authentik
+  #    issuer: https://auth.example.org/application/o/media-streamer/
+  #    client_id: ${OIDC_CLIENT_ID:-}
+  #    client_secret: ${OIDC_CLIENT_SECRET:-}
+  #    allowed_domains: [example.org]
 
 # Notifications when an event starts (event.new) or its clip is ready (event.clip).
 # Channels can also be added in the web UI (Settings -> Notifications). docs/NOTIFICATIONS.md

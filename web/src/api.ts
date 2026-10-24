@@ -2,10 +2,15 @@
 
 export type Rect = [x: number, y: number, w: number, h: number];
 
+export type CameraRole = "viewer" | "editor" | "owner";
+
 export interface Camera {
   id: string;
   name: string;
   source: "rtsp" | "tapo_cloud" | "test" | "file";
+  /** What the signed-in user may do with this camera (admins: owner of everything). */
+  role: CameraRole;
+  /** Live view, through the server (behind the login). */
   webrtc_url: string;
   hls_url: string;
   /** Transcoded low-bitrate live stream (on demand); null when disabled on the server. */
@@ -367,6 +372,70 @@ export interface Delivery {
   sent_at: string | null;
 }
 
+export interface User {
+  id: number;
+  email: string;
+  name: string | null;
+  display_name: string;
+  is_admin: boolean;
+  disabled: boolean;
+  has_password: boolean;
+  /** Linked OAuth providers (ids). */
+  providers: string[];
+  created_at: string;
+  last_login_at: string | null;
+}
+
+export interface AuthProvider {
+  id: string;
+  name: string;
+  type: "google" | "microsoft" | "github" | "oidc";
+}
+
+export interface AuthState {
+  /** False: no logins (auth.enabled: false), everyone is an admin. */
+  enabled: boolean;
+  setup_required: boolean;
+  password_login: boolean;
+  registration: "invite" | "open" | "closed";
+  providers: AuthProvider[];
+  user: User | null;
+  signed_in: boolean;
+  is_admin: boolean;
+  can_add_cameras: boolean;
+}
+
+export interface CameraMember {
+  user_id: number;
+  email: string;
+  name: string | null;
+  display_name: string;
+  role: CameraRole;
+  created_at: string;
+}
+
+export interface Invite {
+  id: number;
+  cameras: { camera_id: string; role: CameraRole }[];
+  is_admin: boolean;
+  note: string | null;
+  created_at: string;
+  expires_at: string;
+  used_at: string | null;
+  used_by: number | null;
+  state: "open" | "used" | "expired";
+  created_by: number | null;
+  created_by_name: string | null;
+}
+
+export interface InvitePreview {
+  from: string | null;
+  is_admin: boolean;
+  note: string | null;
+  expires_at: string;
+  cameras: { camera_id: string; role: CameraRole; name: string }[];
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -390,12 +459,20 @@ function withQuery(path: string, query?: Query): string {
   return qs ? `${path}?${qs}` : path;
 }
 
+let onUnauthorized: () => void = () => {};
+
+/** Called when the session has ended (401), so the app can show the sign-in page. */
+export function setUnauthorizedHandler(handler: () => void) {
+  onUnauthorized = handler;
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(path, {
     method,
     headers: body === undefined ? undefined : { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+  if (res.status === 401 && !path.startsWith("/api/auth/")) onUnauthorized();
   if (!res.ok) {
     let detail = res.statusText;
     try {
@@ -409,6 +486,62 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 }
 
 export const api = {
+  authState: () => request<AuthState>("GET", "/api/auth/state"),
+  login: (email: string, password: string) =>
+    request<AuthState>("POST", "/api/auth/login", { email, password }),
+  setup: (body: { email: string; password: string; name: string; code: string }) =>
+    request<AuthState>("POST", "/api/auth/setup", body),
+  register: (body: { email: string; password: string; name: string; invite?: string }) =>
+    request<AuthState>("POST", "/api/auth/register", body),
+  logout: () => request<{ status: string }>("POST", "/api/auth/logout"),
+  updateMe: (name: string) => request<User>("PATCH", "/api/auth/me", { name }),
+  changePassword: (current: string | null, next: string) =>
+    request<{ status: string }>("POST", "/api/auth/password", { current, new: next }),
+  unlinkProvider: (id: string) =>
+    request<{ status: string }>("DELETE", `/api/auth/providers/${encodeURIComponent(id)}`),
+  invitePreview: (token: string) =>
+    request<InvitePreview>("GET", `/api/auth/invite/${encodeURIComponent(token)}`),
+  acceptInvite: (token: string) =>
+    request<{ cameras: string[] }>("POST", `/api/auth/invite/${encodeURIComponent(token)}/accept`),
+  users: () => request<User[]>("GET", "/api/users"),
+  createUser: (body: { email: string; name: string; password: string | null; is_admin: boolean }) =>
+    request<User>("POST", "/api/users", body),
+  updateUser: (id: number, body: { name?: string; is_admin?: boolean; disabled?: boolean }) =>
+    request<User>("PATCH", `/api/users/${id}`, body),
+  setUserPassword: (id: number, password: string) =>
+    request<{ status: string }>("PUT", `/api/users/${id}/password`, { password }),
+  deleteUser: (id: number) => request<{ status: string }>("DELETE", `/api/users/${id}`),
+  directory: () =>
+    request<{ id: number; email: string; display_name: string }[]>("GET", "/api/users/directory"),
+  cameraAccess: (cameraId: string) =>
+    request<{ members: CameraMember[]; invites: Invite[] }>(
+      "GET",
+      `/api/cameras/${encodeURIComponent(cameraId)}/access`,
+    ),
+  share: (cameraId: string, email: string, role: CameraRole) =>
+    request<{ user_id: number }>("POST", `/api/cameras/${encodeURIComponent(cameraId)}/access`, {
+      email,
+      role,
+    }),
+  setShareRole: (cameraId: string, userId: number, role: CameraRole) =>
+    request<{ role: CameraRole }>(
+      "PUT",
+      `/api/cameras/${encodeURIComponent(cameraId)}/access/${userId}`,
+      { role },
+    ),
+  unshare: (cameraId: string, userId: number) =>
+    request<{ status: string }>(
+      "DELETE",
+      `/api/cameras/${encodeURIComponent(cameraId)}/access/${userId}`,
+    ),
+  invites: () => request<Invite[]>("GET", "/api/invites"),
+  createInvite: (body: {
+    cameras: { camera_id: string; role: CameraRole }[];
+    is_admin?: boolean;
+    note?: string;
+    days?: number;
+  }) => request<Invite & { token: string; path: string }>("POST", "/api/invites", body),
+  deleteInvite: (id: number) => request<{ status: string }>("DELETE", `/api/invites/${id}`),
   status: () => request<Status>("GET", "/api/status"),
   settings: () => request<Settings>("GET", "/api/settings"),
   cameras: () => request<Camera[]>("GET", "/api/cameras"),
@@ -518,22 +651,6 @@ export const api = {
   requeue: (jobId: number) =>
     request<{ status: string }>("POST", `/api/queue/jobs/${jobId}/requeue`),
 };
-
-const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
-
-/** Live-view URLs are configured from the server's point of view (often localhost). When this
- * page was opened from another device, point them at the host the browser used instead. */
-export function browserUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    if (LOCAL_HOSTS.has(u.hostname) && !LOCAL_HOSTS.has(window.location.hostname)) {
-      u.hostname = window.location.hostname;
-    }
-    return u.toString();
-  } catch {
-    return url;
-  }
-}
 
 /** ``source``: the camera's own picture, before burned-in masks (mask editor). */
 export const snapshotUrl = (cameraId: string, fresh = false, source = false) => {

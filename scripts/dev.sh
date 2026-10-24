@@ -91,6 +91,9 @@ echo "  UI (built) + API:      http://localhost:8000   (API docs: /docs)"
 if [ -n "$LAN_IP" ]; then
   echo "  Other devices:         http://$LAN_IP:5173   (live view and notification links use this host)"
 fi
+if [ -f data/setup-code ]; then
+  echo "  First account:         setup code $(cat data/setup-code) (also in data/setup-code)"
+fi
 echo "  Ctrl+C to stop"
 echo
 wait

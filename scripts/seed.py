@@ -6,12 +6,14 @@ optionally, extra detection profiles.
     uv run python scripts/seed.py --profiles            # + a "vehicles" profile
     uv run python scripts/seed.py --server http://localhost:18000
 
+Signs in as an admin: --email (or MEDIA_EMAIL), password from MEDIA_PASSWORD or asked for.
 Idempotent: cameras/profiles that already exist are skipped.
 """
 
 from __future__ import annotations
 
 import argparse
+import getpass
 import os
 import sys
 from pathlib import Path
@@ -30,13 +32,23 @@ def main() -> None:
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--server", default=os.environ.get("MEDIA_SERVER", "http://localhost:8000"))
     p.add_argument("--profiles", action="store_true", help="also add example profiles")
+    p.add_argument("--email", default=os.environ.get("MEDIA_EMAIL"), help="admin account")
     args = p.parse_args()
 
     api = httpx.Client(base_url=args.server.rstrip("/"), timeout=30)
     try:
-        files = api.get("/api/cameras-sample-files").raise_for_status().json()
+        state = api.get("/api/auth/state").raise_for_status().json()
     except httpx.HTTPError as e:
         sys.exit(f"server not reachable at {args.server} ({e}); start it with `mise run dev`")
+    if state["enabled"]:
+        if state["setup_required"]:
+            sys.exit("create the first account in the web UI first (setup code in the log)")
+        email = args.email or input("Admin e-mail: ")
+        password = os.environ.get("MEDIA_PASSWORD") or getpass.getpass("Password: ")
+        r = api.post("/api/auth/login", json={"email": email, "password": password})
+        if r.status_code != 200:
+            sys.exit(f"sign-in failed: {r.json().get('detail')}")
+    files = api.get("/api/cameras-sample-files").raise_for_status().json()
     if not files:
         print("no clips in samples/; run `mise run setup:samples` first")
     existing = {c["source_config"].get("path", "").rsplit("/", 1)[-1]

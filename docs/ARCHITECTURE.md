@@ -143,8 +143,8 @@ SeaweedFS, Hetzner, Wasabi…), configured in `storage.s3` (`pipeline/uploader.p
 - Workers only receive the censored, downsampled derivative. Masks are burned into pixels on the
   server, so a SaaS detector never sees censored areas.
 - Private cameras never produce jobs.
-- The web UI shows original footage (live view, recordings, clips). Until auth exists, do not
-  expose the UI beyond your own network (see [AUTH.md](AUTH.md)).
+- The web UI shows original footage (live view, recordings, clips) to signed-in users, and
+  only for the cameras shared with them (see [AUTH.md](AUTH.md)).
 - Camera passwords (RTSP URLs) are stored on the server and redacted in API responses. The Tapo
   cloud session token is stored in `data/tapo-session.json` (mode 0600); the password is never stored.
 

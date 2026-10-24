@@ -127,7 +127,9 @@ mise run seed       # in another terminal: one fake camera per sample clip
 ```
 
 Open **http://localhost:5173**, or the LAN address `dev` prints (`http://192.168.x.y:5173`)
-from another computer or phone: live view and notification links follow along. The dummy worker pretends to see a fox now and then, enough
+from another computer or phone: live view and notification links follow along. The first
+visit asks for the setup code the server prints in its log (also in `data/setup-code`) and
+creates the admin account. The dummy worker pretends to see a fox now and then, enough
 to watch the whole pipeline work. For real detection on your machine:
 
 ```sh
@@ -139,16 +141,17 @@ mise run setup:yolo && mise run dev:yolo     # YOLO-World (uses CUDA when availa
 ```sh
 cp config.example.yaml config.yaml          # add your cameras
 docker compose up --build -d                # MediaMTX + server (with UI) + ingest on :8000
+docker compose logs server | grep "setup code"   # for the first (admin) account
 
 # With a GPU for video encoding (see docs/HARDWARE.md):
 docker compose -f docker-compose.yml -f docker-compose.vaapi.yml up --build -d   # Intel / AMD
 docker compose -f docker-compose.yml -f docker-compose.nvidia.yml up --build -d  # NVIDIA
 ```
 
-Live-view links follow the address you open the UI with. In Docker, add the host's LAN IP
+Live view goes through the server (behind the login), so only port 8000 and the WebRTC
+media port 8189 (TCP, no UDP needed) have to be reachable. In Docker, add the host's LAN IP
 to `webrtcAdditionalHosts` in `mediamtx/mediamtx.yml` so WebRTC can connect from other
-devices, and set `public_url` for links in notifications. WebRTC media runs over TCP port
-8189 (no UDP needed), so that port has to be reachable too. Check which video encoder the
+devices, and set `public_url` for links in notifications. Check which video encoder the
 container can use with `docker compose exec mediamtx media-streamer hwaccel`.
 
 ## Adding cameras
@@ -227,6 +230,7 @@ detection profiles, censor areas and worker tokens can also be managed in the UI
 | `storage.s3` | S3-compatible bucket for clips and recordings |
 | `notifications` | ntfy / webhook / Apprise channels, filters, quiet hours ([guide](docs/NOTIFICATIONS.md)) |
 | `public_url` | how you open the UI; used for links in notifications |
+| `auth` | accounts: registration (invite / open / closed), admin e-mails, OAuth providers ([guide](docs/AUTH.md)) |
 | `location` | coordinates (sun elevation) and country (SpeciesNet geofencing) |
 
 ## Development
@@ -241,6 +245,7 @@ detection profiles, censor areas and worker tokens can also be managed in the UI
 | `stop` | kill anything left on the dev ports |
 | `build` | build the web UI that the server serves on :8000 |
 | `tapo:login`, `worker:token` | sign in to the Tapo cloud; create a worker token |
+| `user:add`, `user:password`, `user:list` | manage accounts from the command line |
 | `seed` (`-- --profiles`) | fake cameras from `samples/` (and an example profile) |
 | `cameras:remove-test` | remove the test cameras and the data of removed cameras |
 | `check` | ruff, oxlint, typecheck, oxfmt and all tests |
@@ -271,14 +276,17 @@ encoders work here), `worker-token`, `remove-cameras` and `reset`.
 | [Models](docs/MODELS.md) | detection models compared on fox footage |
 | [Hardware encoding](docs/HARDWARE.md) | Quick Sync, NVENC, AMD, VideoToolbox; Docker GPU setup |
 | [Notifications](docs/NOTIFICATIONS.md) | ntfy, webhooks (payload, signatures, Home Assistant) and Apprise |
-| [Authentication](docs/AUTH.md) | design for UI login (not implemented yet) |
+| [Authentication](docs/AUTH.md) | accounts, OAuth, camera sharing and what is protected how |
 | [Roadmap](docs/ROADMAP.md) | planned work |
 
 ## Security
 
-The web UI has **no login yet** ([design](docs/AUTH.md)): keep it on your own network, or
-behind a VPN or an authenticating reverse proxy. Workers need an access token, camera
-passwords are redacted in the API, and workers only ever receive censored footage.
+Everything except the worker API needs a login (e-mail and password and/or Google,
+Microsoft, GitHub or any OpenID Connect provider). Users only see the cameras shared with
+them; live view is served through the server, and MediaMTX only accepts local processes.
+Workers need an access token, camera passwords are redacted in the API, and workers only
+ever receive censored footage. Put TLS in front (e.g. Caddy) before exposing it to the
+internet. Details: [docs/AUTH.md](docs/AUTH.md).
 
 ## Credits
 

@@ -5,16 +5,28 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .. import __version__
+from ..accounts import announce_setup
 from ..config import Settings, get_settings
 from ..db import init_db
 from ..mediamtx import MediaMtx
 from ..pipeline.runner import start_background
-from . import api, api_cameras, api_notify, api_profiles, api_worker, api_workers
+from . import (
+    api,
+    api_auth,
+    api_cameras,
+    api_notify,
+    api_profiles,
+    api_users,
+    api_worker,
+    api_workers,
+    live,
+)
+from .deps import authenticate
 
 log = logging.getLogger(__name__)
 
@@ -33,6 +45,9 @@ def create_app(settings: Settings | None = None, background: bool = True) -> Fas
     async def lifespan(app: FastAPI):
         init_db(settings)
         app.state.settings = settings
+        if not settings.auth.enabled:
+            log.warning("auth.enabled is false: everyone who can reach this server is an admin")
+        announce_setup(settings)
         app.state.mediamtx = MediaMtx(settings)
         try:
             await app.state.mediamtx.sync_paths()
@@ -44,8 +59,24 @@ def create_app(settings: Settings | None = None, background: bool = True) -> Fas
         for t in tasks:
             t.cancel()
         await app.state.mediamtx.aclose()
+        if client := getattr(app.state, "live_client", None):
+            await client.aclose()
 
-    app = FastAPI(title="Media Streamer", version=__version__, lifespan=lifespan)
+    # `authenticate` runs for every route: the API is private unless a route opts out.
+    app = FastAPI(title="Media Streamer", version=__version__, lifespan=lifespan,
+                  dependencies=[Depends(authenticate)])
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        # Invite links carry their token in the URL: never leak it to other sites.
+        response.headers.setdefault("Referrer-Policy", "same-origin")
+        return response
+
+    app.include_router(api_auth.router)
+    app.include_router(api_users.router)
+    app.include_router(live.router)
     app.include_router(api_worker.router)
     app.include_router(api_cameras.router)
     app.include_router(api_workers.router)

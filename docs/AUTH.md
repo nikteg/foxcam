@@ -1,66 +1,147 @@
-# Authentication (design, not implemented)
+# Accounts, sign-in and sharing
 
-Status: **not built.** In development the web UI and API are open to anyone who can reach the
-server. Do not expose port 8000 (or MediaMTX's 8554/8888/8889) to the internet until this is done.
+Everything except the worker API needs a signed-in user: the web UI, the JSON API, the
+recordings, clips and snapshots, and the live view. Workers keep their own access tokens
+([WORKER_PROTOCOL.md](WORKER_PROTOCOL.md)).
 
-## Goals
+## First start
 
-- Anyone in the family can look at the status, live view, fox events and recordings.
-- Only admins can change things: censor areas, cameras, Tapo account, feedback, job retries,
-  and later deleting recordings.
-- Workers authenticate separately from people (already possible: `worker_token`).
-- Live view (served by MediaMTX, not by the server) is protected with the same login.
-- Works on phones/iPad, ideally without a separate password for each device.
+With no accounts yet, the server prints a one-time **setup code** in its log (also written
+to `data/setup-code`). The web UI asks for it and creates the first account, an admin. The
+code keeps whoever finds a fresh installation first from claiming it.
+
+Alternatives: `mise run user:add -- you@example.org --admin` on the server, or list your
+e-mail in `auth.admin_emails` and sign in with an OAuth provider.
+
+## Signing in
+
+- **E-mail and password.** Passwords are hashed with scrypt; repeated failures from one
+  address or for one account are blocked for 15 minutes.
+- **OAuth / OpenID Connect.** Google, Microsoft, GitHub, or any OIDC provider (Authentik,
+  Keycloak, Authelia, Auth0, …):
+
+  ```yaml
+  auth:
+    oauth:
+      - id: google
+        type: google
+        client_id: ${GOOGLE_CLIENT_ID:-}
+        client_secret: ${GOOGLE_CLIENT_SECRET:-}
+      - id: authentik
+        type: oidc
+        name: Authentik
+        issuer: https://auth.example.org/application/o/media-streamer/
+        client_id: ${OIDC_CLIENT_ID:-}
+        client_secret: ${OIDC_CLIENT_SECRET:-}
+        allowed_domains: [example.org]   # optional
+  ```
+
+  Register `<how you open the UI>/api/auth/oauth/<id>/callback` as the redirect URL at the
+  provider (e.g. `https://cams.example.org/api/auth/oauth/google/callback`; set
+  `auth.base_url` if the server cannot tell from the request). Sign-ins use the
+  authorization-code flow with PKCE, state and nonce.
+
+  An external account is matched to an existing account only by an e-mail address the
+  provider has **verified**. Microsoft does not say whether an address is verified unless the
+  `xms_edov` optional claim is configured in the app registration; without it, connect
+  Microsoft from the account page of an existing account instead.
+
+- Accounts can use both: **Account → Sign-in with other accounts** connects or disconnects
+  providers.
+
+Sessions are a random token in an `HttpOnly`, `SameSite=Lax` cookie (`Secure` over HTTPS),
+valid for `auth.session_days` since the last visit. Only a hash is stored. Changing a password
+signs out the account's other browsers; disabling an account signs it out everywhere. Writes
+with a foreign `Origin` header are refused (CSRF).
+
+## Who may create an account
+
+`auth.registration`:
+
+| Value | Who can sign up |
+|---|---|
+| `invite` (default) | only with an invite link |
+| `open` | anyone who reaches the server (they see nothing until something is shared) |
+| `closed` | nobody; admins add accounts (Settings → Users, or `media-streamer user add`) |
+
+E-mails in `auth.admin_emails` can always sign up (through OAuth) and are always admins.
 
 ## Roles
 
+**Admins** see and change everything: all cameras, workers, detection profiles,
+notifications, storage, the Tapo account, users and the configuration.
+
+Everyone else only sees the cameras shared with them, and what those cameras recorded
+(recordings, events, detections, snapshots, live view). Per camera, a user is:
+
 | Role | Can |
 |---|---|
-| `viewer` | GET everything in the UI/API: status, live, events, detections, recordings, downloads. |
-| `admin` | Everything a viewer can, plus all writes: masks, cameras, integrations, feedback, requeue, settings. |
-| `worker` | Only `/api/worker/*`. Uses a bearer token, not a user login. |
+| `viewer` | live view, recordings, events, detections, downloads |
+| `editor` | + censor areas, private flag, detection profiles, recording profile, name, segment length, enable/disable, ✅/❌ feedback |
+| `owner` | + share the camera and remove it |
 
-## Recommended design: reverse proxy + OIDC
+Whoever adds a camera owns it (`auth.users_can_add_cameras: false` reserves that for
+admins). Cameras from `config.yaml` have no owner: admins share them. Adding Tapo cloud
+cameras is admin-only, since the Tapo account is the server's.
+
+## Sharing
+
+On the Cameras page, **Share** on a camera you own:
+
+- **With an existing account**: enter its e-mail and pick a role.
+- **With anyone else: an invite link.** It works once, for 7 days, and lets the recipient
+  create an account (even with `registration: invite`) or accept with an existing one; it
+  grants the chosen role on the camera. Anyone with the link can use it, so send it
+  privately. Open links are listed in the dialog and can be revoked.
+
+Admins also create account-only invite links (optionally making the new account an admin)
+under Settings → Users. Users can stop seeing a shared camera from their account page.
+Removing a camera removes its shares.
+
+## Live view
+
+Browsers never talk to MediaMTX. They load MediaMTX's WebRTC and HLS players through the
+server, at `/api/live/<camera>/<main|low>/<webrtc|hls>/`, which checks the session and the
+user's access to that camera before forwarding. Only the camera's own stream and its
+low-data copy are reachable, never `<camera>/raw` (the picture before burned-in censor
+areas).
+
+MediaMTX (`mediamtx/mediamtx.yml`) only accepts local processes: the server, ingest and the
+transcoders it starts itself. Its API, HLS and WebRTC servers listen on 127.0.0.1; RTSP
+answers other machines with 401. In Docker, the server and ingest share MediaMTX's network
+namespace for this. WebRTC media flows directly between the browser and MediaMTX's port
+8189, only for sessions set up through the server.
+
+To watch over RTSP from another device (VLC, Home Assistant), add a user with a password
+and `read` permission to `mediamtx.yml` (an example is in the file) and publish port 8554.
+
+## Exposing it to the internet
+
+Put a TLS-terminating reverse proxy in front of port 8000 only, e.g. Caddy:
 
 ```
-internet ──► Caddy (TLS, :443) ──► oauth2-proxy / Authelia (OIDC login) ──► server :8000
-                                                                       └──► MediaMTX :8889/:8888
+cams.example.org {
+  reverse_proxy localhost:8000
+}
 ```
 
-- **Caddy** terminates TLS (automatic Let's Encrypt) and is the only exposed port.
-- **oauth2-proxy** (or Authelia / Authentik) handles login with Google/Microsoft/GitHub or a
-  local user list, and forwards the user's e-mail and groups in headers
-  (`X-Forwarded-Email`, `X-Forwarded-Groups`).
-- The server trusts these headers **only** from the proxy (bind the server to localhost or a
-  private Docker network) and maps groups to roles:
-  `admin_emails` / `viewer_emails` (or groups) in `config.yaml`.
-- One FastAPI dependency checks the role per route: GET routes need `viewer`, all
-  POST/PUT/PATCH/DELETE routes need `admin`. `/api/worker/*` keeps its bearer token and
-  bypasses the proxy login (separate Caddy route).
-- MediaMTX live view goes through the same proxy, so its WebRTC/HLS players need the same
-  session cookie. Alternatively use MediaMTX's `authHTTPAddress` to ask the server
-  "may this user read path X?".
+Run the server with uvicorn's proxy headers trusted (the default for a proxy on the same
+machine) so cookies get the `Secure` flag, set `public_url: https://cams.example.org`, and
+open TCP 8189 for WebRTC media. Never proxy MediaMTX's own ports: they trust local
+connections.
 
-Why this design: no password handling in our code, single sign-on across devices, and the
-proxy can be swapped (Tailscale, Cloudflare Access) without code changes.
+## Turning it off
 
-## Simpler alternatives
+`auth.enabled: false` removes all logins: everyone who reaches the server is an admin. Only
+for a trusted network.
 
-| Option | Good for | Trade-off |
-|---|---|---|
-| **Tailscale only** (no public port) | family use, zero code | Every device needs Tailscale; no viewer/admin split unless added later. |
-| **Cloudflare Access** in front | public URL without opening ports | Cloudflare sees the traffic. Same header-based roles as above. |
-| **Built-in login** (sessions + argon2 password hashes in SQLite) | no extra services | We own password reset, brute-force protection, CSRF. Most code and most risk. |
+## Command line
 
-## Implementation checklist (when we build it)
-
-1. `auth` section in `config.yaml`: mode (`none` / `proxy-headers`), trusted proxy IPs, admin and
-   viewer e-mails or groups.
-2. FastAPI dependency `require_role("viewer" | "admin")` on all routers; worker router unchanged.
-3. `GET /api/me` → `{email, role}`; the UI hides admin actions for viewers.
-4. Caddyfile + oauth2-proxy service in `docker-compose.yml` (profile `auth`).
-5. MediaMTX: `authMethod: http` pointing at a new `/api/mediamtx-auth` endpoint, or route
-   live view through the proxy.
-6. Make `worker_token` mandatory when auth is on.
-7. Tests: viewer gets 403 on writes, admin allowed, missing/forged headers rejected when the
-   request does not come from the proxy.
+```sh
+media-streamer user add you@example.org --admin [--name "You"] [--no-password]
+media-streamer user password you@example.org
+media-streamer user list
+media-streamer user admin someone@example.org [--off]
+media-streamer user remove someone@example.org
+media-streamer reset users          # all accounts, sessions, shares, invites
+```

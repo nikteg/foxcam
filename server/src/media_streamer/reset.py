@@ -15,16 +15,21 @@ from sqlalchemy import delete, select, update
 from .config import Settings
 from .db import session_scope
 from .models import (
+    CameraAccess,
     CameraState,
     Detection,
     DetectionProfile,
     Event,
+    Invite,
     Job,
     JobState,
     ManagedCamera,
     MaskVersion,
+    OAuthIdentity,
     Segment,
     SegmentStatus,
+    User,
+    UserSession,
     Worker,
     WorkerToken,
     event_segments,
@@ -120,7 +125,9 @@ def cameras(settings: Settings) -> str:
         n = s.query(ManagedCamera).count()
         s.execute(delete(ManagedCamera))
         s.execute(delete(CameraState))  # mask versions stay: old segments reference them
-    return f"{n} UI cameras removed; masks, private flags and profile choices reset"
+        s.execute(delete(CameraAccess))
+    return (f"{n} UI cameras removed; masks, private flags, profile choices and shares "
+            "reset")
 
 
 def profiles(settings: Settings) -> str:
@@ -135,6 +142,15 @@ def profiles(settings: Settings) -> str:
     return f"{n} UI profiles removed ({cancelled} of their jobs cancelled)"
 
 
+def users(settings: Settings) -> str:
+    """All accounts, sessions, shares and invites (the next start asks for a new admin)."""
+    with session_scope() as s:
+        n = s.query(User).count()
+        for model in (UserSession, OAuthIdentity, CameraAccess, Invite, User):
+            s.execute(delete(model))
+    return f"{n} accounts removed; create the first admin again with the setup code"
+
+
 def tapo(settings: Settings) -> str:
     """The saved Tapo cloud session."""
     from .tapo_account import logout
@@ -145,7 +161,8 @@ def tapo(settings: Settings) -> str:
 
 SCOPES: dict[str, Callable[[Settings], str]] = {
     "recordings": recordings, "events": events, "detections": detections, "queue": queue,
-    "workers": workers, "cameras": cameras, "profiles": profiles, "tapo": tapo,
+    "workers": workers, "cameras": cameras, "profiles": profiles, "users": users,
+    "tapo": tapo,
 }
 
 
@@ -179,6 +196,7 @@ def purge_camera(settings: Settings, camera_id: str) -> dict[str, int]:
         s.execute(delete(Segment).where(Segment.camera_id == camera_id))
         s.execute(delete(CameraState).where(CameraState.camera_id == camera_id))
         s.execute(delete(MaskVersion).where(MaskVersion.camera_id == camera_id))
+        s.execute(delete(CameraAccess).where(CameraAccess.camera_id == camera_id))
         removed = s.execute(delete(ManagedCamera).where(ManagedCamera.id == camera_id)).rowcount
     for rel in [*derived, *thumbs, *clips]:
         (settings.data_dir / rel).unlink(missing_ok=True)

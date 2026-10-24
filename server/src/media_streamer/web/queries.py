@@ -9,9 +9,9 @@ from typing import Any
 from sqlalchemy import func, select
 
 from .. import recording
+from ..accounts import Principal
 from ..config import Settings
 from ..db import session_scope
-from ..mediamtx import low_path
 from ..models import (
     CameraState,
     Detection,
@@ -25,6 +25,7 @@ from ..models import (
 )
 from ..pipeline import queue
 from ..profiles import camera_profiles
+from .live import live_url
 
 WORKER_ONLINE_SECONDS = 120
 
@@ -59,10 +60,14 @@ def save_camera_state(camera_id: str, rects: list[list[float]], private: bool) -
         return st.mask_version_id
 
 
-def cameras(settings: Settings, live: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+def cameras(settings: Settings, live: dict[str, dict[str, Any]],
+            p: Principal) -> list[dict[str, Any]]:
+    """The cameras `p` may see, with the user's role on each."""
     out = []
     with session_scope() as s:
         for cam in settings.all_cameras(include_disabled=True):
+            if not p.can(cam.id):
+                continue
             last = s.scalars(select(Segment).where(Segment.camera_id == cam.id)
                              .order_by(Segment.start_at.desc()).limit(1)).first()
             path = live.get(cam.id, {})
@@ -71,8 +76,9 @@ def cameras(settings: Settings, live: dict[str, dict[str, Any]]) -> list[dict[st
                 "source_config": _public_source(cam.source.model_dump()),
                 "managed": cam.managed, "enabled": cam.enabled,
                 "segment_seconds_override": cam.segment_seconds,
-                "webrtc_url": f"{settings.mediamtx.webrtc_public_url.rstrip('/')}/{cam.id}/",
-                "hls_url": f"{settings.mediamtx.hls_public_url.rstrip('/')}/{cam.id}/",
+                "role": p.role(cam.id),
+                "webrtc_url": live_url(cam.id, "main", "webrtc"),
+                "hls_url": live_url(cam.id, "main", "hls"),
                 **_low_urls(settings, cam.id),
                 "segment_seconds": settings.segment_seconds_for(cam.id),
                 "online": bool(path.get("ready")),
@@ -97,12 +103,10 @@ def _recording(settings: Settings, cam) -> dict[str, Any]:
 
 
 def _low_urls(settings: Settings, camera_id: str) -> dict[str, str | None]:
-    m = settings.mediamtx
-    if not m.low_data.enabled:
+    if not settings.mediamtx.low_data.enabled:
         return {"webrtc_low_url": None, "hls_low_url": None}
-    path = low_path(camera_id)
-    return {"webrtc_low_url": f"{m.webrtc_public_url.rstrip('/')}/{path}/",
-            "hls_low_url": f"{m.hls_public_url.rstrip('/')}/{path}/"}
+    return {"webrtc_low_url": live_url(camera_id, "low", "webrtc"),
+            "hls_low_url": live_url(camera_id, "low", "hls")}
 
 
 def _profiles_source(cam) -> str:
@@ -114,17 +118,26 @@ def _profiles_source(cam) -> str:
     return "config" if cam.profiles is not None else "default"
 
 
-def overview(settings: Settings) -> dict[str, Any]:
+def _only(q, column, camera_ids: set[str] | None):
+    """Restrict a query to the cameras a user may see (None = all)."""
+    return q if camera_ids is None else q.where(column.in_(camera_ids))
+
+
+def overview(settings: Settings, camera_ids: set[str] | None = None) -> dict[str, Any]:
     now = utcnow()
     with session_scope() as s:
-        seg_counts = dict(s.execute(select(Segment.status, func.count())
-                                    .where(Segment.deleted_at.is_(None))
+        seg_counts = dict(s.execute(_only(select(Segment.status, func.count())
+                                          .where(Segment.deleted_at.is_(None)),
+                                          Segment.camera_id, camera_ids)
                                     .group_by(Segment.status)).all())
-        stored = s.scalar(select(func.coalesce(func.sum(Segment.size_bytes), 0))
-                          .where(Segment.deleted_at.is_(None)))
-        events_24h = s.scalar(select(func.count()).select_from(Event)
-                              .where(Event.last_ts >= now - timedelta(hours=24)))
-        events_total = s.scalar(select(func.count()).select_from(Event))
+        stored = s.scalar(_only(select(func.coalesce(func.sum(Segment.size_bytes), 0))
+                                .where(Segment.deleted_at.is_(None)), Segment.camera_id,
+                                camera_ids))
+        events_24h = s.scalar(_only(select(func.count()).select_from(Event)
+                                    .where(Event.last_ts >= now - timedelta(hours=24)),
+                                    Event.camera_id, camera_ids))
+        events_total = s.scalar(_only(select(func.count()).select_from(Event),
+                                      Event.camera_id, camera_ids))
     disk = shutil.disk_usage(settings.recordings_dir)
     return {
         "segments": seg_counts,
@@ -176,8 +189,10 @@ def segment_dict(g: Segment) -> dict[str, Any]:
 
 
 def segments(camera_id: str | None = None, day: str | None = None, only_targets: bool = False,
-             include_deleted: bool = False, limit: int = 200) -> list[dict[str, Any]]:
-    q = select(Segment).order_by(Segment.start_at.desc()).limit(limit)
+             include_deleted: bool = False, limit: int = 200,
+             camera_ids: set[str] | None = None) -> list[dict[str, Any]]:
+    q = _only(select(Segment), Segment.camera_id, camera_ids) \
+        .order_by(Segment.start_at.desc()).limit(limit)
     if camera_id:
         q = q.where(Segment.camera_id == camera_id)
     if day:
@@ -206,8 +221,10 @@ def detection_dict(d: Detection) -> dict[str, Any]:
 def detections(camera_id: str | None = None, label: str | None = None,
                only_targets: bool = False, min_confidence: float = 0.0,
                limit: int = 200, segment_id: int | None = None,
-               profile_id: str | None = None) -> list[dict[str, Any]]:
-    q = select(Detection).where(Detection.confidence >= min_confidence) \
+               profile_id: str | None = None,
+               camera_ids: set[str] | None = None) -> list[dict[str, Any]]:
+    q = _only(select(Detection), Detection.camera_id, camera_ids) \
+        .where(Detection.confidence >= min_confidence) \
         .order_by(Detection.ts.desc()).limit(limit)
     if segment_id is not None:
         q = q.where(Detection.segment_id == segment_id)
@@ -234,8 +251,10 @@ def set_feedback(detection_id: int, correct: bool | None) -> bool:
 
 
 def events(camera_id: str | None = None, limit: int = 100,
-           profile_id: str | None = None, label: str | None = None) -> list[dict[str, Any]]:
-    q = select(Event).order_by(Event.first_ts.desc()).limit(limit)
+           profile_id: str | None = None, label: str | None = None,
+           camera_ids: set[str] | None = None) -> list[dict[str, Any]]:
+    q = _only(select(Event), Event.camera_id, camera_ids) \
+        .order_by(Event.first_ts.desc()).limit(limit)
     if camera_id:
         q = q.where(Event.camera_id == camera_id)
     if profile_id:
@@ -321,6 +340,8 @@ def public_settings(settings: Settings) -> dict[str, Any]:
     s3 = cfg["storage"]["s3"]
     for secret in ("access_key_id", "secret_access_key"):
         s3[secret] = "***" if s3[secret] else None
+    for prov in cfg["auth"]["oauth"]:
+        prov["client_secret"] = "***"
     for cam in cfg["cameras"]:
         if "url" in cam["source"]:
             cam["source"]["url"] = _redact_url(cam["source"]["url"])

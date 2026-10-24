@@ -3,6 +3,7 @@ from __future__ import annotations
 from media_streamer.config import Settings
 from media_streamer.mediamtx import desired_paths
 from media_streamer.web import queries
+from media_streamer.web.deps import OPEN_ACCESS
 
 
 def test_low_data_path_per_camera(settings: Settings) -> None:
@@ -21,14 +22,16 @@ def test_low_data_path_per_camera(settings: Settings) -> None:
 def test_low_data_disabled(settings: Settings) -> None:
     settings.mediamtx.low_data.enabled = False
     assert set(desired_paths(settings)) == {"cam"}
-    cam = queries.cameras(settings, {})[0]
+    cam = queries.cameras(settings, {}, OPEN_ACCESS)[0]
     assert cam["webrtc_low_url"] is None
 
 
 def test_low_data_urls(settings: Settings) -> None:
-    cam = queries.cameras(settings, {})[0]
-    assert cam["webrtc_low_url"] == "http://localhost:8889/cam/low/"
-    assert cam["hls_low_url"] == "http://localhost:8888/cam/low/"
+    cam = queries.cameras(settings, {}, OPEN_ACCESS)[0]
+    # Live view goes through the server's login-checking proxy, never to MediaMTX directly.
+    assert cam["webrtc_url"] == "/api/live/cam/main/webrtc/"
+    assert cam["webrtc_low_url"] == "/api/live/cam/low/webrtc/"
+    assert cam["hls_low_url"] == "/api/live/cam/low/hls/"
 
 
 def test_original_profile_records_source_directly(settings: Settings) -> None:
@@ -68,7 +71,7 @@ def test_burned_in_masks(settings: Settings) -> None:
     cmd = desired_paths(settings)["cam"]["runOnInit"]
     assert "--mask 0.10000,0.20000,0.30000,0.40000" in cmd
     assert "--max-height" not in cmd and "--bitrate" not in cmd
-    cam = queries.cameras(settings, {})[0]
+    cam = queries.cameras(settings, {}, OPEN_ACCESS)[0]
     assert cam["processed"] is True and cam["recording_profile"] == "original"
 
 

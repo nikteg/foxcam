@@ -3,17 +3,15 @@
 from datetime import timedelta
 
 import pytest
-from fastapi.testclient import TestClient
 from media_streamer import db
 from media_streamer.config import ProfileConfig, Settings
 from media_streamer.db import session_scope
 from media_streamer.models import Detection, Event, Job, JobState, Segment, SegmentStatus, utcnow
 from media_streamer.pipeline import events, preprocess, queue, retention
 from media_streamer.profiles import camera_profiles, set_camera_profiles
-from media_streamer.web.app import create_app
 from sqlalchemy import text
 
-from .conftest import add_job, add_segment, needs_ffmpeg
+from .conftest import add_job, add_segment, app_client, needs_ffmpeg
 
 DET = queue.DetectionIn
 
@@ -159,7 +157,7 @@ def test_events_days_per_profile(two_profiles):
 
 
 def test_profiles_api(settings):
-    with TestClient(create_app(settings, background=False)) as c:
+    with app_client(settings) as c:
         body = {"id": "wildlife", "name": "Wildlife", "targets": ["fox", "badger"],
                 "requires": ["SpeciesNet", "bad tag!"], "aliases": {"red fox": "fox"}}
         assert c.post("/api/profiles", json=body).status_code == 201
@@ -196,7 +194,7 @@ def test_profiles_api(settings):
 def test_lease_returns_profile_targets_and_frame_rate(two_profiles):
     seg = add_segment(two_profiles, status=SegmentStatus.QUEUED, with_file=False)
     add_job(seg, profile_id="vehicles")
-    with TestClient(create_app(two_profiles, background=False)) as c:
+    with app_client(two_profiles) as c:
         job = c.post("/api/worker/lease", json={"worker_id": "w", "tags": ["coco"]}).json()
     assert job["profile"]["id"] == "vehicles" and job["sample_fps"] == 1
     assert job["hints"]["target_labels"] == ["car", "person"]
