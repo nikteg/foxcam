@@ -223,3 +223,13 @@ def test_segment_jobs_tell_empty_runs_from_missing_ones(settings, client):
     assert (jobs[1]["detections"], jobs[1]["targets"]) == (0, 0)  # ran, found nothing
     assert jobs[2]["state"] == "dead" and jobs[2]["error"] == "CUDA out of memory"
     assert client.get("/api/segments/999999/jobs").status_code == 404
+
+
+@needs_ffmpeg
+def test_segment_download_name_has_segment_id(settings, client):
+    seg_id = add_segment(settings)
+    r = client.get(f"/api/segments/{seg_id}/download")
+    assert r.status_code == 200
+    disposition = r.headers["content-disposition"]
+    assert f'_seg{seg_id}.mp4"' in disposition and disposition.startswith("attachment")
+    assert "filename=\"cam_" in disposition

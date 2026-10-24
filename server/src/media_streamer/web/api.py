@@ -230,7 +230,7 @@ def segment_jobs(segment_id: int, settings: Settings = Depends(settings_dep),
 def segment_download(segment_id: int, settings: Settings = Depends(settings_dep),
                      p: Principal = Depends(principal)) -> Response:
     seg = _segment(p, segment_id)
-    name = f"{seg.camera_id}_{seg.start_at:%Y%m%d_%H%M%S}.mp4"
+    name = f"{seg.camera_id}_{seg.start_at:%Y%m%d_%H%M%S}_seg{seg.id}.mp4"
     return _serve_segment(settings, seg, name)
 
 
