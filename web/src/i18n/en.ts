@@ -441,7 +441,7 @@ export const en = {
   "recording.asSent": "as sent by the camera, no re-encoding",
   "recording.keptDays": "kept {n} {n:day|days}",
   "recording.transcodeNote":
-    "Re-encoding uses CPU on the server (or a hardware encoder, see mediamtx.encoder). Live view shows the re-encoded stream too, and the current recording file ends when you save.",
+    "Re-encoding uses the server's hardware video encoder when there is one (Quick Sync, NVENC, AMD, Apple), else the CPU. Live view shows the re-encoded stream too, and the current recording file ends when you save.",
   "recording.h265Note":
     "H.265 halves the size again but not every browser plays it (Safari and recent Chrome/Edge do).",
   "recording.fromDefault": "Currently the default profile; saving here overrides it.",

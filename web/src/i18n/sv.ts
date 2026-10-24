@@ -525,7 +525,7 @@ export const sv: Record<MessageKey, string> = {
   "recording.asSent": "som kameran skickar, ingen omkodning",
   "recording.keptDays": "sparas {n} {n:dag|dagar}",
   "recording.transcodeNote":
-    "Omkodning använder serverns CPU (eller en hårdvarukodare, se mediamtx.encoder). Livebilden visar också den omkodade strömmen, och den pågående inspelningsfilen avslutas när du sparar.",
+    "Omkodningen använder serverns hårdvarukodare när det finns en (Quick Sync, NVENC, AMD, Apple), annars CPU:n. Livebilden visar också den omkodade strömmen, och den pågående inspelningsfilen avslutas när du sparar.",
   "recording.h265Note":
     "H.265 halverar storleken igen men alla webbläsare spelar inte upp det (Safari och nyare Chrome/Edge gör det).",
   "recording.fromDefault": "Just nu standardprofilen; att spara här ersätter den.",
