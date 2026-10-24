@@ -183,7 +183,7 @@ def main(argv: list[str] | None = None) -> None:
     hints = {"target_labels": sorted(targets), "min_confidence": args.min_confidence,
              "country": args.country}
 
-    with tempfile.TemporaryDirectory(prefix="media-worker-local-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="media-worker-local-", ignore_cleanup_errors=True) as tmp:
         work = Path(tmp) / "frames"
         t0 = time.monotonic()
         frames = load_frames(args.inputs, work, args)

@@ -192,7 +192,27 @@ export const sv: Record<MessageKey, string> = {
     "Den visas bara en gång. Om du tappar bort den: återkalla arbetaren och lägg till den igen.",
   "workers.token": "Åtkomsttoken",
   "workers.setupTitle": "Konfigurera arbetsdatorn",
-  "workers.step.prereqs": "Installera {uv} och {ffmpeg} på arbetsdatorn.",
+  "workers.platform": "Arbetsdator",
+  "workers.platform.wsl": "Windows + WSL 2 (rekommenderas på Windows)",
+  "workers.platform.windows": "Windows (PowerShell)",
+  "workers.platform.linux": "Linux / macOS",
+  "workers.platform.docker": "Docker med NVIDIA-GPU",
+  "workers.speciesnetWindows":
+    "SpeciesNet är inte testat direkt i Windows. Använd WSL 2, eller välj YOLO-World för Windows.",
+  "workers.step.wslDriver":
+    "Installera NVIDIA-drivrutinen i Windows (aldrig i WSL). Kör sedan i PowerShell som administratör:",
+  "workers.step.wslTools": "Installera ffmpeg och uv i Ubuntu-terminalen:",
+  "workers.step.codeWsl":
+    "Kopiera det här projektet (minst mappen {folder}) till din Linux-hemmapp (inte /mnt/c) och öppna en terminal där.",
+  "workers.step.winget": "Installera uv och ffmpeg i PowerShell och öppna sedan en ny terminal:",
+  "workers.step.linuxTools": "Installera ffmpeg och uv (och NVIDIA-drivrutinen för GPU):",
+  "workers.step.install": "Installera arbetaren (väljer PyTorch-version efter GPU-drivrutinen):",
+  "workers.step.doctor": "Kontrollera GPU, ffmpeg och anslutningen till den här servern:",
+  "workers.step.dockerGpu":
+    "Installera Docker med GPU-stöd: Docker Desktop (WSL 2) i Windows, eller Docker och NVIDIA Container Toolkit i Linux.",
+  "workers.step.dockerEnv": "Skapa worker/.env:",
+  "workers.step.dockerUp": "Bygg, starta och kontrollera:",
+  "workers.moreHelp": "Automatisk start, nätverk och felsökning: {doc}",
   "workers.step.code":
     "Kopiera det här projektet (minst mappen {folder}) dit och öppna en terminal där.",
   "workers.step.run": "Kör:",

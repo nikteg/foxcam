@@ -1685,6 +1685,7 @@ speciesnet = [
 ]
 ultralytics = [
     { name = "clip-anytorch" },
+    { name = "setuptools" },
     { name = "ultralytics" },
 ]
 
@@ -1697,6 +1698,7 @@ dev = [
 requires-dist = [
     { name = "clip-anytorch", marker = "extra == 'ultralytics'", specifier = ">=2.6" },
     { name = "httpx", specifier = ">=0.27" },
+    { name = "setuptools", marker = "extra == 'ultralytics'", specifier = "<82" },
     { name = "speciesnet", marker = "extra == 'speciesnet'", specifier = ">=5.0" },
     { name = "ultralytics", marker = "extra == 'ultralytics'", specifier = ">=8.3" },
 ]

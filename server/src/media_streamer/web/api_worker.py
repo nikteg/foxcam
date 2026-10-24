@@ -20,6 +20,12 @@ from .deps import require_worker, safe_path, settings_dep
 router = APIRouter(prefix="/api/worker", tags=["worker"], dependencies=[Depends(require_worker)])
 
 
+@router.get("/whoami")
+def whoami(identity: Identity = Depends(require_worker)) -> dict[str, Any]:
+    """Credential check without side effects (used by `media-worker doctor`)."""
+    return {"authenticated": True, "token_name": identity.name}
+
+
 class LeaseRequest(BaseModel):
     worker_id: str = Field(min_length=1, max_length=100)
     # Free-form: model name/version, host, GPU... shown in the queue tab.

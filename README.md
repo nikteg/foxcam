@@ -63,15 +63,19 @@ uv sync --all-packages --extra ultralytics
 WORKER_ARGS="--detector ultralytics --model yolov8s-worldv2.pt --classes fox --device mps" scripts/dev.sh
 ```
 
-On the GPU machine, run only the worker and point it at this server. SpeciesNet (the most
-accurate option, see [docs/MODELS.md](docs/MODELS.md)) needs Python 3.12 and its own
-environment because its dependencies conflict with Ultralytics:
+On the GPU machine, install only the worker and point it at this server. SpeciesNet (the
+most accurate option, see [docs/MODELS.md](docs/MODELS.md)) needs Python 3.12 and cannot be
+installed next to Ultralytics:
 
 ```sh
-uv venv --python 3.12 .venv-speciesnet
-VIRTUAL_ENV=.venv-speciesnet uv pip install -e "./worker[speciesnet]"
-.venv-speciesnet/bin/media-worker --server http://<this-host>:8000 --detector speciesnet
+uv tool install --python 3.12 --torch-backend auto "media-worker[speciesnet] @ ./worker"
+media-worker doctor --server http://<this-host>:8000 --token msw_...   # checks GPU, ffmpeg, token
+media-worker --server http://<this-host>:8000 --token msw_... --detector speciesnet
 ```
+
+Windows (WSL 2 or native), Docker with GPU passthrough, autostart and troubleshooting:
+[docs/WORKER_SETUP.md](docs/WORKER_SETUP.md). **Worker queue → Add worker** in the web UI
+creates the token and shows the commands for each platform.
 
 Web checks: `pnpm --dir web check` (typecheck, oxlint and an oxfmt check).
 
@@ -156,6 +160,7 @@ MEDIA_WORKER_TEST_DETECTOR=ultralytics MEDIA_WORKER_TEST_CLASSES=fox uv run pyte
 ## Documentation
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) – components, pipeline, data model, retention, privacy
+- [docs/WORKER_SETUP.md](docs/WORKER_SETUP.md) – GPU worker on Windows/WSL, Docker, Linux
 - [docs/WORKER_PROTOCOL.md](docs/WORKER_PROTOCOL.md) – HTTP API for workers / SaaS adapters
 - [docs/MODELS.md](docs/MODELS.md) – detection models for foxes, with measured results
 - [docs/AUTH.md](docs/AUTH.md) – authentication design (not implemented yet)

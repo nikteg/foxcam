@@ -56,7 +56,7 @@ class SpeciesNetDetector(Detector):
             return []
         folder = frames[0].path.parent
         by_name = {f.path.name: f for f in frames}
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             out_json = Path(tmp) / "predictions.json"
             cmd = [sys.executable, "-m", "speciesnet.scripts.run_model",
                    "--folders", str(folder), "--predictions_json", str(out_json),

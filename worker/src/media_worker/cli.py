@@ -6,6 +6,7 @@ import argparse
 import logging
 import os
 import platform
+import shutil
 import socket
 import sys
 import tempfile
@@ -19,6 +20,7 @@ import httpx
 from . import __version__
 from .client import Client, LeaseLost
 from .detectors import add_detector_args, create_detector
+from .doctor import environment, gpu_summary
 from .frames import extract_frames
 
 log = logging.getLogger("media_worker")
@@ -57,7 +59,8 @@ def process(client: Client, detector, job: dict, args: argparse.Namespace) -> No
     log.info("job %s: camera=%s start=%s (attempt %s)", job["job_id"], seg["camera_id"],
              seg["start_at"], job["attempt"])
     started = time.monotonic()
-    with tempfile.TemporaryDirectory(prefix="media-worker-") as tmp, \
+    # ignore_cleanup_errors: on Windows a file may still be open (antivirus, model cache).
+    with tempfile.TemporaryDirectory(prefix="media-worker-", ignore_cleanup_errors=True) as tmp, \
             Heartbeat(client, job, args.heartbeat) as hb:
         tmp_path = Path(tmp)
         video = tmp_path / "input.mp4"
@@ -89,10 +92,17 @@ def main() -> None:
 
         detect_file_main(sys.argv[2:])
         return
+    if len(sys.argv) > 1 and sys.argv[1] == "doctor":
+        from .doctor import main as doctor_main
+
+        doctor_main(sys.argv[2:])
+        return
 
     p = argparse.ArgumentParser(
         prog="media-worker", description=__doc__,
-        epilog="Offline test on a local video: media-worker detect-file --help")
+        epilog="Check this machine (ffmpeg, GPU, server): media-worker doctor --help\n"
+               "Offline test on a local video: media-worker detect-file --help",
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--server", default=os.environ.get("MEDIA_SERVER", "http://localhost:8000"))
     p.add_argument("--token", default=os.environ.get("MEDIA_WORKER_TOKEN"))
     p.add_argument("--worker-id", default=os.environ.get("MEDIA_WORKER_ID", socket.gethostname()))
@@ -108,9 +118,13 @@ def main() -> None:
                         format="%(asctime)s %(levelname)-7s %(message)s")
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
+    if shutil.which("ffmpeg") is None:
+        sys.exit("ffmpeg not found on PATH (run `media-worker doctor` for install hints)")
     detector = create_detector(args)
     info = {**detector.info(), "version": __version__, "host": platform.node(),
-            "python": platform.python_version()}
+            "python": platform.python_version(), "platform": environment()}
+    if gpu := gpu_summary():
+        info["gpu"] = gpu
     client = Client(args.server, args.worker_id, args.token, info)
     log.info("worker %s using %s -> %s", args.worker_id, detector.name, args.server)
 

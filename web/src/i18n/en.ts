@@ -190,7 +190,27 @@ export const en = {
     "It is only shown once. If you lose it, revoke this worker and add it again.",
   "workers.token": "Access token",
   "workers.setupTitle": "Set up the worker machine",
-  "workers.step.prereqs": "Install {uv} and {ffmpeg} on the worker machine.",
+  "workers.platform": "Worker machine",
+  "workers.platform.wsl": "Windows + WSL 2 (recommended on Windows)",
+  "workers.platform.windows": "Windows (PowerShell)",
+  "workers.platform.linux": "Linux / macOS",
+  "workers.platform.docker": "Docker with NVIDIA GPU",
+  "workers.speciesnetWindows":
+    "SpeciesNet is untested on native Windows. Use WSL 2, or pick YOLO-World for native Windows.",
+  "workers.step.wslDriver":
+    "Install the NVIDIA driver on Windows (never inside WSL). Then in PowerShell as administrator:",
+  "workers.step.wslTools": "In the Ubuntu terminal, install ffmpeg and uv:",
+  "workers.step.codeWsl":
+    "Copy this project (at least the {folder} folder) into your Linux home folder (not /mnt/c) and open a terminal there.",
+  "workers.step.winget": "In PowerShell, install uv and ffmpeg, then open a new terminal:",
+  "workers.step.linuxTools": "Install ffmpeg and uv (plus the NVIDIA driver for a GPU):",
+  "workers.step.install": "Install the worker (picks the PyTorch build for your GPU driver):",
+  "workers.step.doctor": "Check the GPU, ffmpeg and the connection to this server:",
+  "workers.step.dockerGpu":
+    "Install Docker with GPU access: Docker Desktop (WSL 2 backend) on Windows, or Docker and the NVIDIA Container Toolkit on Linux.",
+  "workers.step.dockerEnv": "Create worker/.env:",
+  "workers.step.dockerUp": "Build, start and check it:",
+  "workers.moreHelp": "Starting automatically, networking and troubleshooting: {doc}",
   "workers.step.code":
     "Copy this project (at least the {folder} folder) to it and open a terminal there.",
   "workers.step.run": "Run:",

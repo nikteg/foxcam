@@ -149,3 +149,14 @@ def test_worker_tokens_lock_the_api_and_fix_identity(settings, client):
                           headers={"Authorization": f"Bearer {token}"})
     assert revoked.status_code == 401
     assert client.get("/api/workers/auth").json()["mode"] == "open"
+
+
+def test_whoami_checks_credentials_without_side_effects(client):
+    assert client.get("/api/worker/whoami").json() == {"authenticated": True, "token_name": None}
+    token = client.post("/api/workers/tokens", json={"name": "wsl-pc"}).json()["token"]
+    assert client.get("/api/worker/whoami").status_code == 401
+    assert client.get("/api/worker/whoami",
+                      headers={"Authorization": "Bearer msw_wrong"}).status_code == 401
+    ok = client.get("/api/worker/whoami", headers={"Authorization": f"Bearer {token}"})
+    assert ok.json()["token_name"] == "wsl-pc"
+    assert client.get("/api/queue").json()["stats"]["counts"].get("leased", 0) == 0

@@ -12,6 +12,8 @@ ultralytics = [
     # Text encoder for YOLO-World's open-vocabulary prompts (provides the `clip` module that
     # Ultralytics would otherwise try to pip-install from GitHub at runtime).
     "clip-anytorch>=2.6",
+    # clip-anytorch imports pkg_resources, which setuptools 82 removed.
+    "setuptools<82",
 ]
 # Google's camera-trap ensemble: MegaDetector + species classifier (has "red fox").
 speciesnet = ["speciesnet>=5.0"]

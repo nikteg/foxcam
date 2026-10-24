@@ -23,8 +23,13 @@ import { useState } from "react";
 
 import { api } from "../api";
 import { useI18n, type MessageKey } from "../i18n";
-
-type DetectorChoice = "speciesnet" | "ultralytics" | "dummy";
+import {
+  guessPlatform,
+  PLATFORMS,
+  setupSteps,
+  type DetectorChoice,
+  type Platform,
+} from "../workerSetup";
 
 const DETECTOR_LABELS: Record<DetectorChoice, MessageKey> = {
   speciesnet: "workers.detector.speciesnet",
@@ -32,19 +37,12 @@ const DETECTOR_LABELS: Record<DetectorChoice, MessageKey> = {
   dummy: "workers.detector.dummy",
 };
 
-/** Command that runs the worker straight from the project's worker/ folder via uvx. */
-function workerCommand(detector: DetectorChoice, server: string, token: string): string {
-  const base = (extra: string, python = "") =>
-    `uvx ${python}--from "media-worker${extra} @ ./worker" media-worker --server ${server} --token ${token}`;
-  switch (detector) {
-    case "speciesnet":
-      return `${base("[speciesnet]", "--python 3.12 ")} --detector speciesnet --country SWE`;
-    case "ultralytics":
-      return `${base("[ultralytics]")} --detector ultralytics --model yolov8s-worldv2.pt --classes fox --device cuda`;
-    case "dummy":
-      return `${base("")} --detector dummy --dummy-label fox`;
-  }
-}
+const PLATFORM_LABELS: Record<Platform, MessageKey> = {
+  wsl: "workers.platform.wsl",
+  windows: "workers.platform.windows",
+  linux: "workers.platform.linux",
+  docker: "workers.platform.docker",
+};
 
 /** Clipboard API needs a secure context (https or localhost); fall back to execCommand. */
 async function copyText(text: string): Promise<boolean> {
@@ -88,6 +86,7 @@ export function AddWorkerDialog({ open, onClose }: { open: boolean; onClose: () 
   const client = useQueryClient();
   const [name, setName] = useState("gpu-box");
   const [detector, setDetector] = useState<DetectorChoice>("speciesnet");
+  const [platform, setPlatform] = useState<Platform>(guessPlatform);
   const create = useMutation({
     mutationFn: () => api.createWorkerToken(name.trim(), detector),
     onSuccess: () => {
@@ -152,26 +151,31 @@ export function AddWorkerDialog({ open, onClose }: { open: boolean; onClose: () 
                 <CopyBlock text={created.token} label={t("workers.token")} />
 
                 <Text weight="semibold">{t("workers.setupTitle")}</Text>
+                <Field label={t("workers.platform")}>
+                  <Select value={platform} onChange={(_, d) => setPlatform(d.value as Platform)}>
+                    {PLATFORMS.map((p) => (
+                      <option key={p} value={p}>
+                        {t(PLATFORM_LABELS[p])}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                {platform === "windows" && detector === "speciesnet" && (
+                  <MessageBar intent="warning">
+                    <MessageBarBody>{t("workers.speciesnetWindows")}</MessageBarBody>
+                  </MessageBar>
+                )}
                 <ol className="setup-steps">
-                  <li>
-                    {rich("workers.step.prereqs", {
-                      uv: (
-                        <a href="https://docs.astral.sh/uv/" target="_blank" rel="noreferrer">
-                          uv
-                        </a>
-                      ),
-                      ffmpeg: <code>ffmpeg</code>,
-                    })}
-                  </li>
-                  <li>{rich("workers.step.code", { folder: <code>worker/</code> })}</li>
-                  <li>
-                    {t("workers.step.run")}
-                    <CopyBlock
-                      text={workerCommand(detector, server, created.token)}
-                      label={t("workers.step.run")}
-                    />
-                  </li>
+                  {setupSteps(platform, detector, server, created.token).map((step) => (
+                    <li key={step.text}>
+                      {rich(step.text, { folder: <code>worker/</code> })}
+                      {step.code && <CopyBlock text={step.code} label={t(step.text)} />}
+                    </li>
+                  ))}
                 </ol>
+                <Caption1 className="muted">
+                  {rich("workers.moreHelp", { doc: <code>docs/WORKER_SETUP.md</code> })}
+                </Caption1>
                 {isLocalhost && (
                   <MessageBar intent="info">
                     <MessageBarBody>{t("workers.localhostHint")}</MessageBarBody>

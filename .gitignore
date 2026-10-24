@@ -16,3 +16,4 @@ web/dist/
 # Self-signed certificate MediaMTX generates on first start
 auto.key
 auto.crt
+web/tsconfig.tsbuildinfo
