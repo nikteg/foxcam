@@ -14,13 +14,15 @@ class LeaseLost(Exception):
 
 class Client:
     def __init__(self, server: str, worker_id: str, token: str | None = None,
-                 info: dict[str, Any] | None = None, tags: list[str] | None = None):
+                 info: dict[str, Any] | None = None, tags: list[str] | None = None,
+                 labels: list[str] | None = None):
         headers = {"Authorization": f"Bearer {token}"} if token else {}
         self.http = httpx.Client(base_url=server.rstrip("/"), headers=headers,
                                  timeout=httpx.Timeout(30, read=300))
         self.worker_id = worker_id
         self.info = info or {}
         self.tags = tags or []
+        self.labels = labels
 
     def close(self) -> None:
         self.http.close()
@@ -34,7 +36,7 @@ class Client:
     def lease(self) -> dict[str, Any] | None:
         r = self._check(self.http.post("/api/worker/lease",
                                        json={"worker_id": self.worker_id, "info": self.info,
-                                             "tags": self.tags}))
+                                             "tags": self.tags, "labels": self.labels}))
         return None if r.status_code == 204 else r.json()
 
     def download_input(self, job: dict[str, Any], dst: Path) -> None:

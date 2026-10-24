@@ -21,6 +21,9 @@ class DummyDetector(Detector):
         self.every = max(every, 1)
         self.count = 0
 
+    def labels(self) -> list[str] | None:
+        return None  # pretends to find its label in anything (testing)
+
     def detect(self, frames: list[Frame], hints: dict[str, Any]) -> list[Detection]:
         self.count += 1
         if not self.label or not frames or self.count % self.every:

@@ -34,6 +34,9 @@ class LeaseRequest(BaseModel):
     # Capabilities, e.g. ["speciesnet", "gpu"]. Only jobs of detection profiles whose
     # `requires` tags are all present are handed out.
     tags: list[str] = Field(default=[], max_length=50)
+    # What this worker can detect, if limited (e.g. fixed classes). null = anything: then
+    # targets are taken from each job's profile (open-vocabulary models are prompted).
+    labels: list[str] | None = Field(default=None, max_length=500)
 
 
 class SegmentOut(BaseModel):
@@ -101,7 +104,7 @@ def lease(body: LeaseRequest, settings: Settings = Depends(settings_dep),
     # A per-worker token decides who the worker is; the client's worker_id is ignored then.
     worker_id = identity.name or body.worker_id
     tags = normalize_tags([*body.tags, *identity.tags])
-    job = queue.lease(settings, worker_id, body.info, tags)
+    job = queue.lease(settings, worker_id, body.info, tags, body.labels)
     if job is None:
         return Response(status_code=204)
     seg = job.segment

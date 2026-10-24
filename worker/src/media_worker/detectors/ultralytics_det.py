@@ -1,7 +1,8 @@
 """Ultralytics models: YOLO-World / YOLOE (open vocabulary, prompt with "fox"), or any
 YOLO / RT-DETR weights you fine-tuned yourself.
 
-    media-worker --detector ultralytics --model yolov8s-worldv2.pt --classes fox
+    media-worker --detector ultralytics --model yolov8s-worldv2.pt   # prompted per job
+    media-worker --detector ultralytics --model yolov8s-worldv2.pt --classes fox  # fixed
     media-worker --detector ultralytics --model runs/detect/fox/weights/best.pt
 
 Without ``--classes`` an open-vocabulary model (YOLO-World / YOLOE) is prompted with each
@@ -45,6 +46,13 @@ class UltralyticsDetector(Detector):
         classes = ",".join(self.classes or []) or (
             "from profile" if self.open_vocabulary else "model default")
         return {"detector": self.name, "classes": classes}
+
+    def labels(self) -> list[str] | None:
+        if self.classes:  # fixed prompt: only these
+            return list(self.classes)
+        if self.open_vocabulary:  # prompted per job with the profile's targets
+            return None
+        return [str(n) for n in self.model.names.values()]  # closed-set model, e.g. COCO
 
     def tags(self) -> list[str]:
         # Fixed --classes: only profiles that ask for this worker by tag make sense.

@@ -55,13 +55,13 @@ def touch_worker(worker_id: str, info: dict[str, Any] | None = None,
 
 
 def lease(settings: Settings, worker_id: str, info: dict[str, Any] | None = None,
-          tags: list[str] | None = None) -> Job | None:
+          tags: list[str] | None = None, labels: list[str] | None = None) -> Job | None:
     now = utcnow()
     token = secrets.token_urlsafe(24)
     expires = now + timedelta(seconds=settings.queue.lease_seconds)
     tags = tags or []
     touch_worker(worker_id, info, tags=tags)
-    profiles = eligible_profiles(settings, tags)
+    profiles = eligible_profiles(settings, tags, labels)
     if not profiles:
         touch_worker(worker_id, current_job_id=None)
         return None

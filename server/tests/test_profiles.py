@@ -224,3 +224,13 @@ def test_legacy_rows_join_the_default_profile(settings):
         assert d.profile_id == "default" and d.event_id == s.query(Event).one().id
         assert s.query(Event).one().profile_id == "default"
     assert events.assign_events(settings) == 0  # already part of the old event
+
+
+def test_fixed_class_workers_only_get_matching_profiles(two_profiles):
+    from media_streamer.profiles import eligible_profiles
+
+    two_profiles.profiles[1].requires = []  # vehicles: any worker
+    assert eligible_profiles(two_profiles, [], None) == ["default", "vehicles"]
+    assert eligible_profiles(two_profiles, [], ["fox"]) == ["default"]
+    assert eligible_profiles(two_profiles, [], ["automobile"]) == ["vehicles"]  # alias
+    assert eligible_profiles(two_profiles, [], ["cat"]) == []

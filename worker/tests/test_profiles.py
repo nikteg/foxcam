@@ -39,6 +39,7 @@ def _ultralytics(classes=None) -> UltralyticsDetector:
 def test_open_vocabulary_model_is_prompted_with_the_profile_targets():
     det = _ultralytics()
     assert det.tags() == ["ultralytics", "open-vocabulary"]
+    assert det.labels() is None
     det.detect([], {"target_labels": ["fox"]})
     det.detect([], {"target_labels": ["fox"]})  # unchanged: no re-prompt
     det.detect([], {"target_labels": ["car", "person"]})
@@ -48,6 +49,7 @@ def test_open_vocabulary_model_is_prompted_with_the_profile_targets():
 def test_fixed_classes_ignore_the_profile():
     det = _ultralytics(classes=["fox"])
     assert det.tags() == ["ultralytics"]
+    assert det.labels() == ["fox"]  # the server then only sends fox profiles
     det.detect([], {"target_labels": ["car"]})
     assert det.model.prompts == []
 

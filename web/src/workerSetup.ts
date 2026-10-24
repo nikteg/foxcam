@@ -28,7 +28,8 @@ function detectorArgs(detector: DetectorChoice): string[] {
     case "speciesnet":
       return ["--detector speciesnet"];
     case "ultralytics":
-      return ["--detector ultralytics", "--model yolov8s-worldv2.pt", "--classes fox"];
+      // No --classes: YOLO-World is prompted with each job's profile targets.
+      return ["--detector ultralytics", "--model yolov8s-worldv2.pt"];
     case "dummy":
       return ["--detector dummy", "--dummy-label fox"];
   }

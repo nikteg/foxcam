@@ -153,7 +153,7 @@ def main() -> None:
         info["gpu"] = gpu
     tags = list(dict.fromkeys(
         t.strip().lower() for t in [*detector.tags(), *args.tags.split(",")] if t.strip()))
-    client = Client(args.server, args.worker_id, args.token, info, tags)
+    client = Client(args.server, args.worker_id, args.token, info, tags, detector.labels())
     log.info("worker %s using %s (tags: %s) -> %s", args.worker_id, detector.name,
              ",".join(tags), args.server)
 

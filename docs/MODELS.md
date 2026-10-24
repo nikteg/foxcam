@@ -12,7 +12,7 @@ distance, partly hidden. That rules out the default choice:
 | Model | Type | Fox support | Speed | Licence | Notes |
 |---|---|---|---|---|---|
 | **MegaDetector + SpeciesNet** (Google) | camera-trap detector + species classifier | ✅ "red fox" (and ~2000 species) | moderate | Apache-2.0 | Trained on millions of camera-trap images incl. IR night shots. Supports country geofencing (`location.country` in `config.yaml`, sent to workers). **Recommended starting point.** Detector: `speciesnet`. |
-| **YOLO-World / YOLOE** (Ultralytics) | open-vocabulary detector | ✅ prompt "fox" | fast (real time) | AGPL-3.0 | Weaker on IR/night, small or hidden animals. **Prompt only `fox`**: adding `dog,cat,…` makes it label foxes as "dog" (measured below). Detector: `ultralytics --classes fox`. |
+| **YOLO-World / YOLOE** (Ultralytics) | open-vocabulary detector | ✅ prompt "fox" | fast (real time) | AGPL-3.0 | Weaker on IR/night, small or hidden animals. **Prompt only `fox`**: adding `dog,cat,…` makes it label foxes as "dog" (measured below). Detector: `ultralytics` (prompted with each profile's targets; with `--classes` it only serves profiles looking for those classes). |
 | **OWLv2 / Grounding DINO** | zero-shot detector | ✅ prompt "fox" | slow | Apache-2.0 | Good for labelling a dataset, too slow for every frame. Not bundled. |
 | **RF-DETR / YOLO11 fine-tuned** | custom detector | ✅ after training | fast | Apache-2.0 / AGPL-3.0 | Best long-term accuracy *for your cameras*. Train on your own ✅/❌-reviewed detections (see below). Detector: `ultralytics --model best.pt`. |
 | **VLM verification** (Qwen-VL class) | vision-language model | ✅ "is this a fox?" | slow | varies | Optional second stage on crops to cut false positives. Not bundled. |

@@ -41,8 +41,13 @@ token gets **409**: drop the job and lease a new one.
 ```http
 POST /api/worker/lease
 {"worker_id": "gpu-box", "info": {"detector": "speciesnet", "gpu": "RTX 4090"},
- "tags": ["speciesnet", "gpu"]}
+ "tags": ["speciesnet", "gpu"], "labels": null}
 ```
+
+`labels` (optional): if the worker can only detect certain labels (e.g. a fixed set of
+classes), list them; it then only gets jobs of profiles looking for at least one of them.
+`null` = it can look for anything (open-vocabulary models are prompted with the job's
+`hints.target_labels`).
 
 `info` is free-form and shown in the web UI's worker queue tab. `tags` are capabilities:
 you only get jobs of [detection profiles](ARCHITECTURE.md#detection-profiles) whose

@@ -132,7 +132,22 @@ def set_camera_profiles(settings: Settings, camera_id: str,
         state.profiles = profile_ids
 
 
-def eligible_profiles(settings: Settings, tags: list[str]) -> list[str]:
-    """Profiles whose jobs a worker with these tags may lease."""
+def eligible_profiles(settings: Settings, tags: list[str],
+                      labels: list[str] | None = None) -> list[str]:
+    """Profiles whose jobs a worker with these tags may lease.
+
+    ``labels``: what the worker can detect (e.g. a YOLO-World worker started with fixed
+    ``--classes``). None = anything (open vocabulary, broad models). A profile is only
+    offered when at least one of its targets (after aliases) is among them.
+    """
     have = set(tags)
-    return [p.id for p in settings.all_profiles() if set(p.requires) <= have]
+    out = []
+    for p in settings.all_profiles():
+        if not set(p.requires) <= have:
+            continue
+        if labels is not None:
+            can = {x.lower() for x in labels} | {p.canonical(x).lower() for x in labels}
+            if not can & {t.lower() for t in p.targets}:
+                continue
+        out.append(p.id)
+    return out

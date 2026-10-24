@@ -112,11 +112,11 @@ winget install Git.Git
 uv tool install --torch-backend auto "media-worker[ultralytics] @ .\worker"
 media-worker doctor --server http://192.168.1.10:8000 --token msw_...
 media-worker --server http://192.168.1.10:8000 --token msw_... `
-  --detector ultralytics --model yolov8s-worldv2.pt --classes fox --device cuda
+  --detector ultralytics --model yolov8s-worldv2.pt --device cuda
 ```
 
 Start at sign-in: `worker\deploy\windows\install-task.ps1 -Mode native -Server ... -Token ...
--WorkerArgs "--detector ultralytics --model yolov8s-worldv2.pt --classes fox --device cuda"`.
+-WorkerArgs "--detector ultralytics --model yolov8s-worldv2.pt --device cuda"`.
 
 Notes:
 
@@ -144,7 +144,7 @@ MEDIA_SERVER=http://192.168.1.10:8000
 MEDIA_WORKER_TOKEN=msw_...
 DETECTOR=speciesnet                           # or ultralytics
 WORKER_ARGS=--detector speciesnet
-# WORKER_ARGS=--detector ultralytics --model yolov8s-worldv2.pt --classes fox --device cuda
+# WORKER_ARGS=--detector ultralytics --model yolov8s-worldv2.pt --device cuda
 
 docker compose -f worker/compose.yaml up --build -d
 docker compose -f worker/compose.yaml run --rm worker doctor

@@ -35,6 +35,11 @@ class Detector(ABC):
     def info(self) -> dict[str, Any]:
         return {"detector": self.name}
 
+    def labels(self) -> list[str] | None:
+        """What this detector can report, if limited; the server then only hands out jobs
+        of profiles looking for one of these. None = anything / unknown."""
+        return None
+
     def tags(self) -> list[str]:
         """Capabilities sent with every lease; the server only hands out jobs of detection
         profiles whose ``requires`` tags this worker has. The detector name by default."""
