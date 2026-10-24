@@ -60,7 +60,9 @@ def auto_order(system: str | None = None) -> list[str]:
         return ["videotoolbox", "software"]
     if system == "Windows":
         return ["nvenc", "qsv", "amf", "mf", "software"]
-    return ["nvenc", "qsv", "vaapi", "software"]
+    # VAAPI before Quick Sync: same Intel hardware, but h264_qsv rejects some camera
+    # streams (odd frame rates) that VAAPI handles.
+    return ["nvenc", "vaapi", "qsv", "software"]
 
 
 _ENCODERS = {
@@ -297,10 +299,10 @@ def run(enc: Encode, src: str, dst: str, *, preference: str = "auto", ffmpeg: st
         quick = time.monotonic() - started < STARTUP_SECONDS
         if code == 0 or backend == "software" or not quick:
             return code
-        log.warning("transcode: %s failed on this stream (exit %s); falling back to software",
-                    backend, code)
         mark_broken(backend, enc.codec, ffmpeg=ffmpeg, device=device)
-        backend = "software"
+        failed, backend = backend, select(preference, enc.codec, ffmpeg=ffmpeg, device=device)
+        log.warning("transcode: %s failed on this stream (exit %s); trying %s", failed, code,
+                    backend)
 
 
 def transcode_command(enc: Encode, src: str, dst: str, *, executable: str,

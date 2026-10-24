@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 Rect = list[float]  # normalized [x, y, w, h]
+
+log = logging.getLogger(__name__)
 
 
 class FfmpegError(RuntimeError):
@@ -55,17 +58,29 @@ def _mask_filters(rects: list[Rect]) -> list[str]:
 
 
 def make_masked_derivative(src: Path, dst: Path, rects: list[Rect], fps: float,
-                           max_width: int) -> None:
+                           max_width: int, vaapi_device: str | None = None) -> None:
     """Low-fps, downscaled H.264 copy with censor rectangles burned in. No audio.
 
     This is the only artifact a worker ever receives, so masked pixels never leave the box.
+    With ``vaapi_device`` the GPU decodes and scales (a quarter of the CPU time for a 5 MP
+    camera); software if that fails.
     """
     dst.parent.mkdir(parents=True, exist_ok=True)
+    out = ["-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+           "-movflags", "+faststart", str(dst)]
+    if vaapi_device and Path(vaapi_device).exists():
+        vf = [f"fps={fps}", f"scale_vaapi=w='min({max_width},iw)':h=-2:format=nv12",
+              "hwdownload", "format=nv12", *_mask_filters(rects), "format=yuv420p"]
+        try:
+            _run(["ffmpeg", "-y", "-v", "error", "-init_hw_device", f"vaapi=hw:{vaapi_device}",
+                  "-hwaccel", "vaapi", "-hwaccel_output_format", "vaapi",
+                  "-hwaccel_device", "hw", "-i", str(src), "-vf", ",".join(vf), *out])
+            return
+        except FfmpegError as e:
+            log.warning("GPU preprocessing failed, using the CPU: %s", e)
     vf = [f"fps={fps}", *_mask_filters(rects),
           f"scale='min({max_width},iw)':-2", "format=yuv420p"]
-    _run(["ffmpeg", "-y", "-v", "error", "-i", str(src), "-an", "-vf", ",".join(vf),
-          "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
-          "-movflags", "+faststart", str(dst)])
+    _run(["ffmpeg", "-y", "-v", "error", "-i", str(src), "-vf", ",".join(vf), *out])
 
 
 @dataclass
@@ -81,7 +96,8 @@ def light_stats(src: Path, duration_s: float, samples: int = 6) -> LightStats | 
     """Average colour saturation and brightness over ~``samples`` frames of the segment."""
     # Spread the samples over the whole segment, whatever its length (min 1 frame).
     fps = min(max(samples / max(duration_s, 0.1), 0.02), 5.0)
-    out = _run(["ffmpeg", "-v", "error", "-i", str(src), "-an",
+    # Keyframes are enough for a few samples, and a tenth of the decoding.
+    out = _run(["ffmpeg", "-v", "error", "-skip_frame", "nokey", "-i", str(src), "-an",
                 "-vf", f"fps={fps:.4f},scale=320:-2,signalstats,metadata=mode=print:file=-",
                 "-f", "null", "-"], timeout=120).stdout
     sat, luma = [], []

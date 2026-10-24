@@ -46,7 +46,7 @@ def test_vaapi_uses_render_node() -> None:
 
 def test_auto_order_per_os() -> None:
     assert hwaccel.auto_order("Darwin") == ["videotoolbox", "software"]
-    assert hwaccel.auto_order("Linux") == ["nvenc", "qsv", "vaapi", "software"]
+    assert hwaccel.auto_order("Linux") == ["nvenc", "vaapi", "qsv", "software"]
     assert hwaccel.auto_order("Windows")[-2:] == ["mf", "software"]
 
 
@@ -78,3 +78,27 @@ def test_software_probe_and_run(tmp_path) -> None:
     enc = Encode(max_height=120, masks=[[0, 0, 0.5, 0.5]], audio="none")
     assert hwaccel.run(enc, str(src), str(out), preference="none") == 0
     assert out.stat().st_size > 0
+
+
+def test_run_falls_back_to_the_next_backend_not_software(monkeypatch, tmp_path) -> None:
+    # h264_qsv rejects some camera streams that VAAPI handles: try VAAPI before the CPU.
+    monkeypatch.setattr(hwaccel, "probe", lambda backend, codec, **_: (True, ""))
+    monkeypatch.setattr(hwaccel, "auto_order", lambda: ["qsv", "vaapi", "software"])
+    monkeypatch.setattr(hwaccel, "_cache_file", lambda *_: tmp_path / "cache.json")
+    started = []
+
+    class FakeProc:
+        def __init__(self, args):
+            started.append(args)
+            self.code = 218 if "h264_qsv" in args else 0
+
+        def wait(self):
+            return self.code
+
+        def send_signal(self, _sig):
+            pass
+
+    monkeypatch.setattr(hwaccel.subprocess, "Popen", FakeProc)
+    assert hwaccel.run(hwaccel.Encode(), "in", "out") == 0
+    assert ["h264_qsv" in a for a in started] == [True, False]
+    assert "h264_vaapi" in started[1]

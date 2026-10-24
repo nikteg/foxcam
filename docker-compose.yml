@@ -55,6 +55,9 @@ services:
       # Used by config.docker.yaml.
       PUBLIC_URL: ${PUBLIC_URL:-}
       MAX_DISK_GB: ${MAX_DISK_GB:-}
+      SEGMENT_SECONDS: ${SEGMENT_SECONDS:-60}
+      SAMPLE_FPS: ${SAMPLE_FPS:-2}
+      MAX_WIDTH: ${MAX_WIDTH:-1280}
       # Behind a reverse proxy: its address as this container sees it (docs/AUTH.md).
       FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-127.0.0.1}
       # S3 credentials, if not in config.yaml (storage.s3).

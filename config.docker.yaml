@@ -4,9 +4,19 @@
 # else uses the defaults in config.example.yaml.
 data_dir: ${MEDIA_DATA_DIR:-/data}
 
+# Length of each recorded file: detection (and notifications) wait for a file to finish.
+# Finished hours are joined into one file per camera either way (compaction).
+segment_seconds: ${SEGMENT_SECONDS:-60}
+
 # How users open the web UI, e.g. https://cams.example.org (links in notifications; https
 # also makes the session cookie Secure).
 public_url: ${PUBLIC_URL:-}
+
+# Frames sent to workers: fewer and smaller is much lighter on a small box. YOLO-World
+# looks at 640 px anyway.
+processing:
+  sample_fps: ${SAMPLE_FPS:-2}
+  max_width: ${MAX_WIDTH:-1280}
 
 retention:
   max_disk_gb: ${MAX_DISK_GB:-}   # oldest unpinned footage deleted first; empty = no cap

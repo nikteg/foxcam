@@ -14,7 +14,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-from .. import ffmpeg, sprites
+from .. import ffmpeg, hwaccel, sprites
 from ..config import Settings
 from ..db import session_scope
 from ..models import CameraState, Job, MaskVersion, Segment, SegmentStatus
@@ -22,6 +22,13 @@ from ..profiles import camera_profiles
 from .compaction import playable_file
 
 log = logging.getLogger(__name__)
+
+
+def _vaapi_device(settings: Settings) -> str | None:
+    """The GPU for decoding and scaling, unless hardware video is switched off."""
+    if settings.mediamtx.hwaccel in ("none", "software"):
+        return None
+    return settings.mediamtx.hw_device or hwaccel.DEFAULT_DEVICE
 
 
 def sun_elevation(settings: Settings, seg: Segment) -> float | None:
@@ -95,7 +102,8 @@ def preprocess_segment(settings: Settings, segment_id: int) -> None:
                       for p in profiles for d in p.detectors)
             derived = settings.derived_dir / rel
             ffmpeg.make_masked_derivative(src, derived, mask.rects if mask else [], fps,
-                                          settings.processing.max_width)
+                                          settings.processing.max_width,
+                                          vaapi_device=_vaapi_device(settings))
             updates.update(derived_path=str(derived.relative_to(settings.data_dir)),
                            derived_fps=fps, mask_version_id=mask.id if mask else None,
                            status=SegmentStatus.QUEUED)
