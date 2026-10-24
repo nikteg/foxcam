@@ -141,3 +141,24 @@ def test_pre_roll_reaches_into_previous_segment(settings):
     events.build_clips(settings)
     with session_scope() as s:
         assert [s.get(Segment, i).pinned for i in segs] == [True, True, False]
+
+
+@needs_ffmpeg
+def test_events_marked_wrong_can_be_left_out(settings):
+    from foxcam.web import queries
+
+    start = utcnow().replace(microsecond=0) - timedelta(minutes=30)
+    segs = [add_segment(settings, start=start + timedelta(minutes=10 * i)) for i in range(3)]
+    dets = []
+    for seg_id in segs:  # far apart: three events
+        add_job(seg_id, state="done")
+        dets.append(add_detection(seg_id, seg_id, 500))
+        with session_scope() as s:
+            s.get(Segment, seg_id).has_target = True
+    events.assign_events(settings)
+    queries.set_feedback(dets[0], False)  # a wrong one
+    queries.set_feedback(dets[1], True)  # a right one
+    by_id = {e["best_detection_id"]: e for e in queries.events()}
+    assert [by_id[d]["feedback"] for d in dets] == ["wrong", "correct", None]
+    shown = {e["best_detection_id"] for e in queries.events(hide_wrong=True)}
+    assert shown == {dets[1], dets[2]}

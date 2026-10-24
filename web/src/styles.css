@@ -1590,3 +1590,11 @@ h3.panel-heading {
   vertical-align: -0.18em;
   margin-inline-end: 0.35em;
 }
+/* Event card title: opens the detection drawer. */
+a.event-title {
+  color: inherit;
+  text-decoration: none;
+}
+a.event-title:hover {
+  text-decoration: underline;
+}

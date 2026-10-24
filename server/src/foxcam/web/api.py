@@ -458,10 +458,11 @@ def feedback_export() -> list[dict[str, Any]]:
 def events(camera: str | None = None, profile: str | None = None, label: str | None = None,
            min_agreement: int = Query(1, ge=1, le=10,
                                       description="seen by at least this many detectors"),
+           hide_wrong: bool = Query(False, description="leave out events marked wrong"),
            limit: int = Query(100, le=1000),
            p: Principal = Depends(principal)) -> list[dict[str, Any]]:
     return queries.events(camera, limit, profile, label, _camera_filter(p, camera),
-                          min_agreement)
+                          min_agreement, hide_wrong)
 
 
 def _event(p: Principal, event_id: int) -> Event:

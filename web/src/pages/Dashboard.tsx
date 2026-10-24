@@ -29,7 +29,8 @@ export function Dashboard() {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status, refetchInterval: 10_000 });
   const events = useQuery({
     queryKey: ["events", "latest"],
-    queryFn: () => api.events({ limit: 6 }),
+    // Marked wrong in the detection drawer: not worth a place on the start page.
+    queryFn: () => api.events({ limit: 6, hide_wrong: true }),
     refetchInterval: 15_000,
   });
   const s = status.data;

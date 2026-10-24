@@ -36,6 +36,11 @@ import {
   DialogTitle,
 } from "./Drawer";
 
+/** The event's detections, with its best one open in the drawer. */
+const detailsHref = (e: DetectionEvent) =>
+  `/events/detections?event=${e.id}&only_targets=true` +
+  (e.best_detection_id ? `&selected=${e.best_detection_id}` : "");
+
 export function EventsGrid({
   events,
   byDay = false,
@@ -96,11 +101,19 @@ export function EventsGrid({
               <CardHeader
                 header={
                   <span className="row">
-                    <Text weight="semibold">{e.label}</Text>
+                    {/* The detection drawer: frame, box, feedback. */}
+                    <a className="event-title" {...routerHref(detailsHref(e))}>
+                      <Text weight="semibold">{e.label}</Text>
+                    </a>
                     <Text weight="bold" className="brand-text">
                       {percent(e.max_confidence)}
                     </Text>
                     <Light night={e.is_night} />
+                    {e.feedback === "wrong" && (
+                      <Tag kind="bad" title={t("events.markedWrongHint")}>
+                        {t("events.markedWrong")}
+                      </Tag>
+                    )}
                     {!e.confirmed && (
                       <Tag kind="pending" title={t("events.unconfirmedHint")}>
                         {t("events.unconfirmed")}
@@ -156,9 +169,9 @@ export function EventsGrid({
                   className="push-end"
                   icon={<Search20Regular />}
                   title={t("events.showDetectionsHint")}
-                  {...routerHref(`/events/detections?event=${e.id}&only_targets=true`)}
+                  {...routerHref(detailsHref(e))}
                 >
-                  {t("events.showDetections")}
+                  {t("events.details")}
                 </Button>
               </CardFooter>
             </Card>

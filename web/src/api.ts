@@ -364,6 +364,10 @@ export interface Detection {
 
 export interface DetectionEvent {
   id: number;
+  /** Its most confident detection (the frame, box and feedback in the detection drawer). */
+  best_detection_id: number | null;
+  /** From its detections' feedback: wrong = one marked wrong and none correct. */
+  feedback: "correct" | "wrong" | null;
   camera_id: string;
   profile_id: string | null;
   label: string;
@@ -770,8 +774,14 @@ export const api = {
   }) => request<Detection[]>("GET", withQuery("/api/detections", q)),
   feedback: (id: number, correct: boolean | null) =>
     request<{ status: string }>("POST", `/api/detections/${id}/feedback`, { correct }),
-  events: (q: { camera?: string; profile?: string; min_agreement?: number; limit?: number }) =>
-    request<DetectionEvent[]>("GET", withQuery("/api/events", q)),
+  events: (q: {
+    camera?: string;
+    profile?: string;
+    min_agreement?: number;
+    /** Leave out events marked wrong. */
+    hide_wrong?: boolean;
+    limit?: number;
+  }) => request<DetectionEvent[]>("GET", withQuery("/api/events", q)),
   modelStats: (days?: number) =>
     request<ModelStats[]>("GET", withQuery("/api/models/stats", { days })),
   queue: (q: { state?: string; limit?: number }) =>

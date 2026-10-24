@@ -6,7 +6,7 @@ import shutil
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, select
 
 from .. import recording
 from ..accounts import Principal
@@ -312,9 +312,15 @@ def set_feedback(detection_id: int, correct: bool | None) -> bool:
 def events(camera_id: str | None = None, limit: int = 100,
            profile_id: str | None = None, label: str | None = None,
            camera_ids: set[str] | None = None,
-           min_agreement: int = 1) -> list[dict[str, Any]]:
-    q = _only(select(Event), Event.camera_id, camera_ids) \
+           min_agreement: int = 1, hide_wrong: bool = False) -> list[dict[str, Any]]:
+    # Feedback is per detection: an event is "wrong" once one of its detections is marked
+    # wrong and none correct (a wrong box on a real visit does not hide the visit).
+    wrong = exists().where(Detection.event_id == Event.id, Detection.feedback.is_(False))
+    correct = exists().where(Detection.event_id == Event.id, Detection.feedback.is_(True))
+    q = _only(select(Event, wrong, correct), Event.camera_id, camera_ids) \
         .order_by(Event.first_ts.desc()).limit(limit)
+    if hide_wrong:
+        q = q.where(~(wrong & ~correct))
     if camera_id:
         q = q.where(Event.camera_id == camera_id)
     if profile_id:
@@ -326,6 +332,8 @@ def events(camera_id: str | None = None, limit: int = 100,
     with session_scope() as s:
         return [{
             "id": e.id, "camera_id": e.camera_id, "profile_id": e.profile_id, "label": e.label,
+            "best_detection_id": e.best_detection_id,
+            "feedback": "correct" if is_correct else "wrong" if is_wrong else None,
             "first_ts": iso(e.first_ts),
             "last_ts": iso(e.last_ts), "max_confidence": round(e.max_confidence, 3),
             "detection_count": e.detection_count, "is_night": e.is_night,
@@ -337,7 +345,7 @@ def events(camera_id: str | None = None, limit: int = 100,
             "remote": e.clip_remote_key is not None,
             "clip_duration_s": e.clip_duration_s, "building": e.clip_dirty,
             "clip_error": e.clip_error,
-        } for e in s.scalars(q)]
+        } for e, is_wrong, is_correct in s.execute(q)]
 
 
 def queue_view(limit: int = 100, state: str | None = None) -> dict[str, Any]:

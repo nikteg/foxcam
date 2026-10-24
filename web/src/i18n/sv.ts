@@ -121,8 +121,11 @@ export const sv: Record<MessageKey, string> = {
   "live.lowDataTag": "WebRTC 480p",
 
   // Händelser
-  "events.showDetections": "Detektioner",
-  "events.showDetectionsHint": "Detektionerna som händelsen gjordes av",
+  "events.details": "Detaljer",
+  "events.markedWrong": "markerad fel",
+  "events.markedWrongHint":
+    "En av dess detektioner markerades som fel. Visas inte på Status-sidan.",
+  "events.showDetectionsHint": "Detektionerna som händelsen gjordes av, den bästa öppen",
   "events.none": "Inga händelser än.",
   "events.intro":
     "Observationer av {labels} (från detekteringsprofilerna) nära i tid slås ihop till ett klipp, med {before} s före och {after} s efter. Klippen tas från originalfilmen, utan maskering.",

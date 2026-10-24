@@ -24,7 +24,10 @@ export function Feedback({
   const client = useQueryClient();
   const mutation = useMutation({
     mutationFn: (correct: boolean | null) => api.feedback(detection.id, correct),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["detections"] }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["detections"] });
+      void client.invalidateQueries({ queryKey: ["events"] }); // shown or hidden as wrong
+    },
   });
   // Show the pending choice immediately.
   const value = mutation.isPending ? mutation.variables : detection.feedback;
