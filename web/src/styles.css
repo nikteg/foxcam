@@ -87,6 +87,10 @@ h2.section {
   gap: var(--spacingHorizontalM);
   margin: 28px 0 12px;
 }
+/* The section's main action (Add …), at the right end of its heading. */
+h2.section > .section-action {
+  margin-inline-start: auto;
+}
 
 /* App shell */
 .topbar {

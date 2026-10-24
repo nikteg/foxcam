@@ -69,6 +69,7 @@ export function ProfilesSection() {
           size="small"
           appearance="primary"
           icon={<Add20Regular />}
+          className="section-action"
           onClick={() => setEditing("new")}
         >
           {t("profiles.add")}

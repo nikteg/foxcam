@@ -75,6 +75,7 @@ export function WorkersSection({ workers }: { workers: Worker[] }) {
           size="small"
           appearance="primary"
           icon={<Add20Regular />}
+          className="section-action"
           onClick={() => setAdding(true)}
         >
           {t("workers.add")}

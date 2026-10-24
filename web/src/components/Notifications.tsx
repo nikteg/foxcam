@@ -1,5 +1,5 @@
 import {
-  Body1,
+  Subtitle2,
   Button,
   Caption1,
   Card,
@@ -89,12 +89,19 @@ export function Notifications() {
 
   return (
     <>
-      <div className="row wrap">
-        <Body1 className="muted">{t("notify.intro")}</Body1>
-        <Button appearance="primary" icon={<Add20Regular />} onClick={() => setEditing("new")}>
+      <Subtitle2 as="h2" className="section">
+        {t("settings.notifications")}
+        <Button
+          size="small"
+          appearance="primary"
+          icon={<Add20Regular />}
+          className="section-action"
+          onClick={() => setEditing("new")}
+        >
           {t("notify.add")}
         </Button>
-      </div>
+      </Subtitle2>
+      <p className="muted">{t("notify.intro")}</p>
       <QueryState error={overview.error} loading={overview.isPending} />
       {data && !data.public_url && (
         <MessageBar intent="info" className="block">

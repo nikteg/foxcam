@@ -76,9 +76,6 @@ export function Settings() {
       </Subtitle2>
       <StorageCard />
 
-      <Subtitle2 as="h2" className="section">
-        {t("settings.notifications")}
-      </Subtitle2>
       <Notifications />
 
       <Subtitle2 as="h2" className="section">
