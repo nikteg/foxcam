@@ -493,6 +493,7 @@ export const en = {
   "dashboard.jobsTotal": "{n} in total",
   "dashboard.jobsDone": "{n} done",
   "dashboard.jobsFailed": "{n} gave up",
+  "mask.discard": "Discard the unsaved censor-area changes?",
   "profiles.title": "Detection profiles",
   "profiles.profile": "Profile",
   "profiles.all": "All profiles",

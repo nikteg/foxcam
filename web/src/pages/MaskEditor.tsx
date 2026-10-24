@@ -1,5 +1,4 @@
 import {
-  Button,
   Caption1,
   Card,
   Spinner,
@@ -9,7 +8,6 @@ import {
   ToolbarDivider,
 } from "@fluentui/react-components";
 import {
-  ArrowLeft20Regular,
   ArrowUndo20Regular,
   Camera20Regular,
   Delete20Regular,
@@ -18,10 +16,16 @@ import {
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { useParams } from "react-router";
 
 import { api, snapshotUrl, type MaskState, type Rect } from "../api";
-import { PageHeader, QueryState, Tag, useRouterHref } from "../components/ui";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+} from "../components/Drawer";
+import { QueryState, Tag } from "../components/ui";
 import { useI18n } from "../i18n";
 
 /** Normalized (0..1) rectangle; independent of the stream resolution. */
@@ -44,37 +48,59 @@ const clamp = (v: number, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
 const toBox = ([x, y, w, h]: Rect): Box => ({ x, y, w, h });
 const toRect = (b: Box): Rect => [b.x, b.y, b.w, b.h];
 
-export function MaskEditor() {
-  const { cameraId = "" } = useParams();
+/** Censor areas of a camera, in a large drawer. Closing with unsaved changes asks
+ * first. */
+export function MaskDrawer({ cameraId, onClose }: { cameraId: string; onClose: () => void }) {
   const mask = useQuery({ queryKey: ["mask", cameraId], queryFn: () => api.mask(cameraId) });
   const cameras = useQuery({ queryKey: ["cameras"], queryFn: api.cameras });
   const name = cameras.data?.find((c) => c.id === cameraId)?.name ?? cameraId;
-  const routerHref = useRouterHref();
   const { t, rich } = useI18n();
+  const dirty = useRef(false);
+  const close = () => {
+    if (!dirty.current || window.confirm(t("mask.discard"))) onClose();
+  };
 
   return (
-    <>
-      <PageHeader
-        title={t("mask.title", { name })}
-        actions={
-          <Button as="a" appearance="subtle" icon={<ArrowLeft20Regular />} {...routerHref("/")}>
-            {t("common.back")}
-          </Button>
-        }
-      >
-        <span className="only-mouse">{rich("mask.helpMouse", { key: <kbd>Delete</kbd> })}</span>
-        <span className="only-touch">{t("mask.helpTouch")}</span> {t("mask.helpCommon")}
-      </PageHeader>
-      <QueryState error={mask.error} loading={mask.isPending} />
-      {/* Remount when the saved state changes so the editor starts from it. */}
-      {mask.data && (
-        <Editor key={mask.data.mask_version_id ?? "none"} cameraId={cameraId} saved={mask.data} />
-      )}
-    </>
+    <Dialog open size="large" onOpenChange={(_, d) => !d.open && close()}>
+      <DialogSurface>
+        <DialogBody>
+          <DialogTitle>{t("mask.title", { name })}</DialogTitle>
+          <DialogContent className="form-stack">
+            <Caption1 className="muted">
+              <span className="only-mouse">
+                {rich("mask.helpMouse", { key: <kbd>Delete</kbd> })}
+              </span>
+              <span className="only-touch">{t("mask.helpTouch")}</span> {t("mask.helpCommon")}
+            </Caption1>
+            <QueryState error={mask.error} loading={mask.isPending} />
+            {/* Remount when the saved state changes so the editor starts from it. */}
+            {mask.data && (
+              <Editor
+                key={mask.data.mask_version_id ?? "none"}
+                cameraId={cameraId}
+                saved={mask.data}
+                onDirty={(d) => {
+                  dirty.current = d;
+                }}
+              />
+            )}
+          </DialogContent>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
   );
 }
 
-function Editor({ cameraId, saved }: { cameraId: string; saved: MaskState }) {
+function Editor({
+  cameraId,
+  saved,
+  onDirty,
+}: {
+  cameraId: string;
+  saved: MaskState;
+  /** Unsaved changes or not, for the drawer's close. */
+  onDirty: (dirty: boolean) => void;
+}) {
   const client = useQueryClient();
   const { t } = useI18n();
   const overlay = useRef<HTMLDivElement>(null);
@@ -92,6 +118,9 @@ function Editor({ cameraId, saved }: { cameraId: string; saved: MaskState }) {
     JSON.stringify(boxes.map(toRect)) !== JSON.stringify(saved.rects) ||
     isPrivate !== saved.private ||
     burnIn !== saved.burn_masks;
+  useEffect(() => {
+    onDirty(dirty);
+  });
 
   const save = useMutation({
     mutationFn: () =>
@@ -115,7 +144,9 @@ function Editor({ cameraId, saved }: { cameraId: string; saved: MaskState }) {
       if ((ev.key === "Delete" || ev.key === "Backspace") && selected >= 0) {
         ev.preventDefault();
         remove(selected);
-      } else if (ev.key === "Escape") {
+      } else if (ev.key === "Escape" && selected >= 0) {
+        // Deselect first; Escape with nothing selected closes the drawer.
+        ev.stopPropagation();
         setSelected(-1);
       } else if ((ev.metaKey || ev.ctrlKey) && ev.key === "s") {
         ev.preventDefault();

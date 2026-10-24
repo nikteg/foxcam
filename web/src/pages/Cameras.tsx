@@ -22,6 +22,7 @@ import { useNavigate } from "react-router";
 import { api, type Camera, type RecordingProfile } from "../api";
 import { useIsAdmin, hasRole, useMe } from "../auth";
 import { AddCameraDialog } from "../components/AddCameraDialog";
+import { MaskDrawer } from "./MaskEditor";
 import { CameraCard } from "../components/CameraCard";
 import { SharePanel } from "../components/ShareDialog";
 import { ProfileDialog, ProfilesSection } from "./Profiles";
@@ -34,7 +35,6 @@ import {
   PageTitle,
   QueryState,
   Toolbar,
-  useRouterHref,
   useSubPage,
 } from "../components/ui";
 import { useI18n } from "../i18n";
@@ -57,6 +57,7 @@ export function Cameras() {
   const [adding, setAdding] = useState(false);
   const [addingProfile, setAddingProfile] = useState(false);
   const [settingsFor, setSettingsFor] = useState<Camera | null>(null);
+  const [maskFor, setMaskFor] = useState<string | null>(null);
   const me = useMe();
   const isAdmin = me?.is_admin ?? false;
   // Sub-pages with their own URL (links work even while parts are still loading).
@@ -125,6 +126,7 @@ export function Cameras() {
                 refreshKey={Math.floor(cameras.dataUpdatedAt / 10_000)}
                 manage
                 onSettings={() => setSettingsFor(c)}
+                onMask={() => setMaskFor(c.id)}
               />
             ))}
           </div>
@@ -132,6 +134,7 @@ export function Cameras() {
       )}
 
       <AddCameraDialog open={adding} onClose={() => setAdding(false)} />
+      {maskFor && <MaskDrawer cameraId={maskFor} onClose={() => setMaskFor(null)} />}
       {addingProfile && (
         <ProfileDialog
           profile={null}
@@ -162,12 +165,12 @@ function GeneralPanel({
 }) {
   const { t } = useI18n();
   const client = useQueryClient();
-  const routerHref = useRouterHref();
   const editable = camera.managed === "ui" && hasRole(camera, "editor");
   const canRemove = camera.managed === "ui" && hasRole(camera, "owner");
   const [name, setName] = useState(camera.name);
   const [segment, setSegment] = useState(camera.segment_seconds_override?.toString() ?? "");
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [editingMask, setEditingMask] = useState(false);
   const save = useMutation({
     mutationFn: () =>
       api.updateCamera(camera.id, {
@@ -220,14 +223,10 @@ function GeneralPanel({
           <Body1 className="muted">{t("cameras.configHint")}</Body1>
         )}
         <div className="row wrap">
-          <Button
-            as="a"
-            size="small"
-            icon={<EyeOff20Regular />}
-            {...routerHref(`/cameras/${camera.id}/mask`)}
-          >
+          <Button size="small" icon={<EyeOff20Regular />} onClick={() => setEditingMask(true)}>
             {t("cameras.editCensorAreas")}
           </Button>
+          {editingMask && <MaskDrawer cameraId={camera.id} onClose={() => setEditingMask(false)} />}
           {canRemove && !confirmRemove && (
             <Button size="small" icon={<Delete20Regular />} onClick={() => setConfirmRemove(true)}>
               {t("cameras.removeCamera")}

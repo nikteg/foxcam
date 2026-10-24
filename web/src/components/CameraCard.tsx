@@ -54,6 +54,7 @@ export function CameraCard({
   refreshKey,
   manage = false,
   onSettings,
+  onMask,
 }: {
   camera: Camera;
   /** Changes re-request the snapshot (with the page's poll). */
@@ -62,6 +63,8 @@ export function CameraCard({
   manage?: boolean;
   /** Opens the camera's settings (shown to editors and owners). */
   onSettings?: () => void;
+  /** Opens the censor-area editor (manage, editors). */
+  onMask?: () => void;
 }) {
   const { t } = useI18n();
   const me = useMe();
@@ -216,13 +219,8 @@ export function CameraCard({
         >
           {t("nav.recordings")}
         </Button>
-        {manage && canEdit && (
-          <Button
-            as="a"
-            size="small"
-            icon={<Edit20Regular />}
-            {...routerHref(`/cameras/${c.id}/mask`)}
-          >
+        {manage && canEdit && onMask && (
+          <Button size="small" icon={<Edit20Regular />} onClick={onMask}>
             {t("camera.censorAreas")}
           </Button>
         )}
