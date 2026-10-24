@@ -232,6 +232,8 @@ class Settings(BaseModel):
     segment_seconds: int = 60
     # Optional shared secret for worker endpoints (``Authorization: Bearer ...``).
     worker_token: str | None = None
+    # Let any client act as a worker without a token. Only for a trusted test network.
+    open_worker_access: bool = False
     tapo_session_file: Path | None = None
     # Video files the UI may offer as "file" camera sources (fake cameras for testing).
     samples_dir: Path = Path("./samples")

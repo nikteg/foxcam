@@ -82,19 +82,23 @@ run = "pnpm --dir web dev --host"
 
 [tasks.worker]
 description = "Dummy worker against MEDIA_SERVER (default http://localhost:8000)"
-run = "uv run media-worker --server ${MEDIA_SERVER:-http://localhost:8000} --detector dummy --dummy-label fox"
+run = "MEDIA_WORKER_TOKEN=${MEDIA_WORKER_TOKEN:-$(uv run media-streamer worker-token dev --save data/dev-worker.token)} uv run media-worker --server ${MEDIA_SERVER:-http://localhost:8000} --detector dummy --dummy-label fox"
 
 [tasks."worker:yolo"]
 description = "YOLO-World worker, prompted with each job's profile targets (needs setup:yolo)"
-run = "uv run media-worker --server ${MEDIA_SERVER:-http://localhost:8000} --detector ultralytics --model yolov8s-worldv2.pt"
+run = "MEDIA_WORKER_TOKEN=${MEDIA_WORKER_TOKEN:-$(uv run media-streamer worker-token dev --save data/dev-worker.token)} uv run media-worker --server ${MEDIA_SERVER:-http://localhost:8000} --detector ultralytics --model yolov8s-worldv2.pt"
 
 [tasks."worker:speciesnet"]
 description = "SpeciesNet worker (needs setup:speciesnet)"
-run = "out/speciesnet-venv/bin/media-worker --server ${MEDIA_SERVER:-http://localhost:8000} --detector speciesnet"
+run = "MEDIA_WORKER_TOKEN=${MEDIA_WORKER_TOKEN:-$(uv run media-streamer worker-token dev --save data/dev-worker.token)} out/speciesnet-venv/bin/media-worker --server ${MEDIA_SERVER:-http://localhost:8000} --detector speciesnet"
 
 [tasks.doctor]
 description = "Check ffmpeg, GPU, detectors and the connection to MEDIA_SERVER"
-run = "uv run media-worker doctor --server ${MEDIA_SERVER:-http://localhost:8000}"
+run = "MEDIA_WORKER_TOKEN=${MEDIA_WORKER_TOKEN:-$(uv run media-streamer worker-token dev --save data/dev-worker.token)} uv run media-worker doctor --server ${MEDIA_SERVER:-http://localhost:8000}"
+
+[tasks."worker:token"]
+description = "Create a worker access token: mise run worker:token -- <name> [--tags gpu]"
+run = "uv run media-streamer worker-token"
 
 [tasks."tapo:login"]
 description = "Sign in to the Tapo cloud (password typed locally, never stored)"
@@ -233,7 +237,7 @@ confirm = "Delete queue?"
 run = "uv run media-streamer reset queue --yes"
 
 [tasks."reset:workers"]
-description = "Known workers and all access tokens (worker access becomes open)"
+description = "Known workers and all access tokens (workers need new tokens)"
 depends = ["server-stopped"]
 confirm = "Delete workers?"
 run = "uv run media-streamer reset workers --yes"

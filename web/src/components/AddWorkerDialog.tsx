@@ -186,7 +186,6 @@ export function AddWorkerDialog({ open, onClose }: { open: boolean; onClose: () 
                     <MessageBarBody>{t("workers.localhostHint")}</MessageBarBody>
                   </MessageBar>
                 )}
-                <Caption1 className="muted">{t("workers.lockedNote")}</Caption1>
               </>
             )}
           </DialogContent>

@@ -55,6 +55,7 @@ def test_invalid_detection_payload_rejected(settings, client):
 
 def test_worker_token_required_when_configured(settings, client):
     settings.worker_token = "secret"
+    settings.open_worker_access = False
     assert client.post("/api/worker/lease", json={"worker_id": "w"}).status_code == 401
     ok = client.post("/api/worker/lease", json={"worker_id": "w"},
                      headers={"Authorization": "Bearer secret"})
@@ -121,10 +122,38 @@ def test_tapo_status_without_session(client):
     assert client.get("/api/integrations/tapo/devices").status_code in (401, 501)
 
 
+def test_worker_api_is_locked_by_default(tmp_path):
+    from media_streamer.config import Settings
+
+    s = Settings.model_validate({"data_dir": str(tmp_path),
+                                 "mediamtx": {"api_url": "http://127.0.0.1:1"}})
+    assert s.open_worker_access is False
+    with TestClient(create_app(s, background=False)) as c:
+        assert c.get("/api/workers/auth").json()["mode"] == "locked"
+        r = c.post("/api/worker/lease", json={"worker_id": "stranger"})
+        assert r.status_code == 401 and "token" in r.json()["detail"]
+        assert c.get("/api/queue").json()["workers"] == []  # never registered
+
+
+def test_worker_token_cli_reuses_saved_token(settings, tmp_path):
+    from media_streamer import worker_tokens
+
+    path = tmp_path / "dev.token"
+    first = worker_tokens.ensure("dev", path)
+    assert worker_tokens.ensure("dev", path) == first  # reused while valid
+    assert oct(path.stat().st_mode & 0o777) == "0o600"
+    worker_tokens.revoke(worker_tokens.list_tokens()[0]["id"])
+    second = worker_tokens.ensure("dev", path)  # e.g. after reset:workers
+    assert second != first and worker_tokens.verify(second).name == "dev"
+
+
 def test_worker_tokens_lock_the_api_and_fix_identity(settings, client):
+    settings.open_worker_access = False
     lease = {"worker_id": "spoofed"}
-    assert client.get("/api/workers/auth").json()["mode"] == "open"
-    assert client.post("/api/worker/lease", json=lease).status_code == 204  # open mode
+    assert client.get("/api/workers/auth").json()["mode"] == "locked"
+    settings.open_worker_access = True
+    assert client.post("/api/worker/lease", json=lease).status_code == 204  # opened explicitly
+    settings.open_worker_access = False
 
     created = client.post("/api/workers/tokens", json={"name": "gpu-box", "detector": "speciesnet"})
     assert created.status_code == 201
@@ -141,14 +170,14 @@ def test_worker_tokens_lock_the_api_and_fix_identity(settings, client):
     ok = client.post("/api/worker/lease", json=lease, headers={"Authorization": f"Bearer {token}"})
     assert ok.status_code == 204
     workers = [w["id"] for w in client.get("/api/queue").json()["workers"]]
-    assert "gpu-box" in workers and workers.count("spoofed") == 1  # only from open mode
+    assert "gpu-box" in workers and workers.count("spoofed") == 1  # only from open access
 
     token_id = created.json()["id"]
     assert client.delete(f"/api/workers/tokens/{token_id}").status_code == 200
     revoked = client.post("/api/worker/lease", json=lease,
                           headers={"Authorization": f"Bearer {token}"})
     assert revoked.status_code == 401
-    assert client.get("/api/workers/auth").json()["mode"] == "open"
+    assert client.get("/api/workers/auth").json()["mode"] == "locked"  # stays locked
 
 
 def test_offline_workers_can_be_removed(client):
@@ -165,8 +194,9 @@ def test_offline_workers_can_be_removed(client):
     assert client.delete("/api/workers/dummy").status_code == 404
 
 
-def test_whoami_checks_credentials_without_side_effects(client):
-    assert client.get("/api/worker/whoami").json()["token_name"] is None
+def test_whoami_checks_credentials_without_side_effects(settings, client):
+    assert client.get("/api/worker/whoami").json()["token_name"] is None  # open access
+    settings.open_worker_access = False
     token = client.post("/api/workers/tokens", json={"name": "wsl-pc"}).json()["token"]
     assert client.get("/api/worker/whoami").status_code == 401
     assert client.get("/api/worker/whoami",

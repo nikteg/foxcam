@@ -217,11 +217,11 @@ export const en = {
   "workers.copied": "Copied",
   "workers.localhostHint":
     "This page is open on localhost. Replace localhost in the command with this computer's network address so the worker can reach it.",
-  "workers.lockedNote":
-    "From now on every worker needs a token. Workers started without one (e.g. scripts/dev.sh) need MEDIA_WORKER_TOKEN set.",
   "workers.modeOpen":
-    "Open: any device on the network can act as a worker. Adding a worker creates a token and locks the worker API.",
+    "Open: any device on the network can act as a worker (open_worker_access in config.yaml). Only use this on a trusted test network.",
   "workers.modeLocked": "Locked: workers need an access token.",
+  "workers.modeLockedEmpty":
+    "No worker can connect yet: workers need an access token. Use Add worker to create one.",
   "workers.sharedToken": "A shared worker_token from config.yaml is also accepted.",
   "workers.created": "Created",
   "workers.lastUsed": "Last used",

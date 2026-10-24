@@ -32,8 +32,8 @@ def require_worker(request: Request,
         if identity:
             return identity
         raise HTTPException(401, "invalid worker token")
-    if not shared and not worker_tokens.any_active():
-        return Identity(name=None)  # open mode
+    if request.app.state.settings.open_worker_access:
+        return Identity(name=None)  # explicitly opened for a trusted network
     raise HTTPException(401, "worker token required (create one under Worker queue → Add worker)")
 
 

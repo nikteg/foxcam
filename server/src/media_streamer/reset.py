@@ -104,13 +104,13 @@ def queue(settings: Settings) -> str:
 
 
 def workers(settings: Settings) -> str:
-    """Known workers and all access tokens (the worker API is open again)."""
+    """Known workers and all access tokens (workers need a new token afterwards)."""
     with session_scope() as s:
         n_w = s.query(Worker).count()
         n_t = s.query(WorkerToken).count()
         s.execute(delete(Worker))
         s.execute(delete(WorkerToken))
-    return f"{n_w} workers and {n_t} tokens removed; worker access is open"
+    return f"{n_w} workers and {n_t} tokens removed; workers need a new token"
 
 
 def cameras(settings: Settings) -> str:

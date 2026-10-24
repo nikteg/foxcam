@@ -5,8 +5,10 @@ data_dir: ${MEDIA_DATA_DIR:-./data}
 # Length of each recorded file. Can be overridden per camera.
 segment_seconds: 60
 
-# Optional shared secret for worker endpoints. Workers send "Authorization: Bearer <token>".
+# Workers need an access token: create one per worker in the web UI (Worker queue → Add
+# worker) or with `media-streamer worker-token <name>`. Optionally also a shared secret:
 worker_token: ${MEDIA_WORKER_TOKEN:-}
+# open_worker_access: true   # any client may act as a worker - trusted test networks only
 
 cameras:
   # Development: synthetic test pattern, no camera needed.

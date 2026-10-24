@@ -1,11 +1,9 @@
 """Per-worker access tokens, created from the web UI.
 
-Authentication modes for the worker API:
-
-- **open**: no `worker_token` in config and no tokens created. Any client can act as a
-  worker (convenient while developing on a trusted network).
-- **locked**: as soon as a shared `worker_token` is configured or at least one token has
-  been created, every worker request needs `Authorization: Bearer <token>`.
+Every worker request needs `Authorization: Bearer <token>`: a per-worker token created in
+the web UI (or with `media-streamer worker-token`), or the shared `worker_token` from the
+config. Until one exists no worker can connect. `open_worker_access: true` lets any client
+act as a worker without a token (only for a trusted test network).
 
 A per-worker token also fixes the worker's identity: the server uses the token's name as
 `worker_id`, whatever the client sends.
@@ -20,7 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from .db import session_scope
 from .models import WorkerToken, utcnow
@@ -40,18 +38,12 @@ class TokenError(ValueError):
 class Identity:
     """Who is calling the worker API."""
 
-    name: str | None  # None = shared config token or open mode (client picks worker_id)
+    name: str | None  # None = shared config token or open access (client picks worker_id)
     tags: tuple[str, ...] = ()  # capability tags granted to the token
 
 
 def _hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
-
-
-def any_active() -> bool:
-    with session_scope() as s:
-        return bool(s.scalar(select(func.count()).select_from(WorkerToken)
-                             .where(WorkerToken.revoked_at.is_(None))))
 
 
 def create(name: str, detector: str | None = None,
@@ -97,6 +89,28 @@ def set_tags(token_id: int, tags: list[str]) -> dict[str, Any]:
             raise TokenError("unknown worker token")
         row.tags = normalize_tags(tags) or None
         return _info(row)
+
+
+def ensure(name: str, path, tags: list[str] | None = None) -> str:
+    """A valid token for `name`, kept in the file `path` (mode 0600) for local tooling.
+
+    Reuses the saved token while it is still valid, otherwise replaces the worker's token.
+    """
+    if path.exists():
+        saved = path.read_text().strip()
+        identity = verify(saved)
+        if identity and identity.name == name:
+            return saved
+    with session_scope() as s:
+        row = s.scalar(select(WorkerToken).where(WorkerToken.name == name,
+                                                 WorkerToken.revoked_at.is_(None)))
+        if row is not None:
+            row.revoked_at = utcnow()
+    _, token = create(name, tags=tags)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(token + "\n")
+    path.chmod(0o600)
+    return token
 
 
 def revoke(token_id: int) -> None:

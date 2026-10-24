@@ -219,11 +219,11 @@ export const sv: Record<MessageKey, string> = {
   "workers.copied": "Kopierat",
   "workers.localhostHint":
     "Sidan är öppnad på localhost. Byt localhost i kommandot mot den här datorns nätverksadress så att arbetaren når den.",
-  "workers.lockedNote":
-    "Från och med nu behöver alla arbetare en token. Arbetare som startas utan (t.ex. scripts/dev.sh) behöver MEDIA_WORKER_TOKEN.",
   "workers.modeOpen":
-    "Öppen: vilken enhet som helst i nätverket kan vara arbetare. När du lägger till en arbetare skapas en token och arbetar-API:t låses.",
+    "Öppen: vilken enhet som helst i nätverket kan agera arbetare (open_worker_access i config.yaml). Använd bara på ett betrott testnätverk.",
   "workers.modeLocked": "Låst: arbetare behöver en åtkomsttoken.",
+  "workers.modeLockedEmpty":
+    "Ingen arbetare kan ansluta än: arbetare behöver en åtkomsttoken. Använd Lägg till arbetare för att skapa en.",
   "workers.sharedToken": "En gemensam worker_token från config.yaml accepteras också.",
   "workers.created": "Skapad",
   "workers.lastUsed": "Senast använd",

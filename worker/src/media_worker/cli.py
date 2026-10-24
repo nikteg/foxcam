@@ -88,6 +88,13 @@ def process(client: Client, detector, job: dict, args: argparse.Namespace) -> No
              len(detections), labels, ms / 1000)
 
 
+def _detail(response: httpx.Response) -> str:
+    try:
+        return str(response.json().get("detail", response.status_code))
+    except ValueError:
+        return str(response.status_code)
+
+
 def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "detect-file":
         from .local import main as detect_file_main
@@ -143,6 +150,17 @@ def main() -> None:
             try:
                 job = client.lease()
                 backoff = args.poll
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code in (401, 403):
+                    detail = _detail(e.response)
+                    hint = "" if "Add worker" in detail else (
+                        "; create one under Worker queue → Add worker")
+                    raise SystemExit(f"server rejected this worker: {detail}. Pass a valid "
+                                     f"--token (or MEDIA_WORKER_TOKEN){hint}.") from None
+                log.warning("server error (%s); retrying in %.0fs", e, backoff)
+                time.sleep(backoff)
+                backoff = min(backoff * 2, 120)
+                continue
             except httpx.HTTPError as e:
                 log.warning("server unreachable (%s); retrying in %.0fs", e, backoff)
                 time.sleep(backoff)

@@ -8,14 +8,16 @@ All timestamps are UTC (ISO 8601). Interactive API docs: `http://<server>:8000/d
 
 ## Authentication
 
-Once a worker token exists (created in the web UI under **Worker queue → Add worker**, or a
-shared `worker_token` in `config.yaml` / `MEDIA_WORKER_TOKEN`), every worker request must send
+Every worker request must send a token: one per worker, created in the web UI under
+**Worker queue → Add worker** or with `media-streamer worker-token <name>`, or the shared
+`worker_token` from `config.yaml` / `MEDIA_WORKER_TOKEN`:
 
 ```
 Authorization: Bearer <token>
 ```
 
-Without any token the queue is open. `GET /api/worker/whoami` checks credentials without side
+Until a token exists no worker can connect. Only `open_worker_access: true` in the config
+lets workers in without a token (trusted test networks). `GET /api/worker/whoami` checks credentials without side
 effects: `200 {"authenticated": true, "token_name": "gpu-box"}` or `401`.
 
 ## Flow

@@ -25,6 +25,8 @@ def settings(tmp_path: Path) -> Settings:
         # Nothing listens on port 1: MediaMTX calls fail fast and are ignored.
         "mediamtx": {"api_url": "http://127.0.0.1:1", "rtsp_url": "rtsp://127.0.0.1:1"},
         "cameras": [{"id": "cam", "name": "Cam", "source": {"type": "test"}}],
+        # Most tests exercise the pipeline, not auth (test_api checks the locked default).
+        "open_worker_access": True,
         "queue": {"lease_seconds": 60, "max_attempts": 2, "retry_backoff_seconds": 0},
         "events": {"settle_seconds": 0, "pre_roll_seconds": 1, "post_roll_seconds": 1,
                    "merge_gap_seconds": 5},

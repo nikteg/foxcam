@@ -27,6 +27,10 @@ mise run dev        # whole stack with a dummy worker (Ctrl+C stops it)
 mise run seed       # with the stack running: a fake camera per sample clip
 ```
 
+Workers always need an access token. The dev stack and the `worker*` tasks create a local
+`dev` token for themselves (kept in `data/dev-worker.token`); other workers get one from
+**Worker queue → Add worker** or `mise run worker:token -- <name>`.
+
 | Task | What it does |
 |---|---|
 | `dev`, `dev:no-worker`, `dev:yolo` | whole stack, with a dummy / no / YOLO-World worker |

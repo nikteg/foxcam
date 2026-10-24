@@ -30,9 +30,8 @@ class TagsIn(BaseModel):
 @router.get("/auth")
 def auth_mode(settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
     tokens = worker_tokens.list_tokens()
-    locked = bool(settings.worker_token) or bool(tokens)
-    return {"mode": "locked" if locked else "open", "shared_token": bool(settings.worker_token),
-            "tokens": len(tokens)}
+    return {"mode": "open" if settings.open_worker_access else "locked",
+            "shared_token": bool(settings.worker_token), "tokens": len(tokens)}
 
 
 @router.get("/tokens")

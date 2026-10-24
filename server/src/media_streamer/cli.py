@@ -27,6 +27,11 @@ def main() -> None:
     check.add_argument("--seconds", type=float, default=10)
     check.add_argument("--resolution", choices=["HD", "VGA"], default="HD")
     sub.add_parser("tapo-logout", help="delete the saved Tapo session")
+    tok = sub.add_parser("worker-token", help="create a worker access token and print it")
+    tok.add_argument("name")
+    tok.add_argument("--tags", default="", help="comma separated capability tags")
+    tok.add_argument("--save", metavar="FILE",
+                     help="keep the token in FILE and reuse it while it is valid (dev tooling)")
     reset = sub.add_parser("reset", help="delete one kind of data, keep the rest "
                                          "(stop the server first)")
     reset.add_argument("scopes", nargs="+", metavar="SCOPE",
@@ -70,6 +75,21 @@ def main() -> None:
         try:
             raise SystemExit(check(settings, args.camera, args.seconds, args.resolution))
         except RuntimeError as e:  # e.g. not signed in / ontapo not installed
+            raise SystemExit(f"error: {e}") from None
+    elif args.cmd == "worker-token":
+        from pathlib import Path
+
+        from . import worker_tokens
+        from .db import init_db
+
+        init_db(settings)
+        tags = [t for t in args.tags.split(",") if t.strip()]
+        try:
+            if args.save:
+                print(worker_tokens.ensure(args.name, Path(args.save), tags))
+            else:
+                print(worker_tokens.create(args.name, tags=tags)[1])
+        except worker_tokens.TokenError as e:
             raise SystemExit(f"error: {e}") from None
     elif args.cmd == "reset":
         from . import reset as reset_mod

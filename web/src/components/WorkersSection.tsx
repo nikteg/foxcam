@@ -81,9 +81,16 @@ export function WorkersSection({ workers }: { workers: Worker[] }) {
         </Button>
       </Subtitle2>
       {auth.data && (
-        <MessageBar intent={auth.data.mode === "open" ? "warning" : "success"} className="block">
+        <MessageBar
+          intent={auth.data.mode === "open" ? "warning" : auth.data.tokens ? "success" : "info"}
+          className="block"
+        >
           <MessageBarBody>
-            {auth.data.mode === "open" ? t("workers.modeOpen") : t("workers.modeLocked")}
+            {auth.data.mode === "open"
+              ? t("workers.modeOpen")
+              : auth.data.tokens || auth.data.shared_token
+                ? t("workers.modeLocked")
+                : t("workers.modeLockedEmpty")}
             {auth.data.shared_token && ` ${t("workers.sharedToken")}`}
           </MessageBarBody>
         </MessageBar>

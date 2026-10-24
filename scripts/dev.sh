@@ -38,8 +38,10 @@ start ingest uv run media-streamer ingest
 start web pnpm --dir web dev --host
 if [ "$WORKER_ARGS" != none ]; then
   sleep 3
+  # Workers need a token; a local "dev" token is created once and kept in data/.
+  token="${MEDIA_WORKER_TOKEN:-$(uv run media-streamer worker-token dev --save data/dev-worker.token)}"
   # shellcheck disable=SC2086
-  start worker uv run media-worker --server http://localhost:8000 $WORKER_ARGS
+  start worker env MEDIA_WORKER_TOKEN="$token" uv run media-worker --server http://localhost:8000 $WORKER_ARGS
 fi
 
 echo

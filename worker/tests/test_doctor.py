@@ -51,3 +51,19 @@ def test_cli_exit_code(monkeypatch, capsys):
         doctor.main(["--server", "http://127.0.0.1:1"])
     assert exc.value.code == 1
     assert "[FAIL] server" in capsys.readouterr().out
+
+
+def test_worker_stops_when_the_server_rejects_its_token(monkeypatch):
+    from media_worker import cli
+    from media_worker.client import Client
+
+    def reject(self):
+        request = httpx.Request("POST", "http://server/api/worker/lease")
+        response = httpx.Response(401, json={"detail": "invalid worker token"}, request=request)
+        raise httpx.HTTPStatusError("401", request=request, response=response)
+
+    monkeypatch.setattr(Client, "lease", reject)
+    monkeypatch.setattr("sys.argv", ["media-worker", "--server", "http://server", "--once"])
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+    assert "invalid worker token" in str(exc.value)
