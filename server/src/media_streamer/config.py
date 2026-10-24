@@ -50,7 +50,11 @@ class TapoCloudSource(BaseModel):
     device_id: str | None = None
     resolution: Literal["HD", "VGA"] = "HD"
     # Each relay session is restarted after this many seconds (keeps tokens fresh).
-    session_seconds: int = 1800
+    # Start a fresh relay session after this long (0 = only when the relay ends it).
+    session_seconds: int = 0
+    # Heartbeat interval on the relay connection, like the Tapo app (0 = off: the relay
+    # then closes the session after ~2 minutes and we reconnect).
+    heartbeat_seconds: float = 20
 
 
 class TestSource(BaseModel):
