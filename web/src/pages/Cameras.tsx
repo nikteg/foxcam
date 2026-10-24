@@ -41,12 +41,14 @@ import { TapoAccountCard } from "../components/TapoAccount";
 import {
   Dot,
   Empty,
-  PageHeader,
+  InfoBanner,
+  PageTabs,
+  PageTitle,
   QueryState,
   Tag,
+  Toolbar,
   useRouterHref,
   useSourceLabel,
-  PageTabs,
   useSubPage,
 } from "../components/ui";
 import { useI18n } from "../i18n";
@@ -91,33 +93,7 @@ export function Cameras() {
 
   return (
     <>
-      <PageHeader
-        title={t("nav.cameras")}
-        actions={
-          (isAdmin || me?.can_add_cameras) && (
-            <div className="row wrap">
-              {isAdmin && (
-                <Button icon={<Add20Regular />} onClick={() => setAddingProfile(true)}>
-                  {t("profiles.add")}
-                </Button>
-              )}
-              {me?.can_add_cameras && (
-                <Button
-                  appearance="primary"
-                  icon={<Add20Regular />}
-                  onClick={() => setAdding(true)}
-                >
-                  {t("addCamera.title")}
-                </Button>
-              )}
-            </div>
-          )
-        }
-      >
-        {isAdmin
-          ? rich("cameras.intro", { file: <code>config.yaml</code> })
-          : t("cameras.introUser")}
-      </PageHeader>
+      <PageTitle title={t("nav.cameras")} />
 
       {isAdmin && (
         <PageTabs
@@ -137,10 +113,35 @@ export function Cameras() {
         </div>
       )}
 
-      {tab === "profiles" && <ProfilesSection />}
+      {tab === "profiles" && (
+        <>
+          <Toolbar>
+            <Button
+              appearance="primary"
+              icon={<Add20Regular />}
+              onClick={() => setAddingProfile(true)}
+            >
+              {t("profiles.add")}
+            </Button>
+          </Toolbar>
+          <ProfilesSection />
+        </>
+      )}
 
       {tab === "cameras" && (
         <>
+          {me?.can_add_cameras && (
+            <Toolbar>
+              <Button appearance="primary" icon={<Add20Regular />} onClick={() => setAdding(true)}>
+                {t("addCamera.title")}
+              </Button>
+            </Toolbar>
+          )}
+          <InfoBanner id={isAdmin ? "cameras" : "cameras-user"}>
+            {isAdmin
+              ? rich("cameras.intro", { file: <code>config.yaml</code> })
+              : t("cameras.introUser")}
+          </InfoBanner>
           <QueryState error={cameras.error} loading={cameras.isPending} />
           {cameras.data?.length === 0 && <Empty>{t("cameras.none")}</Empty>}
           <div className="cards">

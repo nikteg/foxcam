@@ -31,7 +31,7 @@ import {
   Dot,
   Empty,
   Light,
-  PageHeader,
+  PageTitle,
   QueryState,
   RouterLink,
   Stat,
@@ -58,7 +58,7 @@ export function Dashboard() {
 
   return (
     <>
-      <PageHeader title={t("nav.status")} />
+      <PageTitle title={t("nav.status")} />
       <QueryState error={status.error} loading={status.isPending} />
       {s && !s.mediamtx_reachable && (
         <MessageBar intent="warning" className="block">
@@ -98,7 +98,7 @@ export function Dashboard() {
 
       <Subtitle2 as="h2" className="section">
         {t("nav.cameras")}
-        <Button as="a" size="small" className="section-action" {...routerHref("/cameras")}>
+        <Button as="a" className="section-action" {...routerHref("/cameras")}>
           {t("dashboard.manage")}
         </Button>
       </Subtitle2>
@@ -121,7 +121,7 @@ export function Dashboard() {
 
       <Subtitle2 as="h2" className="section">
         {t("dashboard.latestEvents")}
-        <Button as="a" size="small" className="section-action" {...routerHref("/events")}>
+        <Button as="a" className="section-action" {...routerHref("/events")}>
           {t("dashboard.all")}
         </Button>
       </Subtitle2>

@@ -137,8 +137,8 @@ export const sv: Record<MessageKey, string> = {
 
   // Detektioner
   "detections.intro":
-    "Alla objekt som arbetarna har rapporterat. Välj en för att se bildrutan och videon; markera den som rätt eller fel för att bygga en träningsmängd ({export}).",
-  "detections.exportJson": "exportera JSON",
+    "Alla objekt som arbetarna har rapporterat. Välj en för att se bildrutan och videon; markera den som rätt eller fel för att bygga en träningsmängd (Exportera träningsmängd).",
+  "detections.exportJson": "Exportera träningsmängd",
   "detections.labelPlaceholder": "Etikett, t.ex. fox",
   "detections.minConfidence": "Lägsta säkerhet",
   "detections.min": "min",

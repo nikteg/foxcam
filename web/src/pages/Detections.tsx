@@ -1,5 +1,9 @@
-import { Button, Caption1, Checkbox, Input, Link, Select, Text } from "@fluentui/react-components";
-import { Folder20Regular, ScanObject20Regular } from "@fluentui/react-icons";
+import { Button, Caption1, Checkbox, Input, Select, Text } from "@fluentui/react-components";
+import {
+  ArrowDownload20Regular,
+  Folder20Regular,
+  ScanObject20Regular,
+} from "@fluentui/react-icons";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Fragment } from "react";
 
@@ -12,10 +16,12 @@ import { Feedback } from "../components/Feedback";
 import {
   ConfidenceBar,
   Empty,
+  InfoBanner,
   Light,
-  PageHeader,
+  PageTitle,
   QueryState,
   Time,
+  Toolbar,
   useRouterHref,
 } from "../components/ui";
 import { decimal, percent } from "../format";
@@ -110,7 +116,7 @@ export function Detections() {
     refetchInterval: 20_000,
   });
   const selected = detections.data?.find((d) => String(d.id) === f.selected);
-  const { t, rich } = useI18n();
+  const { t } = useI18n();
   const routerHref = useRouterHref();
   const cameraName = useCameraName();
   const severalDetectors = useSeveralDetectors();
@@ -118,18 +124,16 @@ export function Detections() {
 
   return (
     <>
-      <PageHeader
-        title={t("nav.detections")}
-        actions={
-          <Button as="a" icon={<ScanObject20Regular />} {...routerHref("/cameras/profiles")}>
-            {t("profiles.title")}
-          </Button>
-        }
-      >
-        {rich("detections.intro", {
-          export: <Link href="/api/detections/feedback-export">{t("detections.exportJson")}</Link>,
-        })}
-      </PageHeader>
+      <PageTitle title={t("nav.detections")} />
+      <Toolbar>
+        <Button as="a" icon={<ScanObject20Regular />} {...routerHref("/cameras/profiles")}>
+          {t("profiles.title")}
+        </Button>
+        <Button as="a" icon={<ArrowDownload20Regular />} href="/api/detections/feedback-export">
+          {t("detections.exportJson")}
+        </Button>
+      </Toolbar>
+      <InfoBanner id="detections">{t("detections.intro")}</InfoBanner>
       <div className="filters">
         <CameraSelect value={f.camera} onChange={(v) => setFilter("camera", v)} />
         <ProfileSelect value={f.profile} onChange={(v) => setFilter("profile", v)} />

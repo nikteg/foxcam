@@ -1,5 +1,4 @@
 import {
-  Subtitle2,
   Button,
   Caption1,
   Card,
@@ -44,7 +43,7 @@ import { useI18n, type MessageKey } from "../i18n";
 import { LabelPicker, useLabelSuggestions, useSuggestionList } from "./LabelPicker";
 import { useCameraName } from "./CameraSelect";
 import { useProfileName, useProfiles } from "./ProfileSelect";
-import { Empty, QueryState, Tag, Time } from "./ui";
+import { Empty, InfoBanner, QueryState, Tag, Time, Toolbar } from "./ui";
 import {
   Dialog,
   DialogActions,
@@ -92,19 +91,12 @@ export function Notifications() {
 
   return (
     <>
-      <Subtitle2 as="h2" className="section">
-        {t("settings.notifications")}
-        <Button
-          size="small"
-          appearance="primary"
-          icon={<Add20Regular />}
-          className="section-action"
-          onClick={() => setEditing("new")}
-        >
+      <Toolbar>
+        <Button appearance="primary" icon={<Add20Regular />} onClick={() => setEditing("new")}>
           {t("notify.add")}
         </Button>
-      </Subtitle2>
-      <p className="muted">{t("notify.intro")}</p>
+      </Toolbar>
+      <InfoBanner id="notifications">{t("notify.intro")}</InfoBanner>
       <QueryState error={overview.error} loading={overview.isPending} />
       {data && !data.public_url && (
         <MessageBar intent="info" className="block">

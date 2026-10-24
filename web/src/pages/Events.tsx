@@ -6,7 +6,7 @@ import { EventsGrid } from "../components/EventsGrid";
 import { Select } from "@fluentui/react-components";
 
 import { ProfileSelect, useProfiles, useSeveralDetectors } from "../components/ProfileSelect";
-import { PageHeader, QueryState } from "../components/ui";
+import { InfoBanner, PageTitle, QueryState } from "../components/ui";
 import { useI18n } from "../i18n";
 import { useFilters } from "../useFilters";
 
@@ -39,14 +39,16 @@ export function Events() {
 
   return (
     <>
-      <PageHeader title={t("nav.events")}>
-        {cfg &&
-          rich("events.intro", {
+      <PageTitle title={t("nav.events")} />
+      {cfg && (
+        <InfoBanner id="events">
+          {rich("events.intro", {
             labels: <b>{targets.join(", ")}</b>,
             before: cfg.events.pre_roll_seconds,
             after: cfg.events.post_roll_seconds,
           })}
-      </PageHeader>
+        </InfoBanner>
+      )}
       <div className="filters">
         <CameraSelect value={camera} onChange={(v) => setFilter("camera", v)} />
         <ProfileSelect value={profile} onChange={(v) => setFilter("profile", v)} />

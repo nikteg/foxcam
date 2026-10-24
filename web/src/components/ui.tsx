@@ -1,10 +1,12 @@
 import {
   Badge,
+  Button,
   Body1,
   Caption1,
   Card,
   Link,
   MessageBar,
+  MessageBarActions,
   MessageBarBody,
   MessageBarTitle,
   ProgressBar,
@@ -18,13 +20,14 @@ import {
 } from "@fluentui/react-components";
 import {
   Checkmark16Filled,
+  Dismiss20Regular,
   ChevronRight16Regular,
   WeatherMoon16Regular,
   WeatherMoon20Regular,
   WeatherSunny16Regular,
   WeatherSunny20Regular,
 } from "@fluentui/react-icons";
-import { useEffect, type MouseEvent, type ReactElement, type ReactNode } from "react";
+import { useEffect, useState, type MouseEvent, type ReactElement, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router";
 
 import { localTime, percent, relativeTime } from "../format";
@@ -77,6 +80,62 @@ export function usePageTitle(title: string | undefined) {
   useEffect(() => {
     document.title = title ? `${title} – ${APP_NAME}` : APP_NAME;
   }, [title]);
+}
+
+/** The page's name for the browser tab and screen readers. Not shown: the nav bar and
+ * the page's tabs already say where you are. */
+export function PageTitle({ title }: { title: string }) {
+  usePageTitle(title);
+  return (
+    <Title2 as="h1" className="visually-hidden">
+      {title}
+    </Title2>
+  );
+}
+
+const DISMISSED = "media-streamer.banners-dismissed";
+
+/** An explanation at the top of a page or tab, until the user closes it (remembered in
+ * this browser). ``id`` names it for that. */
+export function InfoBanner({ id, children }: { id: string; children: ReactNode }) {
+  const { t } = useI18n();
+  const [hidden, setHidden] = useState(() => {
+    try {
+      return (JSON.parse(localStorage.getItem(DISMISSED) ?? "[]") as string[]).includes(id);
+    } catch {
+      return false;
+    }
+  });
+  if (hidden) return null;
+  const dismiss = () => {
+    try {
+      const ids = JSON.parse(localStorage.getItem(DISMISSED) ?? "[]") as string[];
+      localStorage.setItem(DISMISSED, JSON.stringify([...new Set([...ids, id])]));
+    } catch {
+      // private browsing: hide it for now only
+    }
+    setHidden(true);
+  };
+  return (
+    <MessageBar intent="info" className="block info-banner" layout="multiline">
+      <MessageBarBody>{children}</MessageBarBody>
+      <MessageBarActions
+        containerAction={
+          <Button
+            appearance="transparent"
+            icon={<Dismiss20Regular />}
+            aria-label={t("common.close")}
+            onClick={dismiss}
+          />
+        }
+      />
+    </MessageBar>
+  );
+}
+
+/** The actions of a page or tab (Add …), first thing on it, at normal size. */
+export function Toolbar({ children }: { children: ReactNode }) {
+  return <div className="toolbar">{children}</div>;
 }
 
 export function PageHeader({

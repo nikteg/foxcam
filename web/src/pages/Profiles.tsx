@@ -39,7 +39,7 @@ import {
 } from "../components/DetectorsEditor";
 import { profileWarnings, type ProfileWarning } from "../labelWarnings";
 
-import { Empty, QueryState, Tag } from "../components/ui";
+import { Empty, InfoBanner, QueryState, Tag } from "../components/ui";
 import { percent } from "../format";
 import { useI18n } from "../i18n";
 import {
@@ -70,8 +70,10 @@ export function ProfilesSection() {
 
   return (
     <section id="profiles">
-      {/* "Add profile" is in the Cameras page header. */}
-      <p className="muted">{rich("profiles.intro", { file: <code>config.yaml</code> })}</p>
+      {/* "Add profile" is in the Cameras page's toolbar for this tab. */}
+      <InfoBanner id="profiles">
+        {rich("profiles.intro", { file: <code>config.yaml</code> })}
+      </InfoBanner>
       <QueryState error={profiles.error} loading={profiles.isPending} />
       {profiles.data?.length === 0 && <Empty>{t("profiles.none")}</Empty>}
       <div className="cards">

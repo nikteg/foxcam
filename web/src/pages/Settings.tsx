@@ -6,7 +6,7 @@ import { useIsAdmin, useMe } from "../auth";
 import { Notifications } from "../components/Notifications";
 import { StorageCard } from "../components/StorageCard";
 import { UsersSection } from "../components/UsersSection";
-import { PageHeader, PageTabs, QueryState, useSubPage } from "../components/ui";
+import { InfoBanner, PageTabs, PageTitle, QueryState, useSubPage } from "../components/ui";
 import { Navigate } from "react-router";
 
 import { useI18n } from "../i18n";
@@ -95,7 +95,7 @@ export function Settings() {
   if (!isAdmin) return <Navigate to="/" replace />;
   return (
     <>
-      <PageHeader title={t("nav.settings")} />
+      <PageTitle title={t("nav.settings")} />
       {ids.length > 1 && (
         <PageTabs
           base="/settings"
@@ -109,9 +109,9 @@ export function Settings() {
       {tab === "storage" && <StorageCard />}
       {tab === "configuration" && (
         <>
-          <p className="muted">
+          <InfoBanner id="configuration">
             {rich("settings.configIntro", { file: <code>config.yaml</code> })}
-          </p>
+          </InfoBanner>
           <QueryState error={settings.error} loading={settings.isPending} />
         </>
       )}

@@ -7,7 +7,7 @@ import { decimal, percent } from "../format";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
 import { byNumber, byString, DataTable, type Column } from "./DataTable";
-import { Empty, QueryState } from "./ui";
+import { Empty, InfoBanner, QueryState } from "./ui";
 
 const RANGES = [
   { value: "1", label: "models.last24h" },
@@ -123,7 +123,7 @@ export function ModelsSection() {
   });
   return (
     <>
-      <p className="muted">{t("models.intro")}</p>
+      <InfoBanner id="models">{t("models.intro")}</InfoBanner>
       <div className="filters">
         <Select
           value={value}

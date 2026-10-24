@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { api } from "../api";
 import { CameraSelect } from "../components/CameraSelect";
-import { Dot, Empty, PageHeader, QueryState } from "../components/ui";
+import { Dot, Empty, PageTitle, QueryState } from "../components/ui";
 import { useI18n } from "../i18n";
 import { useFilters } from "../useFilters";
 
@@ -37,7 +37,7 @@ export function Live() {
 
   return (
     <>
-      <PageHeader title={t("nav.live")} />
+      <PageTitle title={t("nav.live")} />
       <div className="filters">
         <CameraSelect value={camera} onChange={(v) => setFilter("camera", v)} />
         {lowAvailable && (

@@ -35,12 +35,13 @@ import { useCameraName } from "../components/CameraSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import {
   Empty,
-  PageHeader,
   PageTabs,
+  PageTitle,
   QueryState,
   Stat,
   Tag,
   Time,
+  Toolbar,
   useStateLabel,
   useSubPage,
 } from "../components/ui";
@@ -99,18 +100,7 @@ export function Queue() {
 
   return (
     <>
-      <PageHeader
-        title={t("nav.queue")}
-        actions={
-          <Button
-            appearance="primary"
-            icon={<Add20Regular />}
-            onClick={() => setAddingWorker(true)}
-          >
-            {t("workers.add")}
-          </Button>
-        }
-      />
+      <PageTitle title={t("nav.queue")} />
       <AddWorkerDialog open={addingWorker} onClose={() => setAddingWorker(false)} />
       <QueryState error={queue.error} loading={queue.isPending} />
       {q && (
@@ -126,7 +116,20 @@ export function Queue() {
             ]}
           />
 
-          {tab === "workers" && <WorkersSection workers={q.workers} />}
+          {tab === "workers" && (
+            <>
+              <Toolbar>
+                <Button
+                  appearance="primary"
+                  icon={<Add20Regular />}
+                  onClick={() => setAddingWorker(true)}
+                >
+                  {t("workers.add")}
+                </Button>
+              </Toolbar>
+              <WorkersSection workers={q.workers} />
+            </>
+          )}
           {tab === "models" && <ModelsSection />}
           {tab === "archiving" && <ArchivingSection />}
 

@@ -25,7 +25,7 @@ import { api, type User } from "../api";
 import { useMe } from "../auth";
 import { useI18n } from "../i18n";
 import { InviteLink, useRoleName } from "./ShareDialog";
-import { Empty, QueryState, Tag, Time } from "./ui";
+import { Empty, InfoBanner, QueryState, Tag, Time, Toolbar } from "./ui";
 import {
   Dialog,
   DialogActions,
@@ -47,29 +47,21 @@ export function UsersSection() {
 
   return (
     <section id="users">
-      <Subtitle2 as="h2" className="section">
-        {t("users.title")}
-        <span className="section-action row">
-          <Button size="small" icon={<Link20Regular />} onClick={() => setInviting(true)}>
-            {t("users.invite")}
-          </Button>
-          <Button
-            size="small"
-            appearance="primary"
-            icon={<PersonAdd20Regular />}
-            onClick={() => setAdding(true)}
-          >
-            {t("users.add")}
-          </Button>
-        </span>
-      </Subtitle2>
-      <p className="muted">
+      <Toolbar>
+        <Button appearance="primary" icon={<PersonAdd20Regular />} onClick={() => setAdding(true)}>
+          {t("users.add")}
+        </Button>
+        <Button icon={<Link20Regular />} onClick={() => setInviting(true)}>
+          {t("users.invite")}
+        </Button>
+      </Toolbar>
+      <InfoBanner id={`users-${me?.registration ?? "invite"}`}>
         {me?.registration === "open"
           ? t("users.introOpen")
           : me?.registration === "closed"
             ? t("users.introClosed")
             : t("users.introInvite")}
-      </p>
+      </InfoBanner>
       <QueryState error={users.error} loading={users.isPending} />
       <div className="cards">
         {users.data?.map((u) => (

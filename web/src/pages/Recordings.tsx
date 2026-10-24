@@ -28,8 +28,8 @@ import { Feedback } from "../components/Feedback";
 import {
   Empty,
   Light,
-  PageHeader,
   PageTabs,
+  PageTitle,
   QueryState,
   Tag,
   Time,
@@ -172,7 +172,7 @@ export function Recordings() {
 
   return (
     <>
-      <PageHeader title={t("nav.recordings")} />
+      <PageTitle title={t("nav.recordings")} />
       <PageTabs
         base="/recordings"
         current={tab}

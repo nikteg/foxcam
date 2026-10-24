@@ -25,7 +25,7 @@ import { api, type CompactionStatus } from "../api";
 import { duration, fileSize, localTime } from "../format";
 import { useI18n } from "../i18n";
 import { useCameraName } from "./CameraSelect";
-import { Empty, QueryState, RouterLink, Stat, Tag, Time } from "./ui";
+import { Empty, InfoBanner, QueryState, RouterLink, Stat, Tag, Time } from "./ui";
 
 /** Running / not running / off, as a tag (also on the Status page). */
 export function ArchivingState({ c }: { c: CompactionStatus }) {
@@ -60,7 +60,7 @@ export function ArchivingSection() {
 
   return (
     <>
-      <p className="muted">{t("archiving.intro", { minutes: c.period_minutes })}</p>
+      <InfoBanner id="archiving">{t("archiving.intro", { minutes: c.period_minutes })}</InfoBanner>
       {c.enabled && !c.running && (
         <MessageBar intent="warning" className="block">
           <MessageBarBody>

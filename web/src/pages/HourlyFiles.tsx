@@ -6,7 +6,7 @@ import { api, type ArchiveFile } from "../api";
 import { useCameraName } from "../components/CameraSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
-import { Empty, QueryState, Tag, Time } from "../components/ui";
+import { Empty, InfoBanner, QueryState, Tag, Time } from "../components/ui";
 import { duration, fileSize, localTime } from "../format";
 import { useI18n, type I18n } from "../i18n";
 
@@ -108,7 +108,7 @@ export function HourlyFiles({
 
   return (
     <>
-      <p className="muted">{t("hourly.intro")}</p>
+      <InfoBanner id="archives">{t("hourly.intro")}</InfoBanner>
       <QueryState error={archives.error} loading={archives.isPending} />
       <div className="master-detail">
         <div className="master">

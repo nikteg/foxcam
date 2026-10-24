@@ -171,9 +171,10 @@ h2.section {
   gap: var(--spacingHorizontalM);
   margin: 28px 0 12px;
 }
-/* The section's main action (Add …), at the right end of its heading. */
+/* A link from a section to its page (Status: Manage cameras, All events), next to its
+   heading. */
 h2.section > .section-action {
-  margin-inline-start: auto;
+  font-size: var(--fontSizeBase300);
 }
 
 /* App shell */
@@ -1288,4 +1289,13 @@ Fluent's text styles would otherwise reset the margins. */
   display: flex;
   flex-direction: column;
   gap: var(--spacingVerticalXS);
+}
+
+/* Page and tab actions (components/ui.tsx Toolbar): left-aligned, normal size. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacingHorizontalS);
+  margin-bottom: var(--spacingVerticalL);
 }

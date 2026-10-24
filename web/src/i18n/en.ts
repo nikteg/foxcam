@@ -136,8 +136,8 @@ export const en = {
 
   // Detections
   "detections.intro":
-    "Every object the workers reported. Select one to see the frame and video; mark it correct or wrong to build a training set ({export}).",
-  "detections.exportJson": "export JSON",
+    "Every object the workers reported. Select one to see the frame and video; mark it correct or wrong to build a training set (Export training set).",
+  "detections.exportJson": "Export training set",
   "detections.labelPlaceholder": "Label, e.g. fox",
   "detections.minConfidence": "Minimum confidence",
   "detections.min": "min",
