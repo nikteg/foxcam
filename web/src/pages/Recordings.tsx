@@ -24,7 +24,7 @@ import {
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { Navigate, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 
 import { api, type Segment, type SegmentJob } from "../api";
 import { CameraSelect, useCameraName } from "../components/CameraSelect";
@@ -137,7 +137,6 @@ export function Recordings() {
     "only_targets",
     "status",
     "selected",
-    "view",
     "file",
   ] as const);
   const navigate = useNavigate();
@@ -170,8 +169,6 @@ export function Recordings() {
   return (
     <>
       <PageHeader title={t("nav.recordings")} />
-      {/* Old links: /recordings?view=hourly&hour=12 */}
-      {f.view === "hourly" && <Navigate to="/recordings/joined" replace />}
       <PageTabs
         base="/recordings"
         current={tab}

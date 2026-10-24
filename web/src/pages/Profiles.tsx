@@ -37,7 +37,6 @@ import {
 } from "../components/LabelPicker";
 import { useProfiles } from "../components/ProfileSelect";
 import { profileWarnings } from "../labelWarnings";
-import { Navigate } from "react-router";
 
 import { Empty, QueryState, Tag } from "../components/ui";
 import { percent } from "../format";
@@ -81,11 +80,6 @@ export function ProfilesSection() {
       {removing && <RemoveProfileDialog profile={removing} onClose={() => setRemoving(null)} />}
     </section>
   );
-}
-
-/** Old /profiles links land on Cameras → Detection profiles. */
-export function Profiles() {
-  return <Navigate to="/cameras/profiles" replace />;
 }
 
 function ProfileCard({

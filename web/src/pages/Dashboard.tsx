@@ -48,6 +48,7 @@ export function Dashboard() {
   const s = status.data;
   const { t, rich } = useI18n();
   const stateLabel = useStateLabel();
+  const routerHref = useRouterHref();
 
   return (
     <>
@@ -76,7 +77,10 @@ export function Dashboard() {
       )}
 
       <Subtitle2 as="h2" className="section">
-        {t("nav.cameras")} <RouterLink to="/cameras">{t("dashboard.manage")}</RouterLink>
+        {t("nav.cameras")}
+        <Button as="a" size="small" className="section-action" {...routerHref("/cameras")}>
+          {t("dashboard.manage")}
+        </Button>
       </Subtitle2>
       <div className="cards">
         {s?.cameras.map((c) => (
@@ -96,7 +100,10 @@ export function Dashboard() {
       )}
 
       <Subtitle2 as="h2" className="section">
-        {t("dashboard.latestEvents")} <RouterLink to="/events">{t("dashboard.all")}</RouterLink>
+        {t("dashboard.latestEvents")}
+        <Button as="a" size="small" className="section-action" {...routerHref("/events")}>
+          {t("dashboard.all")}
+        </Button>
       </Subtitle2>
       <EventsGrid events={events.data ?? []} />
 

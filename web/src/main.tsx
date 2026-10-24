@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { Navigate, createBrowserRouter } from "react-router";
+import { createBrowserRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
 
 import { Layout, NotFound } from "./App";
@@ -14,7 +14,6 @@ import { Detections } from "./pages/Detections";
 import { Events } from "./pages/Events";
 import { Live } from "./pages/Live";
 import { MaskEditor } from "./pages/MaskEditor";
-import { Profiles } from "./pages/Profiles";
 import { Queue } from "./pages/Queue";
 import { Recordings } from "./pages/Recordings";
 import { Settings } from "./pages/Settings";
@@ -40,16 +39,12 @@ const router = createBrowserRouter([
       { path: "recordings/joined", Component: Recordings },
       { path: "jobs", Component: Queue },
       { path: "jobs/workers", Component: Queue },
-      // Old links (the page was "Worker queue").
-      { path: "queue", element: <Navigate to="/jobs" replace /> },
-      { path: "queue/workers", element: <Navigate to="/jobs/workers" replace /> },
       { path: "settings", Component: Settings },
       { path: "settings/:subPage", Component: Settings },
       { path: "account", Component: Account },
       { path: "cameras", Component: Cameras },
       { path: "cameras/profiles", Component: Cameras },
       { path: "cameras/integrations", Component: Cameras },
-      { path: "profiles", Component: Profiles },
       { path: "cameras/:cameraId/mask", Component: MaskEditor },
       { path: "*", Component: NotFound },
     ],
