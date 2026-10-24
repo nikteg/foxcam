@@ -240,15 +240,12 @@ export function Light({
   );
 }
 
-export type StatTone = "brand" | "success" | "warning" | "danger" | "neutral";
-
 /** A labelled number (Status page, Jobs counters): icon, label, value and a hint. With
  * `onClick` it is a toggle (e.g. a filter), `selected` when on. */
 export function Stat({
   label,
   value,
   icon,
-  tone = "neutral",
   hint,
   selected,
   onClick,
@@ -256,12 +253,11 @@ export function Stat({
   label: string;
   value: ReactNode;
   icon?: ReactElement;
-  tone?: StatTone;
   hint?: ReactNode;
   selected?: boolean;
   onClick?: () => void;
 }) {
-  const classes = ["stat", `tone-${tone}`, onClick && "clickable", selected && "selected"];
+  const classes = ["stat", onClick && "clickable", selected && "selected"];
   return (
     <Card
       className={classes.filter(Boolean).join(" ")}

@@ -279,6 +279,7 @@ button.fui-CompoundButton {
   grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
   gap: var(--spacingHorizontalM);
 }
+/* One colour for every stat; brand only for a selected (pressed) one. */
 .stat {
   --stat-bg: var(--colorNeutralBackground3);
   --stat-fg: var(--colorNeutralForeground2);
@@ -288,22 +289,6 @@ button.fui-CompoundButton {
     border-color 0.15s,
     box-shadow 0.15s,
     background-color 0.15s;
-}
-.stat.tone-brand {
-  --stat-bg: var(--colorBrandBackground2);
-  --stat-fg: var(--colorBrandForeground1);
-}
-.stat.tone-success {
-  --stat-bg: var(--colorStatusSuccessBackground1);
-  --stat-fg: var(--colorStatusSuccessForeground1);
-}
-.stat.tone-warning {
-  --stat-bg: var(--colorStatusWarningBackground1);
-  --stat-fg: var(--colorStatusWarningForeground3);
-}
-.stat.tone-danger {
-  --stat-bg: var(--colorStatusDangerBackground1);
-  --stat-fg: var(--colorStatusDangerForeground1);
 }
 .stat-head {
   display: flex;
@@ -346,14 +331,16 @@ button.fui-CompoundButton {
   cursor: pointer;
 }
 .stat.clickable:hover {
-  border-color: var(--stat-fg);
+  border-color: var(--colorNeutralStroke1Hover);
   box-shadow: var(--shadow4);
 }
 .stat.selected,
 .stat.selected:hover {
-  border-color: var(--stat-fg);
-  background: var(--stat-bg);
-  box-shadow: inset 0 0 0 1px var(--stat-fg);
+  --stat-bg: var(--colorBrandBackground);
+  --stat-fg: var(--colorNeutralForegroundOnBrand);
+  border-color: var(--colorBrandStroke1);
+  background: var(--colorBrandBackground2);
+  box-shadow: inset 0 0 0 1px var(--colorBrandStroke1);
 }
 
 /* Cards */

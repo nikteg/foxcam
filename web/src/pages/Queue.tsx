@@ -38,7 +38,6 @@ import {
   PageTabs,
   QueryState,
   Stat,
-  type StatTone,
   Tag,
   Time,
   useStateLabel,
@@ -53,12 +52,12 @@ import { useFilters } from "../useFilters";
 
 const STATES: JobState[] = ["pending", "leased", "done", "failed", "dead"];
 
-const STATE_LOOK: Record<JobState, { icon: ReactElement; tone: StatTone }> = {
-  pending: { icon: <Hourglass20Regular />, tone: "warning" },
-  leased: { icon: <ArrowSync20Regular />, tone: "brand" },
-  done: { icon: <CheckmarkCircle20Regular />, tone: "success" },
-  failed: { icon: <ErrorCircle20Regular />, tone: "danger" },
-  dead: { icon: <DismissCircle20Regular />, tone: "neutral" },
+const STATE_ICON: Record<JobState, ReactElement> = {
+  pending: <Hourglass20Regular />,
+  leased: <ArrowSync20Regular />,
+  done: <CheckmarkCircle20Regular />,
+  failed: <ErrorCircle20Regular />,
+  dead: <DismissCircle20Regular />,
 };
 
 export function Queue() {
@@ -127,7 +126,7 @@ export function Queue() {
                 {STATES.map((st) => (
                   <Stat
                     key={st}
-                    {...STATE_LOOK[st]}
+                    icon={STATE_ICON[st]}
                     label={stateLabel(st)}
                     value={q.stats.counts[st]}
                     selected={state === st}

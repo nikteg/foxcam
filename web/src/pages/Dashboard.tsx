@@ -34,7 +34,6 @@ import {
   QueryState,
   RouterLink,
   Stat,
-  type StatTone,
   Tag,
   Time,
   useRouterHref,
@@ -69,31 +68,22 @@ export function Dashboard() {
         <section className="stats">
           <Stat
             icon={<Video20Regular />}
-            tone={camerasTone(s.cameras)}
             label={t("dashboard.camerasOnline")}
             value={`${s.cameras.filter((c) => c.online).length} / ${s.cameras.length}`}
           />
-          <Stat
-            icon={<Alert20Regular />}
-            tone="brand"
-            label={t("dashboard.events24h")}
-            value={s.events_24h}
-          />
+          <Stat icon={<Alert20Regular />} label={t("dashboard.events24h")} value={s.events_24h} />
           <Stat
             icon={<Hourglass20Regular />}
-            tone={s.queue.counts.failed > 0 ? "warning" : "neutral"}
             label={t("dashboard.queueWaiting")}
             value={s.queue.counts.pending + s.queue.counts.failed}
           />
           <Stat
             icon={<CheckmarkCircle20Regular />}
-            tone="success"
             label={t("dashboard.processedLastHour")}
             value={s.queue.done_last_hour}
           />
           <Stat
             icon={<Database20Regular />}
-            tone="brand"
             label={t("dashboard.recordingsStored")}
             value={fileSize(s.recordings_bytes)}
           />
@@ -299,11 +289,4 @@ function CameraCard({ camera: c, refreshKey }: { camera: Camera; refreshKey: num
       </CardFooter>
     </Card>
   );
-}
-
-/** Green when every camera is online, amber when some are not, red when none is. */
-function camerasTone(cameras: Camera[]): StatTone {
-  const online = cameras.filter((c) => c.online).length;
-  if (cameras.length === 0) return "neutral";
-  return online === cameras.length ? "success" : online === 0 ? "danger" : "warning";
 }
