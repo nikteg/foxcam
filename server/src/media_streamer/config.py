@@ -28,7 +28,11 @@ def _expand_env(text: str) -> str:
             return default
         return value
 
-    return _ENV_RE.sub(repl, text)
+    # Comment lines are left alone so examples like "# ${TAPO_USER}" need no variable.
+    return "".join(
+        line if line.lstrip().startswith("#") else _ENV_RE.sub(repl, line)
+        for line in text.splitlines(keepends=True)
+    )
 
 
 class RtspSource(BaseModel):

@@ -31,6 +31,18 @@ def test_missing_env_var_is_an_error(tmp_path, monkeypatch):
         load_settings(write(tmp_path, "worker_token: ${NOPE}\n"))
 
 
+def test_env_vars_in_comments_are_ignored(tmp_path, monkeypatch):
+    monkeypatch.delenv("NOPE", raising=False)
+    s = load_settings(write(tmp_path, "worker_token: abc\n# url: ${NOPE}\n  # ${NOPE}\n"))
+    assert s.worker_token == "abc"
+
+
+def test_example_config_loads(monkeypatch):
+    for name in ("TAPO_USER", "TAPO_PASS", "VAR"):
+        monkeypatch.delenv(name, raising=False)
+    load_settings(Path(__file__).parents[2] / "config.example.yaml")
+
+
 def test_duplicate_camera_ids_rejected(tmp_path):
     with pytest.raises(ValueError, match="unique"):
         load_settings(write(tmp_path, f"""
