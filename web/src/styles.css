@@ -209,7 +209,6 @@ h2.section > .section-action {
   gap: var(--spacingHorizontalXS);
   flex-shrink: 0;
 }
-.topbar .settings-button,
 .bottom-tabs {
   display: none;
 }
@@ -792,9 +791,6 @@ table.table {
   }
   .topbar {
     justify-content: space-between;
-  }
-  .topbar .settings-button {
-    display: inline-flex;
   }
   .bottom-tabs {
     position: fixed;

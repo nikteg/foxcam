@@ -22,6 +22,7 @@ import {
   Folder24Regular,
   Search24Regular,
   Server24Regular,
+  Settings20Regular,
   Settings24Regular,
   Target24Regular,
   Video24Regular,
@@ -45,7 +46,7 @@ interface NavItem {
   admin?: boolean;
 }
 
-// `short` labels are used in the phone bottom bar, where Settings moves to the header.
+// `short` labels are used in the phone bottom bar.
 const TABS: NavItem[] = [
   { to: "/", label: "nav.status", short: "nav.status", icon: <DataBarVertical24Regular /> },
   { to: "/live", label: "nav.live", short: "nav.live", icon: <Video24Regular /> },
@@ -78,18 +79,28 @@ const EXTRA_TABS: NavItem[] = [
 
 function currentTab(pathname: string): string {
   if (pathname === "/") return "/";
-  if (pathname.startsWith("/settings") || pathname === "/account") return "/settings";
   if (pathname.startsWith("/cameras")) return "/cameras";
   return TABS.find((t) => t.to !== "/" && pathname.startsWith(t.to))?.to ?? "";
 }
 
-/** Signed-in user: account page and sign out. */
-function UserMenu() {
+/** Signed-in user: account page, settings (admins) and sign out. */
+function UserMenu({ isAdmin }: { isAdmin: boolean }) {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { data: auth } = useAuth();
   const changed = useAuthChanged();
-  if (!auth?.user) return null;
+  if (!auth?.user) {
+    // Accounts turned off (auth.enabled: false): everyone is an admin, nobody signs in.
+    return isAdmin ? (
+      <Button
+        appearance="subtle"
+        icon={<Settings24Regular />}
+        aria-label={t("nav.settings")}
+        title={t("nav.settings")}
+        onClick={() => void navigate("/settings")}
+      />
+    ) : null;
+  }
   return (
     <Menu>
       <MenuTrigger disableButtonEnhancement>
@@ -105,6 +116,11 @@ function UserMenu() {
           <MenuItem icon={<Person20Regular />} onClick={() => void navigate("/account")}>
             {auth.user.display_name}
           </MenuItem>
+          {isAdmin && (
+            <MenuItem icon={<Settings20Regular />} onClick={() => void navigate("/settings")}>
+              {t("nav.settings")}
+            </MenuItem>
+          )}
           <MenuDivider />
           <MenuItem
             icon={<SignOut20Regular />}
@@ -161,22 +177,12 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
               {t(tab.label)}
             </Tab>
           ))}
-          <Tab value="/settings" icon={<Settings24Regular />}>
-            {t("nav.settings")}
-          </Tab>
         </TabList>
-        {/* Right-aligned header actions (settings shortcut only shown with the bottom bar). */}
+        {/* Right-aligned header actions; Settings is in the user menu. */}
         <div className="topbar-actions">
           <ThemeMenu />
           <LanguageMenu className="language-menu" />
-          <UserMenu />
-          <Button
-            className="settings-button"
-            appearance={selected === "/settings" ? "secondary" : "subtle"}
-            icon={<Settings24Regular />}
-            aria-label={t("nav.settings")}
-            onClick={() => navigate("/settings")}
-          />
+          <UserMenu isAdmin={isAdmin} />
         </div>
       </header>
 

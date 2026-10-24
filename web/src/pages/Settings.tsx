@@ -1,12 +1,4 @@
-import {
-  Card,
-  CardHeader,
-  Field,
-  Radio,
-  RadioGroup,
-  Subtitle2,
-  Text,
-} from "@fluentui/react-components";
+import { Card, CardHeader, Text } from "@fluentui/react-components";
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../api";
@@ -15,10 +7,12 @@ import { Notifications } from "../components/Notifications";
 import { StorageCard } from "../components/StorageCard";
 import { UsersSection } from "../components/UsersSection";
 import { PageHeader, PageTabs, QueryState, useSubPage } from "../components/ui";
-import { LANGUAGE_NAMES, useI18n, type Lang } from "../i18n";
-import { THEME_MODES, useThemeMode, type ThemeMode } from "../theme";
+import { Navigate } from "react-router";
 
-type SubPage = "general" | "users" | "notifications" | "storage" | "configuration";
+import { useI18n } from "../i18n";
+
+// Language and theme are in the top bar; everything here is for admins.
+type SubPage = "users" | "notifications" | "storage" | "configuration";
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   v !== null && typeof v === "object" && !Array.isArray(v);
@@ -82,23 +76,23 @@ export function Settings() {
     queryFn: api.settings,
     enabled: isAdmin,
   });
-  const { t, rich, lang, setLang } = useI18n();
-  const { mode, setMode } = useThemeMode();
+  const { t, rich } = useI18n();
   const cfg = settings.data;
   const ids: SubPage[] = [
-    "general",
-    ...(isAdmin && me?.enabled ? (["users"] as const) : []),
-    ...(isAdmin ? (["notifications", "storage", "configuration"] as const) : []),
+    ...(me?.enabled ? (["users"] as const) : []),
+    "notifications",
+    "storage",
+    "configuration",
   ];
   const tab = useSubPage("/settings", ids);
   const label: Record<SubPage, string> = {
-    general: t("settings.general"),
     users: t("users.title"),
     notifications: t("settings.notifications"),
     storage: t("settings.storage"),
     configuration: t("settings.configuration"),
   };
 
+  if (!isAdmin) return <Navigate to="/" replace />;
   return (
     <>
       <PageHeader title={t("nav.settings")} />
@@ -108,42 +102,6 @@ export function Settings() {
           current={tab}
           tabs={ids.map((id) => ({ id, label: label[id] }))}
         />
-      )}
-
-      {tab === "general" && (
-        <>
-          <Subtitle2 as="h2" className="section">
-            {t("settings.language")}
-          </Subtitle2>
-          <Field hint={t("settings.languageHint")}>
-            <RadioGroup
-              layout="horizontal"
-              value={lang}
-              onChange={(_, d) => setLang(d.value as Lang)}
-              aria-label={t("settings.language")}
-            >
-              {(Object.keys(LANGUAGE_NAMES) as Lang[]).map((l) => (
-                <Radio key={l} value={l} label={LANGUAGE_NAMES[l]} />
-              ))}
-            </RadioGroup>
-          </Field>
-
-          <Subtitle2 as="h2" className="section">
-            {t("settings.theme")}
-          </Subtitle2>
-          <Field hint={t("settings.themeHint")}>
-            <RadioGroup
-              layout="horizontal"
-              value={mode}
-              onChange={(_, d) => setMode(d.value as ThemeMode)}
-              aria-label={t("settings.theme")}
-            >
-              {THEME_MODES.map((m) => (
-                <Radio key={m} value={m} label={t(`theme.${m}`)} />
-              ))}
-            </RadioGroup>
-          </Field>
-        </>
       )}
 
       {tab === "users" && <UsersSection />}

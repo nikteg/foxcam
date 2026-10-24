@@ -309,11 +309,6 @@ export const en = {
     "Re-encodes this camera on the server, so the areas are never stored or streamed.",
 
   // Settings
-  "settings.general": "General",
-  "settings.language": "Language",
-  "settings.languageHint": "Saved in this browser.",
-  "settings.theme": "Theme",
-  "settings.themeHint": "System follows your device's light or dark mode. Saved in this browser.",
   "theme.system": "System",
   "theme.light": "Light",
   "theme.dark": "Dark",

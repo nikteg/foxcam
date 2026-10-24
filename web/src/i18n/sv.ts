@@ -310,12 +310,6 @@ export const sv: Record<MessageKey, string> = {
   "mask.burnInHint": "Kodar om kameran på servern, så att områdena aldrig sparas eller strömmas.",
 
   // Inställningar
-  "settings.general": "Allmänt",
-  "settings.language": "Språk",
-  "settings.languageHint": "Sparas i den här webbläsaren.",
-  "settings.theme": "Tema",
-  "settings.themeHint":
-    "System följer enhetens ljusa eller mörka läge. Sparas i den här webbläsaren.",
   "theme.system": "System",
   "theme.light": "Ljust",
   "theme.dark": "Mörkt",
