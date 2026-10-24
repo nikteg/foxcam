@@ -5,6 +5,33 @@ import logging
 import os
 
 
+def _backends() -> tuple[str, ...]:
+    from .hwaccel import BACKENDS
+
+    return BACKENDS
+
+
+def _hw_command(args: argparse.Namespace) -> int:
+    from . import hwaccel
+
+    if args.cmd == "hwaccel":
+        print(f"auto picks, in order: {', '.join(hwaccel.auto_order())}")
+        for backend, codec, ok, err in hwaccel.report(args.ffmpeg, args.device):
+            name = hwaccel.encoder_name(backend, codec)
+            print(f"  {'ok  ' if ok else 'no  '} {backend:<13} {name:<18} {err[:90]}")
+        best = hwaccel.select("auto", ffmpeg=args.ffmpeg, device=args.device, refresh=True)
+        print(f"auto -> {best} ({hwaccel.encoder_name(best, 'h264')})")
+        return 0
+    masks = [[float(v) for v in m.split(",")] for m in args.mask]
+    if any(len(m) != 4 for m in masks):
+        raise SystemExit("--mask needs X,Y,W,H")
+    enc = hwaccel.Encode(codec=args.codec, max_height=args.max_height, fps=args.fps,
+                         bitrate_kbit=args.bitrate, masks=masks, audio=args.audio,
+                         live=not args.archive)
+    return hwaccel.run(enc, args.input, args.output, preference=args.hwaccel,
+                       ffmpeg=args.ffmpeg, device=args.device)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="media-streamer")
     parser.add_argument("-c", "--config", help="config file (default: $MEDIA_STREAMER_CONFIG "
@@ -51,7 +78,31 @@ def main() -> None:
                     help="data of cameras that are no longer defined")
     rm.add_argument("-y", "--yes", action="store_true", help="don't ask")
 
+    hw_help = "auto | none | " + " | ".join(b for b in _backends() if b != "software")
+    tc = sub.add_parser("transcode", help="RTSP -> masked / scaled / re-encoded RTSP with the "
+                                          "best hardware encoder (run by MediaMTX)")
+    tc.add_argument("--input", required=True)
+    tc.add_argument("--output", required=True)
+    tc.add_argument("--hwaccel", default="auto", help=hw_help)
+    tc.add_argument("--device", help="Linux render node (default /dev/dri/renderD128)")
+    tc.add_argument("--ffmpeg", default="ffmpeg")
+    tc.add_argument("--codec", choices=["h264", "h265"], default="h264")
+    tc.add_argument("--max-height", type=int)
+    tc.add_argument("--fps", type=int)
+    tc.add_argument("--bitrate", type=int, help="kbit/s (default: constant quality)")
+    tc.add_argument("--mask", action="append", default=[], metavar="X,Y,W,H",
+                    help="normalized rectangle to black out (repeatable)")
+    tc.add_argument("--audio", choices=["copy", "opus", "none"], default="copy")
+    tc.add_argument("--archive", action="store_true", help="B-frames allowed (not for live)")
+    hw = sub.add_parser("hwaccel", help="show which hardware encoders work on this machine")
+    hw.add_argument("--ffmpeg", default="ffmpeg")
+    hw.add_argument("--device", help="Linux render node (default /dev/dri/renderD128)")
+
     args = parser.parse_args()
+    if args.cmd in ("transcode", "hwaccel"):  # no config needed (runs inside MediaMTX)
+        logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
+                            format="%(asctime)s %(levelname)-7s %(name)s: %(message)s")
+        raise SystemExit(_hw_command(args))
     if args.config:
         os.environ["MEDIA_STREAMER_CONFIG"] = args.config
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,

@@ -1,0 +1,12 @@
+# Hardware video encoding/decoding with Intel (VAAPI / Quick Sync) or AMD (VAAPI) GPUs:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.vaapi.yml up -d
+#   docker compose exec mediamtx media-streamer hwaccel     # what works
+#
+# Several GPUs: pick the render node with MEDIA_HW_DEVICE (and mediamtx.hw_device).
+services:
+  mediamtx:
+    devices:
+      - ${MEDIA_HW_DEVICE:-/dev/dri/renderD128}:${MEDIA_HW_DEVICE:-/dev/dri/renderD128}
+    # Intel before Broadwell: add `environment: { LIBVA_DRIVER_NAME: i965 }` (and install
+    # i965-va-driver). Newer Intel (iHD) and AMD (radeonsi) are picked automatically.

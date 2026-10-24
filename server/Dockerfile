@@ -8,9 +8,22 @@ RUN pnpm install --frozen-lockfile
 COPY web/ ./
 RUN pnpm build
 
+# MediaMTX itself runs from this image too (docker-compose.yml), so the transcodes it starts
+# (`media-streamer transcode`) find ffmpeg and the GPU drivers.
+FROM bluenviron/mediamtx:1.21.2 AS mediamtx
+
 FROM python:3.12-slim
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+# ffmpeg with VAAPI / QSV / NVENC / Vulkan support, plus the user-space video drivers:
+# mesa (AMD, VAAPI), Intel media driver + oneVPL runtime (Intel VAAPI / Quick Sync, amd64).
+# NVIDIA's libraries come from the host via the NVIDIA Container Toolkit.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg mesa-va-drivers vainfo \
+    && if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
+         apt-get install -y --no-install-recommends intel-media-va-driver libvpl2 \
+           libmfx-gen1.2; \
+       fi \
     && rm -rf /var/lib/apt/lists/*
+COPY --from=mediamtx /mediamtx /usr/local/bin/mediamtx
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /app

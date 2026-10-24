@@ -19,7 +19,7 @@
 
 | Process | Command | Role |
 |---|---|---|
-| MediaMTX | `mediamtx mediamtx/mediamtx.yml` | Pulls RTSP cameras, accepts published streams, records segments, serves live view. Configured by the server through its API, including an on-demand `<camera>/low` path per camera (ffmpeg transcode to ~480p while someone watches it in low-data mode). |
+| MediaMTX | `mediamtx mediamtx/mediamtx.yml` | Pulls RTSP cameras, accepts published streams, records segments, serves live view. Configured by the server through its API, including an on-demand `<camera>/low` path per camera (`media-streamer transcode` to ~480p while someone watches it in low-data mode). |
 | server | `media-streamer serve` | API, web UI and the background pipeline (single process, single SQLite writer). |
 | ingest | `media-streamer ingest` | Publishes non-RTSP sources (Tapo cloud, file, test) into MediaMTX. Re-reads the camera list every 5 s. |
 | worker | `media-worker` | Runs anywhere with HTTP access to the server. Leases jobs, runs a detector, posts results. |
@@ -177,8 +177,8 @@ server reconfigures MediaMTX:
 
 - the camera's own stream goes to `<camera>/raw` (the RTSP source moves there; ingest
   publishers switch their publish URL, see `recording.source_path`);
-- `<camera>` becomes a publisher path whose `runOnInit` ffmpeg reads `<camera>/raw`, draws
-  the masks, scales / limits fps, re-encodes (`mediamtx.encoder`) and publishes `<camera>`.
+- `<camera>` becomes a publisher path whose `runOnInit` (`media-streamer transcode`) reads `<camera>/raw`, draws
+  the masks, scales / limits fps, re-encodes (on the GPU when possible, see [HARDWARE.md](HARDWARE.md)) and publishes `<camera>`.
 
 Recording, live view, the low-data path, snapshots and worker jobs all keep reading
 `<camera>`, so nothing downstream changes. The mask editor snapshots `<camera>/raw`

@@ -8,7 +8,13 @@
 # MEDIA_WORKER_TOKEN.
 services:
   mediamtx:
-    image: bluenviron/mediamtx:latest-ffmpeg # ffmpeg: on-demand low-data live streams
+    # Same image as the server: MediaMTX runs `media-streamer transcode` (masks, recording
+    # profiles, low-data live) with ffmpeg and the GPU drivers in it. Hardware encoding:
+    # add docker-compose.vaapi.yml (Intel / AMD) or docker-compose.nvidia.yml.
+    build: { context: ., dockerfile: server/Dockerfile }
+    image: media-streamer:local
+    entrypoint: ["mediamtx"]
+    command: ["/mediamtx.yml"]
     restart: unless-stopped
     volumes:
       - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
@@ -23,6 +29,7 @@ services:
 
   server:
     build: { context: ., dockerfile: server/Dockerfile }
+    image: media-streamer:local
     restart: unless-stopped
     command: ["serve"]
     depends_on: [mediamtx]
@@ -45,6 +52,7 @@ services:
 
   ingest:
     build: { context: ., dockerfile: server/Dockerfile }
+    image: media-streamer:local
     restart: unless-stopped
     command: ["ingest"]
     depends_on: [mediamtx]

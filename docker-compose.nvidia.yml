@@ -1,0 +1,16 @@
+# Hardware video encoding/decoding with NVIDIA GPUs (NVENC / NVDEC). Needs the NVIDIA
+# driver and the NVIDIA Container Toolkit on the host:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.nvidia.yml up -d
+#   docker compose exec mediamtx media-streamer hwaccel     # what works
+services:
+  mediamtx:
+    environment:
+      NVIDIA_DRIVER_CAPABILITIES: video,compute,utility # "video" brings libnvidia-encode
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, video]

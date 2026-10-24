@@ -46,12 +46,11 @@ mediamtx:
     height: 480
     bitrate_kbit: 500
     fps: 15
-  # ffmpeg as seen by MediaMTX (it runs the low-data, mask and recording-profile encodes).
-  ffmpeg: ffmpeg
-  # Video encoders: libx264 / libx265 work everywhere. Hardware: h264_videotoolbox /
-  # hevc_videotoolbox (macOS), h264_nvenc / hevc_nvenc (NVIDIA), h264_vaapi (Intel/AMD).
-  encoder: libx264
-  encoder_h265: libx265
+  # Hardware video encoding/decoding for the transcodes (low-data live, masks, recording
+  # profiles): auto picks the best that works where MediaMTX runs, else the CPU.
+  # auto | none | videotoolbox | nvenc | qsv | vaapi | amf | mf | vulkan  (docs/HARDWARE.md)
+  hwaccel: auto
+  # hw_device: /dev/dri/renderD128   # Linux render node for vaapi / qsv
 
 # Recording profiles (quality and retention per camera, chosen on the Cameras page).
 # Built in: original (as the camera sends it), 1080p, 720p, 480p, h265. Add your own or

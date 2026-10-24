@@ -105,7 +105,7 @@ class RecordingProfileConfig(BaseModel):
     """How a camera is recorded: as the camera sends it, or re-encoded smaller.
 
     Re-encoding (``transcode``) costs CPU (or a hardware encoder, see
-    ``mediamtx.encoder``) but can cut storage several times over.
+    ``mediamtx.hwaccel``) but can cut storage several times over.
     """
 
     id: str = Field(pattern=PROFILE_ID, max_length=40)
@@ -150,13 +150,17 @@ class MediaMtxConfig(BaseModel):
     # Recording directory as seen by the MediaMTX process. Defaults to ``recordings_dir``.
     record_dir: str | None = None
     low_data: LowDataConfig = LowDataConfig()
-    # ffmpeg as seen by the MediaMTX process, which runs the low-data, mask and recording
-    # profile transcodes (the Docker setup uses the mediamtx -ffmpeg image).
+    # Hardware video encoding/decoding for the low-data, mask and recording-profile
+    # transcodes (run by the MediaMTX process via `media-streamer transcode`):
+    # auto (best that works there) | none | videotoolbox | nvenc | qsv | vaapi | amf | mf |
+    # vulkan. `media-streamer hwaccel` shows what works. See docs/HARDWARE.md.
+    hwaccel: Literal["auto", "none", "videotoolbox", "nvenc", "qsv", "vaapi", "amf", "mf",
+                     "vulkan"] = "auto"
+    # Linux render node for vaapi / qsv (None = /dev/dri/renderD128).
+    hw_device: str | None = None
+    # ffmpeg, and this installation's `media-streamer` command, as seen by MediaMTX.
     ffmpeg: str = "ffmpeg"
-    # Video encoders. libx264/libx265 work everywhere; hardware: h264_videotoolbox /
-    # hevc_videotoolbox (macOS), h264_nvenc / hevc_nvenc (NVIDIA), h264_vaapi (Intel/AMD).
-    encoder: str = "libx264"
-    encoder_h265: str = "libx265"
+    transcoder: str | None = None
 
 
 class ProcessingConfig(BaseModel):

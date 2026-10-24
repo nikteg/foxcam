@@ -15,6 +15,7 @@ import httpx
 
 from . import recording
 from .config import CameraConfig, Settings
+from .hwaccel import Encode
 
 log = logging.getLogger(__name__)
 
@@ -69,15 +70,10 @@ def low_path(camera_id: str) -> str:
 
 def _low_conf(settings: Settings, cam: CameraConfig) -> dict[str, Any]:
     """`<camera>/low`: transcoded from the camera's path only while someone watches it."""
-    m, low = settings.mediamtx, settings.mediamtx.low_data
-    args = [m.ffmpeg, "-v", "error", "-rtsp_transport", "tcp",
-            "-i", f"rtsp://localhost:$RTSP_PORT/{cam.id}", "-map", "0:v:0", "-map", "0:a:0?",
-            "-vf", f"fps={low.fps},scale=-2:{low.height},format=yuv420p",
-            *recording.video_encoder_args(m.encoder, bitrate_kbit=low.bitrate_kbit,
-                                          fps=low.fps, live=True),
-            # Opus is what browsers play over WebRTC.
-            "-c:a", "libopus", "-b:a", "24k", "-ac", "1", "-ar", "48000",
-            "-f", "rtsp", "-rtsp_transport", "tcp", "rtsp://localhost:$RTSP_PORT/$MTX_PATH"]
+    low = settings.mediamtx.low_data
+    enc = Encode(max_height=low.height, fps=low.fps, bitrate_kbit=low.bitrate_kbit,
+                 audio="opus")  # Opus is what browsers play over WebRTC
+    args = recording.transcode(settings, enc, cam.id)
     return {"source": "publisher", "record": False, "runOnDemand": command(args),
             "runOnDemandRestart": True, "runOnDemandStartTimeout": "20s",
             "runOnDemandCloseAfter": "15s"}

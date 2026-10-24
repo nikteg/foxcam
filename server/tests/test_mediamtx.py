@@ -12,9 +12,10 @@ def test_low_data_path_per_camera(settings: Settings) -> None:
     low = paths["cam/low"]
     assert low["record"] is False and low["source"] == "publisher"
     cmd = low["runOnDemand"]
-    assert "rtsp://localhost:$RTSP_PORT/cam " in cmd
-    assert cmd.endswith("rtsp://localhost:$RTSP_PORT/$MTX_PATH")
-    assert "scale=-2:480" in cmd and "500k" in cmd
+    assert " transcode --input rtsp://localhost:$RTSP_PORT/cam " in cmd
+    assert "--output rtsp://localhost:$RTSP_PORT/$MTX_PATH" in cmd
+    assert "--max-height 480 --fps 15 --bitrate 500" in cmd and "--audio opus" in cmd
+    assert "--hwaccel auto" in cmd
 
 
 def test_low_data_disabled(settings: Settings) -> None:
@@ -50,8 +51,7 @@ def test_transcoding_profile_adds_processing_stage(settings: Settings) -> None:
     assert main["record"] is True and main["source"] == "publisher"
     cmd = main["runOnInit"]
     assert "rtsp://localhost:$RTSP_PORT/cam/raw" in cmd
-    assert "'fps" not in cmd and r"'scale=-2:min(720\,ih),format=yuv420p'" in cmd
-    assert "-b:v 1200k" in cmd
+    assert "--max-height 720 --bitrate 1200" in cmd and "--fps" not in cmd
     # The low-data view reads the processed stream.
     assert "$RTSP_PORT/cam " in paths["cam/low"]["runOnDemand"]
 
@@ -66,8 +66,8 @@ def test_burned_in_masks(settings: Settings) -> None:
     proc = recording.processing(settings, settings.camera("cam"))
     assert proc is not None and not proc.transcode
     cmd = desired_paths(settings)["cam"]["runOnInit"]
-    assert "drawbox=x=iw*0.10000:y=ih*0.20000:w=iw*0.30000:h=ih*0.40000" in cmd
-    assert "scale" not in cmd and "-crf 23" in cmd
+    assert "--mask 0.10000,0.20000,0.30000,0.40000" in cmd
+    assert "--max-height" not in cmd and "--bitrate" not in cmd
     cam = queries.cameras(settings, {})[0]
     assert cam["processed"] is True and cam["recording_profile"] == "original"
 
@@ -81,7 +81,7 @@ def test_rtsp_camera_moves_to_raw(settings: Settings) -> None:
          "source": {"type": "rtsp", "url": "rtsp://10.0.0.2/stream1"}}))
     paths = desired_paths(settings)
     assert paths["door/raw"]["source"] == "rtsp://10.0.0.2/stream1"
-    assert "-c:v libx265" in paths["door"]["runOnInit"]
+    assert "--codec h265" in paths["door"]["runOnInit"]
     profile, source = recording.camera_recording_profile(settings, settings.camera("door"))
     assert (profile.id, source) == ("h265", "config")
 

@@ -14,6 +14,7 @@ from typing import Any
 
 from .config import CameraConfig, RecordingProfileConfig, Settings
 from .db import db_ready, session_scope
+from .hwaccel import Encode, default_executable, transcode_command
 from .models import CameraState, MaskVersion
 
 RAW_SUFFIX = "/raw"
@@ -121,55 +122,21 @@ def source_path(settings: Settings, cam: CameraConfig) -> str:
     return raw_path(cam.id) if processing(settings, cam) else cam.id
 
 
-def video_encoder_args(encoder: str, *, bitrate_kbit: int | None, fps: int | None,
-                       live: bool) -> list[str]:
-    """Encoder flags. ``live``: no B-frames and frequent keyframes (WebRTC friendly)."""
-    gop = (fps or 15) * 2
-    args = ["-c:v", encoder, "-g", str(gop), "-bf", "0"] if live else ["-c:v", encoder,
-                                                                        "-g", str(gop)]
-    if encoder in ("libx264", "libx265"):
-        args += ["-preset", "veryfast"]
-        if live and encoder == "libx264":
-            args += ["-tune", "zerolatency"]
-        if encoder == "libx265":
-            args += ["-tag:v", "hvc1", "-x265-params", "log-level=error"]
-    elif encoder.endswith("_videotoolbox"):
-        args += ["-realtime", "1", "-allow_sw", "1"]
-        if encoder.startswith("hevc"):
-            args += ["-tag:v", "hvc1"]
-    if bitrate_kbit:
-        args += ["-b:v", f"{bitrate_kbit}k", "-maxrate", f"{bitrate_kbit}k",
-                 "-bufsize", f"{bitrate_kbit * 2}k"]
-    elif encoder in ("libx264", "libx265"):
-        args += ["-crf", "23" if encoder == "libx264" else "26"]
-    elif encoder.endswith("_videotoolbox"):
-        args += ["-q:v", "60"]
-    return args
-
-
-def mask_filters(rects: list[list[float]]) -> list[str]:
-    return [f"drawbox=x=iw*{x:.5f}:y=ih*{y:.5f}:w=iw*{w:.5f}:h=ih*{h:.5f}:color=black:t=fill"
-            for x, y, w, h in rects]
+def transcode(settings: Settings, enc: Encode, src_path: str) -> list[str]:
+    """``media-streamer transcode`` from ``src_path`` to the hook's own path, run by
+    MediaMTX (which fills in ``$RTSP_PORT`` and ``$MTX_PATH``)."""
+    m = settings.mediamtx
+    return transcode_command(enc, f"rtsp://localhost:$RTSP_PORT/{src_path}",
+                             "rtsp://localhost:$RTSP_PORT/$MTX_PATH",
+                             executable=m.transcoder or default_executable(),
+                             preference=m.hwaccel, ffmpeg=m.ffmpeg, device=m.hw_device)
 
 
 def processor_args(settings: Settings, cam: CameraConfig, proc: Processing) -> list[str]:
-    """ffmpeg reading ``<camera>/raw`` and publishing the processed ``<camera>``.
-
-    Run by MediaMTX, which fills in ``$RTSP_PORT`` and ``$MTX_PATH``.
-    """
-    m, p = settings.mediamtx, proc.profile
-    vf = [*mask_filters(proc.rects)]
-    if p.transcode and p.fps:
-        vf.insert(0, f"fps={p.fps}")
-    if p.transcode and p.max_height:
-        # Only ever scale down; the comma inside min() must be escaped for the filtergraph.
-        vf.append(f"scale=-2:min({p.max_height}\\,ih)")
-    vf.append("format=yuv420p")
-    encoder = m.encoder_h265 if p.transcode and p.codec == "h265" else m.encoder
-    return [m.ffmpeg, "-v", "error", "-rtsp_transport", "tcp",
-            "-i", f"rtsp://localhost:$RTSP_PORT/{raw_path(cam.id)}",
-            "-map", "0:v:0", "-map", "0:a:0?", "-vf", ",".join(vf),
-            *video_encoder_args(encoder, bitrate_kbit=p.bitrate_kbit if p.transcode else None,
-                                fps=p.fps if p.transcode else None, live=True),
-            "-c:a", "copy",
-            "-f", "rtsp", "-rtsp_transport", "tcp", "rtsp://localhost:$RTSP_PORT/$MTX_PATH"]
+    """Reads ``<camera>/raw``, publishes the processed ``<camera>``."""
+    p = proc.profile
+    enc = Encode(codec=p.codec if p.transcode else "h264", masks=proc.rects,
+                 max_height=p.max_height if p.transcode else None,
+                 fps=p.fps if p.transcode else None,
+                 bitrate_kbit=p.bitrate_kbit if p.transcode else None)
+    return transcode(settings, enc, raw_path(cam.id))

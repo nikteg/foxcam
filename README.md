@@ -32,6 +32,9 @@ anything else, and keep the clips.
   Private cameras are never sent anywhere.
 - **Recording profiles.** Keep the camera's original stream, or re-encode it smaller
   (1080p, 720p, 480p, H.265 or your own) with its own retention, per camera.
+- **Hardware video encoding.** Re-encoding uses Intel Quick Sync, NVIDIA NVENC, AMD (VAAPI /
+  AMF) or Apple VideoToolbox when available, also in Docker, with automatic CPU fallback
+  ([docs/HARDWARE.md](docs/HARDWARE.md)).
 - **Events with clips.** Sightings close in time become one event with a clip cut from the
   original footage (with pre/post roll), a thumbnail with the box drawn, a day/night tag and
   ✅/❌ feedback for building a training set.
@@ -133,6 +136,10 @@ mise run setup:yolo && mise run dev:yolo     # YOLO-World (uses CUDA when availa
 ```sh
 cp config.example.yaml config.yaml          # add your cameras
 docker compose up --build -d                # MediaMTX + server (with UI) + ingest on :8000
+
+# With a GPU for video encoding (see docs/HARDWARE.md):
+docker compose -f docker-compose.yml -f docker-compose.vaapi.yml up --build -d   # Intel / AMD
+docker compose -f docker-compose.yml -f docker-compose.nvidia.yml up --build -d  # NVIDIA
 ```
 
 Live-view links follow the address you open the UI with. In Docker, add the host's LAN IP
@@ -244,6 +251,7 @@ detection profiles, censor areas and worker tokens can also be managed in the UI
 | [Worker setup](docs/WORKER_SETUP.md) | GPU workers on Windows/WSL, Docker and Linux |
 | [Worker protocol](docs/WORKER_PROTOCOL.md) | HTTP API for workers and SaaS adapters |
 | [Models](docs/MODELS.md) | detection models compared on fox footage |
+| [Hardware encoding](docs/HARDWARE.md) | Quick Sync, NVENC, AMD, VideoToolbox; Docker GPU setup |
 | [Notifications](docs/NOTIFICATIONS.md) | ntfy, webhooks (payload, signatures, Home Assistant) and Apprise |
 | [Authentication](docs/AUTH.md) | design for UI login (not implemented yet) |
 | [Roadmap](docs/ROADMAP.md) | planned work |
