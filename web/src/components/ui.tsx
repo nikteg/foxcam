@@ -435,7 +435,7 @@ export function PageTabs<T extends string>({
   const navigate = useNavigate();
   return (
     <TabList
-      className="block"
+      className="block page-tabs"
       selectedValue={current}
       onTabSelect={(_, d) =>
         void navigate(d.value === tabs[0]?.id ? base : `${base}/${String(d.value)}`)

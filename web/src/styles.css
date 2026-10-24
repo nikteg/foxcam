@@ -1314,3 +1314,9 @@ Fluent's text styles would otherwise reset the margins. */
   gap: var(--spacingVerticalS);
   min-width: 0;
 }
+
+/* Sub-page tabs: close under the nav bar, the first tab's text in line with the content. */
+.page-tabs {
+  margin-top: calc(-1 * var(--spacingVerticalM));
+  margin-inline-start: calc(-1 * var(--spacingHorizontalMNudge));
+}
