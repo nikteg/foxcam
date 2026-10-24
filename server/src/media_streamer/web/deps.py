@@ -28,9 +28,9 @@ def require_worker(request: Request,
     if bearer:
         if shared and secrets.compare_digest(bearer, shared):
             return Identity(name=None)
-        name = worker_tokens.verify(bearer)
-        if name:
-            return Identity(name=name)
+        identity = worker_tokens.verify(bearer)
+        if identity:
+            return identity
         raise HTTPException(401, "invalid worker token")
     if not shared and not worker_tokens.any_active():
         return Identity(name=None)  # open mode

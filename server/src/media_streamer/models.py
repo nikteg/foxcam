@@ -26,6 +26,8 @@ class CameraState(Base):
     # Private cameras never produce worker jobs.
     private: Mapped[bool] = mapped_column(Boolean, default=False)
     mask_version_id: Mapped[int | None] = mapped_column(ForeignKey("mask_version.id"))
+    # Detection profiles chosen in the UI; None = the camera's config / default profiles.
+    profiles: Mapped[list[Any] | None] = mapped_column(JSON)
 
 
 class ManagedCamera(Base):
@@ -42,6 +44,17 @@ class ManagedCamera(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class DetectionProfile(Base):
+    """A detection profile added in the web UI (config.yaml profiles are not stored)."""
+
+    __tablename__ = "detection_profile"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    # Same fields as a config.yaml profile (see config.ProfileConfig).
+    config: Mapped[dict[str, Any]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class WorkerToken(Base):
     """Per-worker access token created in the web UI. Only a SHA-256 hash is stored."""
 
@@ -52,6 +65,8 @@ class WorkerToken(Base):
     name: Mapped[str] = mapped_column(String, unique=True)
     token_hash: Mapped[str] = mapped_column(String, unique=True)
     detector: Mapped[str | None] = mapped_column(String)
+    # Extra capability tags granted to this worker (e.g. to pin it to a profile).
+    tags: Mapped[list[Any] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime)
@@ -109,6 +124,8 @@ class Segment(Base):
 
     thumb_path: Mapped[str | None] = mapped_column(String)
     derived_path: Mapped[str | None] = mapped_column(String)
+    # Frame rate of the derivative (the highest any of the camera's profiles needs).
+    derived_fps: Mapped[float | None] = mapped_column(Float)
     mask_version_id: Mapped[int | None] = mapped_column(ForeignKey("mask_version.id"))
 
     has_target: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
@@ -143,6 +160,8 @@ class Job(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     segment_id: Mapped[int] = mapped_column(ForeignKey("segment.id", ondelete="CASCADE"),
                                             index=True)
+    # Detection profile this job runs (one job per segment and profile).
+    profile_id: Mapped[str | None] = mapped_column(String, index=True)
     state: Mapped[str] = mapped_column(String, default=JobState.PENDING, index=True)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     priority: Mapped[int] = mapped_column(Integer, default=0)
@@ -167,6 +186,8 @@ class Worker(Base):
     first_seen: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     last_seen: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     info: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    # Capability tags from the last lease (worker --tags, detector, token).
+    tags: Mapped[list[Any] | None] = mapped_column(JSON)
     current_job_id: Mapped[int | None] = mapped_column(Integer)
     jobs_done: Mapped[int] = mapped_column(Integer, default=0)
     jobs_failed: Mapped[int] = mapped_column(Integer, default=0)
@@ -179,6 +200,10 @@ class Detection(Base):
     segment_id: Mapped[int] = mapped_column(ForeignKey("segment.id", ondelete="CASCADE"),
                                             index=True)
     job_id: Mapped[int] = mapped_column(ForeignKey("job.id", ondelete="CASCADE"))
+    profile_id: Mapped[str | None] = mapped_column(String, index=True)
+    # Set once a target detection has been merged into an event. Not a foreign key on
+    # purpose: it keeps pointing at expired (deleted) events so they are not re-created.
+    event_id: Mapped[int | None] = mapped_column(Integer, index=True)
     camera_id: Mapped[str] = mapped_column(String, index=True)
     ts: Mapped[datetime] = mapped_column(DateTime, index=True)  # absolute UTC time
     offset_ms: Mapped[int] = mapped_column(Integer)
@@ -207,12 +232,13 @@ class Detection(Base):
 
 
 class Event(Base):
-    """A merged run of segments where a target (fox) was detected, plus its clip."""
+    """A merged run of target detections (one camera, profile and label), plus its clip."""
 
     __tablename__ = "event"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     camera_id: Mapped[str] = mapped_column(String, index=True)
+    profile_id: Mapped[str | None] = mapped_column(String, index=True)
     label: Mapped[str] = mapped_column(String)
     first_ts: Mapped[datetime] = mapped_column(DateTime, index=True)
     last_ts: Mapped[datetime] = mapped_column(DateTime)

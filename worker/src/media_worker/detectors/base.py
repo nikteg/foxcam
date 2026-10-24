@@ -35,6 +35,12 @@ class Detector(ABC):
     def info(self) -> dict[str, Any]:
         return {"detector": self.name}
 
+    def tags(self) -> list[str]:
+        """Capabilities sent with every lease; the server only hands out jobs of detection
+        profiles whose ``requires`` tags this worker has. The detector name by default."""
+        return [self.name.split(":")[0]]
+
     @abstractmethod
     def detect(self, frames: list[Frame], hints: dict[str, Any]) -> list[Detection]:
-        """``hints`` contains target_labels, min_confidence, country, latitude, longitude."""
+        """``hints``: target_labels and min_confidence of the job's detection profile,
+        profile (id), country, latitude, longitude."""

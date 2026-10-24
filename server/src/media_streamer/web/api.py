@@ -185,8 +185,10 @@ def segment_thumb(segment_id: int, settings: Settings = Depends(settings_dep)) -
 @router.get("/detections")
 def detections(camera: str | None = None, label: str | None = None, only_targets: bool = False,
                min_confidence: float = 0.0, segment: int | None = None,
+               profile: str | None = None,
                limit: int = Query(200, le=2000)) -> list[dict[str, Any]]:
-    return queries.detections(camera, label, only_targets, min_confidence, limit, segment)
+    return queries.detections(camera, label, only_targets, min_confidence, limit, segment,
+                              profile)
 
 
 @router.get("/detections/{detection_id}/frame.jpg")
@@ -225,8 +227,9 @@ def feedback_export() -> list[dict[str, Any]]:
 
 
 @router.get("/events")
-def events(camera: str | None = None, limit: int = Query(100, le=1000)) -> list[dict[str, Any]]:
-    return queries.events(camera, limit)
+def events(camera: str | None = None, profile: str | None = None, label: str | None = None,
+           limit: int = Query(100, le=1000)) -> list[dict[str, Any]]:
+    return queries.events(camera, limit, profile, label)
 
 
 def _event(event_id: int) -> Event:

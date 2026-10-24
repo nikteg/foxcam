@@ -6,6 +6,7 @@ import asyncio
 import logging
 from collections.abc import Callable
 
+from .. import profiles
 from ..config import Settings
 from . import events, preprocess, queue, retention, scanner, uploader
 
@@ -49,11 +50,16 @@ def _events_tick(settings: Settings) -> None:
     events.build_clips(settings)
 
 
+def _reap_tick(settings: Settings) -> None:
+    queue.reap(settings)
+    profiles.cancel_jobs_without_profile(settings)
+
+
 def start_background(settings: Settings) -> list[asyncio.Task[None]]:
     return [
         asyncio.create_task(_loop("scanner", 5, lambda: scanner.scan_once(settings))),
         asyncio.create_task(_preprocess_loop(settings)),
-        asyncio.create_task(_loop("reaper", 15, lambda: queue.reap(settings))),
+        asyncio.create_task(_loop("reaper", 15, lambda: _reap_tick(settings))),
         asyncio.create_task(_loop("events", 10, lambda: _events_tick(settings))),
         asyncio.create_task(_loop("retention", 600, lambda: retention.run_retention(settings))),
         asyncio.create_task(_loop("uploader", 30, lambda: uploader.upload_pending(settings))),

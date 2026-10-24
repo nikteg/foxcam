@@ -34,13 +34,28 @@ def _remove_files(settings: Settings, seg: Segment) -> None:
     seg.deleted_at = utcnow()
 
 
+def _events_days(settings: Settings, profile_id: str | None) -> float:
+    profile = settings.profile(profile_id)
+    if profile is not None and profile.events_days is not None:
+        return profile.events_days
+    return settings.retention.events_days
+
+
 def _expire_events(settings: Settings) -> int:
-    days = settings.retention.events_days
-    if not days:
+    """Events older than their profile's `events_days` (or `retention.events_days`)."""
+    limits = [settings.retention.events_days,
+              *(p.events_days for p in settings.all_profiles(include_disabled=True)
+                if p.events_days is not None)]
+    positive = [d for d in limits if d > 0]
+    if not positive:
         return 0
-    cutoff = utcnow() - timedelta(days=days)
+    now = utcnow()
     with session_scope() as s:
-        events = s.scalars(select(Event).where(Event.last_ts < cutoff)).all()
+        candidates = s.scalars(select(Event).where(
+            Event.last_ts < now - timedelta(days=min(positive)))).all()
+        events = [ev for ev in candidates
+                  if (days := _events_days(settings, ev.profile_id)) > 0
+                  and ev.last_ts < now - timedelta(days=days)]
         store = get_storage(settings)
         for ev in events:
             for rel in (ev.clip_path, ev.thumb_path):

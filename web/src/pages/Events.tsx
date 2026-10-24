@@ -3,19 +3,27 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import { CameraSelect } from "../components/CameraSelect";
 import { EventsGrid } from "../components/EventsGrid";
+import { ProfileSelect, useProfiles } from "../components/ProfileSelect";
 import { PageHeader, QueryState } from "../components/ui";
-import { percent } from "../format";
 import { useI18n } from "../i18n";
 import { useFilters } from "../useFilters";
 
 export function Events() {
-  const [{ camera }, setFilter] = useFilters(["camera"] as const);
+  const [{ camera, profile }, setFilter] = useFilters(["camera", "profile"] as const);
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
+  const profiles = useProfiles();
   const events = useQuery({
-    queryKey: ["events", camera],
-    queryFn: () => api.events({ camera, limit: 200 }),
+    queryKey: ["events", camera, profile],
+    queryFn: () => api.events({ camera, profile, limit: 200 }),
     refetchInterval: 15_000,
   });
+  const targets = [
+    ...new Set(
+      (profiles.data ?? [])
+        .filter((p) => p.enabled && (!profile || p.id === profile))
+        .flatMap((p) => p.targets),
+    ),
+  ];
   const cfg = settings.data;
   const { t, rich } = useI18n();
 
@@ -24,14 +32,14 @@ export function Events() {
       <PageHeader title={t("nav.events")}>
         {cfg &&
           rich("events.intro", {
-            labels: <b>{cfg.detection.target_labels.join(", ")}</b>,
-            confidence: percent(cfg.detection.min_confidence),
+            labels: <b>{targets.join(", ")}</b>,
             before: cfg.events.pre_roll_seconds,
             after: cfg.events.post_roll_seconds,
           })}
       </PageHeader>
       <div className="filters">
         <CameraSelect value={camera} onChange={(v) => setFilter("camera", v)} />
+        <ProfileSelect value={profile} onChange={(v) => setFilter("profile", v)} />
       </div>
       <QueryState error={events.error} loading={events.isPending} />
       {events.data && <EventsGrid events={events.data} />}

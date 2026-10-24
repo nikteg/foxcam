@@ -69,9 +69,10 @@ def add_segment(settings: Settings, camera: str = "cam", start: datetime | None 
         return seg.id
 
 
-def add_job(segment_id: int, state: str = JobState.PENDING, **fields) -> int:
+def add_job(segment_id: int, state: str = JobState.PENDING, profile_id: str = "default",
+            **fields) -> int:
     with session_scope() as s:
-        job = Job(segment_id=segment_id, state=state, **fields)
+        job = Job(segment_id=segment_id, state=state, profile_id=profile_id, **fields)
         s.add(job)
         s.flush()
         return job.id
@@ -82,6 +83,7 @@ def add_detection(segment_id: int, job_id: int, offset_ms: int, label: str = "fo
     with session_scope() as s:
         seg = s.get(Segment, segment_id)
         d = Detection(segment_id=segment_id, job_id=job_id, camera_id=seg.camera_id,
+                      profile_id="default",
                       ts=seg.start_at + timedelta(milliseconds=offset_ms), offset_ms=offset_ms,
                       label=label, confidence=confidence, bbox_x=0.4, bbox_y=0.4, bbox_w=0.2,
                       bbox_h=0.2, is_target=target)

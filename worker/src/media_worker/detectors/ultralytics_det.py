@@ -4,6 +4,10 @@ YOLO / RT-DETR weights you fine-tuned yourself.
     media-worker --detector ultralytics --model yolov8s-worldv2.pt --classes fox
     media-worker --detector ultralytics --model runs/detect/fox/weights/best.pt
 
+Without ``--classes`` an open-vocabulary model (YOLO-World / YOLOE) is prompted with each
+job's profile targets, so one worker can look for foxes on one camera and cars on another.
+It then advertises the ``open-vocabulary`` tag.
+
 Note: Ultralytics is AGPL-3.0.
 """
 
@@ -23,8 +27,10 @@ class UltralyticsDetector(Detector):
         self.model_path = model
         self.model = YOLO(model)
         self.classes = classes
+        self.open_vocabulary = hasattr(self.model, "set_classes")
+        self.prompt: list[str] | None = None
         if classes:
-            if not hasattr(self.model, "set_classes"):
+            if not self.open_vocabulary:
                 raise ValueError(f"{model} is not an open-vocabulary model; drop --classes")
             # Open-vocabulary prompt. Prompt only the classes you want: in our tests,
             # adding "dog,cat,person" made YOLO-World label most foxes as "dog" (see
@@ -36,9 +42,27 @@ class UltralyticsDetector(Detector):
         self.name = f"ultralytics:{model}"
 
     def info(self) -> dict[str, Any]:
-        return {"detector": self.name, "classes": ",".join(self.classes or []) or "model default"}
+        classes = ",".join(self.classes or []) or (
+            "from profile" if self.open_vocabulary else "model default")
+        return {"detector": self.name, "classes": classes}
+
+    def tags(self) -> list[str]:
+        # Fixed --classes: only profiles that ask for this worker by tag make sense.
+        return ["ultralytics", *(["open-vocabulary"]
+                                 if self.open_vocabulary and not self.classes else [])]
+
+    def _prompt_for(self, hints: dict[str, Any]) -> None:
+        """Prompt an open-vocabulary model with the job's targets (only when they change)."""
+        if self.classes or not self.open_vocabulary:
+            return
+        targets = list(dict.fromkeys(t.strip() for t in hints.get("target_labels", [])
+                                     if t.strip()))
+        if targets and targets != self.prompt:
+            self.model.set_classes(targets)
+            self.prompt = targets
 
     def detect(self, frames: list[Frame], hints: dict[str, Any]) -> list[Detection]:
+        self._prompt_for(hints)
         out: list[Detection] = []
         for i in range(0, len(frames), self.batch):
             chunk = frames[i:i + self.batch]

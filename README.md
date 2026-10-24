@@ -73,6 +73,10 @@ media-worker doctor --server http://<this-host>:8000 --token msw_...   # checks 
 media-worker --server http://<this-host>:8000 --token msw_... --detector speciesnet
 ```
 
+Different workers can look for different things on different cameras with **detection
+profiles** (e.g. foxes with SpeciesNet in the garden, cars with YOLO-World on the driveway):
+see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#detection-profiles).
+
 Windows (WSL 2 or native), Docker with GPU passthrough, autostart and troubleshooting:
 [docs/WORKER_SETUP.md](docs/WORKER_SETUP.md). **Worker queue → Add worker** in the web UI
 creates the token and shows the commands for each platform.

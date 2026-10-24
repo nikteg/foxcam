@@ -119,7 +119,7 @@ export const en = {
   // Fox events
   "events.none": "No fox events yet.",
   "events.intro":
-    "Consecutive segments with a {labels} detection (≥ {confidence}) are merged into one clip, with {before} s before and {after} s after. Clips are cut from the original, uncensored footage.",
+    "Sightings of {labels} (from the detection profiles) close in time are merged into one clip, with {before} s before and {after} s after. Clips are cut from the original, uncensored footage.",
   "events.playClip": "Play {label} clip",
   "events.thumbAlt": "{label} on {camera}",
   "events.buildingClip": "Building clip…",
@@ -280,6 +280,76 @@ export const en = {
   "storage.testFailed": "Connection failed",
   "settings.configIntro":
     "Read-only view of {file}. Edit the file and restart to change it. Secrets are hidden.",
+
+  // Detection profiles
+  "profiles.title": "Detection profiles",
+  "profiles.profile": "Profile",
+  "profiles.all": "All profiles",
+  "profiles.add": "Add profile",
+  "profiles.intro":
+    "A profile says what to look for (e.g. fox, or car and person) and which workers can do it. Every recording of a camera is analysed once per profile the camera runs. Profiles from {file} are read-only.",
+  "profiles.none": "No detection profiles.",
+  "profiles.default": "Default",
+  "profiles.defaultHint": "Runs on every camera without its own profile selection.",
+  "profiles.disabled": "Disabled",
+  "profiles.targets": "Looks for",
+  "profiles.aliases": "Label aliases",
+  "profiles.minConfidence": "Min. confidence",
+  "profiles.requires": "Requires tags",
+  "profiles.anyWorker": "any worker",
+  "profiles.fps": "Frame rate",
+  "profiles.allFrames": "all frames",
+  "profiles.keepEvents": "Keep events",
+  "profiles.days": "{n} {n:day|days}",
+  "profiles.forever": "forever",
+  "profiles.noCameras": "no cameras",
+  "profiles.workers": "Workers online",
+  "profiles.noWorkers": "none",
+  "profiles.waiting": "Waiting jobs",
+  "profiles.stuck":
+    "No online worker has the required tags, so these jobs wait. Start a worker with those tags (or remove the requirement).",
+  "profiles.editTitle": "Edit {name}",
+  "profiles.name": "Name",
+  "profiles.nameHint": "Shown in the UI, e.g. Wildlife.",
+  "profiles.id": "Id",
+  "profiles.idHint": "Lower-case letters, digits, '-' or '_'. Cannot be changed later.",
+  "profiles.targetsHint":
+    "Labels that create events, comma separated, e.g. fox, badger. Open-vocabulary workers (YOLO-World) are prompted with these.",
+  "profiles.aliasesHint":
+    "One per line: model label = your label, e.g. red fox = fox. Lets different models agree on names.",
+  "profiles.minConfidencePercent": "Minimum confidence (%)",
+  "profiles.requiresHint":
+    "Comma separated. Only workers with all these tags get this profile's jobs (e.g. speciesnet, or a machine's own tag to pin it). Empty = any worker.",
+  "profiles.requiresHintKnown":
+    "Comma separated; only workers with all these tags get the jobs. Empty = any worker. Known tags: {tags}.",
+  "profiles.fpsHint": "Analyse fewer frames per second to save GPU time (e.g. 1 for cars).",
+  "profiles.keepEventsDays": "Keep events (days)",
+  "profiles.keepEventsHint": "Empty = the global retention setting. 0 = forever.",
+  "profiles.defaultSwitch": "Run on cameras without their own selection",
+  "profiles.enabled": "Enabled",
+  "profiles.removeTitle": "Remove {name}?",
+  "profiles.removeBody":
+    "Waiting jobs of this profile are cancelled. Detections and events already found are kept.",
+
+  "cameras.profilesIntro":
+    "{n} {n:profile|profiles} decide what each camera's recordings are analysed for.",
+  "cameras.manageProfiles": "Manage detection profiles",
+  "cameras.noProfiles": "none (not analysed)",
+  "cameras.detect": "Detection",
+  "cameras.profilesTitle": "Detection on {name}",
+  "cameras.profilesHelp":
+    "Each recording is sent to a worker once per chosen profile. Choose none to only record.",
+  "cameras.profilesFromUi": "Chosen here.",
+  "cameras.profilesFromConfig": "Currently from config.yaml; saving here overrides it.",
+  "cameras.profilesFromDefault": "Currently the default profiles; saving here overrides them.",
+  "cameras.profilesReset": "Use defaults",
+  "queue.byProfile": "Per profile",
+  "queue.running": "Running",
+  "workers.tags": "Tags",
+  "workers.tagsHint":
+    "Optional, comma separated. Lets profiles that require these tags use this worker (e.g. gpu, or its own name to pin profiles to it).",
+  "workers.editTags": "Tags",
+  "workers.tagsTitle": "Tags for {name}",
 
   // Cameras page
   "cameras.intro":

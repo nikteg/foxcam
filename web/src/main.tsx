@@ -13,6 +13,7 @@ import { Detections } from "./pages/Detections";
 import { Events } from "./pages/Events";
 import { Live } from "./pages/Live";
 import { MaskEditor } from "./pages/MaskEditor";
+import { Profiles } from "./pages/Profiles";
 import { Queue } from "./pages/Queue";
 import { Recordings } from "./pages/Recordings";
 import { Settings } from "./pages/Settings";
@@ -36,6 +37,7 @@ const router = createBrowserRouter([
       { path: "queue", Component: Queue },
       { path: "settings", Component: Settings },
       { path: "cameras", Component: Cameras },
+      { path: "profiles", Component: Profiles },
       { path: "cameras/:cameraId/mask", Component: MaskEditor },
       { path: "*", Component: NotFound },
     ],

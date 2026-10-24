@@ -32,19 +32,21 @@ def init_db(settings: Settings) -> Engine:
         cur.close()
 
     Base.metadata.create_all(engine)
-    _add_missing_columns(engine)
+    added = _add_missing_columns(engine)
+    _backfill(engine, added)
     _engine = engine
     _SessionLocal = sessionmaker(engine, expire_on_commit=False)
     return engine
 
 
-def _add_missing_columns(engine: Engine) -> None:
+def _add_missing_columns(engine: Engine) -> set[str]:
     """Minimal migration: add new nullable columns to existing tables.
 
     ``create_all`` creates missing tables but never alters existing ones; new optional
     columns are added here so existing databases keep working after an upgrade.
     """
     insp = inspect(engine)
+    added: set[str] = set()
     with engine.begin() as conn:
         for table in Base.metadata.sorted_tables:
             if not insp.has_table(table.name):
@@ -58,6 +60,23 @@ def _add_missing_columns(engine: Engine) -> None:
                 ddl = col.type.compile(dialect=engine.dialect)
                 conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {ddl}'))
                 log.info("database: added column %s.%s", table.name, col.name)
+                added.add(f"{table.name}.{col.name}")
+    return added
+
+
+def _backfill(engine: Engine, added: set[str]) -> None:
+    """Data written before detection profiles existed belongs to the `default` profile."""
+    with engine.begin() as conn:
+        for table in ("job", "detection", "event"):
+            conn.execute(text(f"UPDATE {table} SET profile_id = 'default' "
+                              "WHERE profile_id IS NULL"))
+        if "detection.event_id" in added:
+            # Events used to be per segment: link their target detections.
+            conn.execute(text(
+                "UPDATE detection SET event_id = (SELECT es.event_id FROM event_segment es "
+                "JOIN event e ON e.id = es.event_id WHERE es.segment_id = detection.segment_id "
+                "AND e.camera_id = detection.camera_id ORDER BY es.event_id LIMIT 1) "
+                "WHERE is_target = 1 AND event_id IS NULL"))
 
 
 def db_ready() -> bool:

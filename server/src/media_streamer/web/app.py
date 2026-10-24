@@ -14,7 +14,7 @@ from ..config import Settings, get_settings
 from ..db import init_db
 from ..mediamtx import MediaMtx
 from ..pipeline.runner import start_background
-from . import api, api_cameras, api_worker, api_workers
+from . import api, api_cameras, api_profiles, api_worker, api_workers
 
 log = logging.getLogger(__name__)
 
@@ -49,6 +49,7 @@ def create_app(settings: Settings | None = None, background: bool = True) -> Fas
     app.include_router(api_worker.router)
     app.include_router(api_cameras.router)
     app.include_router(api_workers.router)
+    app.include_router(api_profiles.router)
     app.include_router(api.router)
     _mount_spa(app, _web_dist())
     return app

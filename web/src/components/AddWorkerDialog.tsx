@@ -27,6 +27,7 @@ import {
   guessPlatform,
   PLATFORMS,
   setupSteps,
+  splitTags,
   type DetectorChoice,
   type Platform,
 } from "../workerSetup";
@@ -87,8 +88,9 @@ export function AddWorkerDialog({ open, onClose }: { open: boolean; onClose: () 
   const [name, setName] = useState("gpu-box");
   const [detector, setDetector] = useState<DetectorChoice>("speciesnet");
   const [platform, setPlatform] = useState<Platform>(guessPlatform);
+  const [tags, setTags] = useState("");
   const create = useMutation({
-    mutationFn: () => api.createWorkerToken(name.trim(), detector),
+    mutationFn: () => api.createWorkerToken(name.trim(), detector, splitTags(tags)),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["workers"] });
       void client.invalidateQueries({ queryKey: ["queue"] });
@@ -132,6 +134,9 @@ export function AddWorkerDialog({ open, onClose }: { open: boolean; onClose: () 
                       </option>
                     ))}
                   </Select>
+                </Field>
+                <Field label={t("workers.tags")} hint={t("workers.tagsHint")}>
+                  <Input value={tags} placeholder="gpu" onChange={(_, d) => setTags(d.value)} />
                 </Field>
                 {create.error && (
                   <MessageBar intent="error">

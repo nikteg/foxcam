@@ -17,6 +17,11 @@ router = APIRouter(prefix="/api/workers", tags=["workers"])
 class TokenIn(BaseModel):
     name: str = Field(min_length=1, max_length=63)
     detector: str | None = Field(default=None, max_length=40)
+    tags: list[str] = Field(default=[], max_length=20)
+
+
+class TagsIn(BaseModel):
+    tags: list[str] = Field(max_length=20)
 
 
 @router.get("/auth")
@@ -36,10 +41,18 @@ def list_tokens() -> list[dict[str, Any]]:
 def create_token(body: TokenIn) -> dict[str, Any]:
     """The plaintext token is only returned here, once."""
     try:
-        info, token = worker_tokens.create(body.name, body.detector)
+        info, token = worker_tokens.create(body.name, body.detector, body.tags)
     except worker_tokens.TokenError as e:
         raise HTTPException(400, str(e)) from e
     return {**info, "token": token}
+
+
+@router.put("/tokens/{token_id}/tags")
+def set_token_tags(token_id: int, body: TagsIn) -> dict[str, Any]:
+    try:
+        return worker_tokens.set_tags(token_id, body.tags)
+    except worker_tokens.TokenError as e:
+        raise HTTPException(404, str(e)) from e
 
 
 @router.delete("/tokens/{token_id}")

@@ -75,6 +75,9 @@ class CameraConfig(BaseModel):
     source: Source
     segment_seconds: int | None = Field(default=None, ge=5, le=3600)  # overrides the global
     enabled: bool = True
+    # Detection profiles to run on this camera. None = every profile marked `default`.
+    # The web UI can override this per camera.
+    profiles: list[str] | None = None
     # "config" = defined in config.yaml (read-only in the UI), "ui" = added in the web UI.
     managed: Literal["config", "ui"] = "config"
 
@@ -110,8 +113,52 @@ class QueueConfig(BaseModel):
 
 
 class DetectionConfig(BaseModel):
+    """Used for the built-in `default` profile when `profiles:` is not configured."""
+
     target_labels: list[str] = ["fox", "red fox", "vulpes vulpes"]
     min_confidence: float = 0.5
+
+
+PROFILE_ID = r"^[a-z0-9][a-z0-9_-]*$"
+TAG = r"^[a-z0-9][a-z0-9_.-]*$"
+DEFAULT_PROFILE = "default"
+
+
+class ProfileConfig(BaseModel):
+    """What to look for, and which workers can look for it.
+
+    Every segment of a camera gets one job per profile. Only workers that have all
+    `requires` tags lease a profile's jobs. Detections whose (aliased) label is in
+    `targets` with at least `min_confidence` become events.
+    """
+
+    id: str = Field(pattern=PROFILE_ID, max_length=40)
+    name: str | None = None
+    targets: list[str] = Field(min_length=1)
+    # Map model labels to one name, e.g. {"red fox": "fox", "vulpes vulpes": "fox"}.
+    aliases: dict[str, str] = {}
+    min_confidence: float = Field(default=0.5, ge=0, le=1)
+    requires: list[Annotated[str, Field(pattern=TAG)]] = []
+    # Frames per second the worker analyses (≤ processing.sample_fps). None = all.
+    fps: float | None = Field(default=None, gt=0)
+    # Run on cameras that have no explicit profile selection.
+    default: bool = False
+    # Delete this profile's events after N days (None = retention.events_days).
+    events_days: float | None = None
+    enabled: bool = True
+    managed: Literal["config", "ui"] = "config"
+
+    @property
+    def display_name(self) -> str:
+        return self.name or self.id
+
+    def canonical(self, label: str) -> str:
+        aliases = {k.lower(): v for k, v in self.aliases.items()}
+        return aliases.get(label.lower(), label)
+
+    def is_target(self, label: str, confidence: float) -> bool:
+        return (confidence >= self.min_confidence
+                and self.canonical(label).lower() in {t.lower() for t in self.targets})
 
 
 class EventsConfig(BaseModel):
@@ -186,6 +233,8 @@ class Settings(BaseModel):
     samples_dir: Path = Path("./samples")
 
     cameras: list[CameraConfig] = []
+    # Detection profiles. Empty = one built-in `default` profile from `detection`.
+    profiles: list[ProfileConfig] = []
     mediamtx: MediaMtxConfig = MediaMtxConfig()
     processing: ProcessingConfig = ProcessingConfig()
     queue: QueueConfig = QueueConfig()
@@ -218,6 +267,13 @@ class Settings(BaseModel):
         ids = [c.id for c in self.cameras]
         if len(ids) != len(set(ids)):
             raise ValueError("camera ids must be unique")
+        if not self.profiles:
+            self.profiles = [ProfileConfig(
+                id=DEFAULT_PROFILE, name="Fox", targets=self.detection.target_labels,
+                min_confidence=self.detection.min_confidence, default=True)]
+        pids = [p.id for p in self.profiles]
+        if len(pids) != len(set(pids)):
+            raise ValueError("profile ids must be unique")
 
     # Derived directories ---------------------------------------------------
     @property
@@ -247,6 +303,17 @@ class Settings(BaseModel):
     def camera(self, camera_id: str) -> CameraConfig | None:
         return next((c for c in self.all_cameras(include_disabled=True) if c.id == camera_id),
                     None)
+
+    def all_profiles(self, include_disabled: bool = False) -> list[ProfileConfig]:
+        """Profiles from config.yaml plus the ones added in the web UI."""
+        from .profiles import ui_profiles  # deferred: imports the DB layer
+
+        profiles = [*self.profiles, *ui_profiles()]
+        return profiles if include_disabled else [p for p in profiles if p.enabled]
+
+    def profile(self, profile_id: str | None) -> ProfileConfig | None:
+        return next((p for p in self.all_profiles(include_disabled=True)
+                     if p.id == profile_id), None)
 
     def segment_seconds_for(self, camera_id: str) -> int:
         cam = self.camera(camera_id)

@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogSurface,
   DialogTitle,
+  Checkbox,
   Field,
   Input,
   MessageBar,
@@ -24,6 +25,7 @@ import {
   Add20Regular,
   Delete20Regular,
   Edit20Regular,
+  ScanObject20Regular,
   EyeOff20Regular,
   Video20Regular,
 } from "@fluentui/react-icons";
@@ -32,6 +34,7 @@ import { useState } from "react";
 
 import { api, type Camera, type CameraSource } from "../api";
 import { AddCameraDialog } from "../components/AddCameraDialog";
+import { useProfileName, useProfiles } from "../components/ProfileSelect";
 import { TapoAccountCard } from "../components/TapoAccount";
 import {
   Dot,
@@ -67,6 +70,9 @@ export function Cameras() {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Camera | null>(null);
   const [removing, setRemoving] = useState<Camera | null>(null);
+  const [choosing, setChoosing] = useState<Camera | null>(null);
+  const routerHref = useRouterHref();
+  const profiles = useProfiles();
 
   return (
     <>
@@ -89,6 +95,16 @@ export function Cameras() {
       </div>
 
       <Subtitle2 as="h2" className="section">
+        {t("profiles.title")}
+      </Subtitle2>
+      <p className="muted">
+        {t("cameras.profilesIntro", { n: profiles.data?.length ?? 0 })}{" "}
+        <Button as="a" size="small" icon={<ScanObject20Regular />} {...routerHref("/profiles")}>
+          {t("cameras.manageProfiles")}
+        </Button>
+      </p>
+
+      <Subtitle2 as="h2" className="section">
         {t("nav.cameras")}
       </Subtitle2>
       <QueryState error={cameras.error} loading={cameras.isPending} />
@@ -100,6 +116,7 @@ export function Cameras() {
             camera={c}
             onEdit={() => setEditing(c)}
             onRemove={() => setRemoving(c)}
+            onProfiles={() => setChoosing(c)}
           />
         ))}
       </div>
@@ -107,6 +124,7 @@ export function Cameras() {
       <AddCameraDialog open={adding} onClose={() => setAdding(false)} />
       {editing && <EditCameraDialog camera={editing} onClose={() => setEditing(null)} />}
       {removing && <RemoveCameraDialog camera={removing} onClose={() => setRemoving(null)} />}
+      {choosing && <CameraProfilesDialog camera={choosing} onClose={() => setChoosing(null)} />}
     </>
   );
 }
@@ -115,12 +133,15 @@ function CameraCard({
   camera: c,
   onEdit,
   onRemove,
+  onProfiles,
 }: {
   camera: Camera;
   onEdit: () => void;
   onRemove: () => void;
+  onProfiles: () => void;
 }) {
   const { t } = useI18n();
+  const profileName = useProfileName();
   const sourceLabel = useSourceLabel();
   const client = useQueryClient();
   const routerHref = useRouterHref();
@@ -161,6 +182,18 @@ function CameraCard({
         </dd>
         <dt>{t("camera.censorAreas")}</dt>
         <dd>{c.rects.length}</dd>
+        <dt>{t("profiles.title")}</dt>
+        <dd>
+          {c.profiles.length ? (
+            <span className="row wrap">
+              {c.profiles.map((id) => (
+                <Tag key={id}>{profileName(id)}</Tag>
+              ))}
+            </span>
+          ) : (
+            <span className="muted">{t("cameras.noProfiles")}</span>
+          )}
+        </dd>
       </dl>
       <Tooltip
         content={editable ? t("cameras.disableHint") : t("cameras.configHint")}
@@ -189,6 +222,9 @@ function CameraCard({
           {...routerHref(`/cameras/${c.id}/mask`)}
         >
           {t("camera.censorAreas")}
+        </Button>
+        <Button size="small" icon={<ScanObject20Regular />} onClick={onProfiles}>
+          {t("cameras.detect")}
         </Button>
         {editable && (
           <>
@@ -261,6 +297,78 @@ function EditCameraDialog({ camera, onClose }: { camera: Camera; onClose: () => 
             </DialogActions>
           </DialogBody>
         </form>
+      </DialogSurface>
+    </Dialog>
+  );
+}
+
+function CameraProfilesDialog({ camera, onClose }: { camera: Camera; onClose: () => void }) {
+  const { t } = useI18n();
+  const client = useQueryClient();
+  const { data: profiles = [] } = useProfiles();
+  const [selected, setSelected] = useState<string[]>(camera.profiles);
+  const save = useMutation({
+    mutationFn: (ids: string[] | null) => api.setCameraProfiles(camera.id, ids),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["cameras"] });
+      void client.invalidateQueries({ queryKey: ["profiles"] });
+      onClose();
+    },
+  });
+  const toggle = (id: string, on: boolean) =>
+    setSelected((cur) => (on ? [...cur, id] : cur.filter((x) => x !== id)));
+
+  return (
+    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
+      <DialogSurface>
+        <DialogBody>
+          <DialogTitle>{t("cameras.profilesTitle", { name: camera.name })}</DialogTitle>
+          <DialogContent className="form-stack">
+            <Body1 className="muted">{t("cameras.profilesHelp")}</Body1>
+            {profiles
+              .filter((p) => p.enabled)
+              .map((p) => (
+                <Checkbox
+                  key={p.id}
+                  checked={selected.includes(p.id)}
+                  onChange={(_, d) => toggle(p.id, d.checked === true)}
+                  label={
+                    <span>
+                      {p.display_name}{" "}
+                      <Caption1 className="muted">({p.targets.join(", ")})</Caption1>
+                    </span>
+                  }
+                />
+              ))}
+            <Caption1 className="muted">
+              {camera.profiles_source === "ui"
+                ? t("cameras.profilesFromUi")
+                : camera.profiles_source === "config"
+                  ? t("cameras.profilesFromConfig")
+                  : t("cameras.profilesFromDefault")}
+            </Caption1>
+            {save.error && (
+              <MessageBar intent="error">
+                <MessageBarBody>{save.error.message}</MessageBarBody>
+              </MessageBar>
+            )}
+          </DialogContent>
+          <DialogActions>
+            {camera.profiles_source === "ui" && (
+              <Button disabled={save.isPending} onClick={() => save.mutate(null)}>
+                {t("cameras.profilesReset")}
+              </Button>
+            )}
+            <Button onClick={onClose}>{t("common.cancel")}</Button>
+            <Button
+              appearance="primary"
+              disabled={save.isPending}
+              onClick={() => save.mutate(selected)}
+            >
+              {t("common.save")}
+            </Button>
+          </DialogActions>
+        </DialogBody>
       </DialogSurface>
     </Dialog>
   );

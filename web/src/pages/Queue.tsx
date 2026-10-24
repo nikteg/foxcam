@@ -28,6 +28,7 @@ import {
   useStateLabel,
 } from "../components/ui";
 import { decimal, duration } from "../format";
+import { useProfileName, useProfiles } from "../components/ProfileSelect";
 import { WorkerAccess } from "../components/WorkerAccess";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
@@ -49,7 +50,15 @@ export function Queue() {
   const navigate = useNavigate();
   const { t } = useI18n();
   const stateLabel = useStateLabel();
-  const jobColumns = makeJobColumns(t, stateLabel, (id) => requeue.mutate(id), requeue.isPending);
+  const profileName = useProfileName();
+  const profiles = useProfiles();
+  const jobColumns = makeJobColumns(
+    t,
+    stateLabel,
+    profileName,
+    (id) => requeue.mutate(id),
+    requeue.isPending,
+  );
   const q = queue.data;
   const avgMs = q?.stats.avg_processing_ms_last_hour;
 
@@ -76,6 +85,48 @@ export function Queue() {
               value={avgMs ? `${decimal(avgMs / 1000, 1)} s` : "–"}
             />
           </section>
+
+          {profiles.data && profiles.data.length > 1 && (
+            <>
+              <Subtitle2 as="h2" className="section">
+                {t("queue.byProfile")}
+              </Subtitle2>
+              <Table className="table responsive" aria-label={t("queue.byProfile")}>
+                <TableHeader>
+                  <TableRow>
+                    <TableHeaderCell>{t("profiles.profile")}</TableHeaderCell>
+                    <TableHeaderCell>{t("profiles.waiting")}</TableHeaderCell>
+                    <TableHeaderCell>{t("queue.running")}</TableHeaderCell>
+                    <TableHeaderCell>{t("profiles.workers")}</TableHeaderCell>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {profiles.data.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell data-label={t("profiles.profile")}>
+                        <Text weight="semibold">{p.display_name}</Text>
+                      </TableCell>
+                      <TableCell data-label={t("profiles.waiting")}>{p.waiting_jobs}</TableCell>
+                      <TableCell data-label={t("queue.running")}>
+                        {q.stats.by_profile[p.id]?.leased ?? 0}
+                      </TableCell>
+                      <TableCell data-label={t("profiles.workers")}>
+                        {p.workers_online.length ? (
+                          p.workers_online.join(", ")
+                        ) : p.waiting_jobs > 0 ? (
+                          <Tag kind="warn" title={t("profiles.stuck")}>
+                            {t("profiles.noWorkers")}
+                          </Tag>
+                        ) : (
+                          "–"
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </>
+          )}
 
           <Subtitle2 as="h2" className="section">
             {t("queue.workers")}
@@ -105,6 +156,9 @@ export function Queue() {
                   <TableCell data-label={t("queue.info")} className="full mono">
                     {/* One chip per key so values wrap as units, never mid-word. */}
                     <span className="chips">
+                      {w.tags.map((tag) => (
+                        <Tag key={`tag-${tag}`}>{tag}</Tag>
+                      ))}
                       {Object.entries(w.info).map(([k, v]) => (
                         <span key={k}>
                           <span className="muted">{k}=</span>
@@ -165,6 +219,7 @@ export function Queue() {
 function makeJobColumns(
   t: I18n["t"],
   stateLabel: (s: string) => string,
+  profileName: (id: string | null) => string,
   retry: (id: number) => void,
   busy: boolean,
 ): Column<Job>[] {
@@ -182,6 +237,13 @@ function makeJobColumns(
       width: 100,
       cell: (j) => j.camera_id,
       compare: byString((j) => j.camera_id),
+    },
+    {
+      id: "profile",
+      header: t("profiles.profile"),
+      width: 110,
+      cell: (j) => profileName(j.profile_id),
+      compare: byString((j) => j.profile_id),
     },
     {
       id: "segment",

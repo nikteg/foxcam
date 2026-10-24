@@ -22,6 +22,7 @@ from ..models import (
     utcnow,
 )
 from ..pipeline import queue
+from ..profiles import camera_profiles
 
 WORKER_ONLINE_SECONDS = 120
 
@@ -77,9 +78,20 @@ def cameras(settings: Settings, live: dict[str, dict[str, Any]]) -> list[dict[st
                 "tracks": path.get("tracks") or [],
                 "last_segment_at": iso(last.start_at) if last else None,
                 "last_is_night": last.is_night if last else None,
+                "profiles": [p.id for p in camera_profiles(settings, cam.id)],
+                "profiles_source": _profiles_source(cam),
                 **camera_state(cam.id),
             })
     return out
+
+
+def _profiles_source(cam) -> str:
+    """Where the camera's profile selection comes from: ui, config or default."""
+    with session_scope() as s:
+        st = s.get(CameraState, cam.id)
+        if st is not None and st.profiles is not None:
+            return "ui"
+    return "config" if cam.profiles is not None else "default"
 
 
 def overview(settings: Settings) -> dict[str, Any]:
@@ -139,6 +151,7 @@ def segments(camera_id: str | None = None, day: str | None = None, only_targets:
 def detection_dict(d: Detection) -> dict[str, Any]:
     return {
         "id": d.id, "segment_id": d.segment_id, "camera_id": d.camera_id, "ts": iso(d.ts),
+        "profile_id": d.profile_id, "event_id": d.event_id,
         "offset_ms": d.offset_ms, "label": d.label, "confidence": round(d.confidence, 3),
         "bbox": d.bbox, "is_target": d.is_target, "model": d.model, "worker_id": d.worker_id,
         "feedback": d.feedback, "is_night": d.segment.is_night if d.segment else None,
@@ -147,7 +160,8 @@ def detection_dict(d: Detection) -> dict[str, Any]:
 
 def detections(camera_id: str | None = None, label: str | None = None,
                only_targets: bool = False, min_confidence: float = 0.0,
-               limit: int = 200, segment_id: int | None = None) -> list[dict[str, Any]]:
+               limit: int = 200, segment_id: int | None = None,
+               profile_id: str | None = None) -> list[dict[str, Any]]:
     q = select(Detection).where(Detection.confidence >= min_confidence) \
         .order_by(Detection.ts.desc()).limit(limit)
     if segment_id is not None:
@@ -156,6 +170,8 @@ def detections(camera_id: str | None = None, label: str | None = None,
         q = q.where(Detection.camera_id == camera_id)
     if label:
         q = q.where(func.lower(Detection.label) == label.lower())
+    if profile_id:
+        q = q.where(Detection.profile_id == profile_id)
     if only_targets:
         q = q.where(Detection.is_target.is_(True))
     with session_scope() as s:
@@ -172,13 +188,19 @@ def set_feedback(detection_id: int, correct: bool | None) -> bool:
         return True
 
 
-def events(camera_id: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+def events(camera_id: str | None = None, limit: int = 100,
+           profile_id: str | None = None, label: str | None = None) -> list[dict[str, Any]]:
     q = select(Event).order_by(Event.first_ts.desc()).limit(limit)
     if camera_id:
         q = q.where(Event.camera_id == camera_id)
+    if profile_id:
+        q = q.where(Event.profile_id == profile_id)
+    if label:
+        q = q.where(func.lower(Event.label) == label.lower())
     with session_scope() as s:
         return [{
-            "id": e.id, "camera_id": e.camera_id, "label": e.label, "first_ts": iso(e.first_ts),
+            "id": e.id, "camera_id": e.camera_id, "profile_id": e.profile_id, "label": e.label,
+            "first_ts": iso(e.first_ts),
             "last_ts": iso(e.last_ts), "max_confidence": round(e.max_confidence, 3),
             "detection_count": e.detection_count, "is_night": e.is_night,
             "clip_url": f"/api/events/{e.id}/clip" if e.clip_path or e.clip_remote_key else None,
@@ -197,13 +219,14 @@ def queue_view(limit: int = 100, state: str | None = None) -> dict[str, Any]:
         q = q.where(Job.state == state)
     with session_scope() as s:
         workers = [{
-            "id": w.id, "info": w.info, "last_seen": iso(w.last_seen),
+            "id": w.id, "info": w.info, "tags": w.tags or [], "last_seen": iso(w.last_seen),
             "online": (now - w.last_seen).total_seconds() < WORKER_ONLINE_SECONDS,
             "current_job_id": w.current_job_id, "jobs_done": w.jobs_done,
             "jobs_failed": w.jobs_failed,
         } for w in s.scalars(select(Worker).order_by(Worker.last_seen.desc()))]
         jobs = [{
             "id": j.id, "segment_id": j.segment_id, "camera_id": j.segment.camera_id,
+            "profile_id": j.profile_id,
             "segment_start": iso(j.segment.start_at), "state": j.state, "attempts": j.attempts,
             "leased_by": j.leased_by, "lease_expires_at": iso(j.lease_expires_at),
             "created_at": iso(j.created_at), "finished_at": iso(j.finished_at),

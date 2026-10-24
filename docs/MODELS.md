@@ -19,6 +19,14 @@ distance, partly hidden. That rules out the default choice:
 | **Cloud APIs** (AWS Rekognition, Google Vision, Azure Vision) | SaaS | ✅ usually "fox" / "red fox" label | network bound | paid | Write a small detector adapter (see [WORKER_PROTOCOL.md](WORKER_PROTOCOL.md)). Only censored frames leave your network. |
 | **Stock YOLO / RT-DETR on COCO** | closed-set detector | ❌ (fox → dog/cat) | fastest | AGPL / Apache | Useful only as a motion/"some animal" pre-filter. |
 
+## Several models side by side
+
+[Detection profiles](ARCHITECTURE.md#detection-profiles) let different workers look for
+different things: e.g. a `wildlife` profile requiring `speciesnet` on the garden cameras and
+a `vehicles` profile requiring `open-vocabulary` (YOLO-World, prompted with the profile's
+targets) on the driveway. Use `aliases` (`red fox: fox`) so both models report the same name.
+Keep a fox profile's YOLO-World targets to fox synonyms only (see the measurements below).
+
 ## Recommended path
 
 1. **Start** with SpeciesNet (MegaDetector + classifier) on the GPU box:

@@ -19,11 +19,14 @@ import { useState } from "react";
 import type { FoxEvent } from "../api";
 import { duration, localTime, percent } from "../format";
 import { useI18n } from "../i18n";
+import { useProfileName, useProfiles } from "./ProfileSelect";
 import { Empty, Light, Tag, Time } from "./ui";
 
 export function EventsGrid({ events }: { events: FoxEvent[] }) {
   const { t } = useI18n();
   const [playing, setPlaying] = useState<FoxEvent | null>(null);
+  const profileName = useProfileName();
+  const manyProfiles = (useProfiles().data?.length ?? 0) > 1;
   if (events.length === 0) return <Empty>{t("events.none")}</Empty>;
 
   return (
@@ -71,6 +74,7 @@ export function EventsGrid({ events }: { events: FoxEvent[] }) {
               }
               description={
                 <Caption1 className="muted">
+                  {manyProfiles && <>{profileName(e.profile_id)} · </>}
                   <Time iso={e.first_ts} /> ·{" "}
                   {t("events.detectionCount", { count: e.detection_count })} ·{" "}
                   {duration(e.clip_duration_s)}

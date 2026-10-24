@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { api, detectionFrameUrl, segmentPlayUrl, type Detection } from "../api";
 import { CameraSelect } from "../components/CameraSelect";
+import { ProfileSelect } from "../components/ProfileSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
 import { Feedback } from "../components/Feedback";
@@ -74,6 +75,7 @@ const columns = (t: I18n["t"]): Column<Detection>[] => [
 export function Detections() {
   const [f, setFilter] = useFilters([
     "camera",
+    "profile",
     "label",
     "only_targets",
     "min_confidence",
@@ -81,6 +83,7 @@ export function Detections() {
   ] as const);
   const query = {
     camera: f.camera,
+    profile: f.profile,
     label: f.label,
     only_targets: f.only_targets === "true",
     min_confidence: Number(f.min_confidence) || 0,
@@ -103,6 +106,7 @@ export function Detections() {
       </PageHeader>
       <div className="filters">
         <CameraSelect value={f.camera} onChange={(v) => setFilter("camera", v)} />
+        <ProfileSelect value={f.profile} onChange={(v) => setFilter("profile", v)} />
         <Input
           placeholder={t("detections.labelPlaceholder")}
           aria-label={t("col.label")}

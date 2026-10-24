@@ -50,7 +50,7 @@ const EXTRA_TABS: NavItem[] = [
 function currentTab(pathname: string): string {
   if (pathname === "/") return "/";
   if (pathname.startsWith("/settings")) return "/settings";
-  if (pathname === "/cameras") return "/cameras";
+  if (pathname === "/cameras" || pathname === "/profiles") return "/cameras";
   return TABS.find((t) => t.to !== "/" && pathname.startsWith(t.to))?.to ?? "";
 }
 

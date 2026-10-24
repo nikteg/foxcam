@@ -56,8 +56,9 @@ class Heartbeat:
 
 def process(client: Client, detector, job: dict, args: argparse.Namespace) -> None:
     seg = job["segment"]
-    log.info("job %s: camera=%s start=%s (attempt %s)", job["job_id"], seg["camera_id"],
-             seg["start_at"], job["attempt"])
+    log.info("job %s: camera=%s profile=%s start=%s (attempt %s)", job["job_id"],
+             seg["camera_id"], job.get("profile", {}).get("id", "-"), seg["start_at"],
+             job["attempt"])
     started = time.monotonic()
     # ignore_cleanup_errors: on Windows a file may still be open (antivirus, model cache).
     with tempfile.TemporaryDirectory(prefix="media-worker-", ignore_cleanup_errors=True) as tmp, \
@@ -66,7 +67,8 @@ def process(client: Client, detector, job: dict, args: argparse.Namespace) -> No
         video = tmp_path / "input.mp4"
         try:
             client.download_input(job, video)
-            fps = min(args.fps or job["input_fps"], job["input_fps"])
+            # The profile's frame rate (older servers: everything in the input).
+            fps = min(args.fps or job.get("sample_fps") or job["input_fps"], job["input_fps"])
             frames = extract_frames(video, tmp_path / "frames", fps)
             detections = detector.detect(frames, job.get("hints", {}))
         except LeaseLost:
@@ -106,6 +108,10 @@ def main() -> None:
     p.add_argument("--server", default=os.environ.get("MEDIA_SERVER", "http://localhost:8000"))
     p.add_argument("--token", default=os.environ.get("MEDIA_WORKER_TOKEN"))
     p.add_argument("--worker-id", default=os.environ.get("MEDIA_WORKER_ID", socket.gethostname()))
+    p.add_argument("--tags", default=os.environ.get("MEDIA_WORKER_TAGS", ""),
+                   help="extra capability tags, comma separated (e.g. gpu,winhack). Detection "
+                        "profiles that require tags only go to workers that have them; the "
+                        "detector adds its own (speciesnet, ultralytics, open-vocabulary, dummy)")
     add_detector_args(p)
     p.add_argument("--fps", type=float, help="subsample frames further (default: all)")
     p.add_argument("--poll", type=float, default=5, help="seconds to wait when queue is empty")
@@ -125,8 +131,11 @@ def main() -> None:
             "python": platform.python_version(), "platform": environment()}
     if gpu := gpu_summary():
         info["gpu"] = gpu
-    client = Client(args.server, args.worker_id, args.token, info)
-    log.info("worker %s using %s -> %s", args.worker_id, detector.name, args.server)
+    tags = list(dict.fromkeys(
+        t.strip().lower() for t in [*detector.tags(), *args.tags.split(",")] if t.strip()))
+    client = Client(args.server, args.worker_id, args.token, info, tags)
+    log.info("worker %s using %s (tags: %s) -> %s", args.worker_id, detector.name,
+             ",".join(tags), args.server)
 
     backoff = args.poll
     try:

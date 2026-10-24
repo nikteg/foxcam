@@ -1,7 +1,8 @@
-"""Group target detections (foxes) into events and cut a clip for each event.
+"""Group target detections into events and cut a clip for each event.
 
-Segments with a target detection are merged with any event on the same camera whose
-detections are within ``merge_gap_seconds``. Once an event has been quiet for
+Target detections (per detection profile, e.g. foxes) are merged into an event with the
+same camera, profile and label when within ``merge_gap_seconds``; a fox and a car seen at
+the same time become two events. Once an event has been quiet for
 ``settle_seconds`` (and the post-roll footage exists) its clip is (re)built from the
 original, unmasked recordings, and the underlying segments are pinned.
 """
@@ -9,15 +10,16 @@ original, unmasked recordings, and the underlying segments are pinned.
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from datetime import timedelta
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from .. import ffmpeg
 from ..config import Settings
 from ..db import session_scope
-from ..models import Detection, Event, Segment, event_segments, utcnow
+from ..models import Detection, Event, Segment, utcnow
 
 log = logging.getLogger(__name__)
 
@@ -26,38 +28,41 @@ def assign_events(settings: Settings) -> int:
     gap = timedelta(seconds=settings.events.merge_gap_seconds)
     changed = 0
     with session_scope() as s:
-        in_event = select(event_segments.c.segment_id)
-        segs = s.scalars(
-            select(Segment).where(Segment.has_target.is_(True), Segment.id.not_in(in_event))
-            .order_by(Segment.start_at)
+        pending = s.scalars(
+            select(Detection).where(Detection.is_target.is_(True), Detection.event_id.is_(None))
+            .order_by(Detection.ts)
         ).all()
-        for seg in segs:
-            dets = s.scalars(select(Detection).where(Detection.segment_id == seg.id,
-                                                     Detection.is_target.is_(True))).all()
-            if not dets:
-                continue
+        groups: dict[tuple, list[Detection]] = defaultdict(list)
+        for d in pending:
+            groups[(d.segment_id, d.camera_id, d.profile_id, d.label.lower())].append(d)
+        for (segment_id, camera_id, profile_id, _), dets in groups.items():
             first = min(d.ts for d in dets)
             last = max(d.ts for d in dets)
+            best = max(dets, key=lambda d: d.confidence)
             event = s.scalars(
-                select(Event).where(Event.camera_id == seg.camera_id,
+                select(Event).where(Event.camera_id == camera_id, Event.profile_id == profile_id,
+                                    func.lower(Event.label) == best.label.lower(),
                                     Event.last_ts >= first - gap, Event.first_ts <= last + gap)
                 .order_by(Event.first_ts).limit(1)
             ).first()
-            best = max(dets, key=lambda d: d.confidence)
             if event is None:
-                event = Event(camera_id=seg.camera_id, label=best.label, first_ts=first,
-                              last_ts=last, max_confidence=best.confidence, detection_count=0,
-                              best_detection_id=best.id)
+                event = Event(camera_id=camera_id, profile_id=profile_id, label=best.label,
+                              first_ts=first, last_ts=last, max_confidence=best.confidence,
+                              detection_count=0, best_detection_id=best.id)
                 s.add(event)
+                s.flush()
             else:
                 event.first_ts = min(event.first_ts, first)
                 event.last_ts = max(event.last_ts, last)
                 if best.confidence > event.max_confidence:
                     event.max_confidence = best.confidence
                     event.best_detection_id = best.id
-                    event.label = best.label
+            for d in dets:
+                d.event_id = event.id
             event.detection_count += len(dets)
-            event.segments.append(seg)
+            seg = s.get(Segment, segment_id)
+            if seg not in event.segments:
+                event.segments.append(seg)
             event.clip_dirty = True
             event.updated_at = utcnow()
             changed += 1

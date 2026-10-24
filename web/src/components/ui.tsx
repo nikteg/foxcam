@@ -123,6 +123,7 @@ const STATE_COLORS: Record<string, BadgeProps["color"]> = {
   pending: "informative",
   new: "informative",
   private: "important",
+  target: "brand",
 };
 
 /** Translated name of a job / segment state ("done", "pending", ...). */

@@ -24,6 +24,7 @@ from sqlalchemy import func, select
 
 from .db import session_scope
 from .models import WorkerToken, utcnow
+from .profiles import normalize_tags
 
 TOKEN_PREFIX = "msw_"
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$")
@@ -40,6 +41,7 @@ class Identity:
     """Who is calling the worker API."""
 
     name: str | None  # None = shared config token or open mode (client picks worker_id)
+    tags: tuple[str, ...] = ()  # capability tags granted to the token
 
 
 def _hash(token: str) -> str:
@@ -52,7 +54,8 @@ def any_active() -> bool:
                              .where(WorkerToken.revoked_at.is_(None))))
 
 
-def create(name: str, detector: str | None = None) -> tuple[dict[str, Any], str]:
+def create(name: str, detector: str | None = None,
+           tags: list[str] | None = None) -> tuple[dict[str, Any], str]:
     """Returns (token info, plaintext token). The plaintext is never stored."""
     name = name.strip()
     if not NAME_RE.match(name):
@@ -65,14 +68,15 @@ def create(name: str, detector: str | None = None) -> tuple[dict[str, Any], str]
         if existing is not None:  # re-use the name of a revoked worker
             s.delete(existing)
             s.flush()
-        row = WorkerToken(name=name, token_hash=_hash(token), detector=detector)
+        row = WorkerToken(name=name, token_hash=_hash(token), detector=detector,
+                          tags=normalize_tags(tags) or None)
         s.add(row)
         s.flush()
         return _info(row), token
 
 
-def verify(token: str) -> str | None:
-    """Worker name for a valid, unrevoked token."""
+def verify(token: str) -> Identity | None:
+    """Identity for a valid, unrevoked token."""
     if not token.startswith(TOKEN_PREFIX):
         return None
     now = utcnow()
@@ -83,7 +87,16 @@ def verify(token: str) -> str | None:
             return None
         if row.last_used_at is None or now - row.last_used_at > LAST_USED_RESOLUTION:
             row.last_used_at = now
-        return row.name
+        return Identity(name=row.name, tags=tuple(row.tags or ()))
+
+
+def set_tags(token_id: int, tags: list[str]) -> dict[str, Any]:
+    with session_scope() as s:
+        row = s.get(WorkerToken, token_id)
+        if row is None or row.revoked_at is not None:
+            raise TokenError("unknown worker token")
+        row.tags = normalize_tags(tags) or None
+        return _info(row)
 
 
 def revoke(token_id: int) -> None:
@@ -107,5 +120,5 @@ def _iso(dt: datetime | None) -> str | None:
 
 
 def _info(row: WorkerToken) -> dict[str, Any]:
-    return {"id": row.id, "name": row.name, "detector": row.detector,
+    return {"id": row.id, "name": row.name, "detector": row.detector, "tags": row.tags or [],
             "created_at": _iso(row.created_at), "last_used_at": _iso(row.last_used_at)}

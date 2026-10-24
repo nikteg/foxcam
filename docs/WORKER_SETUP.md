@@ -166,6 +166,16 @@ media-worker doctor --server http://192.168.1.10:8000 --token msw_...
 Run as a service with `worker/deploy/media-worker.service` (instructions in the file).
 AMD GPUs: `--torch-backend rocm7.1` (match your ROCm install), untested.
 
+## Tags: which jobs a worker gets
+
+Each recording is analysed once per [detection profile](ARCHITECTURE.md#detection-profiles)
+of its camera, and a profile may require worker tags. A worker's tags are its detector
+(`speciesnet`, `ultralytics`, plus `open-vocabulary` for YOLO-World without `--classes`,
+`dummy`), anything passed with `--tags gpu,winhack` (or `MEDIA_WORKER_TAGS`), and the tags
+set on its access token in the web UI (**Worker queue → Tags**). To pin a profile to this
+machine, give the machine a unique tag and require it in the profile. The Profiles page and
+the queue tab show profiles that no online worker can run.
+
 ## Troubleshooting
 
 | Symptom | Fix |
@@ -175,5 +185,6 @@ AMD GPUs: `--torch-backend rocm7.1` (match your ROCm install), untested.
 | `CUDA error: no kernel image is available` | GPU too old for the PyTorch build; try `--torch-backend cu126` (or older). |
 | `server … Connection refused` from WSL to `localhost` | Use the server's LAN address or [mirrored networking](#wsl-networking). |
 | `server … worker token required` / `invalid worker token` | Create a token in **Worker queue → Add worker**; tokens are shown once. |
+| Worker idles while jobs wait | Their profile requires tags the worker lacks; compare **Cameras → Detection profiles** with the worker's tags in the queue tab. |
 | Jobs start but are retried / `lease lost` | The worker was too slow or offline for longer than `queue.lease_seconds`; check the GPU is used, or raise the lease. |
 | SpeciesNet: every job takes ~25 s extra | Expected: the model loads per job (see [ROADMAP.md](ROADMAP.md)). |

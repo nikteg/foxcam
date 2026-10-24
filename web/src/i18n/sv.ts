@@ -120,7 +120,7 @@ export const sv: Record<MessageKey, string> = {
   // Rävhändelser
   "events.none": "Inga rävhändelser än.",
   "events.intro":
-    "Segment i följd med en {labels}-detektion (≥ {confidence}) slås ihop till ett klipp, med {before} s före och {after} s efter. Klippen tas från originalfilmen, utan maskering.",
+    "Observationer av {labels} (från detekteringsprofilerna) nära i tid slås ihop till ett klipp, med {before} s före och {after} s efter. Klippen tas från originalfilmen, utan maskering.",
   "events.playClip": "Spela upp klipp med {label}",
   "events.thumbAlt": "{label} på {camera}",
   "events.buildingClip": "Skapar klipp…",
@@ -364,4 +364,73 @@ export const sv: Record<MessageKey, string> = {
   "tapo.startOver": "Börja om",
   "tapo.signedInAs": "Inloggad som {email}",
   "tapo.signOut": "Logga ut",
+  "profiles.title": "Detekteringsprofiler",
+  "profiles.profile": "Profil",
+  "profiles.all": "Alla profiler",
+  "profiles.add": "Lägg till profil",
+  "profiles.intro":
+    "En profil anger vad som ska letas efter (t.ex. räv, eller bil och person) och vilka arbetare som kan göra det. Varje inspelning analyseras en gång per profil som kameran kör. Profiler från {file} är skrivskyddade.",
+  "profiles.none": "Inga detekteringsprofiler.",
+  "profiles.default": "Standard",
+  "profiles.defaultHint": "Körs på alla kameror som inte har ett eget profilval.",
+  "profiles.disabled": "Avstängd",
+  "profiles.targets": "Letar efter",
+  "profiles.aliases": "Etikettalias",
+  "profiles.minConfidence": "Min. säkerhet",
+  "profiles.requires": "Kräver taggar",
+  "profiles.anyWorker": "alla arbetare",
+  "profiles.fps": "Bildfrekvens",
+  "profiles.allFrames": "alla bilder",
+  "profiles.keepEvents": "Spara händelser",
+  "profiles.days": "{n} {n:dag|dagar}",
+  "profiles.forever": "för alltid",
+  "profiles.noCameras": "inga kameror",
+  "profiles.workers": "Arbetare online",
+  "profiles.noWorkers": "ingen",
+  "profiles.waiting": "Väntande jobb",
+  "profiles.stuck":
+    "Ingen arbetare online har de krävda taggarna, så jobben väntar. Starta en arbetare med taggarna (eller ta bort kravet).",
+  "profiles.editTitle": "Redigera {name}",
+  "profiles.name": "Namn",
+  "profiles.nameHint": "Visas i gränssnittet, t.ex. Vilt.",
+  "profiles.id": "Id",
+  "profiles.idHint": "Små bokstäver, siffror, '-' eller '_'. Kan inte ändras senare.",
+  "profiles.targetsHint":
+    "Etiketter som skapar händelser, kommaseparerade, t.ex. fox, badger. Arbetare med öppet ordförråd (YOLO-World) får dessa som prompt.",
+  "profiles.aliasesHint":
+    "En per rad: modellens etikett = din etikett, t.ex. red fox = fox. Får olika modeller att använda samma namn.",
+  "profiles.minConfidencePercent": "Minsta säkerhet (%)",
+  "profiles.requiresHint":
+    "Kommaseparerade. Bara arbetare med alla dessa taggar får profilens jobb (t.ex. speciesnet, eller en dators egen tagg för att låsa den). Tomt = alla arbetare.",
+  "profiles.requiresHintKnown":
+    "Kommaseparerade; bara arbetare med alla taggarna får jobben. Tomt = alla arbetare. Kända taggar: {tags}.",
+  "profiles.fpsHint":
+    "Analysera färre bilder per sekund för att spara GPU-tid (t.ex. 1 för bilar).",
+  "profiles.keepEventsDays": "Spara händelser (dagar)",
+  "profiles.keepEventsHint": "Tomt = den globala inställningen. 0 = för alltid.",
+  "profiles.defaultSwitch": "Kör på kameror utan eget profilval",
+  "profiles.enabled": "Aktiverad",
+  "profiles.removeTitle": "Ta bort {name}?",
+  "profiles.removeBody":
+    "Profilens väntande jobb avbryts. Detektioner och händelser som redan hittats sparas.",
+  "cameras.profilesIntro":
+    "{n} {n:profil|profiler} styr vad varje kameras inspelningar analyseras för.",
+  "cameras.manageProfiles": "Hantera detekteringsprofiler",
+  "cameras.noProfiles": "inga (analyseras inte)",
+  "cameras.detect": "Detektering",
+  "cameras.profilesTitle": "Detektering på {name}",
+  "cameras.profilesHelp":
+    "Varje inspelning skickas till en arbetare en gång per vald profil. Välj ingen för att bara spela in.",
+  "cameras.profilesFromUi": "Valt här.",
+  "cameras.profilesFromConfig":
+    "Kommer just nu från config.yaml; sparar du här gäller det i stället.",
+  "cameras.profilesFromDefault": "Just nu standardprofilerna; sparar du här gäller det i stället.",
+  "cameras.profilesReset": "Använd standard",
+  "queue.byProfile": "Per profil",
+  "queue.running": "Pågår",
+  "workers.tags": "Taggar",
+  "workers.tagsHint":
+    "Valfritt, kommaseparerat. Låter profiler som kräver taggarna använda arbetaren (t.ex. gpu, eller dess eget namn för att låsa profiler till den).",
+  "workers.editTags": "Taggar",
+  "workers.tagsTitle": "Taggar för {name}",
 };

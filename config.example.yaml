@@ -52,9 +52,32 @@ queue:
   max_attempts: 3
   retry_backoff_seconds: 60
 
+# What to look for. Without `profiles:` there is one built-in `default` profile made from
+# this section, run on every camera by any worker.
 detection:
   target_labels: [fox, red fox, vulpes vulpes]
   min_confidence: 0.5
+
+# Detection profiles (optional; can also be added in the web UI under Cameras). Each
+# recording is analysed once per profile its camera runs. A worker only gets a profile's
+# jobs if it has all `requires` tags (its detector name, `open-vocabulary` for YOLO-World,
+# plus `--tags` / tags on its access token). Open-vocabulary workers are prompted with the
+# profile's targets, so they can look for anything.
+# profiles:
+#   - id: wildlife
+#     name: Wildlife
+#     targets: [fox, badger]
+#     aliases: { red fox: fox, vulpes vulpes: fox, european badger: badger }
+#     min_confidence: 0.5
+#     requires: [speciesnet]
+#     default: true            # cameras without their own selection run it
+#   - id: vehicles
+#     targets: [car, person]
+#     requires: [open-vocabulary]
+#     fps: 1                   # fewer frames: cheaper
+#     events_days: 14          # overrides retention.events_days
+#
+# Per camera (or in the UI: Cameras → Detection):  profiles: [wildlife, vehicles]
 
 events:
   pre_roll_seconds: 10

@@ -23,6 +23,32 @@ export interface Camera {
   managed: "config" | "ui";
   enabled: boolean;
   segment_seconds_override: number | null;
+  /** Detection profiles running on this camera. */
+  profiles: string[];
+  /** ui = chosen in the web UI, config = config.yaml, default = profiles marked default. */
+  profiles_source: "ui" | "config" | "default";
+}
+
+/** What to look for, and which workers may do it (see docs/ARCHITECTURE.md). */
+export interface ProfileInput {
+  id: string;
+  name: string | null;
+  targets: string[];
+  aliases: Record<string, string>;
+  min_confidence: number;
+  requires: string[];
+  fps: number | null;
+  default: boolean;
+  events_days: number | null;
+  enabled: boolean;
+}
+
+export interface Profile extends ProfileInput {
+  managed: "config" | "ui";
+  display_name: string;
+  cameras: string[];
+  workers_online: string[];
+  waiting_jobs: number;
 }
 
 export type CameraSource =
@@ -64,6 +90,7 @@ export interface WorkerToken {
   id: number;
   name: string;
   detector: string | null;
+  tags: string[];
   created_at: string;
   last_used_at: string | null;
 }
@@ -82,6 +109,8 @@ export interface QueueStats {
   oldest_pending_age_s: number | null;
   done_last_hour: number;
   avg_processing_ms_last_hour: number | null;
+  /** Unfinished jobs per profile and state. */
+  by_profile: Record<string, Partial<Record<JobState, number>>>;
 }
 
 export interface Status {
@@ -122,6 +151,8 @@ export interface Detection {
   id: number;
   segment_id: number;
   camera_id: string;
+  profile_id: string | null;
+  event_id: number | null;
   ts: string;
   offset_ms: number;
   label: string;
@@ -137,6 +168,7 @@ export interface Detection {
 export interface FoxEvent {
   id: number;
   camera_id: string;
+  profile_id: string | null;
   label: string;
   first_ts: string;
   last_ts: string;
@@ -155,6 +187,7 @@ export interface FoxEvent {
 export interface Worker {
   id: string;
   info: Record<string, unknown>;
+  tags: string[];
   last_seen: string;
   online: boolean;
   current_job_id: number | null;
@@ -166,6 +199,7 @@ export interface Job {
   id: number;
   segment_id: number;
   camera_id: string;
+  profile_id: string | null;
   segment_start: string;
   state: JobState;
   attempts: number;
@@ -277,11 +311,12 @@ export const api = {
     label?: string;
     only_targets?: boolean;
     min_confidence?: number;
+    profile?: string;
     limit?: number;
   }) => request<Detection[]>("GET", withQuery("/api/detections", q)),
   feedback: (id: number, correct: boolean | null) =>
     request<{ status: string }>("POST", `/api/detections/${id}/feedback`, { correct }),
-  events: (q: { camera?: string; limit?: number }) =>
+  events: (q: { camera?: string; profile?: string; limit?: number }) =>
     request<FoxEvent[]>("GET", withQuery("/api/events", q)),
   queue: (q: { state?: string; limit?: number }) =>
     request<QueueView>("GET", withQuery("/api/queue", q)),
@@ -316,10 +351,32 @@ export const api = {
   testStorage: () => request<ProbeResult>("POST", "/api/storage/test"),
   workerAuth: () => request<WorkerAuth>("GET", "/api/workers/auth"),
   workerTokens: () => request<WorkerToken[]>("GET", "/api/workers/tokens"),
-  createWorkerToken: (name: string, detector: string) =>
-    request<WorkerToken & { token: string }>("POST", "/api/workers/tokens", { name, detector }),
+  createWorkerToken: (name: string, detector: string, tags: string[] = []) =>
+    request<WorkerToken & { token: string }>("POST", "/api/workers/tokens", {
+      name,
+      detector,
+      tags,
+    }),
   revokeWorkerToken: (id: number) =>
     request<{ status: string }>("DELETE", `/api/workers/tokens/${id}`),
+  profiles: () => request<Profile[]>("GET", "/api/profiles"),
+  createProfile: (body: ProfileInput) => request<{ id: string }>("POST", "/api/profiles", body),
+  updateProfile: (body: ProfileInput) =>
+    request<{ id: string }>("PUT", `/api/profiles/${encodeURIComponent(body.id)}`, body),
+  deleteProfile: (id: string) =>
+    request<{ status: string; cancelled_jobs: number }>(
+      "DELETE",
+      `/api/profiles/${encodeURIComponent(id)}`,
+    ),
+  setCameraProfiles: (cameraId: string, profiles: string[] | null) =>
+    request<{ profiles: string[] }>(
+      "PUT",
+      `/api/cameras/${encodeURIComponent(cameraId)}/profiles`,
+      { profiles },
+    ),
+  workerTags: () => request<string[]>("GET", "/api/worker-tags"),
+  setTokenTags: (id: number, tags: string[]) =>
+    request<WorkerToken>("PUT", `/api/workers/tokens/${id}/tags`, { tags }),
   requeue: (jobId: number) =>
     request<{ status: string }>("POST", `/api/queue/jobs/${jobId}/requeue`),
 };

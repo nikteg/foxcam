@@ -6,6 +6,8 @@ import {
   DialogContent,
   DialogSurface,
   DialogTitle,
+  Field,
+  Input,
   MessageBar,
   MessageBarBody,
   Subtitle2,
@@ -17,14 +19,15 @@ import {
   TableRow,
   Text,
 } from "@fluentui/react-components";
-import { Add20Regular, Delete16Regular } from "@fluentui/react-icons";
+import { Add20Regular, Delete16Regular, Tag16Regular } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api, type WorkerToken } from "../api";
 import { useI18n } from "../i18n";
 import { AddWorkerDialog } from "./AddWorkerDialog";
-import { Dot, Time } from "./ui";
+import { splitTags } from "../workerSetup";
+import { Dot, Tag, Time } from "./ui";
 
 /** Worker tokens: who may run jobs, and the button to set up a new worker machine. */
 export function WorkerAccess({ onlineIds }: { onlineIds: Set<string> }) {
@@ -33,6 +36,7 @@ export function WorkerAccess({ onlineIds }: { onlineIds: Set<string> }) {
   const tokens = useQuery({ queryKey: ["workers", "tokens"], queryFn: api.workerTokens });
   const [adding, setAdding] = useState(false);
   const [revoking, setRevoking] = useState<WorkerToken | null>(null);
+  const [tagging, setTagging] = useState<WorkerToken | null>(null);
 
   return (
     <>
@@ -61,6 +65,7 @@ export function WorkerAccess({ onlineIds }: { onlineIds: Set<string> }) {
             <TableRow>
               <TableHeaderCell>{t("workers.name")}</TableHeaderCell>
               <TableHeaderCell>{t("workers.detector")}</TableHeaderCell>
+              <TableHeaderCell>{t("workers.tags")}</TableHeaderCell>
               <TableHeaderCell>{t("workers.created")}</TableHeaderCell>
               <TableHeaderCell>{t("workers.lastUsed")}</TableHeaderCell>
               <TableHeaderCell aria-label={t("col.actions")} className="col-actions" />
@@ -78,6 +83,17 @@ export function WorkerAccess({ onlineIds }: { onlineIds: Set<string> }) {
                   </span>
                 </TableCell>
                 <TableCell data-label={t("workers.detector")}>{tok.detector ?? "–"}</TableCell>
+                <TableCell data-label={t("workers.tags")}>
+                  {tok.tags.length ? (
+                    <span className="row wrap">
+                      {tok.tags.map((tag) => (
+                        <Tag key={tag}>{tag}</Tag>
+                      ))}
+                    </span>
+                  ) : (
+                    "–"
+                  )}
+                </TableCell>
                 <TableCell data-label={t("workers.created")}>
                   <Time iso={tok.created_at} />
                 </TableCell>
@@ -85,9 +101,18 @@ export function WorkerAccess({ onlineIds }: { onlineIds: Set<string> }) {
                   {tok.last_used_at ? <Time iso={tok.last_used_at} relative /> : t("workers.never")}
                 </TableCell>
                 <TableCell className="full">
-                  <Button size="small" icon={<Delete16Regular />} onClick={() => setRevoking(tok)}>
-                    {t("workers.revoke")}
-                  </Button>
+                  <span className="row">
+                    <Button size="small" icon={<Tag16Regular />} onClick={() => setTagging(tok)}>
+                      {t("workers.editTags")}
+                    </Button>
+                    <Button
+                      size="small"
+                      icon={<Delete16Regular />}
+                      onClick={() => setRevoking(tok)}
+                    >
+                      {t("workers.revoke")}
+                    </Button>
+                  </span>
                 </TableCell>
               </TableRow>
             ))}
@@ -96,7 +121,54 @@ export function WorkerAccess({ onlineIds }: { onlineIds: Set<string> }) {
       )}
       <AddWorkerDialog open={adding} onClose={() => setAdding(false)} />
       {revoking && <RevokeDialog token={revoking} onClose={() => setRevoking(null)} />}
+      {tagging && <TagsDialog token={tagging} onClose={() => setTagging(null)} />}
     </>
+  );
+}
+
+function TagsDialog({ token, onClose }: { token: WorkerToken; onClose: () => void }) {
+  const { t } = useI18n();
+  const client = useQueryClient();
+  const [tags, setTags] = useState(token.tags.join(", "));
+  const save = useMutation({
+    mutationFn: () => api.setTokenTags(token.id, splitTags(tags)),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["workers"] });
+      void client.invalidateQueries({ queryKey: ["profiles"] });
+      onClose();
+    },
+  });
+  return (
+    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
+      <DialogSurface>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            save.mutate();
+          }}
+        >
+          <DialogBody>
+            <DialogTitle>{t("workers.tagsTitle", { name: token.name })}</DialogTitle>
+            <DialogContent className="form-stack">
+              <Field label={t("workers.tags")} hint={t("workers.tagsHint")}>
+                <Input value={tags} onChange={(_, d) => setTags(d.value)} />
+              </Field>
+              {save.error && (
+                <MessageBar intent="error">
+                  <MessageBarBody>{save.error.message}</MessageBarBody>
+                </MessageBar>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={onClose}>{t("common.cancel")}</Button>
+              <Button type="submit" appearance="primary" disabled={save.isPending}>
+                {t("common.save")}
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </form>
+      </DialogSurface>
+    </Dialog>
   );
 }
 

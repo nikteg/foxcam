@@ -5,6 +5,13 @@ export type Platform = "wsl" | "windows" | "linux" | "docker";
 
 export const PLATFORMS: Platform[] = ["wsl", "windows", "linux", "docker"];
 
+/** "gpu, Winhack" -> ["gpu", "winhack"] */
+export const splitTags = (text: string) =>
+  text
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+
 export interface SetupStep {
   text: MessageKey;
   code?: string;

@@ -2,8 +2,8 @@
 
 1. Tag light conditions (IR night mode => grayscale => ~0 saturation; plus sun elevation).
 2. Make a thumbnail.
-3. Private camera => stop here. Otherwise burn the current censor rectangles into a
-   low-fps derivative and enqueue a job pointing at it.
+3. Private camera (or no detection profile) => stop here. Otherwise burn the current
+   censor rectangles into a low-fps derivative and enqueue one job per detection profile.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ from .. import ffmpeg
 from ..config import Settings
 from ..db import session_scope
 from ..models import CameraState, Job, MaskVersion, Segment, SegmentStatus
+from ..profiles import camera_profiles
 
 log = logging.getLogger(__name__)
 
@@ -73,15 +74,20 @@ def preprocess_segment(settings: Settings, segment_id: int) -> None:
         updates["thumb_path"] = str(thumb.relative_to(settings.data_dir))
 
         private, mask = current_mask(camera_id)
+        profiles = [] if private else camera_profiles(settings, camera_id)
         if private:
             updates["status"] = SegmentStatus.PRIVATE
+        elif not profiles:
+            updates["status"] = SegmentStatus.DONE  # nothing to look for on this camera
         else:
+            # One derivative for all profiles, at the highest frame rate any of them needs.
+            fps = max(min(p.fps or settings.processing.sample_fps,
+                          settings.processing.sample_fps) for p in profiles)
             derived = settings.derived_dir / rel
-            ffmpeg.make_masked_derivative(src, derived, mask.rects if mask else [],
-                                          settings.processing.sample_fps,
+            ffmpeg.make_masked_derivative(src, derived, mask.rects if mask else [], fps,
                                           settings.processing.max_width)
             updates.update(derived_path=str(derived.relative_to(settings.data_dir)),
-                           mask_version_id=mask.id if mask else None,
+                           derived_fps=fps, mask_version_id=mask.id if mask else None,
                            status=SegmentStatus.QUEUED)
     except Exception as e:
         log.exception("preprocessing segment %s failed", rel)
@@ -94,4 +100,5 @@ def preprocess_segment(settings: Settings, segment_id: int) -> None:
         for k, v in updates.items():
             setattr(seg, k, v)
         if seg.status == SegmentStatus.QUEUED:
-            s.add(Job(segment_id=seg.id))
+            for p in profiles:
+                s.add(Job(segment_id=seg.id, profile_id=p.id))

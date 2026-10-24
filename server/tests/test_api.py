@@ -152,7 +152,7 @@ def test_worker_tokens_lock_the_api_and_fix_identity(settings, client):
 
 
 def test_whoami_checks_credentials_without_side_effects(client):
-    assert client.get("/api/worker/whoami").json() == {"authenticated": True, "token_name": None}
+    assert client.get("/api/worker/whoami").json()["token_name"] is None
     token = client.post("/api/workers/tokens", json={"name": "wsl-pc"}).json()["token"]
     assert client.get("/api/worker/whoami").status_code == 401
     assert client.get("/api/worker/whoami",
