@@ -5,12 +5,6 @@ import {
   Card,
   CardFooter,
   CardHeader,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
   Checkbox,
   Field,
   Input,
@@ -56,6 +50,14 @@ import {
   useSubPage,
 } from "../components/ui";
 import { useI18n } from "../i18n";
+import {
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+} from "../components/Drawer";
 
 function sourceDetail(source: CameraSource, synthetic: string): string {
   switch (source.type) {

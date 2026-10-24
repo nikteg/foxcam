@@ -2,12 +2,6 @@ import {
   Body1,
   Button,
   Caption1,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
   Field,
   Input,
   MessageBar,
@@ -31,6 +25,14 @@ import {
   type DetectorChoice,
   type Platform,
 } from "../workerSetup";
+import {
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+} from "./Drawer";
 
 const DETECTOR_LABELS: Record<DetectorChoice, MessageKey> = {
   speciesnet: "workers.detector.speciesnet",

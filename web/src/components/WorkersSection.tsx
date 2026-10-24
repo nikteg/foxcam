@@ -1,11 +1,5 @@
 import {
   Button,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
   Field,
   MessageBar,
   MessageBarBody,
@@ -26,6 +20,14 @@ import { api, type Worker, type WorkerToken } from "../api";
 import { useI18n } from "../i18n";
 import { TagsPicker } from "./LabelPicker";
 import { Dot, Empty, Tag, Time } from "./ui";
+import {
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+} from "./Drawer";
 
 interface Row {
   id: string;

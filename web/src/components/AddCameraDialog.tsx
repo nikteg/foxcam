@@ -2,11 +2,6 @@ import {
   Button,
   Caption1,
   CompoundButton,
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
   Field,
   Input,
   MessageBar,
@@ -32,6 +27,7 @@ import { useIsAdmin } from "../auth";
 import { useI18n, type MessageKey } from "../i18n";
 import { TapoCameraList, TapoNotInstalled, TapoSignIn } from "./TapoAccount";
 import { ActionRow } from "./ui";
+import { Dialog, DialogBody, DialogContent, DialogSurface, DialogTitle } from "./Drawer";
 
 type Kind = "tapo" | "rtsp" | "file" | "test";
 

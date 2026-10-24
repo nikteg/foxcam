@@ -5,12 +5,6 @@ import {
   Card,
   CardFooter,
   CardHeader,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
   Field,
   Input,
   MessageBar,
@@ -48,6 +42,14 @@ import { profileWarnings, type ProfileWarning } from "../labelWarnings";
 import { Empty, QueryState, Tag } from "../components/ui";
 import { percent } from "../format";
 import { useI18n } from "../i18n";
+import {
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+} from "../components/Drawer";
 
 type AliasRow = { from: string; to: string };
 

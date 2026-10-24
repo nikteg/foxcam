@@ -2,8 +2,6 @@ import {
   Body1,
   Button,
   Caption1,
-  DialogActions,
-  DialogContent,
   Field,
   Input,
   MessageBar,
@@ -25,6 +23,7 @@ import { ApiError, api, type Camera, type CameraRole } from "../api";
 import { useMe } from "../auth";
 import { useI18n } from "../i18n";
 import { Time } from "./ui";
+import { DialogActions, DialogContent } from "./Drawer";
 
 export const ROLES: CameraRole[] = ["viewer", "editor", "owner"];
 

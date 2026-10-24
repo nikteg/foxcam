@@ -5,12 +5,6 @@ import {
   CardFooter,
   CardHeader,
   Checkbox,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
   Field,
   Input,
   MessageBar,
@@ -32,6 +26,14 @@ import { useMe } from "../auth";
 import { useI18n } from "../i18n";
 import { InviteLink, useRoleName } from "./ShareDialog";
 import { Empty, QueryState, Tag, Time } from "./ui";
+import {
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+} from "./Drawer";
 
 /** Settings → Users (admins): accounts and invite links. */
 export function UsersSection() {

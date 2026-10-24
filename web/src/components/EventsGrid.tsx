@@ -5,12 +5,6 @@ import {
   CardFooter,
   CardHeader,
   CardPreview,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
   Text,
 } from "@fluentui/react-components";
 import { ArrowDownload20Regular, Dismiss24Regular, Play20Filled } from "@fluentui/react-icons";
@@ -27,6 +21,14 @@ import {
   useSeveralDetectors,
 } from "./ProfileSelect";
 import { Empty, Light, Tag, Time } from "./ui";
+import {
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+} from "./Drawer";
 
 export function EventsGrid({ events }: { events: DetectionEvent[] }) {
   const { t } = useI18n();
@@ -132,7 +134,7 @@ export function EventsGrid({ events }: { events: DetectionEvent[] }) {
         ))}
       </div>
 
-      <Dialog open={!!playing} onOpenChange={(_, d) => !d.open && setPlaying(null)}>
+      <Dialog size="large" open={!!playing} onOpenChange={(_, d) => !d.open && setPlaying(null)}>
         <DialogSurface className="clip-dialog">
           {playing && (
             <DialogBody>

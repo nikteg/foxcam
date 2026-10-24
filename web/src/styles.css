@@ -493,27 +493,11 @@ table.table {
   text-overflow: ellipsis;
 }
 
-/* Master-detail: list on the left, inline detail drawer on the right (desktop). */
-.master-detail {
-  display: flex;
-  align-items: flex-start;
-  gap: 0;
-}
+/* A list with a detail drawer (components/DetailPanel.tsx) over its right side. */
 .master {
-  flex: 1;
   min-width: 0;
   /* Columns keep a readable minimum width; scroll sideways instead of truncating. */
   overflow-x: auto;
-}
-.fui-InlineDrawer.detail-inline {
-  /* Scale with the window so the list keeps room for its columns. */
-  --fui-Drawer--size: clamp(360px, 34vw, 560px);
-  position: sticky;
-  top: 72px;
-  max-height: calc(100vh - 88px);
-  margin-left: var(--spacingHorizontalL);
-  background: var(--colorNeutralBackground1);
-  border-radius: var(--borderRadiusLarge);
 }
 .detail-stack {
   display: flex;
@@ -610,10 +594,6 @@ table.table {
 .clip-dialog video {
   max-height: 70vh;
   object-fit: contain;
-}
-.fui-DialogSurface.clip-dialog {
-  max-width: min(1100px, 95vw);
-  width: 100%;
 }
 
 /* Live */
@@ -998,10 +978,6 @@ table.table {
 .form-stack > * {
   flex-shrink: 0;
 }
-.fui-DialogSurface.add-camera-dialog {
-  max-width: min(720px, 95vw);
-  width: 100%;
-}
 .kind-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
@@ -1193,11 +1169,6 @@ Fluent's text styles would otherwise reset the margins. */
 }
 
 /* Sharing */
-/* Camera settings (General, Detection, Recording, Sharing): one width for every tab. */
-.fui-DialogSurface.camera-settings-dialog {
-  max-width: min(680px, 95vw);
-  width: 100%;
-}
 .share-add {
   display: flex;
   flex-wrap: wrap;
@@ -1283,4 +1254,29 @@ Fluent's text styles would otherwise reset the margins. */
 }
 .extra-value {
   word-break: break-word;
+}
+
+/* Drawers (components/Drawer.tsx): header, scrolling content, buttons at the bottom. */
+.drawer-surface,
+.drawer-surface > form,
+.drawer-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  align-self: stretch;
+}
+.drawer-column > .fui-TabList {
+  padding: 0 var(--spacingHorizontalL);
+  flex-shrink: 0;
+}
+.drawer-content {
+  padding-bottom: var(--spacingVerticalL);
+}
+.fui-DrawerFooter.drawer-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--spacingHorizontalS);
+  border-top: 1px solid var(--colorNeutralStroke2);
 }

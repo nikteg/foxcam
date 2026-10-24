@@ -2,12 +2,6 @@ import {
   Button,
   Caption1,
   Checkbox,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
   Input,
   Link,
   MessageBar,
@@ -47,6 +41,14 @@ import { useI18n, type I18n } from "../i18n";
 import { hasRole, useCameraRole } from "../auth";
 import { useFilters } from "../useFilters";
 import { HourlyFiles } from "./HourlyFiles";
+import {
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+} from "../components/Drawer";
 
 const SEGMENT_STATES = ["new", "queued", "done", "private", "failed"] as const;
 
