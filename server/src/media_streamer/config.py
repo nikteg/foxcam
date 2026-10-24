@@ -136,6 +136,37 @@ class RetentionConfig(BaseModel):
     delete_derived_after_done: bool = True
 
 
+class S3Config(BaseModel):
+    """Any S3-compatible object store: AWS S3, Cloudflare R2, Backblaze B2, MinIO, Hetzner…"""
+
+    enabled: bool = False
+    bucket: str = ""
+    # None = AWS. Otherwise e.g. http://minio:9000 or https://<account>.r2.cloudflarestorage.com
+    endpoint_url: str | None = None
+    region: str | None = None
+    access_key_id: str | None = None
+    secret_access_key: str | None = None
+    # Key prefix inside the bucket (lets several installations share a bucket).
+    prefix: str = "media-streamer/"
+    # "path" is needed by MinIO and most self-hosted stores; "auto" lets boto3 decide.
+    addressing_style: Literal["auto", "path", "virtual"] = "auto"
+    # What to upload.
+    clips: bool = True  # fox event clips + thumbnails
+    recordings: bool = False  # every finished segment (archive)
+    # Remove the local clip/thumbnail once uploaded (served from S3 afterwards).
+    # Recordings always stay local until retention (`segments_days`) removes them.
+    delete_local_clips: bool = False
+    # Delete archived recordings from the bucket after this many days. 0 = keep (use a
+    # bucket lifecycle rule instead).
+    recordings_days: float = 0
+    # Lifetime of the signed download links the UI redirects to.
+    presign_seconds: int = 3600
+
+
+class StorageConfig(BaseModel):
+    s3: S3Config = S3Config()
+
+
 class LocationConfig(BaseModel):
     latitude: float | None = None
     longitude: float | None = None
@@ -162,6 +193,7 @@ class Settings(BaseModel):
     events: EventsConfig = EventsConfig()
     retention: RetentionConfig = RetentionConfig()
     location: LocationConfig = LocationConfig()
+    storage: StorageConfig = StorageConfig()
 
     def model_post_init(self, _ctx: object) -> None:
         self.data_dir = self.data_dir.resolve()
@@ -174,6 +206,12 @@ class Settings(BaseModel):
             self.tapo_session_file = self.data_dir / "tapo-session.json"
         if not self.worker_token:
             self.worker_token = None
+        s3 = self.storage.s3
+        s3.endpoint_url = s3.endpoint_url or None
+        s3.access_key_id = s3.access_key_id or None
+        s3.secret_access_key = s3.secret_access_key or None
+        if s3.enabled and not s3.bucket:
+            raise ValueError("storage.s3.bucket is required when storage.s3.enabled is true")
         if not self.mediamtx.record_dir:
             self.mediamtx.record_dir = str(self.recordings_dir)
         self.samples_dir = self.samples_dir.resolve()

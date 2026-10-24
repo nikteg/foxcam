@@ -238,6 +238,28 @@ export const sv: Record<MessageKey, string> = {
   "settings.languageHint": "Sparas i den här webbläsaren.",
   "settings.manageCameras": "Hantera kameror och integrationer",
   "settings.configuration": "Konfiguration",
+  "settings.storage": "Lagring",
+
+  "storage.s3": "S3-kompatibel objektlagring",
+  "storage.enabled": "Aktiverad",
+  "storage.disabled": "Inte konfigurerad",
+  "storage.disabledHint":
+    "Klipp sparas bara på den här servern. Fyll i avsnittet {section} i {file} och starta om för att spara en kopia i AWS S3, Cloudflare R2, Backblaze B2, MinIO eller liknande.",
+  "storage.noBoto3":
+    "S3-biblioteket är inte installerat. Kör {cmd} (Docker-avbildningen har det redan).",
+  "storage.bucket": "Bucket",
+  "storage.endpoint": "Endpoint",
+  "storage.clips": "Rävklipp",
+  "storage.recordings": "Inspelningar",
+  "storage.progress": "{done} uppladdade, {pending} väntar",
+  "storage.off": "Laddas inte upp",
+  "storage.deleteLocal": "lokal kopia tas bort efter uppladdning",
+  "storage.keepDays": "sparas {n} {n:dag|dagar} i bucketen",
+  "storage.lastError": "Senaste uppladdningen misslyckades",
+  "storage.test": "Testa anslutningen",
+  "storage.testing": "Testar…",
+  "storage.testOk": "Anslutningen fungerar",
+  "storage.testFailed": "Anslutningen misslyckades",
   "settings.configIntro":
     "Skrivskyddad vy av {file}. Ändra i filen och starta om för att ändra. Hemligheter visas inte.",
 

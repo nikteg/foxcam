@@ -16,12 +16,14 @@ dependencies = [
 [project.optional-dependencies]
 # Experimental: stream Tapo cameras through the TP-Link cloud relay (unofficial, reverse engineered).
 tapo-cloud = ["ontapo>=0.1.0"]
+# Upload clips/recordings to S3-compatible object storage (AWS, R2, B2, MinIO…).
+s3 = ["boto3>=1.35"]
 
 [project.scripts]
 media-streamer = "media_streamer.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pytest>=8", "ruff>=0.6", "moto[s3]>=5", "boto3>=1.35"]
 
 [build-system]
 requires = ["hatchling"]

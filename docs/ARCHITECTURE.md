@@ -44,6 +44,7 @@
    `settle_seconds` (and once the post-roll footage exists) a clip is cut from the **original**
    recordings with pre/post roll, plus a thumbnail with the box drawn. Event segments are pinned.
 5. **Retention** (every 10 min): see below.
+6. **Upload** (every 30 s, only with `storage.s3.enabled`): see [Object storage](#object-storage-s3).
 
 ## Data model (SQLite)
 
@@ -73,6 +74,26 @@ Runs every 10 minutes (`pipeline/retention.py`):
 
 Deleted segments keep their database row (`deleted_at`), so detections stay browsable.
 
+## Object storage (S3)
+
+Optional copy in any S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2, MinIO, Garage,
+SeaweedFS, Hetzner, Wasabi…), configured in `storage.s3` (`pipeline/uploader.py`, `storage.py`):
+
+- **Clips** (default on): once an event clip is built it is uploaded with its thumbnail as
+  `<prefix>clips/…`. If the event grows and the clip is rebuilt, it is uploaded again.
+  `delete_local_clips: true` frees local disk after the upload.
+- **Recordings** (`recordings: true`): every finished segment is archived as
+  `<prefix>recordings/<camera>/<file>.mp4`. Local retention still applies; deleted segments
+  stay downloadable from the bucket. `recordings_days` removes archived recordings from the
+  bucket again (or use a bucket lifecycle rule).
+- **Serving**: the API serves the local file while it exists, otherwise answers with a `307`
+  redirect to a pre-signed URL valid `presign_seconds`. The bucket can (and should) stay private.
+- **Retention**: expired events delete their remote clip and thumbnail too.
+- Upload errors are retried every round and shown under Settings → Storage, which also has a
+  *Test connection* button (write, read and delete a small object).
+- The remote keys are stored in `segment.remote_key`, `event.clip_remote_key` and
+  `event.thumb_remote_key` (added to existing databases automatically at startup).
+
 ## Privacy model
 
 - Workers only receive the censored, downsampled derivative. Masks are burned into pixels on the
@@ -91,7 +112,8 @@ server/src/media_streamer/
   camera_store.py    cameras added from the UI
   mediamtx.py        MediaMTX API client (path sync, live status)
   ffmpeg.py          probe, censored derivative, light stats, thumbnails, clips
-  pipeline/          scanner, preprocess, queue, events, retention, runner
+  pipeline/          scanner, preprocess, queue, events, retention, uploader, runner
+  storage.py         S3-compatible object storage client (boto3)
   ingest/            publishers for tapo_cloud / file / test sources
   tapo_account.py    Tapo cloud sign-in (MFA) and device discovery for the UI
   web/               FastAPI app, worker API, public API, camera API

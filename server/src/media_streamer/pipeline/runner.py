@@ -7,7 +7,7 @@ import logging
 from collections.abc import Callable
 
 from ..config import Settings
-from . import events, preprocess, queue, retention, scanner
+from . import events, preprocess, queue, retention, scanner, uploader
 
 log = logging.getLogger(__name__)
 
@@ -56,4 +56,5 @@ def start_background(settings: Settings) -> list[asyncio.Task[None]]:
         asyncio.create_task(_loop("reaper", 15, lambda: queue.reap(settings))),
         asyncio.create_task(_loop("events", 10, lambda: _events_tick(settings))),
         asyncio.create_task(_loop("retention", 600, lambda: retention.run_retention(settings))),
+        asyncio.create_task(_loop("uploader", 30, lambda: uploader.upload_pending(settings))),
     ]

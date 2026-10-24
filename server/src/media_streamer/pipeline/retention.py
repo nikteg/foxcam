@@ -19,6 +19,7 @@ from sqlalchemy import func, select
 from ..config import Settings
 from ..db import session_scope
 from ..models import Event, Job, JobState, Segment, SegmentStatus, event_segments, utcnow
+from ..storage import StorageError, get_storage
 
 log = logging.getLogger(__name__)
 
@@ -40,10 +41,14 @@ def _expire_events(settings: Settings) -> int:
     cutoff = utcnow() - timedelta(days=days)
     with session_scope() as s:
         events = s.scalars(select(Event).where(Event.last_ts < cutoff)).all()
+        store = get_storage(settings)
         for ev in events:
             for rel in (ev.clip_path, ev.thumb_path):
                 if rel:
                     (settings.data_dir / rel).unlink(missing_ok=True)
+            for key in (ev.clip_remote_key, ev.thumb_remote_key):
+                if key and store:
+                    _delete_remote(store, key)
             seg_ids = [g.id for g in ev.segments]
             s.delete(ev)
             s.flush()
@@ -102,11 +107,36 @@ def _enforce_disk_cap(settings: Settings) -> int:
     return deleted
 
 
+def _delete_remote(store, key: str) -> None:
+    try:
+        store.delete(key)
+    except StorageError as e:
+        log.warning("%s", e)
+
+
+def _expire_remote_recordings(settings: Settings) -> int:
+    """Archived recordings in S3 older than storage.s3.recordings_days (0 = keep)."""
+    store = get_storage(settings)
+    days = settings.storage.s3.recordings_days
+    if store is None or not days:
+        return 0
+    cutoff = utcnow() - timedelta(days=days)
+    with session_scope() as s:
+        segs = s.scalars(select(Segment).where(Segment.remote_key.is_not(None),
+                                               Segment.pinned.is_(False),
+                                               Segment.start_at < cutoff)).all()
+        for seg in segs:
+            _delete_remote(store, seg.remote_key)
+            seg.remote_key = None
+        return len(segs)
+
+
 def run_retention(settings: Settings) -> dict[str, int]:
     result = {
         "events": _expire_events(settings),
         "segments_age": _expire_by_age(settings),
         "segments_disk": _enforce_disk_cap(settings),
+        "remote_recordings": _expire_remote_recordings(settings),
     }
     if any(result.values()):
         log.info("retention: %s", result)

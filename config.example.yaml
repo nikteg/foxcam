@@ -69,6 +69,27 @@ retention:
   max_disk_gb: null         # e.g. 200 - oldest unpinned footage deleted first
   delete_derived_after_done: true
 
+storage:
+  # Optional copy of clips (and recordings) in S3-compatible object storage: AWS S3,
+  # Cloudflare R2, Backblaze B2, MinIO, Hetzner, Wasabi… Needs the `s3` extra (included
+  # in the Docker image). The UI serves files locally while they exist and otherwise
+  # redirects to a short-lived signed URL, so the bucket can stay private.
+  s3:
+    enabled: false
+    bucket: my-fox-clips
+    endpoint_url: null        # null = AWS; e.g. https://<account>.r2.cloudflarestorage.com
+    region: null              # e.g. eu-north-1 (R2: auto)
+    # Leave null to use the standard AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY env vars.
+    access_key_id: null
+    secret_access_key: null
+    prefix: media-streamer/
+    addressing_style: auto    # path for MinIO and most self-hosted stores
+    clips: true               # upload fox event clips + thumbnails
+    recordings: false         # also archive every finished segment
+    delete_local_clips: false # free local disk once a clip is uploaded
+    recordings_days: 0        # delete archived recordings from the bucket after N days; 0 = never
+    presign_seconds: 3600
+
 location:
   # Used for sun elevation (day/night fallback) and as a hint to workers (SpeciesNet geofence).
   latitude: null

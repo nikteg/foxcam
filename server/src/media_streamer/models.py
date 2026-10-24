@@ -114,6 +114,8 @@ class Segment(Base):
     has_target: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     max_confidence: Mapped[float | None] = mapped_column(Float)
     pinned: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Object key when archived to S3 (storage.s3.recordings).
+    remote_key: Mapped[str | None] = mapped_column(String)
     # Files removed by retention; the row is kept so detections stay browsable.
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
@@ -222,6 +224,9 @@ class Event(Base):
     clip_start: Mapped[datetime | None] = mapped_column(DateTime)
     clip_duration_s: Mapped[float | None] = mapped_column(Float)
     thumb_path: Mapped[str | None] = mapped_column(String)
+    # Object keys once uploaded to S3 (reset when the clip is rebuilt).
+    clip_remote_key: Mapped[str | None] = mapped_column(String)
+    thumb_remote_key: Mapped[str | None] = mapped_column(String)
     clip_dirty: Mapped[bool] = mapped_column(Boolean, default=True)
     clip_error: Mapped[str | None] = mapped_column(String)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

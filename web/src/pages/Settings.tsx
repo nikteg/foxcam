@@ -12,6 +12,7 @@ import { Camera20Regular } from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../api";
+import { StorageCard } from "../components/StorageCard";
 import { PageHeader, QueryState, useRouterHref } from "../components/ui";
 import { LANGUAGE_NAMES, useI18n, type Lang } from "../i18n";
 
@@ -50,6 +51,11 @@ export function Settings() {
       <Button as="a" icon={<Camera20Regular />} {...routerHref("/cameras")}>
         {t("settings.manageCameras")}
       </Button>
+
+      <Subtitle2 as="h2" className="section">
+        {t("settings.storage")}
+      </Subtitle2>
+      <StorageCard />
 
       <Subtitle2 as="h2" className="section">
         {t("settings.configuration")}

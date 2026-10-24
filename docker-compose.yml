@@ -37,6 +37,9 @@ services:
       MEDIAMTX_WEBRTC_PUBLIC_URL: ${PUBLIC_HOST_URL:-http://localhost}:${WEBRTC_PORT:-8889}
       MEDIAMTX_HLS_PUBLIC_URL: ${PUBLIC_HOST_URL:-http://localhost}:${HLS_PORT:-8888}
       MEDIA_WORKER_TOKEN: ${MEDIA_WORKER_TOKEN:-}
+      # S3 credentials, if not in config.yaml (storage.s3).
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
     ports:
       - "${HTTP_PORT:-8000}:8000"
 

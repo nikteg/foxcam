@@ -113,8 +113,10 @@ def segment_dict(g: Segment) -> dict[str, Any]:
         "sun_elevation": g.sun_elevation, "has_target": g.has_target,
         "max_confidence": g.max_confidence, "pinned": g.pinned,
         "deleted": g.deleted_at is not None, "mask_version_id": g.mask_version_id,
+        "remote": g.remote_key is not None,
         "thumb_url": f"/api/segments/{g.id}/thumb" if g.thumb_path else None,
-        "download_url": None if g.deleted_at else f"/api/segments/{g.id}/download",
+        "download_url": None if g.deleted_at and not g.remote_key
+        else f"/api/segments/{g.id}/download",
     }
 
 
@@ -179,8 +181,10 @@ def events(camera_id: str | None = None, limit: int = 100) -> list[dict[str, Any
             "id": e.id, "camera_id": e.camera_id, "label": e.label, "first_ts": iso(e.first_ts),
             "last_ts": iso(e.last_ts), "max_confidence": round(e.max_confidence, 3),
             "detection_count": e.detection_count, "is_night": e.is_night,
-            "clip_url": f"/api/events/{e.id}/clip" if e.clip_path else None,
-            "thumb_url": f"/api/events/{e.id}/thumb" if e.thumb_path else None,
+            "clip_url": f"/api/events/{e.id}/clip" if e.clip_path or e.clip_remote_key else None,
+            "thumb_url": f"/api/events/{e.id}/thumb" if e.thumb_path or e.thumb_remote_key
+            else None,
+            "remote": e.clip_remote_key is not None,
             "clip_duration_s": e.clip_duration_s, "building": e.clip_dirty,
             "clip_error": e.clip_error,
         } for e in s.scalars(q)]
@@ -241,6 +245,9 @@ def public_settings(settings: Settings) -> dict[str, Any]:
     """Config as shown in the UI, with secrets removed."""
     cfg = settings.model_dump(mode="json")
     cfg["worker_token"] = "***" if settings.worker_token else None
+    s3 = cfg["storage"]["s3"]
+    for secret in ("access_key_id", "secret_access_key"):
+        s3[secret] = "***" if s3[secret] else None
     for cam in cfg["cameras"]:
         if "url" in cam["source"]:
             cam["source"]["url"] = _redact_url(cam["source"]["url"])

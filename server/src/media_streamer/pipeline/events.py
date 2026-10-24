@@ -141,5 +141,8 @@ def _build_clip(settings: Settings, event_id: int) -> bool:
         ev.clip_duration_s = duration
         ev.clip_dirty = False
         ev.clip_error = None
+        # The clip changed: upload it again (same key, overwritten).
+        ev.clip_remote_key = None
+        ev.thumb_remote_key = None
         log.info("event %s: clip %s (%.0fs)", ev.id, clip_rel, duration)
     return True

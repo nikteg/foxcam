@@ -112,6 +112,8 @@ export interface Segment {
   pinned: boolean;
   deleted: boolean;
   mask_version_id: number | null;
+  /** Archived in S3 storage. */
+  remote: boolean;
   thumb_url: string | null;
   download_url: string | null;
 }
@@ -144,6 +146,8 @@ export interface FoxEvent {
   clip_url: string | null;
   thumb_url: string | null;
   clip_duration_s: number | null;
+  /** Clip uploaded to S3 storage. */
+  remote: boolean;
   building: boolean;
   clip_error: string | null;
 }
@@ -197,6 +201,23 @@ export type Settings = Record<string, unknown> & {
   detection: { target_labels: string[]; min_confidence: number };
   events: { pre_roll_seconds: number; post_roll_seconds: number };
 };
+
+export interface StorageStatus {
+  enabled: boolean;
+  boto3: boolean;
+  bucket: string;
+  endpoint_url: string | null;
+  prefix: string;
+  clips: boolean;
+  recordings: boolean;
+  delete_local_clips: boolean;
+  recordings_days: number;
+  clips_uploaded?: number;
+  clips_pending?: number;
+  recordings_uploaded?: number;
+  recordings_pending?: number;
+  last_error?: string | null;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -291,6 +312,8 @@ export const api = {
     request<TapoLoginResult>("POST", "/api/integrations/tapo/mfa", { login_id, code }),
   tapoDevices: () => request<TapoDevice[]>("GET", "/api/integrations/tapo/devices"),
   tapoLogout: () => request<{ status: string }>("POST", "/api/integrations/tapo/logout"),
+  storage: () => request<StorageStatus>("GET", "/api/storage"),
+  testStorage: () => request<ProbeResult>("POST", "/api/storage/test"),
   workerAuth: () => request<WorkerAuth>("GET", "/api/workers/auth"),
   workerTokens: () => request<WorkerToken[]>("GET", "/api/workers/tokens"),
   createWorkerToken: (name: string, detector: string) =>

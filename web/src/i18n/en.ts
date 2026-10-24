@@ -236,6 +236,28 @@ export const en = {
   "settings.languageHint": "Saved in this browser.",
   "settings.manageCameras": "Manage cameras and integrations",
   "settings.configuration": "Configuration",
+  "settings.storage": "Storage",
+
+  // Storage (S3)
+  "storage.s3": "S3-compatible object storage",
+  "storage.enabled": "Enabled",
+  "storage.disabled": "Not configured",
+  "storage.disabledHint":
+    "Clips are only stored on this server. To keep a copy in AWS S3, Cloudflare R2, Backblaze B2, MinIO or similar, fill in the {section} section of {file} and restart.",
+  "storage.noBoto3": "The S3 library is not installed. Run {cmd} (the Docker image includes it).",
+  "storage.bucket": "Bucket",
+  "storage.endpoint": "Endpoint",
+  "storage.clips": "Fox clips",
+  "storage.recordings": "Recordings",
+  "storage.progress": "{done} uploaded, {pending} waiting",
+  "storage.off": "Not uploaded",
+  "storage.deleteLocal": "local copy removed after upload",
+  "storage.keepDays": "kept {n} {n:day|days} in the bucket",
+  "storage.lastError": "Last upload failed",
+  "storage.test": "Test connection",
+  "storage.testing": "Testing…",
+  "storage.testOk": "Connection works",
+  "storage.testFailed": "Connection failed",
   "settings.configIntro":
     "Read-only view of {file}. Edit the file and restart to change it. Secrets are hidden.",
 

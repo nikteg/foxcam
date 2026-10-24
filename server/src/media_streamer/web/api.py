@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import time
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field, field_validator
 
 from .. import ffmpeg
@@ -15,11 +16,25 @@ from ..config import Settings
 from ..db import session_scope
 from ..mediamtx import MediaMtx
 from ..models import Detection, Event, Segment
-from ..pipeline import queue
+from ..pipeline import queue, uploader
+from ..storage import StorageError, boto3_available, get_storage
 from . import queries
 from .deps import mediamtx_dep, safe_path, settings_dep
 
 router = APIRouter(prefix="/api", tags=["public"])
+
+
+def _serve(settings: Settings, base: Path, rel: str | None, remote_key: str | None,
+           media_type: str, filename: str | None = None) -> Response:
+    """The local file if it still exists, otherwise a redirect to a signed S3 URL."""
+    if rel:
+        path = (base / rel).resolve()
+        if path.is_relative_to(base.resolve()) and path.is_file():
+            return FileResponse(path, media_type=media_type, filename=filename)
+    store = get_storage(settings)
+    if remote_key and store:
+        return RedirectResponse(store.url(remote_key, filename), status_code=307)
+    raise HTTPException(404, "file not available")
 
 
 @router.get("/status")
@@ -36,6 +51,31 @@ async def status(settings: Settings = Depends(settings_dep),
 @router.get("/settings")
 def public_settings(settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
     return queries.public_settings(settings)
+
+
+@router.get("/storage")
+def storage_status(settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
+    cfg = settings.storage.s3
+    out: dict[str, Any] = {
+        "enabled": cfg.enabled, "boto3": boto3_available(), "bucket": cfg.bucket,
+        "endpoint_url": cfg.endpoint_url, "prefix": cfg.prefix, "clips": cfg.clips,
+        "recordings": cfg.recordings, "delete_local_clips": cfg.delete_local_clips,
+        "recordings_days": cfg.recordings_days,
+    }
+    if cfg.enabled:
+        out.update(uploader.stats(settings))
+    return out
+
+
+@router.post("/storage/test")
+async def storage_test(settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
+    try:
+        store = get_storage(settings)
+    except StorageError as e:
+        return {"ok": False, "detail": str(e)}
+    if store is None:
+        raise HTTPException(409, "S3 storage is not enabled in config.yaml")
+    return await asyncio.to_thread(store.check)
 
 
 @router.get("/cameras")
@@ -124,17 +164,16 @@ def segment(segment_id: int) -> dict[str, Any]:
 
 
 @router.get("/segments/{segment_id}/download")
-def segment_download(segment_id: int, settings: Settings = Depends(settings_dep)) -> FileResponse:
+def segment_download(segment_id: int, settings: Settings = Depends(settings_dep)) -> Response:
     seg = _segment(segment_id)
-    path = safe_path(settings.recordings_dir, seg.path)
     name = f"{seg.camera_id}_{seg.start_at:%Y%m%d_%H%M%S}.mp4"
-    return FileResponse(path, media_type="video/mp4", filename=name)
+    return _serve(settings, settings.recordings_dir, seg.path, seg.remote_key, "video/mp4", name)
 
 
 @router.get("/segments/{segment_id}/play")
-def segment_play(segment_id: int, settings: Settings = Depends(settings_dep)) -> FileResponse:
+def segment_play(segment_id: int, settings: Settings = Depends(settings_dep)) -> Response:
     seg = _segment(segment_id)
-    return FileResponse(safe_path(settings.recordings_dir, seg.path), media_type="video/mp4")
+    return _serve(settings, settings.recordings_dir, seg.path, seg.remote_key, "video/mp4")
 
 
 @router.get("/segments/{segment_id}/thumb")
@@ -200,17 +239,17 @@ def _event(event_id: int) -> Event:
 
 @router.get("/events/{event_id}/clip")
 def event_clip(event_id: int, download: bool = False,
-               settings: Settings = Depends(settings_dep)) -> FileResponse:
+               settings: Settings = Depends(settings_dep)) -> Response:
     ev = _event(event_id)
-    path = safe_path(settings.data_dir, ev.clip_path)
     name = f"{ev.camera_id}_{ev.label}_{ev.first_ts:%Y%m%d_%H%M%S}.mp4".replace(" ", "-")
-    return FileResponse(path, media_type="video/mp4", filename=name if download else None)
+    return _serve(settings, settings.data_dir, ev.clip_path, ev.clip_remote_key, "video/mp4",
+                  name if download else None)
 
 
 @router.get("/events/{event_id}/thumb")
-def event_thumb(event_id: int, settings: Settings = Depends(settings_dep)) -> FileResponse:
+def event_thumb(event_id: int, settings: Settings = Depends(settings_dep)) -> Response:
     ev = _event(event_id)
-    return FileResponse(safe_path(settings.data_dir, ev.thumb_path), media_type="image/jpeg")
+    return _serve(settings, settings.data_dir, ev.thumb_path, ev.thumb_remote_key, "image/jpeg")
 
 
 @router.get("/queue")

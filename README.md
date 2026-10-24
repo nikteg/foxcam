@@ -126,6 +126,20 @@ HTTP_PORT=18000 RTSP_PORT=18554 HLS_PORT=18888 WEBRTC_PORT=18889 WEBRTC_UDP_PORT
 Set `PUBLIC_HOST_URL` (e.g. `http://192.168.1.10`) so browsers on other devices can reach
 the live view, and add that IP to `webrtcAdditionalHosts` in `mediamtx/mediamtx.yml`.
 
+## S3-compatible storage
+
+Clips (and optionally all recordings) can be copied to an S3-compatible bucket: AWS S3,
+Cloudflare R2, Backblaze B2, MinIO, Hetzner, Wasabi… Fill in `storage.s3` in `config.yaml`
+(see `config.example.yaml`), install the extra and restart:
+
+```sh
+uv sync --all-packages --extra s3     # included in the Docker image
+```
+
+Credentials can be left out of the file and passed as `AWS_ACCESS_KEY_ID` /
+`AWS_SECRET_ACCESS_KEY`. Settings → Storage shows upload progress and has a connection test.
+Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#object-storage-s3).
+
 ## Tests
 
 ```sh
