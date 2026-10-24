@@ -233,3 +233,15 @@ def test_segment_download_name_has_segment_id(settings, client):
     disposition = r.headers["content-disposition"]
     assert f'_seg{seg_id}.mp4"' in disposition and disposition.startswith("attachment")
     assert "filename=\"cam_" in disposition
+
+
+def test_recording_profiles_with_several_cameras(settings, client):
+    from media_streamer.config import CameraConfig
+
+    settings.cameras.append(CameraConfig.model_validate(
+        {"id": "door", "recording_profile": "720p", "source": {"type": "test"}}))
+    r = client.get("/api/recording-profiles")
+    assert r.status_code == 200, r.text
+    by_id = {p["id"]: p for p in r.json()}
+    assert by_id["original"]["cameras"] == ["cam"] and by_id["original"]["default"]
+    assert by_id["720p"]["cameras"] == ["door"]

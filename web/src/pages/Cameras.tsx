@@ -404,7 +404,8 @@ function useRecordingSummary(): (p: RecordingProfile) => string {
 function RecordingProfileDialog({ camera, onClose }: { camera: Camera; onClose: () => void }) {
   const { t } = useI18n();
   const client = useQueryClient();
-  const { data: profiles = [] } = useRecordingProfiles();
+  const list = useRecordingProfiles();
+  const profiles = list.data ?? [];
   const summary = useRecordingSummary();
   const [selected, setSelected] = useState(camera.recording_profile);
   const save = useMutation({
@@ -424,6 +425,7 @@ function RecordingProfileDialog({ camera, onClose }: { camera: Camera; onClose: 
           <DialogTitle>{t("recording.dialogTitle", { name: camera.name })}</DialogTitle>
           <DialogContent className="form-stack">
             <Body1 className="muted">{t("recording.help")}</Body1>
+            <QueryState error={list.error} loading={list.isPending} />
             <RadioGroup value={selected} onChange={(_, d) => setSelected(d.value)}>
               {profiles.map((p) => (
                 <Radio

@@ -47,12 +47,12 @@ def list_recording_profiles(settings: Settings = Depends(settings_dep),
     for cam in settings.all_cameras(include_disabled=True):
         if not p.can(cam.id):
             continue
-        p, _ = recording.camera_recording_profile(settings, cam)
-        by_profile.setdefault(p.id, []).append(cam.id)
-    return [{**p.model_dump(), "display_name": p.display_name,
-             "default": p.id == settings.recording_profile_default,
-             "cameras": by_profile.get(p.id, [])}
-            for p in recording.all_recording_profiles(settings)]
+        profile, _ = recording.camera_recording_profile(settings, cam)
+        by_profile.setdefault(profile.id, []).append(cam.id)
+    return [{**rp.model_dump(), "display_name": rp.display_name,
+             "default": rp.id == settings.recording_profile_default,
+             "cameras": by_profile.get(rp.id, [])}
+            for rp in recording.all_recording_profiles(settings)]
 
 
 @router.put("/cameras/{camera_id}/recording-profile")
