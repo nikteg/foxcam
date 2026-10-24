@@ -22,6 +22,7 @@ import { useState, type ReactNode } from "react";
 import { ApiError, api, type Camera, type CameraRole } from "../api";
 import { useMe } from "../auth";
 import { useI18n } from "../i18n";
+import { ConfirmPopover } from "./ConfirmPopover";
 import { Time } from "./ui";
 import { DialogActions, DialogContent } from "./Drawer";
 
@@ -208,12 +209,14 @@ export function SharePanel({
         <ul className="share-list">
           {access.data?.members.map((m) => (
             <li key={m.user_id}>
-              <span className="grow">
-                <Text weight="semibold">{m.display_name}</Text>
-                {m.name && <Caption1 className="muted"> {m.email}</Caption1>}
-                {m.user_id === me?.user?.id && (
-                  <Caption1 className="muted"> ({t("share.you")})</Caption1>
-                )}
+              <span className="share-who">
+                <Text weight="semibold">
+                  {m.display_name}
+                  {m.user_id === me?.user?.id && (
+                    <Caption1 className="muted"> ({t("share.you")})</Caption1>
+                  )}
+                </Text>
+                {m.name && <Caption1 className="muted">{m.email}</Caption1>}
               </span>
               <RoleSelect
                 value={m.role}
@@ -221,13 +224,16 @@ export function SharePanel({
                 disabled={setMemberRole.isPending}
                 onChange={(r) => setMemberRole.mutate({ userId: m.user_id, r })}
               />
-              <Button
-                appearance="subtle"
-                icon={<Delete20Regular />}
-                aria-label={t("share.removeFor", { name: m.display_name })}
-                disabled={remove.isPending}
-                onClick={() => remove.mutate(m.user_id)}
-              />
+              <ConfirmPopover
+                title={t("share.removeFor", { name: m.display_name })}
+                onConfirm={() => remove.mutateAsync(m.user_id)}
+              >
+                <Button
+                  appearance="subtle"
+                  icon={<Delete20Regular />}
+                  aria-label={t("share.removeFor", { name: m.display_name })}
+                />
+              </ConfirmPopover>
             </li>
           ))}
         </ul>
@@ -239,19 +245,23 @@ export function SharePanel({
             <ul className="share-list">
               {access.data?.invites.map((inv) => (
                 <li key={inv.id}>
-                  <span className="grow">
+                  <span className="share-who">
                     {roleName(inv.cameras.find((c) => c.camera_id === camera.id)?.role ?? "viewer")}{" "}
                     <Caption1 className="muted">
                       {t("share.expires")} <Time iso={inv.expires_at} />
                     </Caption1>
                   </span>
-                  <Button
-                    appearance="subtle"
-                    icon={<Delete20Regular />}
-                    aria-label={t("share.revoke")}
-                    disabled={revoke.isPending}
-                    onClick={() => revoke.mutate(inv.id)}
-                  />
+                  <ConfirmPopover
+                    title={t("share.revoke")}
+                    confirmLabel={t("share.revoke")}
+                    onConfirm={() => revoke.mutateAsync(inv.id)}
+                  >
+                    <Button
+                      appearance="subtle"
+                      icon={<Delete20Regular />}
+                      aria-label={t("share.revoke")}
+                    />
+                  </ConfirmPopover>
                 </li>
               ))}
             </ul>
