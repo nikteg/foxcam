@@ -170,7 +170,7 @@ AMD GPUs: `--torch-backend rocm7.1` (match your ROCm install), untested.
 
 Each recording is analysed once per [detection profile](ARCHITECTURE.md#detection-profiles)
 of its camera, and a profile may require worker tags. A worker's tags are its detector
-(`speciesnet`, `ultralytics`, plus `open-vocabulary` for YOLO-World without `--classes`,
+(`speciesnet`, `ultralytics`, plus `open-vocabulary` for YOLO-World / YOLOE,
 `dummy`), anything passed with `--tags gpu,winhack` (or `MEDIA_WORKER_TAGS`), and the tags
 set on its access token in the web UI (**Worker queue → Tags**). To pin a profile to this
 machine, give the machine a unique tag and require it in the profile. The Profiles page and

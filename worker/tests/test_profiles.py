@@ -46,12 +46,14 @@ def test_open_vocabulary_model_is_prompted_with_the_profile_targets():
     assert det.model.prompts == [["fox"], ["car", "person"]]
 
 
-def test_fixed_classes_ignore_the_profile():
+def test_classes_are_only_the_fallback_prompt():
+    # An old `--classes fox` command line must not lock the worker to foxes.
     det = _ultralytics(classes=["fox"])
-    assert det.tags() == ["ultralytics"]
-    assert det.labels() == ["fox"]  # the server then only sends fox profiles
-    det.detect([], {"target_labels": ["car"]})
-    assert det.model.prompts == []
+    assert det.tags() == ["ultralytics", "open-vocabulary"]
+    assert det.labels() is None  # the server sends every profile
+    det.detect([], {"target_labels": ["person"]})
+    det.detect([], {})  # no targets (local file run): the --classes prompt
+    assert det.model.prompts == [["person"], ["fox"]]
 
 
 class CountingDetector(Detector):

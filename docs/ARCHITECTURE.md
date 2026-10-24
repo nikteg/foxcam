@@ -77,7 +77,7 @@ tag only that machine has, while several equal machines share the load. Profiles
 online worker can run are flagged in the UI. Removing or disabling a profile cancels its
 waiting jobs.
 
-**Detecting anything.** Open-vocabulary workers (YOLO-World without `--classes`) prompt the
+**Detecting anything.** Open-vocabulary workers (YOLO-World / YOLOE) prompt the
 model with each job's profile targets, so a new profile (`badger`, `deer`, `car`) needs no
 new model. Closed-set models (SpeciesNet, fine-tuned YOLO) report what they know; the
 profile's targets and aliases pick the relevant labels.

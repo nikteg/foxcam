@@ -136,8 +136,8 @@ def eligible_profiles(settings: Settings, tags: list[str],
                       labels: list[str] | None = None) -> list[str]:
     """Profiles whose jobs a worker with these tags may lease.
 
-    ``labels``: what the worker can detect (e.g. a YOLO-World worker started with fixed
-    ``--classes``). None = anything (open vocabulary, broad models). A profile is only
+    ``labels``: what the worker can detect (e.g. the classes of a fine-tuned or COCO
+    YOLO model). None = anything (open vocabulary, broad models). A profile is only
     offered when at least one of its targets (after aliases) is among them.
     """
     have = set(tags)

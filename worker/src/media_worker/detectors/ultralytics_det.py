@@ -2,12 +2,12 @@
 YOLO / RT-DETR weights you fine-tuned yourself.
 
     media-worker --detector ultralytics --model yolov8s-worldv2.pt   # prompted per job
-    media-worker --detector ultralytics --model yolov8s-worldv2.pt --classes fox  # fixed
     media-worker --detector ultralytics --model runs/detect/fox/weights/best.pt
 
-Without ``--classes`` an open-vocabulary model (YOLO-World / YOLOE) is prompted with each
-job's profile targets, so one worker can look for foxes on one camera and cars on another.
-It then advertises the ``open-vocabulary`` tag.
+An open-vocabulary model (YOLO-World / YOLOE) is prompted with each job's profile targets,
+so one worker looks for foxes on one camera and people or cars on another, and picks up
+new profiles without a restart. It advertises the ``open-vocabulary`` tag. ``--classes``
+is only the prompt for jobs that name no targets (e.g. ``media-worker-detect`` runs).
 
 Note: Ultralytics is AGPL-3.0.
 """
@@ -30,41 +30,35 @@ class UltralyticsDetector(Detector):
         self.classes = classes
         self.open_vocabulary = hasattr(self.model, "set_classes")
         self.prompt: list[str] | None = None
-        if classes:
-            if not self.open_vocabulary:
-                raise ValueError(f"{model} is not an open-vocabulary model; drop --classes")
-            # Open-vocabulary prompt. Prompt only the classes you want: in our tests,
-            # adding "dog,cat,person" made YOLO-World label most foxes as "dog" (see
-            # docs/MODELS.md).
-            self.model.set_classes(classes)
+        if classes and not self.open_vocabulary:
+            raise ValueError(f"{model} is not an open-vocabulary model; drop --classes")
         self.conf = conf
         self.batch = batch
         self.device = device
         self.name = f"ultralytics:{model}"
 
     def info(self) -> dict[str, Any]:
-        classes = ",".join(self.classes or []) or (
-            "from profile" if self.open_vocabulary else "model default")
+        classes = "from profile" if self.open_vocabulary else "model default"
         return {"detector": self.name, "classes": classes}
 
     def labels(self) -> list[str] | None:
-        if self.classes:  # fixed prompt: only these
-            return list(self.classes)
-        if self.open_vocabulary:  # prompted per job with the profile's targets
+        if self.open_vocabulary:  # prompted per job with the profile's targets: anything
             return None
         return [str(n) for n in self.model.names.values()]  # closed-set model, e.g. COCO
 
     def tags(self) -> list[str]:
-        # Fixed --classes: only profiles that ask for this worker by tag make sense.
-        return ["ultralytics", *(["open-vocabulary"]
-                                 if self.open_vocabulary and not self.classes else [])]
+        return ["ultralytics", *(["open-vocabulary"] if self.open_vocabulary else [])]
 
     def _prompt_for(self, hints: dict[str, Any]) -> None:
-        """Prompt an open-vocabulary model with the job's targets (only when they change)."""
-        if self.classes or not self.open_vocabulary:
+        """Prompt an open-vocabulary model with the job's targets (only when they change).
+
+        Prompt only what the profile wants: in our tests, adding "dog,cat,person" made
+        YOLO-World label most foxes as "dog" (see docs/MODELS.md).
+        """
+        if not self.open_vocabulary:
             return
         targets = list(dict.fromkeys(t.strip() for t in hints.get("target_labels", [])
-                                     if t.strip()))
+                                     if t.strip())) or list(self.classes or [])
         if targets and targets != self.prompt:
             self.model.set_classes(targets)
             self.prompt = targets

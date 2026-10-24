@@ -3,7 +3,7 @@
 # and a worker. Ctrl+C stops everything.
 #
 #   scripts/dev.sh                                   # dummy worker that "sees" foxes
-#   WORKER_ARGS="--detector ultralytics --model yolov8s-worldv2.pt --classes fox --device mps" scripts/dev.sh
+#   WORKER_ARGS="--detector ultralytics --model yolov8s-worldv2.pt --device mps" scripts/dev.sh
 #   WORKER_ARGS=none scripts/dev.sh                  # no worker (run your own elsewhere)
 #   RELOAD=0 scripts/dev.sh                          # don't restart on code changes
 #   RELOAD_INGEST=0 scripts/dev.sh                   # never restart ingest (camera streams)

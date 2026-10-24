@@ -13,7 +13,7 @@
   .\install-task.ps1 -Server http://192.168.1.10:8000 -Token msw_... -Mode wsl -Distro Ubuntu
 .EXAMPLE
   .\install-task.ps1 -Server http://192.168.1.10:8000 -Token msw_... -Mode native `
-      -WorkerArgs "--detector ultralytics --model yolov8s-worldv2.pt --classes fox"
+      -WorkerArgs "--detector ultralytics --model yolov8s-worldv2.pt"
 .EXAMPLE
   .\install-task.ps1 -Uninstall
 #>
