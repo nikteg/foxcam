@@ -26,7 +26,8 @@ anything else, and keep the clips.
   worker, per-worker access tokens, automatic retries.
 - **Detect anything with profiles.** A detection profile says *what* to look for (fox; car
   and person; …) and *which* workers may do it. Open-vocabulary models (YOLO-World) are
-  prompted with the profile's targets; SpeciesNet knows ~2000 species.
+  prompted with each job's targets, so a new profile needs no new model and no worker
+  restart; SpeciesNet knows ~2000 species.
 - **Privacy built in.** Draw censor rectangles per camera; they are burned into the pixels
   before a worker sees a frame, and optionally into recordings and live view as well.
   Private cameras are never sent anywhere.
@@ -39,10 +40,10 @@ anything else, and keep the clips.
   original footage (with pre/post roll), a thumbnail with the box drawn, a day/night tag and
   ✅/❌ feedback for building a training set.
 - **A UI for every screen.** Live view (WebRTC/HLS, with a ~480p *low data* mode for
-  mobile connections), events, detections, recordings, worker
-  queue and camera management, on phone, tablet and desktop, in English and Swedish.
+  mobile connections), events, detections, recordings, worker queue and camera
+  management, on phone, tablet and desktop, light or dark, in English and Swedish.
 - **Tapo cloud cameras.** Stream cameras you can't reach on the LAN (say, at the summer
-  house) through the TP-Link cloud, like the Tapo app does.
+  house) through the TP-Link cloud, kept alive with the same heartbeats the Tapo app sends.
 - **Notifications and webhooks.** Push to your phone with ntfy, call Home Assistant or any
   webhook (HMAC-signed JSON), or notify Telegram, Discord, Pushover and ~100 more via
   Apprise — with an image of the detection, quiet hours and per-camera cooldown.
@@ -73,7 +74,7 @@ anything else, and keep the clips.
     <td><img src="docs/screenshots/queue.jpg" alt="Worker queue"></td>
   </tr>
   <tr>
-    <td><b>Detection profiles</b> – what to look for and which workers may do it</td>
+    <td><b>Detection profiles</b> – what to look for and which workers may do it (Cameras page)</td>
     <td><b>Worker queue</b> – backlog per profile, workers with their tags and tokens</td>
   </tr>
 </table>
@@ -90,7 +91,7 @@ anything else, and keep the clips.
 
 ```mermaid
 flowchart LR
-  cams["📷 Cameras<br/>RTSP, Tapo cloud"] --> mtx["MediaMTX<br/>record segments, live view"]
+  cams["📷 Cameras<br/>RTSP, Tapo cloud"] --> mtx["MediaMTX<br/>record segments, live view<br/>optional re-encode (GPU)"]
   mtx -->|segments| pre
   subgraph server ["Server – FastAPI + SQLite"]
     direction TB
@@ -103,6 +104,8 @@ flowchart LR
 ```
 
 1. **MediaMTX** pulls each camera, records fixed-length segments and serves the live view.
+   Cameras with a re-encoding recording profile or burned-in censor areas pass through a
+   transcode stage first (on the GPU when there is one), as does the low-data live view.
 2. The **server** registers each segment, tags day/night, burns in the censor areas and
    creates one job per detection profile of the camera.
 3. **Workers** lease jobs, run their detector on the censored, down-sampled video and post
@@ -144,19 +147,23 @@ docker compose -f docker-compose.yml -f docker-compose.nvidia.yml up --build -d 
 
 Live-view links follow the address you open the UI with. In Docker, add the host's LAN IP
 to `webrtcAdditionalHosts` in `mediamtx/mediamtx.yml` so WebRTC can connect from other
-devices, and set `public_url` for links in notifications.
+devices, and set `public_url` for links in notifications. WebRTC media runs over TCP port
+8189 (no UDP needed), so that port has to be reachable too. Check which video encoder the
+container can use with `docker compose exec mediamtx media-streamer hwaccel`.
 
 ## Adding cameras
 
 Use **Cameras → Add camera** in the web UI; cameras start recording within seconds, no
-restart needed.
+restart needed. Each camera card then has its own settings: **Censor areas**, **Detection**
+(which profiles run) and **Recording** (quality profile and retention).
 
 - **RTSP** – the robust option when the server can reach the camera (same network, or a VPN
   such as Tailscale). In the Tapo app create a *Camera Account* (camera → Settings →
   Advanced settings → Camera account); the dialog builds the `rtsp://…/stream1` URL and
   tests it.
 - **Tapo cloud** – works from anywhere, like the Tapo app. Sign in with your Tapo account
-  (two-step verification supported) and pick cameras. Needs the `tapo-cloud` extra (in the
+  under **Cameras → Integrations** (two-step verification supported) and add cameras from
+  the list. Needs the `tapo-cloud` extra (in the
   Docker image). It uses the unofficial [ontapo](https://pypi.org/project/ontapo/) library
   and about 1–2 Mbit/s of upload per HD camera at the camera's site.
 - **Test sources** – a looping video file or a test pattern, for development.
@@ -196,7 +203,7 @@ media-worker --server http://<server>:8000 --token msw_… --detector speciesnet
 | Detector | Good at | Notes |
 |---|---|---|
 | **SpeciesNet** (Google) | wildlife incl. night/IR, ~2000 species | the most accurate for foxes in our tests |
-| **YOLO-World** (Ultralytics) | any object you can name | prompted with each profile's targets; fast on a GPU |
+| **YOLO-World** (Ultralytics) | any object you can name | prompted with each job's profile targets (no `--classes` needed); fast on a GPU |
 | **Your own** | anything | implement one method, or speak the [HTTP protocol](docs/WORKER_PROTOCOL.md) from any language or SaaS |
 
 Measured results on fox footage: [docs/MODELS.md](docs/MODELS.md). GPU setup on
@@ -209,8 +216,10 @@ detection profiles, censor areas and worker tokens can also be managed in the UI
 
 | Section | What it controls |
 |---|---|
-| `cameras` | sources, per-camera segment length, which profiles run |
+| `cameras` | sources, per-camera segment length, which profiles run, recording profile |
 | `profiles` | targets, aliases, confidence, required worker tags, frame rate, event retention |
+| `recording_profiles` | extra recording qualities (resolution, fps, bitrate, H.264/H.265, `keep_days`) next to the built-in original, 1080p, 720p, 480p and H.265 |
+| `mediamtx` | addresses, low-data live view, hardware encoding (`hwaccel`, [guide](docs/HARDWARE.md)) |
 | `processing` | frames per second sent to workers, resolution, night detection threshold |
 | `queue` | lease time, retries |
 | `events` | pre/post roll, merge gap |
@@ -226,28 +235,36 @@ detection profiles, censor areas and worker tokens can also be managed in the UI
 
 | Task | What it does |
 |---|---|
+| `setup`, `setup:yolo`, `setup:speciesnet` | install dependencies (plus a detector for a local worker) |
 | `dev`, `dev:no-worker`, `dev:yolo` | whole stack with a dummy / no / YOLO-World worker, live reload |
 | `server`, `ingest`, `mediamtx`, `web`, `worker*` | one part at a time |
+| `stop` | kill anything left on the dev ports |
+| `build` | build the web UI that the server serves on :8000 |
+| `tapo:login`, `worker:token` | sign in to the Tapo cloud; create a worker token |
 | `seed` (`-- --profiles`) | fake cameras from `samples/` (and an example profile) |
 | `cameras:remove-test` | remove the test cameras and the data of removed cameras |
 | `check` | ruff, oxlint, typecheck, oxfmt and all tests |
+| `doctor` | check ffmpeg, GPU, detectors and the connection to the server |
 | `s3:local` | a local S3 server to try `storage.s3` |
 | `docker:up`, `docker:test` | Docker stacks (the test stack runs next to dev on :18000) |
 | `reset:events`, `reset:detections`, `reset:queue`, … | delete one kind of data, keep the rest |
 | `reset`, `clean:all` | wipe all data – back to a fresh checkout |
+
+`uv run media-streamer --help` lists the server commands, e.g. `hwaccel` (which video
+encoders work here), `worker-token`, `remove-cameras` and `reset`.
 
 | Part | Stack |
 |---|---|
 | [`server/`](server) | Python, FastAPI, SQLAlchemy + SQLite, ffmpeg |
 | [`worker/`](worker) | Python, pluggable detectors (SpeciesNet, Ultralytics, dummy) |
 | [`web/`](web) | React 19, Fluent UI v9, Vite, React Compiler, TanStack Query, oxlint, oxfmt |
-| [`mediamtx/`](mediamtx) | MediaMTX config (RTSP ingest, recording, WebRTC/HLS) |
+| [`mediamtx/`](mediamtx) | MediaMTX config (RTSP ingest, recording, WebRTC/HLS); paths are pushed by the server |
 
 ## Documentation
 
 | | |
 |---|---|
-| [Architecture](docs/ARCHITECTURE.md) | pipeline, detection profiles, data model, retention, S3, privacy |
+| [Architecture](docs/ARCHITECTURE.md) | pipeline, detection and recording profiles, data model, retention, S3, privacy |
 | [Worker setup](docs/WORKER_SETUP.md) | GPU workers on Windows/WSL, Docker and Linux |
 | [Worker protocol](docs/WORKER_PROTOCOL.md) | HTTP API for workers and SaaS adapters |
 | [Models](docs/MODELS.md) | detection models compared on fox footage |

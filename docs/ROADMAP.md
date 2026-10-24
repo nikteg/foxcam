@@ -15,7 +15,9 @@
 
 - Notification templates (custom title/body per channel) and digest mode (one summary per
   night instead of one message per event).
-
+- Hardware decoding for the batch work too (worker inputs, clips, thumbnails); today only
+  the live transcodes use the GPU ([HARDWARE.md](HARDWARE.md)).
+- Recording profiles editable in the UI (today: built-in ones plus `config.yaml`).
 - Motion pre-filter (skip segments without motion before queueing) to save GPU time.
 - Night-only schedule per camera (don't queue daylight segments).
 - Event timeline view (per camera, per day) and a "best of" gallery.
