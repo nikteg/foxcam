@@ -11,13 +11,13 @@ import {
   Subtitle2,
   Text,
 } from "@fluentui/react-components";
-import { Key20Regular, LinkDismiss20Regular, SignOut20Regular } from "@fluentui/react-icons";
+import { Key20Regular, LinkDismiss20Regular } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 
 import { api } from "../api";
-import { AUTH_KEY, useAuthChanged, useMe } from "../auth";
+import { AUTH_KEY, useMe } from "../auth";
 import { Empty, PageHeader, Tag } from "../components/ui";
 import { useRoleName } from "../components/ShareDialog";
 import { useI18n } from "../i18n";
@@ -26,26 +26,12 @@ export function Account() {
   const { t } = useI18n();
   const me = useMe();
   const [params] = useSearchParams();
-  const changed = useAuthChanged();
-  const logout = useMutation({ mutationFn: api.logout, onSuccess: () => changed() });
   const user = me?.user;
 
   return (
     <>
-      <PageHeader
-        title={t("account.title")}
-        actions={
-          user && (
-            <Button
-              icon={<SignOut20Regular />}
-              disabled={logout.isPending}
-              onClick={() => logout.mutate()}
-            >
-              {t("account.signOut")}
-            </Button>
-          )
-        }
-      />
+      {/* Signing out is in the account menu in the top bar. */}
+      <PageHeader title={t("account.title")} />
       {params.get("error") && (
         <MessageBar intent="error" className="block">
           <MessageBarBody>{params.get("error")}</MessageBarBody>
