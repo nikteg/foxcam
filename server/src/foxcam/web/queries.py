@@ -124,6 +124,14 @@ def _only(q, column, camera_ids: set[str] | None):
     return q if camera_ids is None else q.where(column.in_(camera_ids))
 
 
+def _feedback():
+    """(wrong, correct) EXISTS clauses. Feedback is per detection: an event is "wrong" once
+    one of its detections is marked wrong and none correct (a wrong box on a real visit does
+    not hide the visit)."""
+    return (exists().where(Detection.event_id == Event.id, Detection.feedback.is_(False)),
+            exists().where(Detection.event_id == Event.id, Detection.feedback.is_(True)))
+
+
 def overview(settings: Settings, camera_ids: set[str] | None = None) -> dict[str, Any]:
     now = utcnow()
     with session_scope() as s:
@@ -134,8 +142,11 @@ def overview(settings: Settings, camera_ids: set[str] | None = None) -> dict[str
         stored = s.scalar(_only(select(func.coalesce(func.sum(Segment.size_bytes), 0))
                                 .where(Segment.deleted_at.is_(None)), Segment.camera_id,
                                 camera_ids))
+        # Like the Status page's event list: events marked wrong are left out.
+        wrong, correct = _feedback()
         events_24h = s.scalar(_only(select(func.count()).select_from(Event)
-                                    .where(Event.last_ts >= now - timedelta(hours=24)),
+                                    .where(Event.last_ts >= now - timedelta(hours=24),
+                                           ~(wrong & ~correct)),
                                     Event.camera_id, camera_ids))
         events_total = s.scalar(_only(select(func.count()).select_from(Event),
                                       Event.camera_id, camera_ids))
@@ -313,10 +324,7 @@ def events(camera_id: str | None = None, limit: int = 100,
            profile_id: str | None = None, label: str | None = None,
            camera_ids: set[str] | None = None,
            min_agreement: int = 1, hide_wrong: bool = False) -> list[dict[str, Any]]:
-    # Feedback is per detection: an event is "wrong" once one of its detections is marked
-    # wrong and none correct (a wrong box on a real visit does not hide the visit).
-    wrong = exists().where(Detection.event_id == Event.id, Detection.feedback.is_(False))
-    correct = exists().where(Detection.event_id == Event.id, Detection.feedback.is_(True))
+    wrong, correct = _feedback()
     q = _only(select(Event, wrong, correct), Event.camera_id, camera_ids) \
         .order_by(Event.first_ts.desc()).limit(limit)
     if hide_wrong:

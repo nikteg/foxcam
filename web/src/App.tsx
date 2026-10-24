@@ -136,6 +136,12 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
   const { t } = useI18n();
   const tabs = TABS.filter((tab) => isAdmin || !tab.admin);
   const extraTabs = EXTRA_TABS.filter((tab) => isAdmin || !tab.admin);
+  // A new section starts at the top (the router keeps the scroll position otherwise);
+  // pressing the open one scrolls back up, like a phone app's tab bar.
+  const go = (to: string) => {
+    void navigate(to);
+    window.scrollTo({ top: 0, behavior: to === selected ? "smooth" : "instant" });
+  };
 
   return (
     <>
@@ -149,7 +155,7 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
         <TabList
           className="top-tabs"
           selectedValue={selected}
-          onTabSelect={(_, d) => navigate(String(d.value))}
+          onTabSelect={(_, d) => go(String(d.value))}
           size="medium"
         >
           {tabs.map((tab) => (
@@ -182,7 +188,7 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
             type="button"
             className={selected === tab.to ? "active" : undefined}
             aria-current={selected === tab.to ? "page" : undefined}
-            onClick={() => navigate(tab.to)}
+            onClick={() => go(tab.to)}
           >
             {tab.icon}
             <Caption1>{t(tab.short)}</Caption1>

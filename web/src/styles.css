@@ -1569,9 +1569,19 @@ h3.panel-heading {
 .runtime-form {
   max-width: 620px;
 }
+/* Reset: a small, quiet button on its own line under the hint. */
 .runtime-form .reset-setting {
-  margin-inline-start: var(--spacingHorizontalXS);
-  vertical-align: baseline;
+  display: flex;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  margin-top: var(--spacingVerticalXXS);
+  margin-inline-start: calc(-1 * var(--spacingHorizontalXS));
+  padding: 0 var(--spacingHorizontalXS);
+  font-size: var(--fontSizeBase100);
+  font-weight: var(--fontWeightRegular);
+  line-height: var(--lineHeightBase200);
+  color: var(--colorNeutralForeground3);
 }
 .runtime-facts {
   margin-bottom: var(--spacingVerticalXL);
