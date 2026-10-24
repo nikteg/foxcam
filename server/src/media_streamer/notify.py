@@ -327,7 +327,7 @@ def send_webhook(ch: ChannelConfig, data: dict[str, Any], client: httpx.Client) 
     headers = {"Content-Type": "application/json", "User-Agent": "media-streamer",
                **ch.headers}
     if ch.secret:
-        headers["X-Media-Streamer-Signature"] = signature(ch.secret, body)
+        headers["X-Foxcam-Signature"] = signature(ch.secret, body)
     r = client.post(ch.url, content=body, headers=headers)
     if r.status_code >= 400:
         raise NotifyError(f"webhook answered {r.status_code}: {r.text.strip()[:200]}")

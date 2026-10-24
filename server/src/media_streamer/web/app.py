@@ -80,7 +80,7 @@ def create_app(settings: Settings | None = None, background: bool = True) -> Fas
     # `authenticate` runs for every route: the API is private unless a route opts out.
     # The API docs (/docs, /redoc, /openapi.json) are outside the login: development only.
     docs = os.environ.get("MEDIA_STREAMER_API_DOCS") == "1"
-    app = FastAPI(title="Media Streamer", version=__version__, lifespan=lifespan,
+    app = FastAPI(title="Foxcam", version=__version__, lifespan=lifespan,
                   dependencies=[Depends(authenticate)],
                   docs_url="/docs" if docs else None, redoc_url="/redoc" if docs else None,
                   openapi_url="/openapi.json" if docs else None)

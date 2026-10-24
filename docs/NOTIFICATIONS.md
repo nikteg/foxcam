@@ -1,6 +1,6 @@
 # Notifications and webhooks
 
-Media Streamer can tell you when something is seen:
+Foxcam can tell you when something is seen:
 
 | Channel | Use it for | Image |
 |---|---|---|
@@ -19,7 +19,7 @@ and the latest deliveries) or in `config.yaml`. Each channel chooses:
 - **Image**: the frame of the best detection with its box, **censor areas blacked out**,
   so masked areas never leave the server through a notification either.
 
-Delivery goes through an outbox: if a service is down, Media Streamer retries with backoff
+Delivery goes through an outbox: if a service is down, Foxcam retries with backoff
 (30 s, 1, 2, 4, 8 min) before giving up; the UI shows sent / waiting / failed / skipped.
 
 Set `public_url` (how you open the UI, e.g. `http://192.168.1.10:8000`) so notifications
@@ -100,7 +100,7 @@ A `POST` with `Content-Type: application/json` per notification:
 `type` is `event.new`, `event.clip` (clip ready; `links.clip` filled in) or `test`. Any
 `2xx` counts as delivered. Extra request headers can be set per channel (`headers:`).
 
-With a `secret`, the raw body is signed: `X-Media-Streamer-Signature: sha256=<hex>`
+With a `secret`, the raw body is signed: `X-Foxcam-Signature: sha256=<hex>`
 (HMAC-SHA256). Verify it before trusting the request:
 
 ```python

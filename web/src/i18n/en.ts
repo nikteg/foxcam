@@ -465,7 +465,7 @@ export const en = {
   "notify.webhookHint": "Receives a JSON POST per notification (see docs/NOTIFICATIONS.md).",
   "notify.secret": "Signing secret",
   "notify.secretHint":
-    "Optional: the body is signed with HMAC-SHA256 in X-Media-Streamer-Signature.",
+    "Optional: the body is signed with HMAC-SHA256 in X-Foxcam-Signature.",
   "notify.headers": "Extra headers",
   "notify.headersHint": "One per line, Name: value.",
   "notify.appriseUrl": "Apprise URL",
@@ -799,8 +799,8 @@ export const en = {
   "setup.oauthHint":
     "Or sign in with an external account whose e-mail is listed in auth.admin_emails:",
   "invite.title": "Invitation",
-  "invite.from": "{name} invited you to Media Streamer.",
-  "invite.generic": "You were invited to Media Streamer.",
+  "invite.from": "{name} invited you to Foxcam.",
+  "invite.generic": "You were invited to Foxcam.",
   "invite.admin": "You will be an admin.",
   "invite.authOff": "Accounts are turned off on this server (auth.enabled: false).",
   "invite.signedInAs": "Signed in as {name}.",

@@ -73,7 +73,7 @@ function followLink(e: MouseEvent, go: () => void) {
   go();
 }
 
-const APP_NAME = "Media Streamer";
+const APP_NAME = "Foxcam";
 
 /** Sets the browser tab title, so history and bookmarks name the page. */
 export function usePageTitle(title: string | undefined) {

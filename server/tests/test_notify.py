@@ -100,7 +100,7 @@ def test_webhook_payload_and_signature(settings):
     assert notify.deliver_pending(settings, rec.client()) == 1
     [req] = rec.requests
     body = req.content
-    assert req.headers["X-Media-Streamer-Signature"] == notify.signature("s3cret", body)
+    assert req.headers["X-Foxcam-Signature"] == notify.signature("s3cret", body)
     assert req.headers["X-Extra"] == "1"
     data = json.loads(body)
     assert data["type"] == "event.new"

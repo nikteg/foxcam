@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🦊 Media Streamer
+# 🦊 Foxcam
 
 **Self-hosted camera recorder that finds the moments that matter.**<br>
 Record Tapo (or any RTSP) cameras, let GPU workers anywhere look for foxes, wildlife or

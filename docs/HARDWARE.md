@@ -1,6 +1,6 @@
 # Hardware video encoding and decoding
 
-Media Streamer re-encodes video in three places:
+Foxcam re-encodes video in three places:
 
 | What | When | Run by |
 |---|---|---|

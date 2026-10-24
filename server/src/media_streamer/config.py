@@ -434,7 +434,7 @@ class ChannelConfig(BaseModel):
     tags: list[str] = []
     # webhook (url) / apprise (url)
     url: str | None = None
-    # webhook: HMAC-SHA256 of the body in X-Media-Streamer-Signature: sha256=<hex>
+    # webhook: HMAC-SHA256 of the body in X-Foxcam-Signature: sha256=<hex>
     secret: str | None = None
     headers: dict[str, str] = {}
     managed: Literal["config", "ui"] = "config"

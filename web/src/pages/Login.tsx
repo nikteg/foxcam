@@ -37,7 +37,7 @@ function AuthFrame({ title, children }: { title: string; children: ReactNode }) 
       <Card className="auth-card">
         <Text weight="semibold" size={500}>
           <img className="brand-icon" src="/icon.svg" alt="" />
-          Media Streamer
+          Foxcam
         </Text>
         <Title2 as="h1">{title}</Title2>
         {children}
