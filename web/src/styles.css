@@ -71,6 +71,14 @@ kbd {
 .contents {
   display: contents;
 }
+/* A spinner standing in for content: give it room. */
+.fui-Spinner.loading-block {
+  padding: var(--spacingVerticalXL) 0;
+}
+/* Fluent puts field hints 2px under the control; too close for multi-line hints. */
+.fui-Field .fui-Field__hint {
+  margin-top: var(--spacingVerticalS);
+}
 /* A second, muted line under a radio / switch label. */
 .fui-Text.option-hint {
   display: block;

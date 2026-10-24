@@ -56,7 +56,9 @@ export function TapoCameraList() {
 
   return (
     <div className="form-stack">
-      {devices.isPending && <Spinner size="small" label={t("addCamera.findingCameras")} />}
+      {devices.isPending && (
+        <Spinner size="small" label={t("addCamera.findingCameras")} className="loading-block" />
+      )}
       {error && (
         <MessageBar intent="error">
           <MessageBarBody>{error.message}</MessageBarBody>

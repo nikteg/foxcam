@@ -171,7 +171,7 @@ function TapoStep({ onDone }: { onDone: () => void }) {
   const status = useQuery({ queryKey: ["tapo", "status"], queryFn: api.tapoStatus });
   const connected = (status.data?.connected && !status.data.expired) ?? false;
 
-  if (status.isPending) return <Spinner size="small" />;
+  if (status.isPending) return <Spinner size="small" className="loading-block" />;
   if (status.data && !status.data.available) return <TapoNotInstalled />;
   if (!connected) return <TapoSignIn />;
 
