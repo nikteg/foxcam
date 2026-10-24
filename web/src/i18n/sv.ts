@@ -209,6 +209,7 @@ export const sv: Record<MessageKey, string> = {
 
   // Jobb (kö och arbetare)
   "queue.oldestWaiting": "Äldsta väntande",
+  "queue.filterByState": "Visa jobb efter status",
   "queue.doneLastHour": "Klara senaste timmen",
   "queue.avgProcessing": "Snittid per jobb",
   "queue.workers": "Arbetare",

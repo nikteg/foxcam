@@ -17,6 +17,8 @@ import {
   TabList,
 } from "@fluentui/react-components";
 import {
+  Checkmark16Filled,
+  ChevronRight16Regular,
   WeatherMoon16Regular,
   WeatherMoon20Regular,
   WeatherSunny16Regular,
@@ -273,6 +275,12 @@ export function Stat({
           </span>
         )}
         <Caption1 className="stat-label">{label}</Caption1>
+        {/* Pressable: a chevron, a checkmark while on (also visible on touch screens). */}
+        {onClick && (
+          <span className="stat-toggle" aria-hidden>
+            {selected ? <Checkmark16Filled /> : <ChevronRight16Regular />}
+          </span>
+        )}
       </div>
       <Text className="stat-value">{value}</Text>
       {hint && <Caption1 className="muted stat-hint">{hint}</Caption1>}

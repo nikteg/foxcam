@@ -122,6 +122,9 @@ export function Queue() {
 
           {tab === "queue" && (
             <>
+              <Caption1 as="p" className="muted stats-caption">
+                {t("queue.filterByState")}
+              </Caption1>
               <section className="stats">
                 {STATES.map((st) => (
                   <Stat
@@ -134,6 +137,8 @@ export function Queue() {
                     onClick={() => setFilter("state", state === st ? "" : st)}
                   />
                 ))}
+              </section>
+              <section className="stats stats-info">
                 <Stat
                   icon={<Timer20Regular />}
                   label={t("queue.oldestWaiting")}

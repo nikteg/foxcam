@@ -279,10 +279,19 @@ button.fui-CompoundButton {
   grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
   gap: var(--spacingHorizontalM);
 }
-/* One colour for every stat; brand only for a selected (pressed) one. */
+/* A soft, slightly raised surface (light and dark themes). */
+.fui-Card.stat {
+  background: linear-gradient(
+    160deg,
+    var(--colorNeutralBackground1Hover) 0%,
+    var(--colorNeutralBackground1) 70%
+  );
+  /* Card draws its border in ::after with this radius: change both together. */
+  --fui-Card--border-radius: var(--borderRadiusXLarge);
+  border-radius: var(--borderRadiusXLarge);
+  box-shadow: var(--shadow2);
+}
 .stat {
-  --stat-bg: var(--colorNeutralBackground3);
-  --stat-fg: var(--colorNeutralForeground2);
   gap: var(--spacingVerticalS);
   padding: var(--spacingVerticalM) var(--spacingHorizontalL);
   transition:
@@ -299,13 +308,7 @@ button.fui-CompoundButton {
 .stat-icon {
   display: inline-flex;
   flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--borderRadiusLarge);
-  background: var(--stat-bg);
-  color: var(--stat-fg);
+  color: var(--colorNeutralForeground3);
 }
 /* Labels can be lowercase state names ("väntar"): capitalise the first letter only. */
 .fui-Text.stat-label {
@@ -330,17 +333,36 @@ button.fui-CompoundButton {
 .stat.clickable {
   cursor: pointer;
 }
-.stat.clickable:hover {
-  border-color: var(--colorNeutralStroke1Hover);
+.stat-toggle {
+  display: inline-flex;
+  margin-left: auto;
+  flex: none;
+  color: var(--colorNeutralForeground3);
+}
+.stat.selected .stat-icon,
+.stat.selected .stat-toggle {
+  color: var(--colorBrandForeground1);
+}
+.fui-Text.stats-caption {
+  display: block;
+  margin: 0 0 var(--spacingVerticalS);
+}
+.stats.stats-info {
+  margin-top: var(--spacingVerticalM);
+}
+.fui-Card.stat.clickable:hover {
   box-shadow: var(--shadow4);
 }
-.stat.selected,
-.stat.selected:hover {
-  --stat-bg: var(--colorBrandBackground);
-  --stat-fg: var(--colorNeutralForegroundOnBrand);
-  border-color: var(--colorBrandStroke1);
+.fui-Card.stat.selected,
+.fui-Card.stat.selected:hover {
   background: var(--colorBrandBackground2);
-  box-shadow: inset 0 0 0 1px var(--colorBrandStroke1);
+}
+.fui-Card.stat.clickable:hover::after {
+  border-color: var(--colorNeutralStroke1Hover);
+}
+.fui-Card.stat.selected::after,
+.fui-Card.stat.selected:hover::after {
+  border: 2px solid var(--colorBrandStroke1);
 }
 
 /* Cards */

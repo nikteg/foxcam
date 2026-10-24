@@ -208,6 +208,7 @@ export const en = {
 
   // Jobs (queue and workers)
   "queue.oldestWaiting": "Oldest waiting",
+  "queue.filterByState": "Show jobs by state",
   "queue.doneLastHour": "Done last hour",
   "queue.avgProcessing": "Avg processing",
   "queue.workers": "Workers",
