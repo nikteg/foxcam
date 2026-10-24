@@ -464,8 +464,7 @@ export const en = {
   "notify.url": "URL",
   "notify.webhookHint": "Receives a JSON POST per notification (see docs/NOTIFICATIONS.md).",
   "notify.secret": "Signing secret",
-  "notify.secretHint":
-    "Optional: the body is signed with HMAC-SHA256 in X-Foxcam-Signature.",
+  "notify.secretHint": "Optional: the body is signed with HMAC-SHA256 in X-Foxcam-Signature.",
   "notify.headers": "Extra headers",
   "notify.headersHint": "One per line, Name: value.",
   "notify.appriseUrl": "Apprise URL",
