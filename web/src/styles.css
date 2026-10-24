@@ -1557,3 +1557,27 @@ h3.panel-heading {
 .runtime-facts {
   margin-bottom: var(--spacingVerticalXL);
 }
+/* Remove confirmations (components/ConfirmPopover.tsx): a small card at the button. */
+.confirm-popover {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalS);
+  max-width: 300px;
+}
+.confirm-popover p {
+  margin: 0;
+}
+.confirm-popover-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacingHorizontalS);
+  margin-top: var(--spacingVerticalXS);
+}
+.fui-Button.danger-primary {
+  background: var(--colorStatusDangerBackground3);
+  color: var(--colorNeutralForegroundOnBrand);
+}
+.fui-Button.danger-primary:hover {
+  background: var(--colorStatusDangerBackground3Hover, var(--colorPaletteRedBackground3));
+  color: var(--colorNeutralForegroundOnBrand);
+}

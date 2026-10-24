@@ -1,5 +1,4 @@
 import {
-  Body1,
   Button,
   Caption1,
   Card,
@@ -41,6 +40,7 @@ import { profileWarnings, type ProfileWarning } from "../labelWarnings";
 
 import { ConfigTag, Empty, Fact, Facts, InfoBanner, QueryState, Tag } from "../components/ui";
 import { percent } from "../format";
+import { ConfirmPopover } from "../components/ConfirmPopover";
 import { useI18n } from "../i18n";
 import {
   Dialog,
@@ -65,7 +65,13 @@ export function ProfilesSection() {
   const profiles = useProfiles();
   const cameras = useQuery({ queryKey: ["cameras"], queryFn: api.cameras });
   const [editing, setEditing] = useState<Profile | null>(null);
-  const [removing, setRemoving] = useState<Profile | null>(null);
+  const client = useQueryClient();
+  const remove = (p: Profile) =>
+    api.deleteProfile(p.id).then(() => {
+      void client.invalidateQueries({ queryKey: ["profiles"] });
+      void client.invalidateQueries({ queryKey: ["cameras"] });
+      void client.invalidateQueries({ queryKey: ["queue"] });
+    });
   const cameraName = (id: string) => cameras.data?.find((c) => c.id === id)?.name ?? id;
 
   return (
@@ -83,12 +89,11 @@ export function ProfilesSection() {
             profile={p}
             cameraName={cameraName}
             onEdit={() => setEditing(p)}
-            onRemove={() => setRemoving(p)}
+            onRemove={() => remove(p)}
           />
         ))}
       </div>
       {editing && <ProfileDialog profile={editing} onClose={() => setEditing(null)} />}
-      {removing && <RemoveProfileDialog profile={removing} onClose={() => setRemoving(null)} />}
     </section>
   );
 }
@@ -102,7 +107,7 @@ function ProfileCard({
   profile: Profile;
   cameraName: (id: string) => string;
   onEdit: () => void;
-  onRemove: () => void;
+  onRemove: () => Promise<unknown>;
 }) {
   const { t } = useI18n();
   const editable = p.managed === "ui";
@@ -236,9 +241,15 @@ function ProfileCard({
           <Button size="small" icon={<Edit20Regular />} onClick={onEdit}>
             {t("common.edit")}
           </Button>
-          <Button size="small" icon={<Delete20Regular />} onClick={onRemove}>
-            {t("common.remove")}
-          </Button>
+          <ConfirmPopover
+            title={t("profiles.removeTitle", { name: p.display_name })}
+            body={t("profiles.removeBody")}
+            onConfirm={onRemove}
+          >
+            <Button size="small" icon={<Delete20Regular />}>
+              {t("common.remove")}
+            </Button>
+          </ConfirmPopover>
         </CardFooter>
       )}
     </Card>
@@ -506,48 +517,6 @@ export function ProfileDialog({
             </DialogActions>
           </DialogBody>
         </form>
-      </DialogSurface>
-    </Dialog>
-  );
-}
-
-function RemoveProfileDialog({ profile, onClose }: { profile: Profile; onClose: () => void }) {
-  const { t } = useI18n();
-  const client = useQueryClient();
-  const remove = useMutation({
-    mutationFn: () => api.deleteProfile(profile.id),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ["profiles"] });
-      void client.invalidateQueries({ queryKey: ["cameras"] });
-      void client.invalidateQueries({ queryKey: ["queue"] });
-      onClose();
-    },
-  });
-  return (
-    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>{t("profiles.removeTitle", { name: profile.display_name })}</DialogTitle>
-          <DialogContent>
-            <Body1>{t("profiles.removeBody")}</Body1>
-            {remove.error && (
-              <MessageBar intent="error">
-                <MessageBarBody>{remove.error.message}</MessageBarBody>
-              </MessageBar>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={onClose}>{t("common.cancel")}</Button>
-            <Button
-              appearance="primary"
-              icon={<Delete20Regular />}
-              disabled={remove.isPending}
-              onClick={() => remove.mutate()}
-            >
-              {t("common.remove")}
-            </Button>
-          </DialogActions>
-        </DialogBody>
       </DialogSurface>
     </Dialog>
   );

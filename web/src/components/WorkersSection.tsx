@@ -17,6 +17,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api, type Worker, type WorkerToken } from "../api";
+import { ConfirmPopover } from "./ConfirmPopover";
 import { useI18n } from "../i18n";
 import { TagsPicker } from "./LabelPicker";
 import { Dot, Empty, Tag, Time } from "./ui";
@@ -54,7 +55,11 @@ export function WorkersSection({ workers }: { workers: Worker[] }) {
   const client = useQueryClient();
   const auth = useQuery({ queryKey: ["workers", "auth"], queryFn: api.workerAuth });
   const tokens = useQuery({ queryKey: ["workers", "tokens"], queryFn: api.workerTokens });
-  const [revoking, setRevoking] = useState<WorkerToken | null>(null);
+  const revoke = (tok: WorkerToken) =>
+    api.revokeWorkerToken(tok.id).then(() => {
+      void client.invalidateQueries({ queryKey: ["workers"] });
+      void client.invalidateQueries({ queryKey: ["queue"] });
+    });
   const [tagging, setTagging] = useState<WorkerToken | null>(null);
   const remove = useMutation({
     mutationFn: api.removeWorker,
@@ -157,13 +162,16 @@ export function WorkersSection({ workers }: { workers: Worker[] }) {
                         </Button>
                       )}
                       {tok && (
-                        <Button
-                          size="small"
-                          icon={<Key16Regular />}
-                          onClick={() => setRevoking(tok)}
+                        <ConfirmPopover
+                          title={t("workers.revokeTitle", { name: tok.name })}
+                          body={t("workers.revokeBody")}
+                          confirmLabel={t("workers.revoke")}
+                          onConfirm={() => revoke(tok)}
                         >
-                          {t("workers.revoke")}
-                        </Button>
+                          <Button size="small" icon={<Key16Regular />}>
+                            {t("workers.revoke")}
+                          </Button>
+                        </ConfirmPopover>
                       )}
                       {w && !w.online && (
                         <Tooltip content={t("queue.removeWorkerHint")} relationship="description">
@@ -186,7 +194,6 @@ export function WorkersSection({ workers }: { workers: Worker[] }) {
         </Table>
       )}
       {rows.length === 0 && <Empty>{t("queue.noWorkers")}</Empty>}
-      {revoking && <RevokeDialog token={revoking} onClose={() => setRevoking(null)} />}
       {tagging && <TagsDialog token={tagging} onClose={() => setTagging(null)} />}
     </>
   );
@@ -233,40 +240,6 @@ function TagsDialog({ token, onClose }: { token: WorkerToken; onClose: () => voi
             </DialogActions>
           </DialogBody>
         </form>
-      </DialogSurface>
-    </Dialog>
-  );
-}
-
-function RevokeDialog({ token, onClose }: { token: WorkerToken; onClose: () => void }) {
-  const { t } = useI18n();
-  const client = useQueryClient();
-  const revoke = useMutation({
-    mutationFn: () => api.revokeWorkerToken(token.id),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ["workers"] });
-      void client.invalidateQueries({ queryKey: ["queue"] });
-      onClose();
-    },
-  });
-  return (
-    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>{t("workers.revokeTitle", { name: token.name })}</DialogTitle>
-          <DialogContent>{t("workers.revokeBody")}</DialogContent>
-          <DialogActions>
-            <Button onClick={onClose}>{t("common.cancel")}</Button>
-            <Button
-              appearance="primary"
-              icon={<Delete16Regular />}
-              disabled={revoke.isPending}
-              onClick={() => revoke.mutate()}
-            >
-              {t("workers.revoke")}
-            </Button>
-          </DialogActions>
-        </DialogBody>
       </DialogSurface>
     </Dialog>
   );

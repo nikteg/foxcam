@@ -39,6 +39,7 @@ import {
   type ProbeResult,
 } from "../api";
 import { percent } from "../format";
+import { ConfirmPopover } from "./ConfirmPopover";
 import { useI18n, type MessageKey } from "../i18n";
 import { LabelPicker, useLabelSuggestions, useSuggestionList } from "./LabelPicker";
 import { useCameraName } from "./CameraSelect";
@@ -78,6 +79,7 @@ function toggle<T>(list: T[] | null, all: T[], value: T, checked: boolean): T[] 
 
 /** Notification channels (ntfy, webhooks, Apprise) with a test button and recent deliveries. */
 export function Notifications() {
+  const client = useQueryClient();
   const { t, rich } = useI18n();
   const overview = useQuery({ queryKey: ["notifications"], queryFn: api.notifications });
   const deliveries = useQuery({
@@ -86,7 +88,6 @@ export function Notifications() {
     refetchInterval: 15_000,
   });
   const [editing, setEditing] = useState<Channel | "new" | null>(null);
-  const [removing, setRemoving] = useState<Channel | null>(null);
   const data = overview.data;
 
   return (
@@ -115,7 +116,11 @@ export function Notifications() {
             key={ch.id}
             channel={ch}
             onEdit={() => setEditing(ch)}
-            onRemove={() => setRemoving(ch)}
+            onRemove={() =>
+              api
+                .deleteChannel(ch.id)
+                .then(() => client.invalidateQueries({ queryKey: ["notifications"] }))
+            }
           />
         ))}
       </div>
@@ -131,7 +136,6 @@ export function Notifications() {
           onClose={() => setEditing(null)}
         />
       )}
-      {removing && <RemoveDialog channel={removing} onClose={() => setRemoving(null)} />}
     </>
   );
 }
@@ -143,7 +147,7 @@ function ChannelCard({
 }: {
   channel: Channel;
   onEdit: () => void;
-  onRemove: () => void;
+  onRemove: () => Promise<unknown>;
 }) {
   const { t } = useI18n();
   const cameraName = useCameraName();
@@ -233,9 +237,15 @@ function ChannelCard({
             <Button size="small" icon={<Edit20Regular />} onClick={onEdit}>
               {t("common.edit")}
             </Button>
-            <Button size="small" icon={<Delete20Regular />} onClick={onRemove}>
-              {t("common.remove")}
-            </Button>
+            <ConfirmPopover
+              title={t("notify.removeTitle", { name: c.display_name })}
+              body={t("notify.removeBody")}
+              onConfirm={onRemove}
+            >
+              <Button size="small" icon={<Delete20Regular />}>
+                {t("common.remove")}
+              </Button>
+            </ConfirmPopover>
           </>
         )}
       </CardFooter>
@@ -618,39 +628,6 @@ function ChannelDialog({
             </DialogActions>
           </DialogBody>
         </form>
-      </DialogSurface>
-    </Dialog>
-  );
-}
-
-function RemoveDialog({ channel, onClose }: { channel: Channel; onClose: () => void }) {
-  const { t } = useI18n();
-  const client = useQueryClient();
-  const remove = useMutation({
-    mutationFn: () => api.deleteChannel(channel.id),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ["notifications"] });
-      onClose();
-    },
-  });
-  return (
-    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>{t("notify.removeTitle", { name: channel.display_name })}</DialogTitle>
-          <DialogContent>{t("notify.removeBody")}</DialogContent>
-          <DialogActions>
-            <Button onClick={onClose}>{t("common.cancel")}</Button>
-            <Button
-              appearance="primary"
-              icon={<Delete20Regular />}
-              disabled={remove.isPending}
-              onClick={() => remove.mutate()}
-            >
-              {t("common.remove")}
-            </Button>
-          </DialogActions>
-        </DialogBody>
       </DialogSurface>
     </Dialog>
   );

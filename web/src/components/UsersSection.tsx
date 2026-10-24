@@ -23,6 +23,7 @@ import { useState } from "react";
 
 import { api, type User } from "../api";
 import { useMe } from "../auth";
+import { ConfirmPopover } from "./ConfirmPopover";
 import { useI18n } from "../i18n";
 import { InviteLink, useRoleName } from "./ShareDialog";
 import { Empty, Fact, Facts, InfoBanner, QueryState, Tag, Time, Toolbar } from "./ui";
@@ -37,13 +38,13 @@ import {
 
 /** Settings → Users (admins): accounts and invite links. */
 export function UsersSection() {
+  const client = useQueryClient();
   const { t } = useI18n();
   const me = useMe();
   const users = useQuery({ queryKey: ["users"], queryFn: api.users });
   const [adding, setAdding] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [passwordFor, setPasswordFor] = useState<User | null>(null);
-  const [removing, setRemoving] = useState<User | null>(null);
 
   return (
     <section id="users">
@@ -70,7 +71,9 @@ export function UsersSection() {
             user={u}
             self={u.id === me?.user?.id}
             onPassword={() => setPasswordFor(u)}
-            onRemove={() => setRemoving(u)}
+            onRemove={() =>
+              api.deleteUser(u.id).then(() => client.invalidateQueries({ queryKey: ["users"] }))
+            }
           />
         ))}
       </div>
@@ -78,7 +81,6 @@ export function UsersSection() {
       {adding && <AddUserDialog onClose={() => setAdding(false)} />}
       {inviting && <InviteDialog onClose={() => setInviting(false)} />}
       {passwordFor && <PasswordDialog user={passwordFor} onClose={() => setPasswordFor(null)} />}
-      {removing && <RemoveUserDialog user={removing} onClose={() => setRemoving(null)} />}
     </section>
   );
 }
@@ -92,7 +94,7 @@ function UserCard({
   user: User;
   self: boolean;
   onPassword: () => void;
-  onRemove: () => void;
+  onRemove: () => Promise<unknown>;
 }) {
   const { t } = useI18n();
   const client = useQueryClient();
@@ -145,9 +147,15 @@ function UserCard({
           <Button size="small" icon={<Key20Regular />} onClick={onPassword}>
             {t("users.setPassword")}
           </Button>
-          <Button size="small" icon={<Delete20Regular />} onClick={onRemove}>
-            {t("common.remove")}
-          </Button>
+          <ConfirmPopover
+            title={t("users.removeTitle", { name: u.display_name })}
+            body={t("users.removeBody")}
+            onConfirm={onRemove}
+          >
+            <Button size="small" icon={<Delete20Regular />}>
+              {t("common.remove")}
+            </Button>
+          </ConfirmPopover>
         </CardFooter>
       )}
     </Card>
@@ -371,42 +379,6 @@ function PasswordDialog({ user, onClose }: { user: User; onClose: () => void }) 
             </DialogActions>
           </DialogBody>
         </form>
-      </DialogSurface>
-    </Dialog>
-  );
-}
-
-function RemoveUserDialog({ user, onClose }: { user: User; onClose: () => void }) {
-  const { t } = useI18n();
-  const client = useQueryClient();
-  const remove = useMutation({
-    mutationFn: () => api.deleteUser(user.id),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ["users"] });
-      onClose();
-    },
-  });
-  return (
-    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>{t("users.removeTitle", { name: user.display_name })}</DialogTitle>
-          <DialogContent className="form-stack">
-            <Text>{t("users.removeBody")}</Text>
-            <ErrorBar error={remove.error} />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={onClose}>{t("common.cancel")}</Button>
-            <Button
-              appearance="primary"
-              icon={<Delete20Regular />}
-              disabled={remove.isPending}
-              onClick={() => remove.mutate()}
-            >
-              {t("common.remove")}
-            </Button>
-          </DialogActions>
-        </DialogBody>
       </DialogSurface>
     </Dialog>
   );

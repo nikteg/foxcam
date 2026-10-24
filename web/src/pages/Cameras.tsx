@@ -7,9 +7,7 @@ import {
   Field,
   Input,
   MessageBar,
-  MessageBarActions,
   MessageBarBody,
-  MessageBarTitle,
   Radio,
   RadioGroup,
   Tab,
@@ -39,6 +37,7 @@ import {
   Toolbar,
   useSubPage,
 } from "../components/ui";
+import { ConfirmPopover } from "../components/ConfirmPopover";
 import { useI18n } from "../i18n";
 import {
   Dialog,
@@ -177,7 +176,6 @@ function GeneralPanel({
   const canRemove = camera.managed === "ui" && hasRole(camera, "owner");
   const [name, setName] = useState(camera.name);
   const [segment, setSegment] = useState(camera.segment_seconds_override?.toString() ?? "");
-  const [confirmRemove, setConfirmRemove] = useState(false);
   const [editingMask, setEditingMask] = useState(false);
   const save = useMutation({
     mutationFn: () =>
@@ -243,32 +241,6 @@ function GeneralPanel({
           </Button>
         </div>
         {editingMask && <MaskDrawer cameraId={camera.id} onClose={() => setEditingMask(false)} />}
-        {confirmRemove && (
-          <MessageBar
-            intent="warning"
-            // The button is in the footer: bring the question into view.
-            ref={(el) => el?.scrollIntoView({ behavior: "smooth", block: "nearest" })}
-          >
-            <MessageBarBody>
-              <MessageBarTitle>{t("cameras.removeTitle", { name: camera.name })}</MessageBarTitle>
-              {t("cameras.removeBody")}
-            </MessageBarBody>
-            <MessageBarActions>
-              <Button size="small" onClick={() => setConfirmRemove(false)}>
-                {t("common.cancel")}
-              </Button>
-              <Button
-                size="small"
-                appearance="primary"
-                icon={<Delete20Regular />}
-                disabled={remove.isPending}
-                onClick={() => remove.mutate()}
-              >
-                {t("common.remove")}
-              </Button>
-            </MessageBarActions>
-          </MessageBar>
-        )}
         {error && (
           <MessageBar intent="error">
             <MessageBarBody>{error.message}</MessageBarBody>
@@ -277,15 +249,18 @@ function GeneralPanel({
       </DialogContent>
       <DialogActions>
         {canRemove && (
-          <Button
-            appearance="subtle"
-            className="danger actions-start"
-            icon={<Delete20Regular />}
-            disabled={confirmRemove}
-            onClick={() => setConfirmRemove(true)}
-          >
-            {t("cameras.removeCamera")}
-          </Button>
+          <span className="actions-start">
+            <ConfirmPopover
+              title={t("cameras.removeTitle", { name: camera.name })}
+              body={t("cameras.removeBody")}
+              onConfirm={() => remove.mutateAsync()}
+              align="start"
+            >
+              <Button appearance="subtle" className="danger" icon={<Delete20Regular />}>
+                {t("cameras.removeCamera")}
+              </Button>
+            </ConfirmPopover>
+          </span>
         )}
         <Button onClick={onClose}>{editable ? t("common.cancel") : t("common.close")}</Button>
         {editable && (

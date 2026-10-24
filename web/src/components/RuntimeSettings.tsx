@@ -200,76 +200,78 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
         save.mutate({ values: Object.fromEntries(changed.map((k) => [k, parse(k)])) });
       }}
     >
-      {groups.map((g) => (
-        <section key={g.keys.join()} className="form-stack">
-          {g.title && (
-            <Subtitle2 as="h2" className="panel-heading">
-              {t(g.title)}
-            </Subtitle2>
-          )}
-          {g.keys.map((k) => {
-            const s = byKey.get(k);
-            const meta = META[k];
-            if (!s || !meta) return null;
-            const value = draft[k]!;
-            return (
-              <Field
-                key={k}
-                label={
-                  <span className="row">
-                    {t(meta.label)}
-                    <SourceTag source={s.source} />
-                  </span>
-                }
-                hint={
-                  <>
-                    {t(meta.hint)}
-                    {s.source === "ui" && (
-                      <Button
-                        size="small"
-                        appearance="transparent"
-                        className="reset-setting"
-                        icon={<ArrowUndo16Regular />}
-                        disabled={save.isPending}
-                        onClick={() => save.mutate({ reset: [k] })}
-                      >
-                        {t(
-                          s.config_source === "config"
-                            ? "runtime.resetToConfig"
-                            : "runtime.resetToDefault",
-                          { value: shown(t, s.config_value, meta) },
-                        )}
-                      </Button>
-                    )}
-                  </>
-                }
-              >
-                {typeof value === "boolean" ? (
-                  <Switch
-                    checked={value}
-                    onChange={(_, d) => setDraft((v) => ({ ...v, [k]: d.checked }))}
-                  />
-                ) : (
-                  <Input
-                    type={meta.kind === "url" ? "url" : "number"}
-                    min={s.ge ?? s.gt}
-                    max={s.le ?? s.lt}
-                    step="any"
-                    value={value}
-                    placeholder={
-                      s.nullable
-                        ? t(meta.kind === "url" ? "runtime.notSet" : "retention.noCap")
-                        : undefined
-                    }
-                    contentAfter={meta.unit ? t(meta.unit) : undefined}
-                    onChange={(_, d) => setDraft((v) => ({ ...v, [k]: d.value }))}
-                  />
-                )}
-              </Field>
-            );
-          })}
-        </section>
-      ))}
+      {groups
+        .filter((g) => g.keys.some((k) => byKey.has(k)))
+        .map((g) => (
+          <section key={g.keys.join()} className="form-stack">
+            {g.title && (
+              <Subtitle2 as="h2" className="panel-heading">
+                {t(g.title)}
+              </Subtitle2>
+            )}
+            {g.keys.map((k) => {
+              const s = byKey.get(k);
+              const meta = META[k];
+              if (!s || !meta) return null;
+              const value = draft[k]!;
+              return (
+                <Field
+                  key={k}
+                  label={
+                    <span className="row">
+                      {t(meta.label)}
+                      <SourceTag source={s.source} />
+                    </span>
+                  }
+                  hint={
+                    <>
+                      {t(meta.hint)}
+                      {s.source === "ui" && (
+                        <Button
+                          size="small"
+                          appearance="transparent"
+                          className="reset-setting"
+                          icon={<ArrowUndo16Regular />}
+                          disabled={save.isPending}
+                          onClick={() => save.mutate({ reset: [k] })}
+                        >
+                          {t(
+                            s.config_source === "config"
+                              ? "runtime.resetToConfig"
+                              : "runtime.resetToDefault",
+                            { value: shown(t, s.config_value, meta) },
+                          )}
+                        </Button>
+                      )}
+                    </>
+                  }
+                >
+                  {typeof value === "boolean" ? (
+                    <Switch
+                      checked={value}
+                      onChange={(_, d) => setDraft((v) => ({ ...v, [k]: d.checked }))}
+                    />
+                  ) : (
+                    <Input
+                      type={meta.kind === "url" ? "url" : "number"}
+                      min={s.ge ?? s.gt}
+                      max={s.le ?? s.lt}
+                      step="any"
+                      value={value}
+                      placeholder={
+                        s.nullable
+                          ? t(meta.kind === "url" ? "runtime.notSet" : "retention.noCap")
+                          : undefined
+                      }
+                      contentAfter={meta.unit ? t(meta.unit) : undefined}
+                      onChange={(_, d) => setDraft((v) => ({ ...v, [k]: d.value }))}
+                    />
+                  )}
+                </Field>
+              );
+            })}
+          </section>
+        ))}
       {save.error && (
         <MessageBar intent="error">
           <MessageBarBody>{save.error.message}</MessageBarBody>
