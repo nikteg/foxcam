@@ -19,7 +19,7 @@ services:
       - "${RTSP_PORT:-8554}:8554" # RTSP
       - "${HLS_PORT:-8888}:8888" # HLS (live view fallback)
       - "${WEBRTC_PORT:-8889}:8889" # WebRTC (live view)
-      - "${WEBRTC_UDP_PORT:-8189}:8189/udp" # WebRTC media
+      - "${WEBRTC_ICE_PORT:-8189}:8189/tcp" # WebRTC media (over TCP, see mediamtx.yml)
 
   server:
     build: { context: ., dockerfile: server/Dockerfile }

@@ -185,7 +185,7 @@ run = "docker compose logs -f"
 description = "Second Docker stack on :18000 with its own data (out/docker-data), next to dev"
 run = """
 MEDIA_DATA_PATH=./out/docker-data HTTP_PORT=18000 RTSP_PORT=18554 HLS_PORT=18888 \
-WEBRTC_PORT=18889 WEBRTC_UDP_PORT=18189 docker compose -p media-streamer-test up --build -d
+WEBRTC_PORT=18889 WEBRTC_ICE_PORT=18189 docker compose -p media-streamer-test up --build -d
 echo "http://localhost:18000  (stop: mise run docker:test-down)"
 """
 
