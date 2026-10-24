@@ -117,6 +117,10 @@ export const en = {
   "live.hlsFallback": "HLS fallback",
   "live.frameTitle": "{name} live",
   "live.offline": "Camera offline",
+  "live.lowData": "Low data",
+  "live.lowDataHint":
+    "Watch a ~480p stream that uses about a tenth of the bandwidth. It is transcoded on the server only while you watch.",
+  "live.lowDataTag": "WebRTC · 480p",
 
   // Events
   "events.none": "No events yet.",

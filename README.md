@@ -32,7 +32,8 @@ anything else, and keep the clips.
 - **Events with clips.** Sightings close in time become one event with a clip cut from the
   original footage (with pre/post roll), a thumbnail with the box drawn, a day/night tag and
   ✅/❌ feedback for building a training set.
-- **A UI for every screen.** Live view (WebRTC/HLS), events, detections, recordings, worker
+- **A UI for every screen.** Live view (WebRTC/HLS, with a ~480p *low data* mode for
+  mobile connections), events, detections, recordings, worker
   queue and camera management, on phone, tablet and desktop, in English and Swedish.
 - **Tapo cloud cameras.** Stream cameras you can't reach on the LAN (say, at the summer
   house) through the TP-Link cloud, like the Tapo app does.

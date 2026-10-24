@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 
 from ..config import Settings
 from ..db import session_scope
+from ..mediamtx import low_path
 from ..models import (
     CameraState,
     Detection,
@@ -70,6 +71,7 @@ def cameras(settings: Settings, live: dict[str, dict[str, Any]]) -> list[dict[st
                 "segment_seconds_override": cam.segment_seconds,
                 "webrtc_url": f"{settings.mediamtx.webrtc_public_url.rstrip('/')}/{cam.id}/",
                 "hls_url": f"{settings.mediamtx.hls_public_url.rstrip('/')}/{cam.id}/",
+                **_low_urls(settings, cam.id),
                 "segment_seconds": settings.segment_seconds_for(cam.id),
                 "online": bool(path.get("ready")),
                 "online_since": path.get("readyTime"),
@@ -83,6 +85,15 @@ def cameras(settings: Settings, live: dict[str, dict[str, Any]]) -> list[dict[st
                 **camera_state(cam.id),
             })
     return out
+
+
+def _low_urls(settings: Settings, camera_id: str) -> dict[str, str | None]:
+    m = settings.mediamtx
+    if not m.low_data.enabled:
+        return {"webrtc_low_url": None, "hls_low_url": None}
+    path = low_path(camera_id)
+    return {"webrtc_low_url": f"{m.webrtc_public_url.rstrip('/')}/{path}/",
+            "hls_low_url": f"{m.hls_public_url.rstrip('/')}/{path}/"}
 
 
 def _profiles_source(cam) -> str:

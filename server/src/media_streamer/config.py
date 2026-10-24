@@ -94,6 +94,23 @@ class CameraConfig(BaseModel):
         return self.name or self.id
 
 
+class LowDataConfig(BaseModel):
+    """On-demand low-bitrate copy of every camera for live view on slow connections.
+
+    MediaMTX starts the transcode (``ffmpeg``, run by the MediaMTX process) only while
+    someone watches ``<camera>/low`` and stops it shortly after the last viewer leaves.
+    """
+
+    enabled: bool = True
+    height: int = Field(default=480, ge=144, le=1080)
+    bitrate_kbit: int = Field(default=500, ge=100, le=8000)
+    fps: int = Field(default=15, ge=1, le=30)
+    # e.g. h264_videotoolbox (macOS), h264_nvenc, h264_vaapi. libx264 works everywhere.
+    encoder: str = "libx264"
+    # ffmpeg as seen by the MediaMTX process (the Docker setup uses the -ffmpeg image).
+    ffmpeg: str = "ffmpeg"
+
+
 class MediaMtxConfig(BaseModel):
     api_url: str = "http://localhost:9997"
     # RTSP URL prefix used by ingest publishers and for snapshots (as seen by this server).
@@ -103,6 +120,7 @@ class MediaMtxConfig(BaseModel):
     hls_public_url: str = "http://localhost:8888"
     # Recording directory as seen by the MediaMTX process. Defaults to ``recordings_dir``.
     record_dir: str | None = None
+    low_data: LowDataConfig = LowDataConfig()
 
 
 class ProcessingConfig(BaseModel):

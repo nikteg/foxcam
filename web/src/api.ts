@@ -8,6 +8,9 @@ export interface Camera {
   source: "rtsp" | "tapo_cloud" | "test" | "file";
   webrtc_url: string;
   hls_url: string;
+  /** Transcoded low-bitrate live stream (on demand); null when disabled on the server. */
+  webrtc_low_url: string | null;
+  hls_low_url: string | null;
   segment_seconds: number;
   online: boolean;
   online_since: string | null;

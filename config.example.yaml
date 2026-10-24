@@ -40,6 +40,13 @@ mediamtx:
   # Where MediaMTX writes recordings, as seen by the MediaMTX process.
   # Leave unset when MediaMTX and the server see the same path.
   record_dir: ${MEDIAMTX_RECORD_DIR:-}
+  # "Low data" live view: <camera>/low, transcoded by MediaMTX only while someone watches.
+  low_data:
+    enabled: true
+    height: 480
+    bitrate_kbit: 500
+    fps: 15
+    encoder: libx264      # h264_videotoolbox (macOS), h264_nvenc, h264_vaapi, …
 
 processing:
   sample_fps: 2          # frames/s in the censored copy sent to workers

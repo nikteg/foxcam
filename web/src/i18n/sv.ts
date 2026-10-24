@@ -118,6 +118,10 @@ export const sv: Record<MessageKey, string> = {
   "live.hlsFallback": "HLS-reserv",
   "live.frameTitle": "{name} live",
   "live.offline": "Kameran är frånkopplad",
+  "live.lowData": "Låg datamängd",
+  "live.lowDataHint":
+    "Visa en ström i ~480p som använder ungefär en tiondel av bandbredden. Den kodas om på servern bara medan du tittar.",
+  "live.lowDataTag": "WebRTC · 480p",
 
   // Händelser
   "events.none": "Inga händelser än.",

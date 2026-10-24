@@ -37,6 +37,50 @@ def _path_conf(settings: Settings, cam: CameraConfig) -> dict[str, Any]:
     return conf
 
 
+LOW_SUFFIX = "/low"
+
+
+def low_path(camera_id: str) -> str:
+    return f"{camera_id}{LOW_SUFFIX}"
+
+
+def encoder_args(encoder: str, bitrate_kbit: int, fps: int) -> list[str]:
+    """Live-friendly encoder settings (no B-frames, a keyframe every 2 s)."""
+    rate = ["-b:v", f"{bitrate_kbit}k", "-maxrate", f"{bitrate_kbit}k",
+            "-bufsize", f"{bitrate_kbit * 2}k", "-g", str(fps * 2), "-bf", "0"]
+    if encoder == "libx264":
+        return ["-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency", *rate]
+    if encoder.endswith("_videotoolbox"):
+        return ["-c:v", encoder, "-realtime", "1", "-allow_sw", "1", *rate]
+    return ["-c:v", encoder, *rate]
+
+
+def _low_conf(settings: Settings, cam: CameraConfig) -> dict[str, Any]:
+    """`<camera>/low`: transcoded from the camera's path only while someone watches it."""
+    low = settings.mediamtx.low_data
+    # MediaMTX runs this itself (no shell); $RTSP_PORT and $MTX_PATH are filled in by it.
+    cmd = [low.ffmpeg, "-v", "error", "-rtsp_transport", "tcp",
+           "-i", f"rtsp://localhost:$RTSP_PORT/{cam.id}", "-map", "0:v:0", "-map", "0:a:0?",
+           "-vf", f"fps={low.fps},scale=-2:{low.height},format=yuv420p",
+           *encoder_args(low.encoder, low.bitrate_kbit, low.fps),
+           # Opus is what browsers play over WebRTC.
+           "-c:a", "libopus", "-b:a", "24k", "-ac", "1", "-ar", "48000",
+           "-f", "rtsp", "-rtsp_transport", "tcp", "rtsp://localhost:$RTSP_PORT/$MTX_PATH"]
+    return {"source": "publisher", "record": False, "runOnDemand": " ".join(cmd),
+            "runOnDemandRestart": True, "runOnDemandStartTimeout": "20s",
+            "runOnDemandCloseAfter": "15s"}
+
+
+def desired_paths(settings: Settings) -> dict[str, dict[str, Any]]:
+    """Every MediaMTX path this server manages, by name."""
+    out: dict[str, dict[str, Any]] = {}
+    for cam in settings.all_cameras():
+        out[cam.id] = _path_conf(settings, cam)
+        if settings.mediamtx.low_data.enabled:
+            out[low_path(cam.id)] = _low_conf(settings, cam)
+    return out
+
+
 class MediaMtx:
     def __init__(self, settings: Settings):
         self.settings = settings
@@ -47,7 +91,7 @@ class MediaMtx:
 
     async def sync_paths(self) -> None:
         """Make MediaMTX's path list match the enabled cameras (adds, updates, removes)."""
-        wanted = {cam.id for cam in self.settings.all_cameras()}
+        wanted = desired_paths(self.settings)
         listed = await self.client.get("/v3/config/paths/list", params={"itemsPerPage": 1000})
         if listed.status_code == 200:
             for item in listed.json().get("items", []):
@@ -55,18 +99,17 @@ class MediaMtx:
                 if name and name != "all_others" and name not in wanted:
                     await self.client.post(f"/v3/config/paths/delete/{name}")
                     log.info("mediamtx: path %s removed", name)
-        for cam in self.settings.all_cameras():
-            conf = _path_conf(self.settings, cam)
-            existing = await self.client.get(f"/v3/config/paths/get/{cam.id}")
+        for name, conf in wanted.items():
+            existing = await self.client.get(f"/v3/config/paths/get/{name}")
             if existing.status_code == 200:
-                r = await self.client.post(f"/v3/config/paths/replace/{cam.id}", json=conf)
+                r = await self.client.post(f"/v3/config/paths/replace/{name}", json=conf)
             else:
-                r = await self.client.post(f"/v3/config/paths/add/{cam.id}", json=conf)
+                r = await self.client.post(f"/v3/config/paths/add/{name}", json=conf)
             if r.status_code >= 400:
-                log.error("mediamtx: configuring path %s failed: %s %s", cam.id,
+                log.error("mediamtx: configuring path %s failed: %s %s", name,
                           r.status_code, r.text)
             else:
-                log.info("mediamtx: path %s configured (%s)", cam.id, cam.source.type)
+                log.info("mediamtx: path %s configured", name)
 
     async def paths(self) -> dict[str, dict[str, Any]]:
         """Live status per path name. Empty dict if MediaMTX is unreachable."""
