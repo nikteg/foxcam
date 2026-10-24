@@ -425,6 +425,11 @@ table.table {
   border-radius: var(--borderRadiusLarge);
   overflow: hidden;
 }
+/* Cells that wrap (chips, tags) keep clear of the row borders. */
+.table td.fui-TableCell {
+  padding-top: var(--spacingVerticalS);
+  padding-bottom: var(--spacingVerticalS);
+}
 .table .col-thumb {
   width: 112px;
 }
