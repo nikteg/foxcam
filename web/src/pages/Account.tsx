@@ -17,6 +17,12 @@ import {
   MessageBarTitle,
   Select,
   Subtitle2,
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
   Text,
 } from "@fluentui/react-components";
 import {
@@ -297,51 +303,70 @@ function ApiKeys() {
         {rich("apiKeys.intro", { header: <code>Authorization: Bearer msk_…</code> })}
       </p>
       {keys.data?.length === 0 && <Empty>{t("apiKeys.none")}</Empty>}
-      <div className="cards">
-        {keys.data?.map((k) => (
-          <Card key={k.id} size="small">
-            <CardHeader
-              header={
-                <span className="row tags">
+      {!!keys.data?.length && (
+        <Table className="table responsive" aria-label={t("apiKeys.title")}>
+          <TableHeader>
+            <TableRow>
+              <TableHeaderCell>{t("apiKeys.name")}</TableHeaderCell>
+              <TableHeaderCell>{t("apiKeys.colScopes")}</TableHeaderCell>
+              <TableHeaderCell>{t("apiKeys.colKey")}</TableHeaderCell>
+              <TableHeaderCell>{t("apiKeys.colLastUsed")}</TableHeaderCell>
+              <TableHeaderCell>{t("apiKeys.expiry")}</TableHeaderCell>
+              <TableHeaderCell aria-label={t("col.actions")} className="col-actions" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {keys.data.map((k) => (
+              <TableRow key={k.id}>
+                <TableCell data-label={t("apiKeys.name")}>
                   <Text weight="semibold">{k.name}</Text>
-                  {k.scopes.map((s) => (
-                    <Tag key={s} kind={s === "admin" ? "target" : undefined}>
-                      {t(`apiKeys.scope.${s}`)}
-                    </Tag>
-                  ))}
-                </span>
-              }
-              description={
-                <Caption1 className="muted">
-                  <code>{k.prefix}…</code> – {t("apiKeys.lastUsed")}{" "}
-                  {k.last_used_at ? <Time iso={k.last_used_at} relative /> : t("apiKeys.never")}
-                  {k.expires_at && (
-                    <>
-                      {" "}
-                      – {t("apiKeys.expires")} <Time iso={k.expires_at} />
-                    </>
+                </TableCell>
+                <TableCell data-label={t("apiKeys.colScopes")}>
+                  <span className="chips">
+                    {k.scopes.map((s) => (
+                      <Tag key={s} kind={s === "admin" ? "target" : undefined}>
+                        {t(`apiKeys.scope.${s}`)}
+                      </Tag>
+                    ))}
+                  </span>
+                </TableCell>
+                <TableCell data-label={t("apiKeys.colKey")}>
+                  <code>{k.prefix}…</code>
+                </TableCell>
+                <TableCell data-label={t("apiKeys.colLastUsed")}>
+                  {k.last_used_at ? (
+                    <Time iso={k.last_used_at} relative />
+                  ) : (
+                    <span className="muted">{t("apiKeys.never")}</span>
                   )}
-                </Caption1>
-              }
-              action={
-                <Button
-                  size="small"
-                  icon={<Delete20Regular />}
-                  disabled={revoke.isPending}
-                  onClick={() => {
-                    if (window.confirm(t("apiKeys.revokeConfirm", { name: k.name }))) {
-                      revoke.mutate(k.id);
-                    }
-                  }}
-                >
-                  {t("apiKeys.revoke")}
-                </Button>
-              }
-            />
-          </Card>
-        ))}
-      </div>
-      <div className="block">
+                </TableCell>
+                <TableCell data-label={t("apiKeys.expiry")}>
+                  {k.expires_at ? (
+                    <Time iso={k.expires_at} />
+                  ) : (
+                    <span className="muted">{t("apiKeys.noExpiry")}</span>
+                  )}
+                </TableCell>
+                <TableCell className="full">
+                  <Button
+                    size="small"
+                    icon={<Delete20Regular />}
+                    disabled={revoke.isPending}
+                    onClick={() => {
+                      if (window.confirm(t("apiKeys.revokeConfirm", { name: k.name }))) {
+                        revoke.mutate(k.id);
+                      }
+                    }}
+                  >
+                    {t("apiKeys.revoke")}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+      <div className="section-actions">
         <Button icon={<Add20Regular />} onClick={() => setAdding(true)}>
           {t("apiKeys.add")}
         </Button>

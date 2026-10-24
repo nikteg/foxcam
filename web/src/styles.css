@@ -68,6 +68,11 @@ kbd {
 .block {
   margin-bottom: var(--spacingVerticalL);
 }
+/* A section's add button under its table or list: clear of it, not squeezed against it. */
+.section-actions {
+  margin-top: var(--spacingVerticalL);
+  margin-bottom: var(--spacingVerticalL);
+}
 .contents {
   display: contents;
 }
