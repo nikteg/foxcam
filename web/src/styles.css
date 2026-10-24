@@ -12,6 +12,13 @@ body {
   margin: 0;
   background: #0f1216;
 }
+/* Taps act at once on phones: no double-tap-to-zoom wait (pinch zoom still works; the
+   censor editor's touch-action: none still wins there), and no grey tap flash, since buttons
+   show their own pressed state. */
+html {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
 /* data-theme is set by <ThemeProvider>. */
 html[data-theme="light"],
 html[data-theme="light"] body {
