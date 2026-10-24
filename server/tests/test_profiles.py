@@ -111,7 +111,8 @@ def test_segment_finishes_when_all_profiles_are_done(two_profiles):
         car = dets[("vehicles", "car")]
         assert car.is_target and car.extra == {"raw_label": "automobile"}  # alias applied
         assert not dets[("vehicles", "dog")].is_target
-        assert not dets[("default", "red fox")].is_target  # below the default threshold
+        fox = dets[("default", "fox")]  # default profile aliases "red fox" to "fox"
+        assert not fox.is_target and fox.extra == {"raw_label": "red fox"}  # below threshold
     assert not derived.exists()  # removed once every profile is done
 
 

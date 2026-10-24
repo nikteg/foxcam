@@ -63,11 +63,11 @@ segment has one job per profile, so the same segment may come back for another p
   "input_url": "/api/worker/jobs/42/input",
   "input_fps": 2.0,
   "sample_fps": 2.0,
-  "profile": {"id": "default", "name": "Fox", "targets": ["fox", "red fox", "vulpes vulpes"],
+  "profile": {"id": "default", "name": "Fox", "targets": ["fox"],
               "min_confidence": 0.5},
   "segment": {"id": 17, "camera_id": "garden", "start_at": "2026-10-24T10:00:00",
               "duration_s": 60.0, "width": 1920, "height": 1080, "is_night": true},
-  "hints": {"target_labels": ["fox", "red fox", "vulpes vulpes"], "min_confidence": 0.5,
+  "hints": {"target_labels": ["fox"], "min_confidence": 0.5,
             "profile": "default", "country": "SWE", "latitude": null, "longitude": null}
 }
 ```
@@ -102,8 +102,9 @@ POST /api/worker/jobs/42/result
 
 - `offset_ms`: from the start of the segment.
 - `bbox`: `[x, y, width, height]`, normalized 0–1, top-left origin (optional).
-- `label`: free text. The server marks a detection as a *target* when the label is in
-  `detection.target_labels` (case-insensitive) and `confidence ≥ min_confidence`.
+- `label`: free text. The server marks a detection as a *target* when the label (after the
+  profile's `aliases`, e.g. `red fox` → `fox`) is in its targets (case-insensitive) and
+  `confidence ≥ min_confidence`.
 - Report every object you like (people, cats, …); only targets create fox events.
 - An empty `detections` list is a valid result ("nothing seen").
 

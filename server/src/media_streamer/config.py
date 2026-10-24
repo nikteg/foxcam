@@ -182,7 +182,10 @@ class QueueConfig(BaseModel):
 class DetectionConfig(BaseModel):
     """Used for the built-in `default` profile when `profiles:` is not configured."""
 
-    target_labels: list[str] = ["fox", "red fox", "vulpes vulpes"]
+    # Open-vocabulary workers are prompted with these: one word per thing (synonyms compete,
+    # see docs/MODELS.md). Other models' names for it go in `aliases`.
+    target_labels: list[str] = ["fox"]
+    aliases: dict[str, str] = {"red fox": "fox", "vulpes vulpes": "fox"}
     min_confidence: float = 0.5
 
 
@@ -483,7 +486,7 @@ class Settings(BaseModel):
         if not self.profiles:
             self.profiles = [ProfileConfig(
                 id=DEFAULT_PROFILE, name="Fox", targets=self.detection.target_labels,
-                min_confidence=self.detection.min_confidence, default=True)]
+                aliases=self.detection.aliases, min_confidence=self.detection.min_confidence, default=True)]
         # MEDIA_STREAMER_PUBLIC_URL fills in when the config has none (scripts/dev.sh sets it
         # from this machine's LAN address).
         self.public_url = self.public_url or os.environ.get("MEDIA_STREAMER_PUBLIC_URL") or None

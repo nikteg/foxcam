@@ -514,7 +514,7 @@ export const sv: Record<MessageKey, string> = {
   "profiles.id": "Id",
   "profiles.idHint": "Små bokstäver, siffror, '-' eller '_'. Kan inte ändras senare.",
   "profiles.targetsHint":
-    "Etiketter som skapar händelser, kommaseparerade, t.ex. fox, badger. Arbetare med öppet ordförråd (YOLO-World) får dessa som prompt.",
+    "Etiketter som skapar händelser, kommaseparerade, t.ex. fox, badger. Arbetare med öppet ordförråd (YOLO-World) får dessa som prompt: använd ett ord per sak, eftersom synonymer (person, man, woman) konkurrerar och sänker alla värden. Mappa andra namn med alias i stället.",
   "profiles.aliasesHint":
     "En per rad: modellens etikett = din etikett, t.ex. red fox = fox. Får olika modeller att använda samma namn.",
   "profiles.minConfidencePercent": "Minsta säkerhet (%)",

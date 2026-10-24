@@ -25,7 +25,23 @@ distance, partly hidden. That rules out the default choice:
 different things: e.g. a `wildlife` profile requiring `speciesnet` on the garden cameras and
 a `vehicles` profile requiring `open-vocabulary` (YOLO-World, prompted with the profile's
 targets) on the driveway. Use `aliases` (`red fox: fox`) so both models report the same name.
-Keep a fox profile's YOLO-World targets to fox synonyms only (see the measurements below).
+
+**Give YOLO-World one word per thing.** Distinct targets are fine together, but synonyms of the
+same thing compete for the same object and pull every score down, often below the threshold.
+Prompt `person`, not `person, man, woman`; prompt `fox`, and map other models' names to it with
+`aliases`. Measured on a 30 s driveway clip with one person (best person score) and on the fox
+samples (best fox score):
+
+| Prompt | Score |
+|---|---|
+| `person` | 0.89 |
+| `person, car` / `person, fox` / `person, dog, cat, fox` | 0.89 / 0.89 / 0.88 |
+| `person, man` | **0.47** |
+| `person, man, woman, child, walk` | **0.43** (no event at 50 %) |
+| `fox` (`fox-yard-day` / `fox-night-urban`) | 0.92 / 0.84 |
+| `fox, red fox, vulpes vulpes` | **0.74 / 0.68** |
+
+Unrelated words (`dog, cat`) only hurt when they look like the target (see the fox table below).
 
 ## Recommended path
 

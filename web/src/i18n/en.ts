@@ -431,7 +431,7 @@ export const en = {
   "profiles.id": "Id",
   "profiles.idHint": "Lower-case letters, digits, '-' or '_'. Cannot be changed later.",
   "profiles.targetsHint":
-    "Labels that create events, comma separated, e.g. fox, badger. Open-vocabulary workers (YOLO-World) are prompted with these.",
+    "Labels that create events, comma separated, e.g. fox, badger. Open-vocabulary workers (YOLO-World) are prompted with these: use one word per thing, since synonyms (person, man, woman) compete and lower every score. Map other names with aliases instead.",
   "profiles.aliasesHint":
     "One per line: model label = your label, e.g. red fox = fox. Lets different models agree on names.",
   "profiles.minConfidencePercent": "Minimum confidence (%)",

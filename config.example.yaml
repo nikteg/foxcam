@@ -81,7 +81,10 @@ queue:
 # What to look for. Without `profiles:` there is one built-in `default` profile made from
 # this section, run on every camera by any worker.
 detection:
-  target_labels: [fox, red fox, vulpes vulpes]
+  # YOLO-World is prompted with these: one word per thing, synonyms lower every score.
+  target_labels: [fox]
+  # Other models' names for a target (SpeciesNet says "red fox").
+  aliases: { red fox: fox, vulpes vulpes: fox }
   min_confidence: 0.5
 
 # Detection profiles (optional; can also be added in the web UI under Cameras). Each
