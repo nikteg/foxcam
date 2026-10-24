@@ -547,9 +547,11 @@ export const sv: Record<MessageKey, string> = {
     "Koppla en etikett som en modell rapporterar till din, t.ex. red fox → fox, så att olika modeller använder samma namn.",
   "profiles.minConfidencePercent": "Minsta säkerhet (%)",
   "profiles.requiresHint":
-    "Kommaseparerade. Bara arbetare med alla dessa taggar får profilens jobb (t.ex. speciesnet, eller en dators egen tagg för att låsa den). Tomt = alla arbetare.",
-  "profiles.requiresHintKnown":
-    "Kommaseparerade; bara arbetare med alla taggarna får jobben. Tomt = alla arbetare. Kända taggar: {tags}.",
+    "Bara arbetare med alla dessa taggar får profilens jobb (t.ex. speciesnet, eller en dators egen tagg för att låsa den). Tomt = alla arbetare.",
+  "profiles.requiresAny": "Alla arbetare kan köra den: {workers}.",
+  "profiles.requiresMatching": "Arbetare med de här taggarna: {workers}.",
+  "profiles.requiresNoMatch": "Ingen känd arbetare har alla de här taggarna än.",
+  "profiles.tagNoWorker": "på en token eller profil, ingen arbetare än",
   "profiles.fpsHint":
     "Analysera färre bilder per sekund för att spara GPU-tid (t.ex. 1 för bilar).",
   "profiles.keepEventsDays": "Spara händelser (dagar)",

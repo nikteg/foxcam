@@ -464,9 +464,11 @@ export const en = {
     "Map a label a model reports to yours, e.g. red fox → fox, so different models agree on names.",
   "profiles.minConfidencePercent": "Minimum confidence (%)",
   "profiles.requiresHint":
-    "Comma separated. Only workers with all these tags get this profile's jobs (e.g. speciesnet, or a machine's own tag to pin it). Empty = any worker.",
-  "profiles.requiresHintKnown":
-    "Comma separated; only workers with all these tags get the jobs. Empty = any worker. Known tags: {tags}.",
+    "Only workers with all these tags get this profile's jobs (e.g. speciesnet, or a machine's own tag to pin it). Empty = any worker.",
+  "profiles.requiresAny": "Any worker can run it: {workers}.",
+  "profiles.requiresMatching": "Workers with these tags: {workers}.",
+  "profiles.requiresNoMatch": "No known worker has all these tags yet.",
+  "profiles.tagNoWorker": "on a token or profile, no worker yet",
   "profiles.fpsHint": "Analyse fewer frames per second to save GPU time (e.g. 1 for cars).",
   "profiles.keepEventsDays": "Keep events (days)",
   "profiles.keepEventsHint": "Empty = the global retention setting. 0 = forever.",

@@ -26,7 +26,7 @@ import {
   Edit20Regular,
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { api, type Profile, type ProfileInput } from "../api";
 import {
@@ -43,11 +43,14 @@ import { Empty, QueryState, Tag } from "../components/ui";
 import { percent } from "../format";
 import { useI18n } from "../i18n";
 
-const splitList = (text: string) =>
-  text
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+/** Tags as the server stores them: lower case, no spaces, unique. */
+const normalizeTags = (tags: string[]) => [
+  ...new Set(
+    tags
+      .map((s) => s.trim().toLowerCase().replace(/\s+/g, "-"))
+      .filter((s) => /^[a-z0-9][a-z0-9_.-]*$/.test(s)),
+  ),
+];
 
 type AliasRow = { from: string; to: string };
 
@@ -249,7 +252,7 @@ function ProfileDialog({ profile, onClose }: { profile: Profile | null; onClose:
   const [minConf, setMinConf] = useState(
     String(Math.round((profile?.min_confidence ?? 0.5) * 100)),
   );
-  const [requires, setRequires] = useState(profile?.requires.join(", ") ?? "");
+  const [requires, setRequires] = useState<string[]>(profile?.requires ?? []);
   const [fps, setFps] = useState(profile?.fps?.toString() ?? "");
   const [eventsDays, setEventsDays] = useState(profile?.events_days?.toString() ?? "");
   const [isDefault, setDefault] = useState(profile?.default ?? false);
@@ -261,7 +264,7 @@ function ProfileDialog({ profile, onClose }: { profile: Profile | null; onClose:
     targets: targets.map((s) => s.trim()).filter(Boolean),
     aliases: aliasMap(aliases),
     min_confidence: Math.min(Math.max(Number(minConf) / 100, 0), 1),
-    requires: splitList(requires).map((s) => s.toLowerCase()),
+    requires,
     fps: fps ? Number(fps) : null,
     default: isDefault,
     events_days: eventsDays === "" ? null : Number(eventsDays),
@@ -275,13 +278,23 @@ function ProfileDialog({ profile, onClose }: { profile: Profile | null; onClose:
       onClose();
     },
   });
-  const known = tags.data ?? [];
-  const warnings = profileWarnings(
-    targets,
-    aliasMap(aliases),
-    splitList(requires).map((s) => s.toLowerCase()),
-    labels.data,
+  const known = useMemo(() => tags.data ?? [], [tags.data]);
+  // Tags suggest which workers have them; free text pins a worker not connected yet.
+  const tagSuggestions = useMemo(() => {
+    const workers = labels.data?.workers ?? [];
+    return known.map((tag) => {
+      const holders = workers.filter((w) => w.tags.includes(tag)).map((w) => w.id);
+      return {
+        label: tag,
+        sources: [holders.length ? holders.join(", ") : t("profiles.tagNoWorker")],
+        seen: holders.length,
+      };
+    });
+  }, [known, labels.data, t]);
+  const matching = (labels.data?.workers ?? []).filter((w) =>
+    requires.every((tag) => w.tags.includes(tag)),
   );
+  const warnings = profileWarnings(targets, aliasMap(aliases), requires, labels.data);
   const setAlias = (i: number, row: Partial<AliasRow>) =>
     setAliases((rows) => rows.map((r, j) => (j === i ? { ...r, ...row } : r)));
 
@@ -387,15 +400,26 @@ function ProfileDialog({ profile, onClose }: { profile: Profile | null; onClose:
               <Field
                 label={t("profiles.requires")}
                 hint={
-                  known.length
-                    ? t("profiles.requiresHintKnown", { tags: known.join(", ") })
-                    : t("profiles.requiresHint")
+                  <>
+                    {t("profiles.requiresHint")}{" "}
+                    {labels.data &&
+                      (matching.length
+                        ? t(
+                            requires.length ? "profiles.requiresMatching" : "profiles.requiresAny",
+                            {
+                              workers: matching.map((w) => w.id).join(", "),
+                            },
+                          )
+                        : t("profiles.requiresNoMatch"))}
+                  </>
                 }
               >
-                <Input
+                <LabelPicker
                   value={requires}
+                  onChange={(v) => setRequires(normalizeTags(v))}
+                  suggestions={tagSuggestions}
                   placeholder="speciesnet"
-                  onChange={(_, d) => setRequires(d.value)}
+                  ariaLabel={t("profiles.requires")}
                 />
               </Field>
               <Field label={t("profiles.fps")} hint={t("profiles.fpsHint")}>
