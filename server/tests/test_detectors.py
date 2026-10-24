@@ -436,3 +436,15 @@ def test_raw_results_are_not_shown_to_viewers(wildlife):
         accounts.grant("cam", sign_in(c, wildlife, "viewer@example.org"), "viewer")
         jobs = c.get(f"/api/segments/{seg_id}/jobs").json()
     assert jobs and all("raw_result" not in j for j in jobs)
+
+
+def test_jobs_that_gave_up_count_with_the_detectors_model(wildlife):
+    from media_streamer import model_stats
+
+    first = _two_model_results(wildlife)  # yolo ran model "y"
+    seg = _queued_segment(wildlife, utc_later(wildlife, first))
+    job = queue.lease(wildlife, "y", tags=["gpu", "open-vocabulary"])
+    queue.fail(wildlife, job.id, job.lease_token, "crash", retryable=False)
+    rows = [r for r in model_stats.model_stats(wildlife) if r["detector_id"] == "yolo"]
+    assert [(r["model"], r["jobs_done"], r["jobs_dead"]) for r in rows] == [("y", 1, 1)]
+    assert seg

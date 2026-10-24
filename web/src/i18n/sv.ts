@@ -564,6 +564,8 @@ export const sv: Record<MessageKey, string> = {
   "models.jobsCell": "{done} klara – {dead} gav upp – {skipped} överhoppade",
   "recordings.rawResult": "Rådata",
   "detections.extra": "Övriga detaljer",
+  "detectors.requiresPlaceholder": "inga, t.ex. speciesnet",
+  "detectors.profileValue": "profilens ({value})",
   "profiles.title": "Detekteringsprofiler",
   "profiles.profile": "Profil",
   "profiles.all": "Alla profiler",

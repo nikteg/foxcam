@@ -479,6 +479,8 @@ export const en = {
   "models.jobsCell": "{done} done – {dead} gave up – {skipped} skipped",
   "recordings.rawResult": "Raw result",
   "detections.extra": "Other details",
+  "detectors.requiresPlaceholder": "none, e.g. speciesnet",
+  "detectors.profileValue": "profile's ({value})",
   "profiles.title": "Detection profiles",
   "profiles.profile": "Profile",
   "profiles.all": "All profiles",

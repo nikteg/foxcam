@@ -34,8 +34,9 @@ const columns = (t: I18n["t"]): Column<ModelStats>[] => [
   {
     id: "model",
     header: t("col.model"),
-    width: 170,
-    cell: (r) => <Caption1>{r.model ?? "–"}</Caption1>,
+    width: 260,
+    minWidth: 180,
+    cell: (r) => <Caption1 title={r.model ?? undefined}>{r.model ?? "–"}</Caption1>,
     compare: byString((r) => r.model),
   },
   {

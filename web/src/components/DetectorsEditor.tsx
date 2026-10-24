@@ -127,7 +127,7 @@ export function DetectorsEditor({
               <TagsPicker
                 value={row.requires}
                 onChange={(requires) => set(i, { requires })}
-                placeholder="speciesnet"
+                placeholder={t("detectors.requiresPlaceholder")}
                 ariaLabel={t("detectors.requires")}
               />
             </Field>
@@ -139,7 +139,7 @@ export function DetectorsEditor({
                   min={0}
                   max={100}
                   value={row.minConf}
-                  placeholder={profileMinConf}
+                  placeholder={t("detectors.profileValue", { value: profileMinConf })}
                   onChange={(_, d) => set(i, { minConf: d.value })}
                 />
               </Field>

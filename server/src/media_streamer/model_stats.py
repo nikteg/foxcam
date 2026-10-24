@@ -87,6 +87,17 @@ def model_stats(settings: Settings, since: datetime | None = None) -> list[dict[
             if hits[(seg, pid)] - {key[1]}:
                 r["segments_agreed"] += 1
 
+    # Jobs that never finished (gave up, skipped) have no model: count them with the
+    # detector's model when it ran a single one.
+    for key in [k for k in rows if not k[2]]:
+        ran = [k for k in rows if k[:2] == key[:2] and k[2]]
+        if len(ran) == 1:
+            r, into = rows.pop(key), rows[ran[0]]
+            for field in ("jobs_dead", "jobs_skipped", "detections", "targets",
+                          "feedback_correct", "feedback_wrong", "segments_with_target",
+                          "segments_agreed"):
+                into[field] += r[field]
+
     out = []
     for (pid, did, model), r in rows.items():
         profile = settings.profile(pid)
