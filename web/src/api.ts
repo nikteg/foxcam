@@ -836,5 +836,5 @@ export const snapshotUrl = (cameraId: string, fresh = false, source = false) => 
 export const segmentPlayUrl = (segmentId: number, offsetMs = 0) =>
   `/api/segments/${segmentId}/play${offsetMs ? `#t=${(offsetMs / 1000).toFixed(1)}` : ""}`;
 
-export const detectionFrameUrl = (detectionId: number) =>
-  `/api/detections/${detectionId}/frame.jpg`;
+export const detectionFrameUrl = (detectionId: number, size: "full" | "small" = "full") =>
+  `/api/detections/${detectionId}/frame.jpg${size === "small" ? "?size=small" : ""}`;

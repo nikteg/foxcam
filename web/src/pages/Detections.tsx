@@ -24,6 +24,16 @@ import { useFilters } from "../useFilters";
 
 const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detection>[] => [
   {
+    id: "thumb",
+    header: t("col.preview"),
+    width: 120,
+    phone: "thumb",
+    // The frame with the box drawn in; made on first view (lazy: rows in sight only).
+    cell: (d) => (
+      <img className="mini" loading="lazy" src={detectionFrameUrl(d.id, "small")} alt="" />
+    ),
+  },
+  {
     id: "ts",
     header: t("col.time"),
     width: 205,

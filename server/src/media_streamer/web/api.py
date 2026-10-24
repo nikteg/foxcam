@@ -9,7 +9,7 @@ import asyncio
 import time
 from datetime import timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, RedirectResponse, Response
@@ -311,9 +311,12 @@ def detections(camera: str | None = None, label: str | None = None, only_targets
 
 
 @router.get("/detections/{detection_id}/frame.jpg")
-async def detection_frame(detection_id: int, settings: Settings = Depends(settings_dep),
+async def detection_frame(detection_id: int,
+                          size: Literal["full", "small"] = "full",
+                          settings: Settings = Depends(settings_dep),
                           p: Principal = Depends(principal)) -> FileResponse:
-    """The original (uncensored) frame at the detection time, with its box drawn in."""
+    """The original (uncensored) frame at the detection time, with its box drawn in.
+    ``small``: a preview for table rows (cached separately)."""
     with session_scope() as s:
         det = s.get(Detection, detection_id)
         if det is None or not p.can(det.camera_id):
@@ -322,11 +325,14 @@ async def detection_frame(detection_id: int, settings: Settings = Depends(settin
         offset_s, bbox = det.offset_ms / 1000, det.bbox
     if src is None:
         raise HTTPException(410, "recording deleted by retention")
-    dst = settings.thumbs_dir / "detections" / f"{detection_id}.jpg"
+    small = size == "small"
+    dst = settings.thumbs_dir / "detections" / f"{detection_id}{'-small' if small else ''}.jpg"
     if not dst.exists():
-        await asyncio.to_thread(ffmpeg.thumbnail, src.path, dst, src.offset_s + offset_s, 960,
-                                bbox)
-    return FileResponse(dst, media_type="image/jpeg")
+        await asyncio.to_thread(ffmpeg.thumbnail, src.path, dst, src.offset_s + offset_s,
+                                240 if small else 960, bbox)
+    # Never changes once made (the box is from the detection, the frame from the file).
+    return FileResponse(dst, media_type="image/jpeg",
+                        headers={"Cache-Control": "private, max-age=86400"})
 
 
 class FeedbackBody(BaseModel):

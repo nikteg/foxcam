@@ -275,3 +275,20 @@ def test_default_recording_profile_is_for_admins(settings):
     with app_client(settings, email="viewer@example.org", admin=False) as c:
         assert c.put("/api/recording-profiles/default",
                      json={"profile": "h265"}).status_code == 403
+
+
+@needs_ffmpeg
+def test_detection_frame_has_a_small_preview(settings, client):
+    import subprocess
+
+    seg = add_segment(settings, size="640x360")
+    det = add_detection(seg, add_job(seg), 500)
+    for size, width in (("", 960), ("?size=small", 240)):
+        r = client.get(f"/api/detections/{det}/frame.jpg{size}")
+        assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg"
+        assert "max-age" in r.headers["cache-control"]
+        name = f"{det}-small.jpg" if size else f"{det}.jpg"
+        out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=width",
+                              "-of", "csv=p=0", str(settings.thumbs_dir / "detections" / name)],
+                             capture_output=True, text=True, check=True).stdout
+        assert int(out.strip()) == width
