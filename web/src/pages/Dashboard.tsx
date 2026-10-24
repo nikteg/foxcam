@@ -24,6 +24,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 
 import { api, snapshotUrl, type Camera, type CompactionStatus } from "../api";
+import { ArchivingState } from "../components/ArchivingSection";
 import { useCameraName } from "../components/CameraSelect";
 import { EventsGrid } from "../components/EventsGrid";
 import {
@@ -41,7 +42,7 @@ import {
   useStateLabel,
 } from "../components/ui";
 import { useI18n } from "../i18n";
-import { duration, fileSize, localTime } from "../format";
+import { fileSize, localTime } from "../format";
 
 export function Dashboard() {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status, refetchInterval: 10_000 });
@@ -148,72 +149,31 @@ export function Dashboard() {
         </>
       )}
 
-      {s?.compaction && <CompactionSection c={s.compaction} />}
+      {s?.compaction && <ArchivingSummary c={s.compaction} />}
     </>
   );
 }
 
-/** The compact process: joins finished hours into one file per camera (admins only). */
-function CompactionSection({ c }: { c: CompactionStatus }) {
-  const { t, rich } = useI18n();
+/** The archiving process in one line (admins); details under Jobs → Archiving. */
+function ArchivingSummary({ c }: { c: CompactionStatus }) {
+  const { t } = useI18n();
   const cameraName = useCameraName();
-  const run = (r: { camera_id: string; start_at: string }) =>
-    `${cameraName(r.camera_id)} ${localTime(r.start_at)}`;
-  const last = c.last_built;
-  const errorIsNewer = c.last_error && (!last || (c.last_error_at ?? "") > last.at);
   return (
     <>
       <Subtitle2 as="h2" className="section">
-        {t("compaction.title")}
-        {!c.enabled ? (
-          <Tag>{t("compaction.off")}</Tag>
-        ) : c.running ? (
-          <Tag kind="ok">{t("compaction.running")}</Tag>
-        ) : (
-          <Tag kind="bad">{t("compaction.stopped")}</Tag>
-        )}
+        {t("compaction.title")} <ArchivingState c={c} />
       </Subtitle2>
-      {c.enabled && !c.running && (
-        <MessageBar intent="warning" className="block">
-          <MessageBarBody>
-            {rich("compaction.notRunning", { command: <code>media-streamer compact</code> })}
-          </MessageBarBody>
-        </MessageBar>
-      )}
-      {errorIsNewer && (
-        <MessageBar intent="error" className="block">
-          <MessageBarBody>{c.last_error}</MessageBarBody>
-        </MessageBar>
-      )}
-      <dl className="facts">
-        <dt>{t("compaction.now")}</dt>
-        <dd>
-          {c.current
-            ? t(c.current.reencode ? "compaction.reencoding" : "compaction.joining", {
-                what: run(c.current),
-                n: c.current.segments,
-              })
-            : t("compaction.idle")}
-        </dd>
-        <dt>{t("compaction.waiting")}</dt>
-        <dd>
-          {t("compaction.waitingValue", { n: c.waiting_periods, segments: c.waiting_segments })}
-        </dd>
-        <dt>{t("compaction.done")}</dt>
-        <dd>{t("compaction.doneValue", { n: c.archives, segments: c.joined_segments })}</dd>
-        <dt>{t("compaction.last")}</dt>
-        <dd>
-          {last ? (
-            <>
-              {run(last)} – {fileSize(last.bytes_before)} → {fileSize(last.bytes_after)} (
-              {last.encoder === "copy" ? t("compaction.copied") : last.encoder},{" "}
-              {duration(last.seconds)}) <Time iso={last.at} relative />
-            </>
-          ) : (
-            "–"
-          )}
-        </dd>
-      </dl>
+      <p className="muted">
+        {c.current
+          ? t(c.current.reencode ? "compaction.reencoding" : "compaction.joining", {
+              what: `${cameraName(c.current.camera_id)} ${localTime(c.current.start_at)}`,
+              n: c.current.segments,
+            })
+          : c.waiting_periods
+            ? t("archiving.summaryWaiting", { n: c.waiting_periods })
+            : t("archiving.summaryUpToDate")}{" "}
+        <RouterLink to="/jobs/archiving">{t("archiving.details")}</RouterLink>
+      </p>
     </>
   );
 }

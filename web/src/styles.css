@@ -318,10 +318,14 @@ button.fui-CompoundButton {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.stat-value::first-letter,
 .stat-label::first-letter {
   text-transform: uppercase;
 }
 .fui-Text.stat-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--fontSizeHero700);
   line-height: var(--lineHeightHero700);
   font-weight: var(--fontWeightSemibold);
@@ -1279,4 +1283,13 @@ Fluent's text styles would otherwise reset the margins. */
   flex-wrap: wrap;
   gap: var(--spacingHorizontalS);
   border-top: 1px solid var(--colorNeutralStroke2);
+}
+
+.plain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalXS);
 }

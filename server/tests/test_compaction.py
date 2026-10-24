@@ -10,7 +10,7 @@ from media_streamer.db import session_scope
 from media_streamer.models import Archive, Segment, SegmentStatus, utcnow
 from media_streamer.pipeline import compaction, retention, uploader
 
-from .conftest import add_segment, needs_ffmpeg
+from .conftest import add_segment, app_client, needs_ffmpeg
 
 HOUR = timedelta(hours=1)
 
@@ -161,6 +161,12 @@ def test_status_for_the_status_page(settings):
     ids = _hour_ago(settings, n=3)
     st = compaction.status(settings)
     assert (st["running"], st["waiting_periods"], st["waiting_segments"]) == (False, 1, 3)
+    [waiting] = st["waiting_list"]
+    assert (waiting["camera_id"], waiting["segments"]) == ("cam", 3)
+    with app_client(settings) as c:  # Jobs → Archiving (admins)
+        assert c.get("/api/archiving").json()["waiting_periods"] == 1
+    with app_client(settings, email="viewer@example.org", admin=False) as c:
+        assert c.get("/api/archiving").status_code == 403
 
     compaction.compact_once(settings)
     compaction._write_state(settings, heartbeat_at=compaction._now_iso())

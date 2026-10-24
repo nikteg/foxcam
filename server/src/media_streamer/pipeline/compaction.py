@@ -82,7 +82,8 @@ def _now_iso() -> str:
 
 
 def status(settings: Settings) -> dict:
-    """For the Status page: is the process alive, what is it doing, what is waiting."""
+    """For Jobs → Archiving and the Status page: is the process alive, what is it doing,
+    what is waiting (oldest periods first)."""
     cfg = settings.compaction
     state = read_state(settings)
     beat = state.get("heartbeat_at")
@@ -111,6 +112,10 @@ def status(settings: Settings) -> dict:
         "last_error": state.get("last_error"), "last_error_at": state.get("last_error_at"),
         "archives": archives or 0, "joined_segments": joined or 0,
         "waiting_periods": len(waiting), "waiting_segments": sum(waiting.values()),
+        "waiting_list": [
+            {"camera_id": cam, "start_at": start.isoformat(timespec="seconds") + "Z",
+             "segments": n}
+            for (cam, start), n in sorted(waiting.items(), key=lambda kv: kv[0][1])[:50]],
     }
 
 

@@ -142,7 +142,7 @@ export function Recordings() {
     "file",
   ] as const);
   const navigate = useNavigate();
-  const tab = useSubPage("/recordings", ["segments", "joined"] as const);
+  const tab = useSubPage("/recordings", ["segments", "archives"] as const);
   const segments = useQuery({
     queryKey: ["segments", f.camera, f.day, f.only_targets, f.status],
     // A new filter keeps the current list on screen until its own data arrives.
@@ -178,10 +178,10 @@ export function Recordings() {
         current={tab}
         tabs={[
           { id: "segments", label: t("recordings.segmentsTab") },
-          { id: "joined", label: t("hourly.title") },
+          { id: "archives", label: t("hourly.title") },
         ]}
       />
-      {tab === "joined" ? (
+      {tab === "archives" ? (
         <>
           <div className="filters">
             <CameraSelect value={f.camera} onChange={(v) => setFilter("camera", v)} />
@@ -259,7 +259,7 @@ export function Recordings() {
               {selected && (
                 <RecordingDetail
                   segment={selected}
-                  onOpenHourly={(id) => void navigate(`/recordings/joined?file=${id}`)}
+                  onOpenHourly={(id) => void navigate(`/recordings/archives?file=${id}`)}
                 />
               )}
             </DetailPanel>

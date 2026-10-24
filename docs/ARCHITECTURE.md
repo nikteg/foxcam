@@ -226,11 +226,14 @@ Recording, live view, the low-data path, snapshots and worker jobs all keep read
 `<camera>`, so nothing downstream changes. The mask editor snapshots `<camera>/raw`
 (`?source=true`) so you can see what is under existing masks.
 
-## Compaction (hourly files, recording profiles)
+## Archiving (compaction, recording profiles)
 
 Segments are short (`segment_seconds`) so detection starts soon after something happens,
 but thousands of small files per camera and day are a burden on disk and in S3.
-`media-streamer compact` (its own process; `compact` service in Docker) joins them:
+`media-streamer compact` (its own process; `compact` service in Docker) joins them into
+archive files. Jobs → Archiving shows whether it runs, what it is doing, which periods wait
+and what was archived last (`GET /api/archiving`); the files are under Recordings →
+Archives, and the Status page has a one-line summary.
 
 - Once a period (`compaction.period_minutes`, default an hour) is over by
   `delay_minutes` and none of its segments is still being preprocessed, each camera's

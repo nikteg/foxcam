@@ -394,6 +394,12 @@ def event_thumb(event_id: int, settings: Settings = Depends(settings_dep),
     return _serve(settings, settings.data_dir, ev.thumb_path, ev.thumb_remote_key, "image/jpeg")
 
 
+@router.get("/archiving", dependencies=[Depends(require_admin)])
+async def archiving(settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
+    """Jobs → Archiving: the process joining finished periods into archive files."""
+    return await asyncio.to_thread(compaction.status, settings)
+
+
 @router.get("/models/stats", dependencies=[Depends(require_admin)])
 def models_stats(days: float | None = Query(None, gt=0, description="last N days; none = all"),
                  settings: Settings = Depends(settings_dep)) -> list[dict[str, Any]]:

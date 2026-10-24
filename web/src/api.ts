@@ -196,6 +196,8 @@ export interface CompactionStatus {
   joined_segments: number;
   waiting_periods: number;
   waiting_segments: number;
+  /** Periods waiting to be archived, oldest first (at most 50). */
+  waiting_list: { camera_id: string; start_at: string; segments: number }[];
 }
 
 export interface Segment {
@@ -710,6 +712,7 @@ export const api = {
       "POST",
       `/api/segments/${id}/reanalyse`,
     ),
+  archiving: () => request<CompactionStatus>("GET", "/api/archiving"),
   archives: (q: { camera?: string; day?: string; limit?: number }) =>
     request<ArchiveFile[]>("GET", withQuery("/api/archives", q)),
   detections: (q: {
