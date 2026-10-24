@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter } from "react-router";
+import { Navigate, createBrowserRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
 
 import { Layout, NotFound } from "./App";
@@ -38,8 +38,11 @@ const router = createBrowserRouter([
       { path: "detections", Component: Detections },
       { path: "recordings", Component: Recordings },
       { path: "recordings/joined", Component: Recordings },
-      { path: "queue", Component: Queue },
-      { path: "queue/workers", Component: Queue },
+      { path: "jobs", Component: Queue },
+      { path: "jobs/workers", Component: Queue },
+      // Old links (the page was "Worker queue").
+      { path: "queue", element: <Navigate to="/jobs" replace /> },
+      { path: "queue/workers", element: <Navigate to="/jobs/workers" replace /> },
       { path: "settings", Component: Settings },
       { path: "settings/:subPage", Component: Settings },
       { path: "account", Component: Account },

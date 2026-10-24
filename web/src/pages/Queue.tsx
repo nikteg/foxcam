@@ -10,9 +10,10 @@ import {
   TableRow,
   Text,
 } from "@fluentui/react-components";
-import { ArrowClockwise16Regular, Dismiss16Regular } from "@fluentui/react-icons";
+import { Add20Regular, ArrowClockwise16Regular, Dismiss16Regular } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { useState } from "react";
 import { useNavigate } from "react-router";
 
 import { api, type Job, type JobState } from "../api";
@@ -31,6 +32,7 @@ import {
 } from "../components/ui";
 import { decimal, duration } from "../format";
 import { useProfileName, useProfiles } from "../components/ProfileSelect";
+import { AddWorkerDialog } from "../components/AddWorkerDialog";
 import { WorkersSection } from "../components/WorkersSection";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
@@ -65,46 +67,61 @@ export function Queue() {
   );
   const q = queue.data;
   const avgMs = q?.stats.avg_processing_ms_last_hour;
-  const tab = useSubPage("/queue", ["jobs", "workers"] as const);
+  const tab = useSubPage("/jobs", ["queue", "workers"] as const);
+  const [addingWorker, setAddingWorker] = useState(false);
 
   return (
     <>
-      <PageHeader title={t("nav.queue")} />
+      <PageHeader
+        title={t("nav.queue")}
+        actions={
+          <Button
+            appearance="primary"
+            icon={<Add20Regular />}
+            onClick={() => setAddingWorker(true)}
+          >
+            {t("workers.add")}
+          </Button>
+        }
+      />
+      <AddWorkerDialog open={addingWorker} onClose={() => setAddingWorker(false)} />
       <QueryState error={queue.error} loading={queue.isPending} />
       {q && (
         <>
-          <section className="stats">
-            {STATES.map((st) => (
-              <Stat
-                key={st}
-                label={stateLabel(st)}
-                value={q.stats.counts[st]}
-                selected={state === st}
-                // The counters filter the job list, so they bring you to it.
-                onClick={() => void navigate(state === st ? "/queue" : `/queue?state=${st}`)}
-              />
-            ))}
-            <Stat label={t("queue.oldestWaiting")} value={duration(q.stats.oldest_pending_age_s)} />
-            <Stat label={t("queue.doneLastHour")} value={q.stats.done_last_hour} />
-            <Stat
-              label={t("queue.avgProcessing")}
-              value={avgMs ? `${decimal(avgMs / 1000, 1)} s` : "–"}
-            />
-          </section>
-
           <PageTabs
-            base="/queue"
+            base="/jobs"
             current={tab}
             tabs={[
-              { id: "jobs", label: t("queue.jobs") },
+              { id: "queue", label: t("queue.queueTab") },
               { id: "workers", label: t("queue.workers") },
             ]}
           />
 
           {tab === "workers" && <WorkersSection workers={q.workers} />}
 
-          {tab === "jobs" && (
+          {tab === "queue" && (
             <>
+              <section className="stats">
+                {STATES.map((st) => (
+                  <Stat
+                    key={st}
+                    label={stateLabel(st)}
+                    value={q.stats.counts[st]}
+                    selected={state === st}
+                    // The counters filter the job list, so they bring you to it.
+                    onClick={() => setFilter("state", state === st ? "" : st)}
+                  />
+                ))}
+                <Stat
+                  label={t("queue.oldestWaiting")}
+                  value={duration(q.stats.oldest_pending_age_s)}
+                />
+                <Stat label={t("queue.doneLastHour")} value={q.stats.done_last_hour} />
+                <Stat
+                  label={t("queue.avgProcessing")}
+                  value={avgMs ? `${decimal(avgMs / 1000, 1)} s` : "–"}
+                />
+              </section>
               {profiles.data && profiles.data.length > 1 && (
                 <>
                   <Subtitle2 as="h2" className="section">
@@ -147,19 +164,22 @@ export function Queue() {
                 </>
               )}
 
-              {state && (
-                <div className="row block">
-                  <Tag kind={state}>{stateLabel(state)}</Tag>
-                  <Button
-                    size="small"
-                    appearance="subtle"
-                    icon={<Dismiss16Regular />}
-                    onClick={() => setFilter("state", "")}
-                  >
-                    {t("queue.clearFilter")}
-                  </Button>
-                </div>
-              )}
+              <Subtitle2 as="h2" className="section row">
+                {t("queue.latestJobs")}
+                {state && (
+                  <>
+                    <Tag kind={state}>{stateLabel(state)}</Tag>
+                    <Button
+                      size="small"
+                      appearance="subtle"
+                      icon={<Dismiss16Regular />}
+                      onClick={() => setFilter("state", "")}
+                    >
+                      {t("queue.clearFilter")}
+                    </Button>
+                  </>
+                )}
+              </Subtitle2>
               {q.jobs.length > 0 && (
                 <DataTable
                   ariaLabel="Jobs"

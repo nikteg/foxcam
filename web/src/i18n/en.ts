@@ -10,8 +10,8 @@ export const en = {
   "nav.detectionsShort": "Detect",
   "nav.recordings": "Recordings",
   "nav.recordingsShort": "Files",
-  "nav.queue": "Worker queue",
-  "nav.queueShort": "Queue",
+  "nav.queue": "Jobs",
+  "nav.queueShort": "Jobs",
   "nav.cameras": "Cameras",
   "nav.settings": "Settings",
   "nav.main": "Main",
@@ -205,7 +205,7 @@ export const en = {
   "recordings.runNothing": "0 detections",
   "recordings.runFound": "{n} {n:detection|detections} ({targets} {targets:target|targets})",
 
-  // Worker queue
+  // Jobs (queue and workers)
   "queue.oldestWaiting": "Oldest waiting",
   "queue.doneLastHour": "Done last hour",
   "queue.avgProcessing": "Avg processing",
@@ -215,6 +215,8 @@ export const en = {
   "queue.currentJob": "Current job",
   "queue.noWorkers": "No worker has connected yet. Use Add worker to get the setup command.",
   "queue.jobs": "Jobs",
+  "queue.latestJobs": "Latest jobs",
+  "queue.queueTab": "Queue",
   "queue.clearFilter": "Clear filter",
   "queue.noJobs": "No jobs.",
   "queue.retry": "Retry",

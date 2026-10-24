@@ -9,7 +9,7 @@ All timestamps are UTC (ISO 8601). Interactive API docs: `http://<server>:8000/d
 ## Authentication
 
 Every worker request must send a token: one per worker, created in the web UI under
-**Worker queue → Workers → Add worker** or with `media-streamer worker-token <name>`, or the shared
+**Jobs → Add worker** or with `media-streamer worker-token <name>`, or the shared
 `worker_token` from `config.yaml` / `MEDIA_WORKER_TOKEN`:
 
 ```

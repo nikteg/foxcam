@@ -104,12 +104,7 @@ export function Detections() {
       <PageHeader
         title={t("nav.detections")}
         actions={
-          <Button
-            as="a"
-            appearance="subtle"
-            icon={<ScanObject20Regular />}
-            {...routerHref("/cameras/profiles")}
-          >
+          <Button as="a" icon={<ScanObject20Regular />} {...routerHref("/cameras/profiles")}>
             {t("profiles.title")}
           </Button>
         }

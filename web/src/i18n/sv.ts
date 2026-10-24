@@ -11,8 +11,8 @@ export const sv: Record<MessageKey, string> = {
   "nav.detectionsShort": "Detekt.",
   "nav.recordings": "Inspelningar",
   "nav.recordingsShort": "Filer",
-  "nav.queue": "Arbetskö",
-  "nav.queueShort": "Kö",
+  "nav.queue": "Jobb",
+  "nav.queueShort": "Jobb",
   "nav.cameras": "Kameror",
   "nav.settings": "Inställningar",
   "nav.main": "Huvudmeny",
@@ -206,7 +206,7 @@ export const sv: Record<MessageKey, string> = {
   "recordings.runNothing": "0 detekteringar",
   "recordings.runFound": "{n} {n:detektering|detekteringar} ({targets} {targets:träff|träffar})",
 
-  // Arbetskö
+  // Jobb (kö och arbetare)
   "queue.oldestWaiting": "Äldsta väntande",
   "queue.doneLastHour": "Klara senaste timmen",
   "queue.avgProcessing": "Snittid per jobb",
@@ -217,6 +217,8 @@ export const sv: Record<MessageKey, string> = {
   "queue.noWorkers":
     "Ingen arbetare har anslutit än. Använd Lägg till arbetare för att få startkommandot.",
   "queue.jobs": "Jobb",
+  "queue.latestJobs": "Senaste jobben",
+  "queue.queueTab": "Kö",
   "queue.clearFilter": "Rensa filter",
   "queue.noJobs": "Inga jobb.",
   "queue.retry": "Försök igen",

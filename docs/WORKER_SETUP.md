@@ -2,7 +2,7 @@
 
 The worker is a small Python program that runs on the machine with the GPU. It connects
 **out** to the server over HTTP (no ports to open on the worker), leases jobs, runs the
-detector and posts the results. Create a token first: web UI → **Worker queue → Workers → Add worker**.
+detector and posts the results. Create a token first: web UI → **Jobs → Add worker**.
 The dialog also shows ready-to-paste commands for each option below.
 
 | Option | Good for | GPU |
@@ -172,7 +172,7 @@ Each recording is analysed once per [detection profile](ARCHITECTURE.md#detectio
 of its camera, and a profile may require worker tags. A worker's tags are its detector
 (`speciesnet`, `ultralytics`, plus `open-vocabulary` for YOLO-World / YOLOE,
 `dummy`), anything passed with `--tags gpu,winhack` (or `MEDIA_WORKER_TAGS`), and the tags
-set on its access token in the web UI (**Worker queue → Workers → Tags**). To pin a profile to this
+set on its access token in the web UI (**Jobs → Workers → Tags**). To pin a profile to this
 machine, give the machine a unique tag and require it in the profile. The Profiles page and
 the queue tab show profiles that no online worker can run.
 
@@ -184,7 +184,7 @@ the queue tab show profiles that no online worker can run.
 | `nvidia-smi` not found in WSL | Update the **Windows** NVIDIA driver, `wsl --update`, `wsl --shutdown`. Never install the Linux driver inside WSL. |
 | `CUDA error: no kernel image is available` | GPU too old for the PyTorch build; try `--torch-backend cu126` (or older). |
 | `server … Connection refused` from WSL to `localhost` | Use the server's LAN address or [mirrored networking](#wsl-networking). |
-| `server … worker token required` / `invalid worker token` | Create a token in **Worker queue → Workers → Add worker**; tokens are shown once. |
+| `server … worker token required` / `invalid worker token` | Create a token in **Jobs → Add worker**; tokens are shown once. |
 | Worker idles while jobs wait | Their profile requires tags the worker lacks; compare **Cameras → Detection profiles** with the worker's tags in the queue tab. |
 | Jobs start but are retried / `lease lost` | The worker was too slow or offline for longer than `queue.lease_seconds`; check the GPU is used, or raise the lease. |
 | SpeciesNet: every job takes ~25 s extra | Expected: the model loads per job (see [ROADMAP.md](ROADMAP.md)). |

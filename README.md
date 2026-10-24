@@ -73,11 +73,11 @@ anything else, and keep the clips.
   </tr>
   <tr>
     <td><img src="docs/screenshots/profiles.jpg" alt="Detection profiles"></td>
-    <td><img src="docs/screenshots/queue.jpg" alt="Worker queue"></td>
+    <td><img src="docs/screenshots/queue.jpg" alt="Jobs"></td>
   </tr>
   <tr>
     <td><b>Detection profiles</b> – what to look for and which workers may do it (Cameras page)</td>
-    <td><b>Worker queue</b> – backlog per profile, workers with their tags and tokens</td>
+    <td><b>Jobs</b> – the detection queue per profile, workers with their tags and tokens</td>
   </tr>
 </table>
 
@@ -198,7 +198,7 @@ uv run media-streamer tapo-logout     # delete the saved session
 ## Workers and models
 
 A worker runs wherever the GPU is and only needs to reach the server over HTTP. Create a
-token under **Worker queue → Workers → Add worker**: the dialog shows ready-to-paste commands for
+token under **Jobs → Add worker**: the dialog shows ready-to-paste commands for
 Windows + WSL 2, native Windows, Linux/macOS and Docker. For example:
 
 ```sh

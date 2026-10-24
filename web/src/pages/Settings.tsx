@@ -20,8 +20,59 @@ import { THEME_MODES, useThemeMode, type ThemeMode } from "../theme";
 
 type SubPage = "general" | "users" | "notifications" | "storage" | "configuration";
 
-const show = (v: unknown) =>
-  v === null || v === undefined ? "–" : typeof v === "object" ? JSON.stringify(v) : String(v);
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  v !== null && typeof v === "object" && !Array.isArray(v);
+
+/** One configuration value, nested objects and lists included (read-only view). */
+function ConfigValue({ value }: { value: unknown }) {
+  const { t } = useI18n();
+  if (value === null || value === undefined || value === "") {
+    return <span className="muted">–</span>;
+  }
+  if (typeof value === "boolean") return <>{value ? t("common.yes") : t("common.no")}</>;
+  if (Array.isArray(value)) {
+    if (value.length === 0) return <span className="muted">–</span>;
+    if (value.every((v) => !isObject(v) && !Array.isArray(v))) {
+      return (
+        <span className="row wrap tags">
+          {value.map((v, i) => (
+            // oxlint-disable-next-line react/no-array-index-key -- plain values can repeat
+            <code key={i} className="config-chip">
+              {String(v)}
+            </code>
+          ))}
+        </span>
+      );
+    }
+    return (
+      <div className="config-list">
+        {value.map((v, i) => (
+          // oxlint-disable-next-line react/no-array-index-key -- list order is the identity
+          <div key={i} className="config-item">
+            <ConfigValue value={v} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (isObject(value)) {
+    const entries = Object.entries(value);
+    if (entries.length === 0) return <span className="muted">–</span>;
+    return (
+      <dl className="facts config-object">
+        {entries.map(([k, v]) => (
+          <div key={k} className="contents">
+            <dt>{k}</dt>
+            <dd className={isObject(v) || Array.isArray(v) ? undefined : "mono"}>
+              <ConfigValue value={v} />
+            </dd>
+          </div>
+        ))}
+      </dl>
+    );
+  }
+  return <>{String(value)}</>;
+}
 
 export function Settings() {
   const isAdmin = useIsAdmin();
@@ -113,17 +164,12 @@ export function Settings() {
             .map(([key, value]) => (
               <Card key={key} size="small">
                 <CardHeader header={<Text weight="semibold">{key}</Text>} />
-                {value && typeof value === "object" && !Array.isArray(value) ? (
-                  <dl className="facts">
-                    {Object.entries(value).map(([k, v]) => (
-                      <div key={k} className="contents">
-                        <dt>{k}</dt>
-                        <dd className="mono">{show(v)}</dd>
-                      </div>
-                    ))}
-                  </dl>
+                {isObject(value) ? (
+                  <ConfigValue value={value} />
                 ) : (
-                  <div className="mono">{show(value)}</div>
+                  <div className={Array.isArray(value) ? undefined : "mono"}>
+                    <ConfigValue value={value} />
+                  </div>
                 )}
               </Card>
             ))}

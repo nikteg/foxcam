@@ -331,14 +331,14 @@ def capture(tmp: Path) -> list[str]:
         shot(page, "recordings", f"/recordings?selected={det['segment_id']}")
         shot(page, "mask-editor", "/cameras/street/mask")
         shot(page, "profiles", "/cameras#profiles", element="section#profiles")
-        shot(page, "queue", "/queue")
+        shot(page, "queue", "/jobs")
         phone = browser.new_context(color_scheme="dark", **PHONE)
         phone.add_cookies(cookie)
         phone.add_init_script(init)
         page = phone.new_page()
         shot(page, "mobile-events", "/events")
         shot(page, "mobile-detections", f"/detections?selected={det['id']}")
-        shot(page, "add-worker", "/queue", prepare=add_worker)
+        shot(page, "add-worker", "/jobs", prepare=add_worker)
         browser.close()
     return shots
 

@@ -9,7 +9,6 @@ import {
   Field,
   MessageBar,
   MessageBarBody,
-  Subtitle2,
   Table,
   TableBody,
   TableCell,
@@ -19,13 +18,12 @@ import {
   Text,
   Tooltip,
 } from "@fluentui/react-components";
-import { Add20Regular, Delete16Regular, Key16Regular, Tag16Regular } from "@fluentui/react-icons";
+import { Delete16Regular, Key16Regular, Tag16Regular } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api, type Worker, type WorkerToken } from "../api";
 import { useI18n } from "../i18n";
-import { AddWorkerDialog } from "./AddWorkerDialog";
 import { TagsPicker } from "./LabelPicker";
 import { Dot, Empty, Tag, Time } from "./ui";
 
@@ -54,7 +52,6 @@ export function WorkersSection({ workers }: { workers: Worker[] }) {
   const client = useQueryClient();
   const auth = useQuery({ queryKey: ["workers", "auth"], queryFn: api.workerAuth });
   const tokens = useQuery({ queryKey: ["workers", "tokens"], queryFn: api.workerTokens });
-  const [adding, setAdding] = useState(false);
   const [revoking, setRevoking] = useState<WorkerToken | null>(null);
   const [tagging, setTagging] = useState<WorkerToken | null>(null);
   const remove = useMutation({
@@ -68,18 +65,6 @@ export function WorkersSection({ workers }: { workers: Worker[] }) {
 
   return (
     <>
-      <Subtitle2 as="h2" className="section">
-        {t("queue.workers")}
-        <Button
-          size="small"
-          appearance="primary"
-          icon={<Add20Regular />}
-          className="section-action"
-          onClick={() => setAdding(true)}
-        >
-          {t("workers.add")}
-        </Button>
-      </Subtitle2>
       {auth.data && (
         <MessageBar
           intent={auth.data.mode === "open" ? "warning" : auth.data.tokens ? "success" : "info"}
@@ -199,7 +184,6 @@ export function WorkersSection({ workers }: { workers: Worker[] }) {
         </Table>
       )}
       {rows.length === 0 && <Empty>{t("queue.noWorkers")}</Empty>}
-      <AddWorkerDialog open={adding} onClose={() => setAdding(false)} />
       {revoking && <RevokeDialog token={revoking} onClose={() => setRevoking(null)} />}
       {tagging && <TagsDialog token={tagging} onClose={() => setTagging(null)} />}
     </>

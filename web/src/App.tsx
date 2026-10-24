@@ -63,7 +63,7 @@ const TABS: NavItem[] = [
     icon: <Folder24Regular />,
   },
   {
-    to: "/queue",
+    to: "/jobs",
     label: "nav.queue",
     short: "nav.queueShort",
     icon: <Server24Regular />,

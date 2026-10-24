@@ -131,6 +131,22 @@ a.tag-link:focus-visible {
 .label-option-source {
   font-size: var(--fontSizeBase200);
 }
+/* Settings → Configuration: nested values. */
+.config-object .config-object,
+.config-list {
+  padding-inline-start: var(--spacingHorizontalS);
+  border-inline-start: 2px solid var(--colorNeutralStroke2);
+}
+.config-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalS);
+}
+code.config-chip {
+  padding: 0 var(--spacingHorizontalXS);
+  border-radius: var(--borderRadiusSmall);
+  background: var(--colorNeutralBackground3);
+}
 /* A spinner standing in for content: give it room. */
 .fui-Spinner.loading-block {
   padding: var(--spacingVerticalXL) 0;
