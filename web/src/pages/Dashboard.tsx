@@ -11,8 +11,13 @@ import {
   Text,
 } from "@fluentui/react-components";
 import {
+  Alert20Regular,
+  CheckmarkCircle20Regular,
+  Database20Regular,
   Edit20Regular,
   Folder20Regular,
+  HardDrive20Regular,
+  Hourglass20Regular,
   Play20Filled,
   Video20Regular,
 } from "@fluentui/react-icons";
@@ -29,6 +34,7 @@ import {
   QueryState,
   RouterLink,
   Stat,
+  type StatTone,
   Tag,
   Time,
   useRouterHref,
@@ -62,17 +68,40 @@ export function Dashboard() {
       {s && (
         <section className="stats">
           <Stat
+            icon={<Video20Regular />}
+            tone={camerasTone(s.cameras)}
             label={t("dashboard.camerasOnline")}
             value={`${s.cameras.filter((c) => c.online).length} / ${s.cameras.length}`}
           />
-          <Stat label={t("dashboard.events24h")} value={s.events_24h} />
           <Stat
+            icon={<Alert20Regular />}
+            tone="brand"
+            label={t("dashboard.events24h")}
+            value={s.events_24h}
+          />
+          <Stat
+            icon={<Hourglass20Regular />}
+            tone={s.queue.counts.failed > 0 ? "warning" : "neutral"}
             label={t("dashboard.queueWaiting")}
             value={s.queue.counts.pending + s.queue.counts.failed}
           />
-          <Stat label={t("dashboard.processedLastHour")} value={s.queue.done_last_hour} />
-          <Stat label={t("dashboard.recordingsStored")} value={fileSize(s.recordings_bytes)} />
-          <Stat label={t("dashboard.diskFree")} value={fileSize(s.disk_free_bytes)} />
+          <Stat
+            icon={<CheckmarkCircle20Regular />}
+            tone="success"
+            label={t("dashboard.processedLastHour")}
+            value={s.queue.done_last_hour}
+          />
+          <Stat
+            icon={<Database20Regular />}
+            tone="brand"
+            label={t("dashboard.recordingsStored")}
+            value={fileSize(s.recordings_bytes)}
+          />
+          <Stat
+            icon={<HardDrive20Regular />}
+            label={t("dashboard.diskFree")}
+            value={fileSize(s.disk_free_bytes)}
+          />
         </section>
       )}
 
@@ -270,4 +299,11 @@ function CameraCard({ camera: c, refreshKey }: { camera: Camera; refreshKey: num
       </CardFooter>
     </Card>
   );
+}
+
+/** Green when every camera is online, amber when some are not, red when none is. */
+function camerasTone(cameras: Camera[]): StatTone {
+  const online = cameras.filter((c) => c.online).length;
+  if (cameras.length === 0) return "neutral";
+  return online === cameras.length ? "success" : online === 0 ? "danger" : "warning";
 }

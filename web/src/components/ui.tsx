@@ -22,7 +22,7 @@ import {
   WeatherSunny16Regular,
   WeatherSunny20Regular,
 } from "@fluentui/react-icons";
-import { useEffect, type MouseEvent, type ReactNode } from "react";
+import { useEffect, type MouseEvent, type ReactElement, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router";
 
 import { localTime, percent, relativeTime } from "../format";
@@ -240,28 +240,46 @@ export function Light({
   );
 }
 
+export type StatTone = "brand" | "success" | "warning" | "danger" | "neutral";
+
+/** A labelled number (Status page, Jobs counters): icon, label, value and a hint. With
+ * `onClick` it is a toggle (e.g. a filter), `selected` when on. */
 export function Stat({
   label,
   value,
+  icon,
+  tone = "neutral",
+  hint,
   selected,
   onClick,
 }: {
   label: string;
   value: ReactNode;
+  icon?: ReactElement;
+  tone?: StatTone;
+  hint?: ReactNode;
   selected?: boolean;
   onClick?: () => void;
 }) {
+  const classes = ["stat", `tone-${tone}`, onClick && "clickable", selected && "selected"];
   return (
     <Card
-      className={`stat ${selected ? "selected" : ""}`}
-      appearance="filled-alternative"
+      className={classes.filter(Boolean).join(" ")}
+      appearance="outline"
       size="small"
       onClick={onClick}
+      aria-pressed={onClick ? !!selected : undefined}
     >
-      <Caption1 className="muted stat-label">{label}</Caption1>
-      <Text size={600} weight="semibold">
-        {value}
-      </Text>
+      <div className="stat-head">
+        {icon && (
+          <span className="stat-icon" aria-hidden>
+            {icon}
+          </span>
+        )}
+        <Caption1 className="stat-label">{label}</Caption1>
+      </div>
+      <Text className="stat-value">{value}</Text>
+      {hint && <Caption1 className="muted stat-hint">{hint}</Caption1>}
     </Card>
   );
 }

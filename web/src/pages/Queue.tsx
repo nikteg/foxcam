@@ -10,7 +10,20 @@ import {
   TableRow,
   Text,
 } from "@fluentui/react-components";
-import { Add20Regular, ArrowClockwise16Regular, Dismiss16Regular } from "@fluentui/react-icons";
+import {
+  Add20Regular,
+  ArrowClockwise16Regular,
+  ArrowSync20Regular,
+  ArrowTrending20Regular,
+  CheckmarkCircle20Regular,
+  Dismiss16Regular,
+  DismissCircle20Regular,
+  ErrorCircle20Regular,
+  Gauge20Regular,
+  Hourglass20Regular,
+  Timer20Regular,
+} from "@fluentui/react-icons";
+import type { ReactElement } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useState } from "react";
@@ -25,6 +38,7 @@ import {
   PageTabs,
   QueryState,
   Stat,
+  type StatTone,
   Tag,
   Time,
   useStateLabel,
@@ -38,6 +52,14 @@ import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
 
 const STATES: JobState[] = ["pending", "leased", "done", "failed", "dead"];
+
+const STATE_LOOK: Record<JobState, { icon: ReactElement; tone: StatTone }> = {
+  pending: { icon: <Hourglass20Regular />, tone: "warning" },
+  leased: { icon: <ArrowSync20Regular />, tone: "brand" },
+  done: { icon: <CheckmarkCircle20Regular />, tone: "success" },
+  failed: { icon: <ErrorCircle20Regular />, tone: "danger" },
+  dead: { icon: <DismissCircle20Regular />, tone: "neutral" },
+};
 
 export function Queue() {
   const [{ state }, setFilter] = useFilters(["state"] as const);
@@ -105,6 +127,7 @@ export function Queue() {
                 {STATES.map((st) => (
                   <Stat
                     key={st}
+                    {...STATE_LOOK[st]}
                     label={stateLabel(st)}
                     value={q.stats.counts[st]}
                     selected={state === st}
@@ -113,11 +136,17 @@ export function Queue() {
                   />
                 ))}
                 <Stat
+                  icon={<Timer20Regular />}
                   label={t("queue.oldestWaiting")}
                   value={duration(q.stats.oldest_pending_age_s)}
                 />
-                <Stat label={t("queue.doneLastHour")} value={q.stats.done_last_hour} />
                 <Stat
+                  icon={<ArrowTrending20Regular />}
+                  label={t("queue.doneLastHour")}
+                  value={q.stats.done_last_hour}
+                />
+                <Stat
+                  icon={<Gauge20Regular />}
                   label={t("queue.avgProcessing")}
                   value={avgMs ? `${decimal(avgMs / 1000, 1)} s` : "–"}
                 />

@@ -280,17 +280,80 @@ button.fui-CompoundButton {
   gap: var(--spacingHorizontalM);
 }
 .stat {
-  gap: 2px;
+  --stat-bg: var(--colorNeutralBackground3);
+  --stat-fg: var(--colorNeutralForeground2);
+  gap: var(--spacingVerticalS);
+  padding: var(--spacingVerticalM) var(--spacingHorizontalL);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background-color 0.15s;
+}
+.stat.tone-brand {
+  --stat-bg: var(--colorBrandBackground2);
+  --stat-fg: var(--colorBrandForeground1);
+}
+.stat.tone-success {
+  --stat-bg: var(--colorStatusSuccessBackground1);
+  --stat-fg: var(--colorStatusSuccessForeground1);
+}
+.stat.tone-warning {
+  --stat-bg: var(--colorStatusWarningBackground1);
+  --stat-fg: var(--colorStatusWarningForeground3);
+}
+.stat.tone-danger {
+  --stat-bg: var(--colorStatusDangerBackground1);
+  --stat-fg: var(--colorStatusDangerForeground1);
+}
+.stat-head {
+  display: flex;
+  align-items: center;
+  gap: var(--spacingHorizontalS);
+  min-width: 0;
+}
+.stat-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--borderRadiusLarge);
+  background: var(--stat-bg);
+  color: var(--stat-fg);
 }
 /* Labels can be lowercase state names ("väntar"): capitalise the first letter only. */
-.stat-label {
+.fui-Text.stat-label {
   display: block;
+  color: var(--colorNeutralForeground2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .stat-label::first-letter {
   text-transform: uppercase;
 }
-.stat.selected {
-  outline: 2px solid var(--colorBrandStroke1);
+.fui-Text.stat-value {
+  font-size: var(--fontSizeHero700);
+  line-height: var(--lineHeightHero700);
+  font-weight: var(--fontWeightSemibold);
+  font-variant-numeric: tabular-nums;
+}
+.fui-Text.stat-hint {
+  margin-top: calc(-1 * var(--spacingVerticalXS));
+}
+.stat.clickable {
+  cursor: pointer;
+}
+.stat.clickable:hover {
+  border-color: var(--stat-fg);
+  box-shadow: var(--shadow4);
+}
+.stat.selected,
+.stat.selected:hover {
+  border-color: var(--stat-fg);
+  background: var(--stat-bg);
+  box-shadow: inset 0 0 0 1px var(--stat-fg);
 }
 
 /* Cards */
