@@ -4,6 +4,7 @@ import {
   Caption1,
   Card,
   CardHeader,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogBody,
@@ -17,7 +18,6 @@ import {
   MessageBarTitle,
   Select,
   Subtitle2,
-  Switch,
   Text,
 } from "@fluentui/react-components";
 import {
@@ -30,7 +30,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 
-import { api } from "../api";
+import { api, type ApiKeyScope } from "../api";
 import { AUTH_KEY, useMe } from "../auth";
 import { CopyBlock } from "../components/AddWorkerDialog";
 import { Empty, PageHeader, Tag, Time } from "../components/ui";
@@ -305,7 +305,11 @@ function ApiKeys() {
               header={
                 <span className="row tags">
                   <Text weight="semibold">{k.name}</Text>
-                  {k.read_only && <Tag>{t("apiKeys.readOnly")}</Tag>}
+                  {k.scopes.map((s) => (
+                    <Tag key={s} kind={s === "admin" ? "target" : undefined}>
+                      {t(`apiKeys.scope.${s}`)}
+                    </Tag>
+                  ))}
                 </span>
               }
               description={
@@ -350,15 +354,22 @@ function ApiKeys() {
 
 function AddApiKeyDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useI18n();
+  const me = useMe();
   const client = useQueryClient();
   const [name, setName] = useState("");
-  const [readOnly, setReadOnly] = useState(false);
+  const [write, setWrite] = useState(true);
+  const [admin, setAdmin] = useState(false);
   const [expires, setExpires] = useState("");
+  const scopes: ApiKeyScope[] = [
+    "read",
+    ...(write ? ["write" as const] : []),
+    ...(admin ? ["admin" as const] : []),
+  ];
   const create = useMutation({
     mutationFn: () =>
       api.createApiKey({
         name: name.trim(),
-        read_only: readOnly,
+        scopes,
         expires_days: expires ? Number(expires) : null,
       }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["api-keys"] }),
@@ -366,7 +377,8 @@ function AddApiKeyDialog({ open, onClose }: { open: boolean; onClose: () => void
   const close = () => {
     create.reset();
     setName("");
-    setReadOnly(false);
+    setWrite(true);
+    setAdmin(false);
     setExpires("");
     onClose();
   };
@@ -389,11 +401,23 @@ function AddApiKeyDialog({ open, onClose }: { open: boolean; onClose: () => void
                 <Field label={t("apiKeys.name")} hint={t("apiKeys.nameHint")} required>
                   <Input value={name} maxLength={80} onChange={(_, d) => setName(d.value)} />
                 </Field>
-                <Switch
-                  label={t("apiKeys.readOnlySwitch")}
-                  checked={readOnly}
-                  onChange={(_, d) => setReadOnly(d.checked)}
-                />
+                <Field label={t("apiKeys.scopes")}>
+                  <div className="form-stack">
+                    <Checkbox checked disabled label={t("apiKeys.scope.readHint")} />
+                    <Checkbox
+                      checked={write}
+                      onChange={(_, d) => setWrite(d.checked === true)}
+                      label={t("apiKeys.scope.writeHint")}
+                    />
+                    {me?.is_admin && (
+                      <Checkbox
+                        checked={admin}
+                        onChange={(_, d) => setAdmin(d.checked === true)}
+                        label={t("apiKeys.scope.adminHint")}
+                      />
+                    )}
+                  </div>
+                </Field>
                 <Field label={t("apiKeys.expiry")}>
                   <Select value={expires} onChange={(_, d) => setExpires(d.value)}>
                     {EXPIRY_DAYS.map((days) => (

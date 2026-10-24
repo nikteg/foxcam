@@ -63,10 +63,18 @@ API key**, then send it with every request:
 curl -H "Authorization: Bearer msk_…" https://cams.example.org/api/events
 ```
 
-A key acts as the user who made it, with that user's rights at the time of each request:
-an admin's key can do what the admin can, a user's key sees only that user's cameras, and
-the keys of a disabled or removed account stop working. A key can be **read-only** (GET
-requests only) and can **expire**. Keys can't reach `/api/auth/`: no making more keys,
+A key acts as the user who made it, with that user's rights at the time of each request
+(a user's key sees only that user's cameras; the keys of a disabled or removed account stop
+working), limited further by its **scopes**:
+
+| Scope | Allows |
+|---|---|
+| `read` | GET requests: cameras, recordings, events, detections, live view over HLS. Always included. |
+| `write` | Everything else the user may change: cameras, censor areas, feedback, sharing, live view over WebRTC. |
+| `admin` | An admin's admin powers: users (including their passwords), workers and their tokens, profiles, notifications, settings, the job queue. Only admins can give it, and it is off unless ticked. |
+
+An admin's key without `admin` still sees every camera, but counts as a regular user
+everywhere else. Keys can also **expire**. Keys can't reach `/api/auth/`: no making more keys,
 changing the password or signing in. Only a SHA-256 of each key is stored, and the key
 itself is shown once; revoke it on the Account page. Workers use their own tokens
 (`msw_…`, Jobs → Add worker), not API keys.

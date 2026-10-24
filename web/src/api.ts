@@ -128,12 +128,15 @@ export interface WorkerAuth {
   tokens: number;
 }
 
+/** read: look (GET, always); write: change what the user may; admin: admin powers. */
+export type ApiKeyScope = "read" | "write" | "admin";
+
 export interface ApiKey {
   id: number;
   name: string;
   /** The first characters, e.g. "msk_Ab12cd". */
   prefix: string;
-  read_only: boolean;
+  scopes: ApiKeyScope[];
   created_at: string;
   last_used_at: string | null;
   expires_at: string | null;
@@ -683,7 +686,7 @@ export const api = {
   unlinkProvider: (id: string) =>
     request<{ status: string }>("DELETE", `/api/auth/providers/${encodeURIComponent(id)}`),
   apiKeys: () => request<ApiKey[]>("GET", "/api/auth/api-keys"),
-  createApiKey: (body: { name: string; read_only: boolean; expires_days: number | null }) =>
+  createApiKey: (body: { name: string; scopes: ApiKeyScope[]; expires_days: number | null }) =>
     request<ApiKey & { key: string }>("POST", "/api/auth/api-keys", body),
   revokeApiKey: (id: number) => request<{ status: string }>("DELETE", `/api/auth/api-keys/${id}`),
   invitePreview: (token: string) =>

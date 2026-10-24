@@ -14,6 +14,7 @@ from .conftest import app_client
 
 
 def _key(c: TestClient, **body) -> dict:
+    body.setdefault("scopes", ["read", "write", "admin"])
     r = c.post("/api/auth/api-keys", json={"name": "script", **body})
     assert r.status_code == 201, r.text
     return r.json()
@@ -34,7 +35,7 @@ def test_a_key_acts_as_its_user(settings):
         assert "key" not in listed and listed["last_used_at"] is None
     with _bearer(settings, key) as api:
         assert api.get("/api/cameras").status_code == 200
-        assert api.get("/api/queue").status_code == 200  # an admin's key is an admin
+        assert api.get("/api/queue").status_code == 200  # admin scope: an admin
         r = api.post("/api/profiles", json={"id": "cars", "targets": ["car"]})
         assert r.status_code == 201, r.text
     with app_client(settings) as c:
@@ -43,7 +44,9 @@ def test_a_key_acts_as_its_user(settings):
 
 def test_only_with_the_users_rights(settings):
     with app_client(settings, email="user@example.org", admin=False) as c:
-        key = _key(c)["key"]
+        r = c.post("/api/auth/api-keys", json={"name": "x", "scopes": ["read", "admin"]})
+        assert r.status_code == 403  # only admins can hand out the admin scope
+        key = _key(c, scopes=["read", "write"])["key"]
     with _bearer(settings, key) as api:
         assert api.get("/api/cameras").json() == []  # nothing shared with this user
         assert api.get("/api/queue").status_code == 403
@@ -51,11 +54,24 @@ def test_only_with_the_users_rights(settings):
 
 def test_read_only_keys_only_read(settings):
     with app_client(settings) as c:
-        key = _key(c, read_only=True)["key"]
-    with _bearer(settings, key) as api:
+        created = _key(c, scopes=[])
+        assert created["scopes"] == ["read"]  # always
+    with _bearer(settings, created["key"]) as api:
         assert api.get("/api/profiles").status_code == 200
-        r = api.post("/api/profiles", json={"id": "cars", "targets": ["car"]})
+        r = api.patch("/api/cameras/cam", json={"name": "x"})
         assert r.status_code == 403 and "read-only" in r.text
+
+
+def test_without_the_admin_scope_an_admins_key_is_no_admin(settings):
+    with app_client(settings) as c:
+        created = _key(c, scopes=["read", "write"])
+    with _bearer(settings, created["key"]) as api:
+        assert [c["id"] for c in api.get("/api/cameras").json()] == ["cam"]  # still sees all
+        r = api.get("/api/users")
+        assert r.status_code == 403 and "admin scope" in r.text
+        assert api.post("/api/profiles", json={"id": "x", "targets": ["car"]}).status_code \
+            == 403
+        assert api.put("/api/cameras/cam/mask", json={"rects": []}).status_code == 200
 
 
 def test_keys_cannot_manage_the_account(settings):

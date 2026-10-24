@@ -63,19 +63,24 @@ class Principal:
     is_admin: bool = False
     # camera id -> role (admins have every role on every camera without entries here).
     cameras: dict[str, str] = field(default_factory=dict)
-    # Signed in with an API key (api_keys.py) rather than a browser session.
+    # Signed in with an API key (api_keys.py) rather than a browser session, and what the
+    # key may do. An admin's key without the admin scope is no admin (is_admin False) but
+    # still sees every camera (all_cameras).
     api_key_id: int | None = None
-    read_only: bool = False  # an API key that may only read (GET)
+    scopes: frozenset[str] | None = None  # None = a browser session: everything
+    all_cameras: bool = False
 
     def role(self, camera_id: str) -> str | None:
-        return CameraRole.OWNER if self.is_admin else self.cameras.get(camera_id)
+        if self.is_admin or self.all_cameras:
+            return CameraRole.OWNER
+        return self.cameras.get(camera_id)
 
     def can(self, camera_id: str, role: str = CameraRole.VIEWER) -> bool:
         return CameraRole.at_least(self.role(camera_id), role)
 
     def camera_ids(self) -> set[str] | None:
         """The cameras this principal may see; None = all of them."""
-        return None if self.is_admin else set(self.cameras)
+        return None if self.is_admin or self.all_cameras else set(self.cameras)
 
 
 def _sha256(token: str) -> str:

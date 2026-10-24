@@ -333,7 +333,8 @@ def unlink_provider(provider_id: str, p: Principal = Depends(principal)) -> dict
 
 class ApiKeyIn(BaseModel):
     name: str = Field(min_length=1, max_length=80)
-    read_only: bool = False
+    # read is always included; admin only for admins.
+    scopes: list[str] = Field(default=["read"], max_length=3)
     expires_days: int | None = Field(default=None, ge=1, le=3650)  # None = never
 
 
@@ -346,7 +347,7 @@ def list_api_keys(p: Principal = Depends(principal)) -> list[dict[str, Any]]:
 def create_api_key(body: ApiKeyIn, p: Principal = Depends(principal)) -> dict[str, Any]:
     """The key itself is in the response only, never again."""
     try:
-        info, key = api_keys.create(_user(p), body.name, body.read_only, body.expires_days)
+        info, key = api_keys.create(_user(p), body.name, body.scopes, body.expires_days)
     except AccountError as e:
         raise _error(e) from e
     return {**info, "key": key}

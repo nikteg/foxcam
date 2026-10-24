@@ -105,8 +105,8 @@ def authenticate(request: Request) -> None:
         if _api_key(request):
             raise HTTPException(401, "invalid or expired API key")
         raise HTTPException(401, "sign in first")
-    if p.read_only and request.method not in SAFE_METHODS:
-        raise HTTPException(403, "this API key is read-only")
+    if p.scopes is not None and request.method not in SAFE_METHODS and "write" not in p.scopes:
+        raise HTTPException(403, "this API key is read-only (no write scope)")
 
 
 def principal(request: Request) -> Principal:
@@ -118,6 +118,8 @@ def principal(request: Request) -> Principal:
 
 def require_admin(p: Principal = Depends(principal)) -> Principal:
     if not p.is_admin:
+        if p.all_cameras:  # an admin's API key without the admin scope
+            raise HTTPException(403, "this API key has no admin scope")
         raise HTTPException(403, "only admins can do this")
     return p
 

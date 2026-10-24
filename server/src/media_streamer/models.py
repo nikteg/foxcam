@@ -444,6 +444,9 @@ class ApiKey(Base):
     token_hash: Mapped[str] = mapped_column(String, unique=True)
     # The first characters, to tell keys apart in the list.
     prefix: Mapped[str] = mapped_column(String)
+    # What it may do: read, write, admin (api_keys.SCOPES).
+    scopes: Mapped[list[str] | None] = mapped_column(JSON)
+    # Before scopes (a NOT NULL column in databases from then); unused.
     read_only: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime)
