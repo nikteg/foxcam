@@ -61,6 +61,10 @@ kbd {
 .wrap {
   flex-wrap: wrap;
 }
+/* Toolbars have no gap of their own: keep wrapped rows of buttons apart. */
+.fui-Toolbar.wrap {
+  row-gap: var(--spacingVerticalS);
+}
 .block {
   margin-bottom: var(--spacingVerticalL);
 }
@@ -68,7 +72,7 @@ kbd {
   display: contents;
 }
 /* A second, muted line under a radio / switch label. */
-.option-hint {
+.fui-Text.option-hint {
   display: block;
 }
 .empty {
@@ -824,6 +828,14 @@ button.kind-option {
   max-width: none;
   height: 100%;
   text-align: left;
+}
+/* Fluent sets line-height 100% on the secondary text: too tight once it wraps. */
+.kind-option .fui-CompoundButton__contentContainer {
+  flex: 1;
+}
+.kind-option .fui-CompoundButton__secondaryContent {
+  line-height: var(--lineHeightBase200);
+  margin-top: var(--spacingVerticalXXS);
 }
 .device-list {
   list-style: none;
