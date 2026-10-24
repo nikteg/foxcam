@@ -3,7 +3,6 @@ import {
   Caption1,
   CompoundButton,
   Dialog,
-  DialogActions,
   DialogBody,
   DialogContent,
   DialogSurface,
@@ -26,11 +25,12 @@ import {
   Video24Regular,
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type ReactElement } from "react";
+import { useState, type ReactElement, type ReactNode } from "react";
 
 import { api, type CameraSource, type ProbeResult } from "../api";
 import { useI18n, type MessageKey } from "../i18n";
 import { TapoCameraList, TapoNotInstalled, TapoSignIn } from "./TapoAccount";
+import { ActionRow } from "./ui";
 
 type Kind = "tapo" | "rtsp" | "file" | "test";
 
@@ -44,11 +44,16 @@ const TITLES: Record<Kind, MessageKey> = {
 export function AddCameraDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useI18n();
   const [kind, setKind] = useState<Kind | null>(null);
-  const tapoConnected = useTapoConnected();
   const close = () => {
     setKind(null);
     onClose();
   };
+  // Each step puts this at the left of its action row.
+  const back = (
+    <Button appearance="subtle" icon={<ArrowLeft20Regular />} onClick={() => setKind(null)}>
+      {t("addCamera.otherTypes")}
+    </Button>
+  );
 
   return (
     <Dialog open={open} onOpenChange={(_, d) => !d.open && close()}>
@@ -68,29 +73,11 @@ export function AddCameraDialog({ open, onClose }: { open: boolean; onClose: () 
           </DialogTitle>
           <DialogContent>
             {kind === null && <ChooseKind onChoose={setKind} />}
-            {kind === "tapo" && <TapoStep />}
-            {kind === "rtsp" && <RtspStep onDone={close} />}
-            {kind === "file" && <FileStep onDone={close} />}
-            {kind === "test" && <TestStep onDone={close} />}
+            {kind === "tapo" && <TapoStep back={back} onDone={close} />}
+            {kind === "rtsp" && <RtspStep back={back} onDone={close} />}
+            {kind === "file" && <FileStep back={back} onDone={close} />}
+            {kind === "test" && <TestStep back={back} onDone={close} />}
           </DialogContent>
-          {kind !== null && (
-            <DialogActions position="start">
-              <Button
-                appearance="subtle"
-                icon={<ArrowLeft20Regular />}
-                onClick={() => setKind(null)}
-              >
-                {t("addCamera.otherTypes")}
-              </Button>
-            </DialogActions>
-          )}
-          {kind === "tapo" && tapoConnected && (
-            <DialogActions position="end">
-              <Button appearance="primary" onClick={close}>
-                {t("common.done")}
-              </Button>
-            </DialogActions>
-          )}
         </DialogBody>
       </DialogSurface>
     </Dialog>
@@ -174,26 +161,32 @@ function ProbeBar({ result }: { result: ProbeResult | undefined }) {
 
 // --- Tapo cloud -------------------------------------------------------------------
 
-function TapoStep() {
+type StepProps = { back: ReactNode; onDone: () => void };
+
+function TapoStep({ back, onDone }: StepProps) {
+  const { t } = useI18n();
   const status = useQuery({ queryKey: ["tapo", "status"], queryFn: api.tapoStatus });
   const connected = (status.data?.connected && !status.data.expired) ?? false;
 
   if (status.isPending) return <Spinner size="small" className="loading-block" />;
-  if (status.data && !status.data.available) return <TapoNotInstalled />;
-  if (!connected) return <TapoSignIn />;
-
-  return <TapoCameraList />;
-}
-
-/** Signed in to Tapo: the camera list is showing and "Done" closes the dialog. */
-function useTapoConnected(): boolean {
-  const status = useQuery({ queryKey: ["tapo", "status"], queryFn: api.tapoStatus });
-  return (status.data?.available && status.data.connected && !status.data.expired) ?? false;
+  if (!connected && status.data?.available) return <TapoSignIn back={back} />;
+  return (
+    <div className="form-stack">
+      {connected ? <TapoCameraList /> : <TapoNotInstalled />}
+      <ActionRow back={back}>
+        {connected && (
+          <Button appearance="primary" onClick={onDone}>
+            {t("common.done")}
+          </Button>
+        )}
+      </ActionRow>
+    </div>
+  );
 }
 
 // --- RTSP ---------------------------------------------------------------------------
 
-function RtspStep({ onDone }: { onDone: () => void }) {
+function RtspStep({ back, onDone }: StepProps) {
   const { t } = useI18n();
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
@@ -274,7 +267,8 @@ function RtspStep({ onDone }: { onDone: () => void }) {
       <SegmentField value={segment} onChange={setSegment} />
       <ProbeBar result={probe.data} />
       <ErrorBar error={probe.error ?? add.error} />
-      <div className="row">
+      <ActionRow back={back}>
+        {probe.isPending && <Spinner size="tiny" />}
         <Button
           icon={<PlugConnected20Regular />}
           disabled={!url || probe.isPending}
@@ -282,7 +276,6 @@ function RtspStep({ onDone }: { onDone: () => void }) {
         >
           {t("addCamera.testConnection")}
         </Button>
-        {probe.isPending && <Spinner size="tiny" />}
         <Button
           type="submit"
           appearance="primary"
@@ -291,14 +284,14 @@ function RtspStep({ onDone }: { onDone: () => void }) {
         >
           {t("addCamera.add")}
         </Button>
-      </div>
+      </ActionRow>
     </form>
   );
 }
 
 // --- File & test pattern ------------------------------------------------------------
 
-function FileStep({ onDone }: { onDone: () => void }) {
+function FileStep({ back, onDone }: StepProps) {
   const { t, rich } = useI18n();
   const files = useQuery({ queryKey: ["sample-files"], queryFn: api.sampleFiles });
   const [file, setFile] = useState("");
@@ -309,11 +302,16 @@ function FileStep({ onDone }: { onDone: () => void }) {
 
   if (files.data?.length === 0) {
     return (
-      <MessageBar intent="info">
-        <MessageBarBody>
-          {rich("addCamera.noSamples", { command: <code>python3 scripts/fetch_samples.py</code> })}
-        </MessageBarBody>
-      </MessageBar>
+      <div className="form-stack">
+        <MessageBar intent="info">
+          <MessageBarBody>
+            {rich("addCamera.noSamples", {
+              command: <code>python3 scripts/fetch_samples.py</code>,
+            })}
+          </MessageBarBody>
+        </MessageBar>
+        <ActionRow back={back} />
+      </div>
     );
   }
   return (
@@ -346,16 +344,16 @@ function FileStep({ onDone }: { onDone: () => void }) {
       </Field>
       <SegmentField value={segment} onChange={setSegment} />
       <ErrorBar error={add.error} />
-      <div className="row">
+      <ActionRow back={back}>
         <Button type="submit" appearance="primary" icon={<Add20Regular />} disabled={!chosen}>
           {t("addCamera.add")}
         </Button>
-      </div>
+      </ActionRow>
     </form>
   );
 }
 
-function TestStep({ onDone }: { onDone: () => void }) {
+function TestStep({ back, onDone }: StepProps) {
   const { t } = useI18n();
   const [name, setName] = useState(() => t("addCamera.kind.test"));
   const add = useAddCamera(onDone);
@@ -371,11 +369,11 @@ function TestStep({ onDone }: { onDone: () => void }) {
         <Input value={name} onChange={(_, d) => setName(d.value)} />
       </Field>
       <ErrorBar error={add.error} />
-      <div className="row">
+      <ActionRow back={back}>
         <Button type="submit" appearance="primary" icon={<Add20Regular />} disabled={!name}>
           {t("addCamera.add")}
         </Button>
-      </div>
+      </ActionRow>
     </form>
   );
 }

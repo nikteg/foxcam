@@ -71,6 +71,27 @@ kbd {
 .contents {
   display: contents;
 }
+/* <ActionRow>: back on the left, actions on the right. */
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacingVerticalS) var(--spacingHorizontalM);
+}
+.action-row-back,
+.action-row-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacingHorizontalS);
+}
+.action-row-back {
+  /* Line the arrow up with the content above (subtle buttons are padded). */
+  margin-inline-start: calc(-1 * var(--spacingHorizontalM));
+}
+.action-row-end {
+  margin-inline-start: auto;
+}
 /* A spinner standing in for content: give it room. */
 .fui-Spinner.loading-block {
   padding: var(--spacingVerticalXL) 0;

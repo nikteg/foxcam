@@ -290,3 +290,14 @@ export function QueryState({ error, loading }: { error: unknown; loading: boolea
 export function Empty({ children }: { children: ReactNode }) {
   return <Body1 className="muted empty">{children}</Body1>;
 }
+
+/** Bottom row of a form or dialog step: going back on the left, the step's actions on the
+ *  right. Wraps on narrow screens (the actions stay right-aligned). */
+export function ActionRow({ back, children }: { back?: ReactNode; children?: ReactNode }) {
+  return (
+    <div className="action-row">
+      {back && <div className="action-row-back">{back}</div>}
+      <div className="action-row-end">{children}</div>
+    </div>
+  );
+}

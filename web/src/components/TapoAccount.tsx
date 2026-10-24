@@ -14,16 +14,17 @@ import {
 } from "@fluentui/react-components";
 import {
   Add20Regular,
+  ArrowLeft20Regular,
   Cloud24Regular,
   PlugConnected20Regular,
   SignOut20Regular,
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { api } from "../api";
 import { useI18n } from "../i18n";
-import { Tag } from "./ui";
+import { ActionRow, Tag } from "./ui";
 
 const INSTALL_COMMAND = "uv sync --all-packages --extra tapo-cloud";
 
@@ -111,7 +112,14 @@ export function TapoCameraList() {
 }
 
 /** Sign in to the Tapo cloud account, including the e-mail/app verification code step. */
-export function TapoSignIn({ onConnected }: { onConnected?: () => void }) {
+export function TapoSignIn({
+  onConnected,
+  back,
+}: {
+  onConnected?: () => void;
+  /** Leave this step (e.g. the Add camera dialog's "Other source types"). */
+  back?: ReactNode;
+}) {
   const { t } = useI18n();
   const client = useQueryClient();
   const [email, setEmail] = useState("");
@@ -183,7 +191,25 @@ export function TapoSignIn({ onConnected }: { onConnected?: () => void }) {
           <MessageBarBody>{error.message}</MessageBarBody>
         </MessageBar>
       )}
-      <div className="row">
+      <ActionRow
+        back={
+          (back || mfa) && (
+            <>
+              {back}
+              {mfa && (
+                <Button
+                  appearance="subtle"
+                  icon={<ArrowLeft20Regular />}
+                  onClick={() => setMfa(null)}
+                >
+                  {t("tapo.startOver")}
+                </Button>
+              )}
+            </>
+          )
+        }
+      >
+        {(login.isPending || verify.isPending) && <Spinner size="tiny" />}
         <Button
           type="submit"
           appearance="primary"
@@ -192,13 +218,7 @@ export function TapoSignIn({ onConnected }: { onConnected?: () => void }) {
         >
           {mfa ? t("tapo.verify") : t("tapo.signIn")}
         </Button>
-        {(login.isPending || verify.isPending) && <Spinner size="tiny" />}
-        {mfa && (
-          <Button appearance="subtle" onClick={() => setMfa(null)}>
-            {t("tapo.startOver")}
-          </Button>
-        )}
-      </div>
+      </ActionRow>
     </form>
   );
 }
