@@ -22,6 +22,7 @@ from .models import (
     Job,
     JobState,
     ManagedCamera,
+    MaskVersion,
     Segment,
     SegmentStatus,
     Worker,
@@ -146,3 +147,57 @@ SCOPES: dict[str, Callable[[Settings], str]] = {
     "recordings": recordings, "events": events, "detections": detections, "queue": queue,
     "workers": workers, "cameras": cameras, "profiles": profiles, "tapo": tapo,
 }
+
+
+# --- cameras -------------------------------------------------------------------------
+
+TEST_SOURCES = ("file", "test")  # looping sample videos and test patterns
+
+
+def camera_ids_with_data() -> set[str]:
+    with session_scope() as s:
+        return set(s.scalars(select(Segment.camera_id).distinct()))
+
+
+def purge_camera(settings: Settings, camera_id: str) -> dict[str, int]:
+    """Delete a camera's recordings, events, detections and settings. Removes the camera
+    itself when it was added in the UI (config.yaml cameras must be removed there)."""
+    with session_scope() as s:
+        seg_ids = list(s.scalars(select(Segment.id).where(Segment.camera_id == camera_id)))
+        derived = [p for p in s.scalars(select(Segment.derived_path)
+                                         .where(Segment.camera_id == camera_id)) if p]
+        thumbs = [p for p in s.scalars(select(Segment.thumb_path)
+                                        .where(Segment.camera_id == camera_id)) if p]
+        events = s.scalars(select(Event).where(Event.camera_id == camera_id)).all()
+        clips = [p for ev in events for p in (ev.clip_path, ev.thumb_path) if p]
+        n_events = len(events)
+        s.execute(delete(event_segments).where(event_segments.c.segment_id.in_(seg_ids)))
+        for ev in events:
+            s.delete(ev)
+        s.execute(delete(Detection).where(Detection.camera_id == camera_id))
+        s.execute(delete(Job).where(Job.segment_id.in_(seg_ids)))
+        s.execute(delete(Segment).where(Segment.camera_id == camera_id))
+        s.execute(delete(CameraState).where(CameraState.camera_id == camera_id))
+        s.execute(delete(MaskVersion).where(MaskVersion.camera_id == camera_id))
+        removed = s.execute(delete(ManagedCamera).where(ManagedCamera.id == camera_id)).rowcount
+    for rel in [*derived, *thumbs, *clips]:
+        (settings.data_dir / rel).unlink(missing_ok=True)
+    for folder in (settings.recordings_dir / camera_id, settings.derived_dir / camera_id,
+                   settings.thumbs_dir / camera_id, settings.clips_dir / camera_id):
+        if folder.is_dir():
+            shutil.rmtree(folder)
+    return {"segments": len(seg_ids), "events": n_events, "camera_removed": removed}
+
+
+def test_cameras(settings: Settings) -> tuple[list[str], list[str]]:
+    """(ids added in the UI, ids defined in config.yaml) of cameras with a test source."""
+    cams = [c for c in settings.all_cameras(include_disabled=True)
+            if c.source.type in TEST_SOURCES]
+    return ([c.id for c in cams if c.managed == "ui"],
+            [c.id for c in cams if c.managed == "config"])
+
+
+def orphaned_cameras(settings: Settings) -> list[str]:
+    """Camera ids that still have recordings but are no longer defined anywhere."""
+    known = {c.id for c in settings.all_cameras(include_disabled=True)}
+    return sorted(camera_ids_with_data() - known)

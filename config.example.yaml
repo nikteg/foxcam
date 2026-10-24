@@ -10,12 +10,10 @@ segment_seconds: 60
 worker_token: ${MEDIA_WORKER_TOKEN:-}
 # open_worker_access: true   # any client may act as a worker - trusted test networks only
 
-cameras:
-  # Development: synthetic test pattern, no camera needed.
-  - id: test
-    name: Test pattern
-    source: { type: test }
-
+# Cameras are easiest to add in the web UI (Cameras -> Add camera); they can also be listed
+# here (read-only in the UI). For test cameras from the sample clips run `mise run seed`;
+# `mise run cameras:remove-test` removes them again with their recordings.
+cameras: []
   # Loop a local video file as a fake camera (handy with a fox clip to test detection).
   # - id: foxclip
   #   source: { type: file, path: ./samples/fox.mp4 }

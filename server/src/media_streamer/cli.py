@@ -41,6 +41,15 @@ def main() -> None:
                        help="recordings | events | detections | queue | workers | cameras | "
                             "profiles | tapo")
     reset.add_argument("-y", "--yes", action="store_true", help="don't ask")
+    rm = sub.add_parser("remove-cameras",
+                        help="remove cameras and their recordings, events and settings "
+                             "(stop the server first)")
+    rm.add_argument("ids", nargs="*", help="camera ids")
+    rm.add_argument("--test", action="store_true",
+                    help="all test cameras (looping sample files, test patterns)")
+    rm.add_argument("--orphaned", action="store_true",
+                    help="data of cameras that are no longer defined")
+    rm.add_argument("-y", "--yes", action="store_true", help="don't ask")
 
     args = parser.parse_args()
     if args.config:
@@ -118,6 +127,36 @@ def main() -> None:
         init_db(settings)
         for scope in args.scopes:
             print(f"{scope}: {reset_mod.SCOPES[scope](settings)}")
+    elif args.cmd == "remove-cameras":
+        from . import reset as reset_mod
+        from .db import init_db
+
+        init_db(settings)
+        targets = list(dict.fromkeys(args.ids))
+        in_config: list[str] = []
+        if args.test:
+            ui_ids, in_config = reset_mod.test_cameras(settings)
+            targets += [i for i in ui_ids if i not in targets]
+        if args.orphaned:
+            targets += [i for i in reset_mod.orphaned_cameras(settings) if i not in targets]
+        config_ids = {c.id for c in settings.cameras}
+        blocked = sorted(set(in_config) | (set(targets) & config_ids))
+        targets = [i for i in targets if i not in blocked]
+        for cam_id in blocked:
+            print(f"{cam_id}: defined in config.yaml - remove it there (and restart), then "
+                  "run this again with --orphaned to delete its data")
+        if not targets:
+            print("nothing to remove")
+            return
+        if not args.yes:
+            print("This deletes these cameras with all their recordings, events and settings:")
+            print("  " + ", ".join(targets))
+            if input("Continue? [y/N] ").strip().lower() not in ("y", "yes"):
+                raise SystemExit("aborted")
+        for cam_id in targets:
+            r = reset_mod.purge_camera(settings, cam_id)
+            print(f"{cam_id}: {r['segments']} recordings and {r['events']} events deleted"
+                  f"{', camera removed' if r['camera_removed'] else ''}")
     elif args.cmd == "tapo-logout":
         from .tapo_account import logout
 

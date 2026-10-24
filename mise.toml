@@ -212,6 +212,12 @@ if lsof -ti tcp:8000 >/dev/null 2>&1; then
 fi
 """
 
+[tasks."cameras:remove-test"]
+description = "Remove test cameras (sample-file loops, test patterns) and data of removed cameras"
+depends = ["server-stopped"]
+confirm = "Delete the test cameras with their recordings and events?"
+run = "uv run media-streamer remove-cameras --test --orphaned --yes"
+
 [tasks."reset:recordings"]
 description = "All footage plus segments, jobs, detections and events (keeps cameras, masks, profiles, workers)"
 depends = ["server-stopped"]

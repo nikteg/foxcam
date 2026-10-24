@@ -218,6 +218,7 @@ detection profiles, censor areas and worker tokens can also be managed in the UI
 | `dev`, `dev:no-worker`, `dev:yolo` | whole stack with a dummy / no / YOLO-World worker, live reload |
 | `server`, `ingest`, `mediamtx`, `web`, `worker*` | one part at a time |
 | `seed` (`-- --profiles`) | fake cameras from `samples/` (and an example profile) |
+| `cameras:remove-test` | remove the test cameras and the data of removed cameras |
 | `check` | ruff, oxlint, typecheck, oxfmt and all tests |
 | `s3:local` | a local S3 server to try `storage.s3` |
 | `docker:up`, `docker:test` | Docker stacks (the test stack runs next to dev on :18000) |

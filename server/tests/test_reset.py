@@ -104,3 +104,28 @@ def test_reset_workers_cameras_profiles(settings):
     reset.cameras(settings)
     assert _count(ManagedCamera) == 0 and _count(CameraState) == 0
     assert _count(Segment) == 2  # footage untouched
+
+
+def test_remove_test_cameras_and_orphans(settings):
+    from media_streamer.camera_store import add_camera
+
+    add_camera(settings, name="Loop", source={"type": "test"})
+    add_camera(settings, name="Real", source={"type": "rtsp", "url": "rtsp://cam/stream1"})
+    ui_test, config_test = reset.test_cameras(settings)
+    assert ui_test == ["loop"] and config_test == ["cam"]  # fixture camera is a test source
+
+    _world(settings)  # data for "cam"
+    add_segment(settings, camera="gone", with_file=False)  # camera no longer defined
+    assert reset.orphaned_cameras(settings) == ["gone"]
+
+    r = reset.purge_camera(settings, "loop")
+    assert r["camera_removed"] == 1
+    r = reset.purge_camera(settings, "cam")
+    assert r["segments"] == 2 and r["events"] == 1 and r["camera_removed"] == 0
+    with session_scope() as s:
+        assert s.query(Segment).filter_by(camera_id="cam").count() == 0
+        assert s.query(Event).count() == 0 and s.query(Detection).count() == 0
+        assert s.get(CameraState, "cam") is None
+        assert sorted(c.id for c in s.query(ManagedCamera)) == ["real", "ui"]  # "ui": _world
+    assert not (settings.recordings_dir / "cam").exists()
+    assert reset.orphaned_cameras(settings) == ["gone"]
