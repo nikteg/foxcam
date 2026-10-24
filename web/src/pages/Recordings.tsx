@@ -8,12 +8,7 @@ import {
   Text,
   Tooltip,
 } from "@fluentui/react-components";
-import {
-  Archive16Regular,
-  ArrowClockwise20Regular,
-  ArrowDownload20Regular,
-  Pin16Filled,
-} from "@fluentui/react-icons";
+import { Archive16Regular, ArrowClockwise20Regular, Pin16Filled } from "@fluentui/react-icons";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
@@ -26,6 +21,7 @@ import { Feedback } from "../components/Feedback";
 import {
   Checkbox,
   DateTimeInput,
+  DownloadButton,
   Empty,
   Fact,
   Facts,
@@ -327,14 +323,9 @@ function RecordingDetail({
       )}
       <div className="row wrap">
         {s.download_url && (
-          <Button
-            as="a"
-            href={s.download_url}
-            appearance="primary"
-            icon={<ArrowDownload20Regular />}
-          >
+          <DownloadButton href={s.download_url} appearance="primary">
             {t("common.download")}
-          </Button>
+          </DownloadButton>
         )}
         {canEdit && !s.deleted && (
           <Button

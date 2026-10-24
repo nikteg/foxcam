@@ -19,6 +19,16 @@ html {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
+/* A modal drawer is open (components/Drawer.tsx): the page behind stays put, and scrolling
+   inside the drawer does not carry over to it. */
+html.scroll-locked,
+html.scroll-locked body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+.app-drawer .fui-DrawerBody {
+  overscroll-behavior: contain;
+}
 /* iOS zooms in on a focused field with text under 16 px (Fluent's are 14 px). */
 @media (pointer: coarse) {
   input,

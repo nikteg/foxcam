@@ -10,12 +10,27 @@ import {
   OverlayDrawer,
 } from "@fluentui/react-components";
 import { Dismiss24Regular } from "@fluentui/react-icons";
-import { createContext, useContext, type ReactElement, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type ReactElement, type ReactNode } from "react";
 
 import { useI18n } from "../i18n";
 import { PHONE, useMediaQuery } from "../useMediaQuery";
 
 const CloseContext = createContext<() => void>(() => {});
+
+// Open modal drawers (they can stack): the page behind does not scroll while any is open.
+let locks = 0;
+
+/** Keep the page still behind a modal drawer, also on iOS (where swiping past the end
+ * of the drawer would otherwise scroll the page underneath). */
+function useScrollLock(on: boolean) {
+  useEffect(() => {
+    if (!on) return;
+    if (locks++ === 0) document.documentElement.classList.add("scroll-locked");
+    return () => {
+      if (--locks === 0) document.documentElement.classList.remove("scroll-locked");
+    };
+  }, [on]);
+}
 
 /** ``onOpenChange`` gets ``{ open: false }`` when the drawer is dismissed (Escape, the
  * backdrop, the close button), like Fluent's Dialog. */
@@ -35,6 +50,7 @@ export function Dialog({
   children: ReactNode;
 }) {
   const phone = useMediaQuery(PHONE);
+  useScrollLock(open && modal);
   const close = () => onOpenChange?.(undefined, { open: false });
   return (
     <OverlayDrawer

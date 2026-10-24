@@ -1,10 +1,5 @@
 import { Button, Caption1, Input, Select, Text } from "@fluentui/react-components";
-import {
-  ArrowDownload20Regular,
-  Dismiss16Regular,
-  Folder20Regular,
-  ScanObject20Regular,
-} from "@fluentui/react-icons";
+import { Dismiss16Regular, Folder20Regular, ScanObject20Regular } from "@fluentui/react-icons";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Fragment } from "react";
 
@@ -17,6 +12,7 @@ import { Feedback } from "../components/Feedback";
 import {
   Checkbox,
   ConfidenceBar,
+  DownloadButton,
   Empty,
   Fact,
   Facts,
@@ -135,9 +131,9 @@ export function DetectionList() {
         <Button as="a" icon={<ScanObject20Regular />} {...routerHref("/cameras/profiles")}>
           {t("profiles.title")}
         </Button>
-        <Button as="a" icon={<ArrowDownload20Regular />} href="/api/detections/feedback-export">
+        <DownloadButton href="/api/detections/feedback-export">
           {t("detections.exportJson")}
-        </Button>
+        </DownloadButton>
       </Toolbar>
       <InfoBanner id="detections">{t("detections.intro")}</InfoBanner>
       <div className="filters">

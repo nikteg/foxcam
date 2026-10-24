@@ -1,12 +1,21 @@
 import { Button } from "@fluentui/react-components";
-import { ArrowDownload20Regular, Folder20Regular } from "@fluentui/react-icons";
+import { Folder20Regular } from "@fluentui/react-icons";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { api, type ArchiveFile } from "../api";
 import { useCameraName } from "../components/CameraSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
-import { Empty, Fact, Facts, InfoBanner, QueryState, Tag, Time } from "../components/ui";
+import {
+  DownloadButton,
+  Empty,
+  Fact,
+  Facts,
+  InfoBanner,
+  QueryState,
+  Tag,
+  Time,
+} from "../components/ui";
 import { duration, fileSize, localTime } from "../format";
 import { useI18n, type I18n } from "../i18n";
 import { VideoPlayer } from "../components/VideoPlayer";
@@ -145,14 +154,9 @@ export function HourlyFiles({
               )}
               <div className="row wrap">
                 {selected.download_url && (
-                  <Button
-                    as="a"
-                    href={selected.download_url}
-                    appearance="primary"
-                    icon={<ArrowDownload20Regular />}
-                  >
+                  <DownloadButton href={selected.download_url} appearance="primary">
                     {t("common.download")}
-                  </Button>
+                  </DownloadButton>
                 )}
                 <Button icon={<Folder20Regular />} onClick={() => onShowSegments(selected)}>
                   {t("hourly.showSegments")}

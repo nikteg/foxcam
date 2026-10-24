@@ -7,12 +7,7 @@ import {
   CardPreview,
   Text,
 } from "@fluentui/react-components";
-import {
-  ArrowDownload20Regular,
-  Dismiss24Regular,
-  Play20Filled,
-  Search20Regular,
-} from "@fluentui/react-icons";
+import { Dismiss24Regular, Play20Filled, Search20Regular } from "@fluentui/react-icons";
 import { Fragment, useState } from "react";
 
 import type { DetectionEvent } from "../api";
@@ -25,7 +20,7 @@ import {
   useProfiles,
   useSeveralDetectors,
 } from "./ProfileSelect";
-import { Empty, Light, Tag, Time, useRouterHref } from "./ui";
+import { DownloadButton, Empty, Light, Tag, Time, useRouterHref } from "./ui";
 import { VideoPlayer } from "./VideoPlayer";
 import {
   Dialog,
@@ -148,13 +143,9 @@ export function EventsGrid({
                     >
                       {t("common.play")}
                     </Button>
-                    <Button
-                      as="a"
-                      href={`${e.clip_url}?download=true`}
-                      icon={<ArrowDownload20Regular />}
-                    >
+                    <DownloadButton href={`${e.clip_url}?download=true`}>
                       {t("common.download")}
-                    </Button>
+                    </DownloadButton>
                   </>
                 ) : e.clip_error ? (
                   <Tag kind="bad" title={e.clip_error}>
@@ -209,13 +200,9 @@ export function EventsGrid({
                 )}
               </DialogContent>
               <DialogActions>
-                <Button
-                  as="a"
-                  href={`${playing.clip_url}?download=true`}
-                  icon={<ArrowDownload20Regular />}
-                >
+                <DownloadButton href={`${playing.clip_url}?download=true`}>
                   {t("common.download")}
-                </Button>
+                </DownloadButton>
                 <Button appearance="primary" onClick={() => setPlaying(null)}>
                   {t("common.close")}
                 </Button>

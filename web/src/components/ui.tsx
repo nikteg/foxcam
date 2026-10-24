@@ -17,9 +17,11 @@ import {
   Tooltip,
   Tab,
   TabList,
+  type ButtonProps,
   type CheckboxProps,
 } from "@fluentui/react-components";
 import {
+  ArrowDownload20Regular,
   ArrowRight20Regular,
   LockClosed16Regular,
   Checkmark16Filled,
@@ -44,6 +46,37 @@ import { useLocation, useNavigate } from "react-router";
 
 import { localTime, percent, relativeTime } from "../format";
 import { useI18n } from "../i18n";
+
+/** Running as an iOS home screen app (no browser UI around it). */
+const standalone =
+  (navigator as { standalone?: boolean }).standalone === true ||
+  window.matchMedia("(display-mode: standalone)").matches;
+
+/** A download link styled as a button. In a home screen app a file opened in the app's own
+ * window has no way back (iOS shows it full screen, without a back button), so there it
+ * opens in a new window: iOS shows that as a sheet with Done. */
+export function DownloadButton({
+  href,
+  appearance,
+  children,
+}: {
+  href: string;
+  appearance?: ButtonProps["appearance"];
+  children: ReactNode;
+}) {
+  return (
+    <Button
+      as="a"
+      href={href}
+      download
+      appearance={appearance}
+      icon={<ArrowDownload20Regular />}
+      {...(standalone ? { target: "_blank", rel: "noopener" } : {})}
+    >
+      {children}
+    </Button>
+  );
+}
 
 /** Fluent Checkbox with an id of its own. Inside a <Field> it takes the field's id, so with
  * several in one Field (a group of options) every label pointed at the first box and
