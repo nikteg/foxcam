@@ -154,6 +154,7 @@ export const en = {
   "detections.openRecording": "Open recording",
 
   // Recordings
+  "recordings.anyDay": "Any day",
   "recordings.dayUtc": "Day (UTC)",
   "recordings.onlyWithMatch": "Only with a match",
   "recordings.none": "No recordings yet.",
@@ -426,6 +427,8 @@ export const en = {
   "notify.all": "all",
   "notify.allHint": "All checked = every camera, including ones added later.",
   "notify.only": "Only",
+  "notify.quietFrom": "From",
+  "notify.quietTo": "To",
   "notify.quietHours": "Quiet hours",
   "notify.quietHint": "No notifications in this window (e.g. 23:00 – 06:00). Leave empty for none.",
   "notify.cooldown": "Cooldown",

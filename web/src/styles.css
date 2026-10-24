@@ -1625,3 +1625,21 @@ a.event-title {
 a.event-title:hover {
   text-decoration: underline;
 }
+
+/* Empty date/time inputs on iOS Safari: a blank box, and placeholder is ignored. Draw the
+   hint over it (components/ui.tsx DateTimeInput); other browsers show their own mm/dd/yyyy. */
+@supports (-webkit-touch-callout: none) {
+  .date-time-input {
+    position: relative;
+    min-width: 8em;
+  }
+  .date-time-input[data-placeholder]::before {
+    content: attr(data-placeholder);
+    position: absolute;
+    inset-inline-start: var(--spacingHorizontalMNudge);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--colorNeutralForeground4);
+    pointer-events: none;
+  }
+}

@@ -24,8 +24,8 @@ import {
   Settings24Regular,
   Target24Regular,
 } from "@fluentui/react-icons";
-import type { ReactElement } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router";
+import { useLayoutEffect, type ReactElement } from "react";
+import { Outlet, useLocation, useNavigate, useNavigationType } from "react-router";
 
 import { api } from "./api";
 import { useAuth, useAuthChanged, useUnauthorizedRedirect } from "./auth";
@@ -132,15 +132,21 @@ export function Layout() {
 function AppShell({ isAdmin }: { isAdmin: boolean }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const navigationType = useNavigationType();
   const selected = currentTab(pathname);
+  // Another page (or sub-page) starts at the top; the router keeps the scroll position
+  // otherwise. Back/forward (POP) is left to the browser, and query changes (filters,
+  // drawers) do not count.
+  useLayoutEffect(() => {
+    if (navigationType !== "POP") window.scrollTo(0, 0);
+  }, [pathname, navigationType]);
   const { t } = useI18n();
   const tabs = TABS.filter((tab) => isAdmin || !tab.admin);
   const extraTabs = EXTRA_TABS.filter((tab) => isAdmin || !tab.admin);
-  // A new section starts at the top (the router keeps the scroll position otherwise);
-  // pressing the open one scrolls back up, like a phone app's tab bar.
+  // Pressing the open section scrolls back up, like a phone app's tab bar.
   const go = (to: string) => {
-    void navigate(to);
-    window.scrollTo({ top: 0, behavior: to === selected ? "smooth" : "instant" });
+    if (to === pathname) window.scrollTo({ top: 0, behavior: "smooth" });
+    else void navigate(to);
   };
 
   return (

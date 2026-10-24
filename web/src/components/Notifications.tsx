@@ -46,6 +46,7 @@ import { useCameraName } from "./CameraSelect";
 import { useProfileName, useProfiles } from "./ProfileSelect";
 import {
   ConfigTag,
+  DateTimeInput,
   Empty,
   Fact,
   Facts,
@@ -595,9 +596,21 @@ function ChannelDialog({
               </Field>
               <Field label={t("notify.quietHours")} hint={t("notify.quietHint")}>
                 <div className="row wrap">
-                  <Input type="time" value={quietFrom} onChange={(_, d) => setQuietFrom(d.value)} />
+                  <DateTimeInput
+                    type="time"
+                    value={quietFrom}
+                    placeholder={t("notify.quietFrom")}
+                    aria-label={t("notify.quietFrom")}
+                    onChange={setQuietFrom}
+                  />
                   <span>–</span>
-                  <Input type="time" value={quietTo} onChange={(_, d) => setQuietTo(d.value)} />
+                  <DateTimeInput
+                    type="time"
+                    value={quietTo}
+                    placeholder={t("notify.quietTo")}
+                    aria-label={t("notify.quietTo")}
+                    onChange={setQuietTo}
+                  />
                 </div>
               </Field>
               <Field label={t("notify.cooldownMinutes")} hint={t("notify.cooldownHint")}>

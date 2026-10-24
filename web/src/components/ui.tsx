@@ -3,6 +3,7 @@ import {
   Body1,
   Caption1,
   Card,
+  Input,
   Link,
   MessageBar,
   MessageBarActions,
@@ -31,6 +32,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type HTMLAttributes,
   type MouseEvent,
   type ReactElement,
   type ReactNode,
@@ -39,6 +41,36 @@ import { useLocation, useNavigate } from "react-router";
 
 import { localTime, percent, relativeTime } from "../format";
 import { useI18n } from "../i18n";
+
+/** Date or time input with a hint while empty. iOS Safari shows an empty date/time input
+ * as a blank box and ignores placeholder, so the hint is drawn over it there (styles.css). */
+export function DateTimeInput({
+  type,
+  value,
+  placeholder,
+  onChange,
+  ...rest
+}: {
+  type: "date" | "time";
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+  "aria-label"?: string;
+}) {
+  return (
+    <Input
+      {...rest}
+      type={type}
+      value={value}
+      placeholder={placeholder}
+      className="date-time-input"
+      root={
+        { "data-placeholder": value ? undefined : placeholder } as HTMLAttributes<HTMLSpanElement>
+      }
+      onChange={(_, d) => onChange(d.value)}
+    />
+  );
+}
 
 /** Fluent link that navigates client-side (keeps cmd/ctrl-click working). */
 export function RouterLink({

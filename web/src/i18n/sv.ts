@@ -156,6 +156,7 @@ export const sv: Record<MessageKey, string> = {
   "detections.openRecording": "Öppna inspelningen",
 
   // Inspelningar
+  "recordings.anyDay": "Alla dagar",
   "recordings.dayUtc": "Dag (UTC)",
   "recordings.onlyWithMatch": "Endast med träff",
   "recordings.none": "Inga inspelningar än.",
@@ -426,6 +427,8 @@ export const sv: Record<MessageKey, string> = {
   "notify.all": "alla",
   "notify.allHint": "Alla ikryssade = varje kamera, även sådana som läggs till senare.",
   "notify.only": "Bara",
+  "notify.quietFrom": "Från",
+  "notify.quietTo": "Till",
   "notify.quietHours": "Tysta timmar",
   "notify.quietHint":
     "Inga aviseringar under denna tid (t.ex. 23:00 – 06:00). Lämna tomt för inga.",

@@ -2,7 +2,6 @@ import {
   Button,
   Caption1,
   Checkbox,
-  Input,
   Link,
   MessageBar,
   MessageBarBody,
@@ -26,6 +25,7 @@ import { byNumber, byString, DataTable, type Column } from "../components/DataTa
 import { DetailPanel } from "../components/DetailPanel";
 import { Feedback } from "../components/Feedback";
 import {
+  DateTimeInput,
   Empty,
   Fact,
   Facts,
@@ -189,11 +189,12 @@ export function Recordings() {
         <>
           <div className="filters">
             <CameraSelect value={f.camera} onChange={(v) => setFilter("camera", v)} />
-            <Input
+            <DateTimeInput
               type="date"
               value={f.day}
+              placeholder={t("recordings.anyDay")}
               aria-label={t("recordings.dayUtc")}
-              onChange={(_, d) => setFilter("day", d.value)}
+              onChange={(v) => setFilter("day", v)}
             />
           </div>
           <HourlyFiles
@@ -212,11 +213,12 @@ export function Recordings() {
         <>
           <div className="filters">
             <CameraSelect value={f.camera} onChange={(v) => setFilter("camera", v)} />
-            <Input
+            <DateTimeInput
               type="date"
               value={f.day}
+              placeholder={t("recordings.anyDay")}
               aria-label={t("recordings.dayUtc")}
-              onChange={(_, d) => setFilter("day", d.value)}
+              onChange={(v) => setFilter("day", v)}
             />
             <Select
               value={f.status}
