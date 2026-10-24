@@ -139,7 +139,10 @@ export function Queue() {
                   />
                 ))}
               </section>
-              <section className="stats stats-info">
+              <Caption1 as="p" className="muted stats-caption stats-caption-next">
+                {t("queue.stats")}
+              </Caption1>
+              <section className="stats">
                 <Stat
                   icon={<Timer20Regular />}
                   label={t("queue.oldestWaiting")}
@@ -274,7 +277,7 @@ function makeJobColumns(
     {
       id: "error",
       header: t("col.error"),
-      width: 220,
+      width: 140,
       phone: "full",
       cell: (j) => (
         <Caption1 className="err" title={j.error ?? undefined}>

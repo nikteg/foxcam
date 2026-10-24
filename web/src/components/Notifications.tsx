@@ -43,7 +43,7 @@ import { useI18n, type MessageKey } from "../i18n";
 import { LabelPicker, useLabelSuggestions, useSuggestionList } from "./LabelPicker";
 import { useCameraName } from "./CameraSelect";
 import { useProfileName, useProfiles } from "./ProfileSelect";
-import { Empty, InfoBanner, QueryState, Tag, Time, Toolbar } from "./ui";
+import { ConfigTag, Empty, InfoBanner, QueryState, Tag, Time, Toolbar } from "./ui";
 import {
   Dialog,
   DialogActions,
@@ -165,7 +165,7 @@ function ChannelCard({
         description={
           <span className="row wrap tags">
             <Tag>{t(TYPE_LABELS[c.type])}</Tag>
-            {c.managed === "config" && <Tag kind="pending">config.yaml</Tag>}
+            {c.managed === "config" && <ConfigTag />}
             {!c.enabled && <Tag kind="warn">{t("notify.disabled")}</Tag>}
           </span>
         }

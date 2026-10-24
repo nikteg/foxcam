@@ -577,6 +577,8 @@ export const sv: Record<MessageKey, string> = {
   "cameras.censorBurned": "Även inbrända i inspelningar och livebild.",
   "live.hlsFallbackHint":
     "Öppnar kameran som HLS-ström i en ny flik, för webbläsare eller nät där WebRTC inte fungerar.",
+  "queue.stats": "Statistik",
+  "common.configTagHint": "Definierad i config.yaml: ändra den där (skrivskyddad här).",
   "profiles.title": "Detekteringsprofiler",
   "profiles.profile": "Profil",
   "profiles.all": "Alla profiler",

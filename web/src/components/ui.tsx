@@ -18,6 +18,7 @@ import {
 } from "@fluentui/react-components";
 import {
   ArrowRight20Regular,
+  LockClosed16Regular,
   Checkmark16Filled,
   Dismiss20Regular,
   ChevronRight16Regular,
@@ -217,6 +218,7 @@ const TAG_TONES: Record<string, string> = {
   new: "info",
   private: "important",
   target: "brand",
+  config: "config",
 };
 
 /** Translated name of a job / segment state ("done", "pending", ...). */
@@ -284,7 +286,7 @@ export function Tag({
   const tone = (kind && TAG_TONES[kind]) || "neutral";
   const badge = (
     <span className={`app-tag tone-${tone}`}>
-      {icon ?? (tone !== "neutral" && tone !== "brand" && <span className="app-tag-dot" />)}
+      {icon ?? (!["neutral", "brand", "config"].includes(tone) && <span className="app-tag-dot" />)}
       {children}
     </span>
   );
@@ -294,6 +296,16 @@ export function Tag({
     </Tooltip>
   ) : (
     badge
+  );
+}
+
+/** "Defined in config.yaml": read-only here. Stands apart from state tags. */
+export function ConfigTag() {
+  const { t } = useI18n();
+  return (
+    <Tag kind="config" title={t("common.configTagHint")} icon={<LockClosed16Regular />}>
+      config.yaml
+    </Tag>
   );
 }
 

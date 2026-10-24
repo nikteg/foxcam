@@ -49,6 +49,8 @@ interface Props<T> {
 
 /** Rows rendered at first, and added each time the end of the table scrolls into view. */
 const PAGE = 100;
+/** A column grows to fit its content up to this width; longer text is cut with "…". */
+const MAX_FIT = 420;
 
 type SortState = { sortColumn: string | undefined; sortDirection: "ascending" | "descending" };
 
@@ -85,11 +87,20 @@ export function DataTable<T>({
       renderCell: c.cell,
     }),
   );
+  // Columns grow to fit what is in them (measured after rendering, see below), so tags,
+  // names and model strings are not cut off; `width` is the starting point.
+  const [fitted, setFitted] = useState<Record<string, number>>({});
   const sizing: TableColumnSizingOptions = Object.fromEntries(
-    columns.map((c) => [
-      c.id,
-      { idealWidth: c.width ?? 120, minWidth: c.minWidth ?? Math.round((c.width ?? 100) * 0.85) },
-    ]),
+    columns.map((c) => {
+      const width = Math.max(c.width ?? 120, fitted[c.id] ?? 0);
+      return [
+        c.id,
+        {
+          idealWidth: width,
+          minWidth: Math.max(c.minWidth ?? Math.round((c.width ?? 100) * 0.85), fitted[c.id] ?? 0),
+        },
+      ];
+    }),
   );
   const compare = columns.find((c) => c.id === sort.sortColumn)?.compare;
   const sorted = compare
@@ -107,6 +118,35 @@ export function DataTable<T>({
     if ((e.target as HTMLElement).closest("a, button, input, [role=checkbox]")) return;
     clickRef.current?.(item);
   });
+
+  // Widen columns whose content does not fit (only ever wider, at most MAX_FIT px).
+  // Measured after rendering and again whenever the columns change size (the grid fits
+  // them to the page after its first render).
+  const box = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const root = box.current;
+    if (phone || !root) return;
+    const measure = () => {
+      const need: Record<string, number> = {};
+      for (const cell of root.querySelectorAll<HTMLElement>(".dt-cell[data-col]")) {
+        if (cell.scrollWidth <= cell.clientWidth + 1) continue;
+        const col = cell.dataset.col!;
+        need[col] = Math.max(need[col] ?? 0, Math.min(cell.scrollWidth + 4, MAX_FIT));
+      }
+      setFitted((f) => {
+        const grow = Object.entries(need).filter(([col, w]) => w > (f[col] ?? 0));
+        return grow.length ? { ...f, ...Object.fromEntries(grow) } : f;
+      });
+    };
+    measure();
+    const row = root.querySelector(".dt-row");
+    const observer = new ResizeObserver(measure);
+    for (const cell of row?.children ?? []) observer.observe(cell);
+    return () => observer.disconnect();
+    // The rows and columns are what change the content to measure; widths only grow,
+    // up to MAX_FIT, so it settles.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
+  }, [visible, columns, phone]);
 
   // More rows when the end of the table comes near.
   const sentinel = useRef<HTMLDivElement>(null);
@@ -126,7 +166,7 @@ export function DataTable<T>({
 
   return (
     // Columns keep a readable minimum width; narrow screens scroll the table sideways.
-    <div className="data-table-scroll">
+    <div className="data-table-scroll" ref={box}>
       <DataGrid
         className={`data-table ${onRowClick ? "clickable" : ""}`}
         items={visible}
@@ -196,6 +236,7 @@ function RowImpl<T>({ item, columns, className, selected, activate }: RowProps<T
         return (
           <DataGridCell
             className={`dt-cell ${mode ? `phone-${mode}` : ""}`}
+            data-col={String(columnId)}
             data-label={mode === "nolabel" || mode === "thumb" ? undefined : col?.header}
           >
             {renderCell(item)}

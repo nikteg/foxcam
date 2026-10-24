@@ -20,7 +20,7 @@ import { hasRole, useMe } from "../auth";
 import { useI18n } from "../i18n";
 import { useProfileName } from "./ProfileSelect";
 import { useRoleName } from "./ShareDialog";
-import { Dot, Light, Tag, Time, useRouterHref, useSourceLabel } from "./ui";
+import { ConfigTag, Dot, Light, Tag, Time, useRouterHref, useSourceLabel } from "./ui";
 
 export function sourceDetail(source: CameraSource, synthetic: string): string {
   switch (source.type) {
@@ -124,7 +124,7 @@ export function CameraCard({
 
       {manage && (c.managed === "config" || (me?.enabled && c.role !== "owner") || !c.enabled) && (
         <span className="row wrap tags">
-          {c.managed === "config" && <Tag kind="pending">config.yaml</Tag>}
+          {c.managed === "config" && <ConfigTag />}
           {me?.enabled && c.role !== "owner" && <Tag>{roleName(c.role)}</Tag>}
           {!c.enabled && <Tag kind="warn">{t("cameras.disabled")}</Tag>}
         </span>

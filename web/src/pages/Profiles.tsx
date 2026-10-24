@@ -39,7 +39,7 @@ import {
 } from "../components/DetectorsEditor";
 import { profileWarnings, type ProfileWarning } from "../labelWarnings";
 
-import { Empty, InfoBanner, QueryState, Tag } from "../components/ui";
+import { ConfigTag, Empty, InfoBanner, QueryState, Tag } from "../components/ui";
 import { percent } from "../format";
 import { useI18n } from "../i18n";
 import {
@@ -120,7 +120,7 @@ function ProfileCard({
         }
         description={
           <span className="row wrap tags">
-            {!editable && <Tag kind="pending">config.yaml</Tag>}
+            {!editable && <ConfigTag />}
             {p.default && <Tag title={t("profiles.defaultHint")}>{t("profiles.default")}</Tag>}
             {!p.enabled && <Tag kind="warn">{t("profiles.disabled")}</Tag>}
           </span>

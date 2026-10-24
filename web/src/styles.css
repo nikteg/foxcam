@@ -355,8 +355,8 @@ button.fui-CompoundButton {
   display: block;
   margin: 0 0 var(--spacingVerticalS);
 }
-.stats.stats-info {
-  margin-top: var(--spacingVerticalM);
+.fui-Text.stats-caption-next {
+  margin-top: var(--spacingVerticalXL);
 }
 .fui-Card.stat.clickable:hover {
   box-shadow: var(--shadow4);
@@ -1373,4 +1373,13 @@ h3.panel-heading {
   border-color: transparent;
   background: var(--colorBrandBackground2);
   color: var(--colorBrandForeground2);
+}
+
+/* config.yaml: read-only, so unlike any state tag (inverted, monospace, a lock). */
+.app-tag.tone-config {
+  border-color: transparent;
+  background: var(--colorNeutralForeground1);
+  color: var(--colorNeutralBackground1);
+  font-family: var(--fontFamilyMonospace);
+  font-weight: var(--fontWeightRegular);
 }
