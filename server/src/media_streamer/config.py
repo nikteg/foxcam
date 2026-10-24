@@ -346,6 +346,9 @@ class Settings(BaseModel):
             self.profiles = [ProfileConfig(
                 id=DEFAULT_PROFILE, name="Fox", targets=self.detection.target_labels,
                 min_confidence=self.detection.min_confidence, default=True)]
+        # MEDIA_STREAMER_PUBLIC_URL fills in when the config has none (scripts/dev.sh sets it
+        # from this machine's LAN address).
+        self.public_url = self.public_url or os.environ.get("MEDIA_STREAMER_PUBLIC_URL") or None
         self.public_url = self.public_url.rstrip("/") if self.public_url else None
         cids = [c.id for c in self.notifications.channels]
         if len(cids) != len(set(cids)):

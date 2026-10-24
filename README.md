@@ -116,7 +116,8 @@ mise run dev        # MediaMTX, server, ingest, web UI and a dummy worker (live 
 mise run seed       # in another terminal: one fake camera per sample clip
 ```
 
-Open **http://localhost:5173**. The dummy worker pretends to see a fox now and then, enough
+Open **http://localhost:5173**, or the LAN address `dev` prints (`http://192.168.x.y:5173`)
+from another computer or phone: live view and notification links follow along. The dummy worker pretends to see a fox now and then, enough
 to watch the whole pipeline work. For real detection on your machine:
 
 ```sh
@@ -130,8 +131,9 @@ cp config.example.yaml config.yaml          # add your cameras
 docker compose up --build -d                # MediaMTX + server (with UI) + ingest on :8000
 ```
 
-Set `PUBLIC_HOST_URL` (e.g. `http://192.168.1.10`) so other devices can open the live view,
-and add that IP to `webrtcAdditionalHosts` in `mediamtx/mediamtx.yml`.
+Live-view links follow the address you open the UI with. In Docker, add the host's LAN IP
+to `webrtcAdditionalHosts` in `mediamtx/mediamtx.yml` so WebRTC can connect from other
+devices, and set `public_url` for links in notifications.
 
 ## Adding cameras
 

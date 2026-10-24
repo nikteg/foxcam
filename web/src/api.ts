@@ -458,6 +458,22 @@ export const api = {
     request<{ status: string }>("POST", `/api/queue/jobs/${jobId}/requeue`),
 };
 
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+
+/** Live-view URLs are configured from the server's point of view (often localhost). When this
+ * page was opened from another device, point them at the host the browser used instead. */
+export function browserUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    if (LOCAL_HOSTS.has(u.hostname) && !LOCAL_HOSTS.has(window.location.hostname)) {
+      u.hostname = window.location.hostname;
+    }
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 export const snapshotUrl = (cameraId: string, fresh = false) =>
   `/api/cameras/${encodeURIComponent(cameraId)}/snapshot.jpg${fresh ? `?fresh=true&t=${Date.now()}` : ""}`;
 

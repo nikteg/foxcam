@@ -1,7 +1,7 @@
 import { Caption1, Card, CardHeader, Link, Text } from "@fluentui/react-components";
 import { useQuery } from "@tanstack/react-query";
 
-import { api } from "../api";
+import { api, browserUrl } from "../api";
 import { CameraSelect } from "../components/CameraSelect";
 import { Dot, Empty, PageHeader, QueryState } from "../components/ui";
 import { useI18n } from "../i18n";
@@ -38,7 +38,7 @@ export function Live() {
               action={
                 <Caption1 className="muted">
                   WebRTC –{" "}
-                  <Link href={c.hls_url} target="_blank" rel="noreferrer">
+                  <Link href={browserUrl(c.hls_url)} target="_blank" rel="noreferrer">
                     {t("live.hlsFallback")}
                   </Link>
                 </Caption1>
@@ -50,7 +50,7 @@ export function Live() {
               <iframe
                 className="live-frame"
                 title={t("live.frameTitle", { name: c.name })}
-                src={`${c.webrtc_url}?controls=true&muted=true&autoplay=true`}
+                src={`${browserUrl(c.webrtc_url)}?controls=true&muted=true&autoplay=true`}
                 // oxlint-disable-next-line react/iframe-missing-sandbox -- cross-origin player
                 sandbox="allow-scripts allow-same-origin"
                 allow="autoplay; fullscreen"

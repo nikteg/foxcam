@@ -56,3 +56,13 @@ cameras:
 def test_per_camera_segment_length(settings):
     assert settings.segment_seconds_for("cam") == 2
     assert settings.segment_seconds_for("unknown") == 2
+
+
+def test_public_url_from_environment(tmp_path, monkeypatch):
+    from media_streamer.config import Settings
+
+    monkeypatch.setenv("MEDIA_STREAMER_PUBLIC_URL", "http://192.168.1.10:5173/")
+    assert Settings.model_validate({"data_dir": str(tmp_path)}).public_url == \
+        "http://192.168.1.10:5173"
+    explicit = Settings.model_validate({"data_dir": str(tmp_path), "public_url": "https://cams"})
+    assert explicit.public_url == "https://cams"  # the config wins

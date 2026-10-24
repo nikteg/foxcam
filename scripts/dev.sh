@@ -36,6 +36,21 @@ start() { # name, command...  (output prefixed with [name])
 # Recording file names include the UTC offset; TZ=UTC just keeps them in UTC.
 start mediamtx env TZ=UTC "$MEDIAMTX" mediamtx/mediamtx.yml
 sleep 1
+# This machine's LAN address, so other devices can use the UI (and notifications link to it).
+lan_ip() {
+  if command -v ipconfig >/dev/null 2>&1; then # macOS: the interface of the default route
+    local iface
+    iface="$(route -n get default 2>/dev/null | awk '/interface:/{print $2}')"
+    ipconfig getifaddr "${iface:-en0}" 2>/dev/null || true
+  else
+    hostname -I 2>/dev/null | awk '{print $1}'
+  fi
+}
+LAN_IP="$(lan_ip)"
+if [ -n "$LAN_IP" ]; then
+  export MEDIA_STREAMER_PUBLIC_URL="${MEDIA_STREAMER_PUBLIC_URL:-http://$LAN_IP:5173}"
+fi
+
 RELOAD="${RELOAD:-1}"
 # Restart a command when Python files under the given directory change.
 watch() { # dir, command...
@@ -66,6 +81,9 @@ fi
 echo
 echo "  UI (dev, hot reload):  http://localhost:5173"
 echo "  UI (built) + API:      http://localhost:8000   (API docs: /docs)"
+if [ -n "$LAN_IP" ]; then
+  echo "  Other devices:         http://$LAN_IP:5173   (live view and notification links use this host)"
+fi
 echo "  Ctrl+C to stop"
 echo
 wait
