@@ -14,6 +14,7 @@ import { Outlet, useLocation, useNavigate } from "react-router";
 
 import { RouterLink, usePageTitle } from "./components/ui";
 import { LanguageMenu, useI18n, type MessageKey } from "./i18n";
+import { ThemeMenu } from "./theme";
 
 interface NavItem {
   to: string;
@@ -90,6 +91,7 @@ export function Layout() {
         </TabList>
         {/* Right-aligned header actions (settings shortcut only shown with the bottom bar). */}
         <div className="topbar-actions">
+          <ThemeMenu />
           <LanguageMenu className="language-menu" />
           <Button
             className="settings-button"

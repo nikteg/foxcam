@@ -15,6 +15,7 @@ import { api } from "../api";
 import { StorageCard } from "../components/StorageCard";
 import { PageHeader, QueryState, useRouterHref } from "../components/ui";
 import { LANGUAGE_NAMES, useI18n, type Lang } from "../i18n";
+import { THEME_MODES, useThemeMode, type ThemeMode } from "../theme";
 
 const show = (v: unknown) =>
   v === null || v === undefined ? "–" : typeof v === "object" ? JSON.stringify(v) : String(v);
@@ -23,6 +24,7 @@ export function Settings() {
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
   const routerHref = useRouterHref();
   const { t, rich, lang, setLang } = useI18n();
+  const { mode, setMode } = useThemeMode();
   const cfg = settings.data;
 
   return (
@@ -41,6 +43,22 @@ export function Settings() {
         >
           {(Object.keys(LANGUAGE_NAMES) as Lang[]).map((l) => (
             <Radio key={l} value={l} label={LANGUAGE_NAMES[l]} />
+          ))}
+        </RadioGroup>
+      </Field>
+
+      <Subtitle2 as="h2" className="section">
+        {t("settings.theme")}
+      </Subtitle2>
+      <Field hint={t("settings.themeHint")}>
+        <RadioGroup
+          layout="horizontal"
+          value={mode}
+          onChange={(_, d) => setMode(d.value as ThemeMode)}
+          aria-label={t("settings.theme")}
+        >
+          {THEME_MODES.map((m) => (
+            <Radio key={m} value={m} label={t(`theme.${m}`)} />
           ))}
         </RadioGroup>
       </Field>

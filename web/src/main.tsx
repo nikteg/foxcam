@@ -1,4 +1,3 @@
-import { FluentProvider } from "@fluentui/react-components";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -17,7 +16,7 @@ import { Profiles } from "./pages/Profiles";
 import { Queue } from "./pages/Queue";
 import { Recordings } from "./pages/Recordings";
 import { Settings } from "./pages/Settings";
-import { theme } from "./theme";
+import { ThemeProvider } from "./theme";
 import "./styles.css";
 
 const queryClient = new QueryClient({
@@ -46,7 +45,7 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <FluentProvider theme={theme}>
+    <ThemeProvider>
       {/* Not a FluentProvider className: Fluent copies those onto its tooltip/popover portal
           containers, which would then get the full-page background. */}
       <div className="app-root">
@@ -56,6 +55,6 @@ createRoot(document.getElementById("root")!).render(
           </I18nProvider>
         </QueryClientProvider>
       </div>
-    </FluentProvider>
+    </ThemeProvider>
   </StrictMode>,
 );

@@ -30,6 +30,7 @@ export const sv: Record<MessageKey, string> = {
   "common.download": "Ladda ner",
   "common.edit": "Redigera",
   "common.language": "Språk",
+  "common.theme": "Tema",
   "common.loadFailed": "Kunde inte läsa in",
   "common.loading": "Läser in…",
   "common.no": "nej",
@@ -258,6 +259,12 @@ export const sv: Record<MessageKey, string> = {
   // Inställningar
   "settings.language": "Språk",
   "settings.languageHint": "Sparas i den här webbläsaren.",
+  "settings.theme": "Tema",
+  "settings.themeHint":
+    "System följer enhetens ljusa eller mörka läge. Sparas i den här webbläsaren.",
+  "theme.system": "System",
+  "theme.light": "Ljust",
+  "theme.dark": "Mörkt",
   "settings.manageCameras": "Hantera kameror och integrationer",
   "settings.configuration": "Konfiguration",
   "settings.storage": "Lagring",
