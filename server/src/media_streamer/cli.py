@@ -17,7 +17,8 @@ def main() -> None:
     serve.add_argument("--port", type=int, default=8000)
     serve.add_argument("--no-background", action="store_true",
                        help="don't run scanner/preprocess/queue loops (UI/API only)")
-    serve.add_argument("--reload", action="store_true")
+    serve.add_argument("--reload", action="store_true",
+                       help="restart when the server's Python code changes (development)")
 
     sub.add_parser("ingest", help="publish non-RTSP sources (tapo_cloud, test, file) to MediaMTX")
     sub.add_parser("tapo-login", help="log in to the Tapo cloud and store a session")
@@ -47,6 +48,7 @@ def main() -> None:
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
                         format="%(asctime)s %(levelname)-7s %(name)s: %(message)s")
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("watchfiles").setLevel(logging.WARNING)  # --reload: one line per save
 
     from .config import get_settings
 
@@ -57,11 +59,24 @@ def main() -> None:
 
         if args.no_background:
             os.environ["MEDIA_STREAMER_NO_BACKGROUND"] = "1"
+        from pathlib import Path
+
+        # Only watch the package: watching the repo would restart on every new recording.
         uvicorn.run("media_streamer.web.main:app", host=args.host, port=args.port,
-                    reload=args.reload, log_level="info")
+                    reload=args.reload, reload_dirs=[str(Path(__file__).parent)],
+                    log_level="info")
     elif args.cmd == "ingest":
+        import signal
+
         from .ingest.supervisor import run_ingest
 
+        # Stop publishers cleanly on Ctrl+C / SIGTERM, also when started in the background
+        # (which leaves SIGINT ignored) - e.g. scripts/dev.sh restarting it on code changes.
+        def stop(*_: object) -> None:
+            raise KeyboardInterrupt
+
+        signal.signal(signal.SIGINT, signal.default_int_handler)
+        signal.signal(signal.SIGTERM, stop)
         settings.ensure_dirs()
         run_ingest(settings)
     elif args.cmd == "tapo-login":

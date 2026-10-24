@@ -5,6 +5,9 @@
 #   scripts/dev.sh                                   # dummy worker that "sees" foxes
 #   WORKER_ARGS="--detector ultralytics --model yolov8s-worldv2.pt --classes fox --device mps" scripts/dev.sh
 #   WORKER_ARGS=none scripts/dev.sh                  # no worker (run your own elsewhere)
+#   RELOAD=0 scripts/dev.sh                          # don't restart on code changes
+#
+# Server, ingest and worker restart when their Python code changes (web: Vite HMR).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -33,15 +36,31 @@ start() { # name, command...  (output prefixed with [name])
 # Recording file names include the UTC offset; TZ=UTC just keeps them in UTC.
 start mediamtx env TZ=UTC "$MEDIAMTX" mediamtx/mediamtx.yml
 sleep 1
-start server uv run media-streamer serve --host 0.0.0.0 --port 8000
-start ingest uv run media-streamer ingest
+RELOAD="${RELOAD:-1}"
+# Restart a command when Python files under the given directory change.
+watch() { # dir, command...
+  local dir=$1
+  shift
+  if [ "$RELOAD" = 1 ]; then
+    uv run watchfiles --filter python --sigint-timeout 10 "$*" "$dir"
+  else
+    uv run "$@"
+  fi
+}
+if [ "$RELOAD" = 1 ]; then
+  start server uv run media-streamer serve --host 0.0.0.0 --port 8000 --reload
+else
+  start server uv run media-streamer serve --host 0.0.0.0 --port 8000
+fi
+start ingest watch server/src media-streamer ingest
 start web pnpm --dir web dev --host
 if [ "$WORKER_ARGS" != none ]; then
   sleep 3
   # Workers need a token; a local "dev" token is created once and kept in data/.
   token="${MEDIA_WORKER_TOKEN:-$(uv run media-streamer worker-token dev --save data/dev-worker.token)}"
   # shellcheck disable=SC2086
-  start worker env MEDIA_WORKER_TOKEN="$token" uv run media-worker --server http://localhost:8000 $WORKER_ARGS
+  export MEDIA_WORKER_TOKEN="$token"
+  start worker watch worker/src media-worker --server http://localhost:8000 $WORKER_ARGS
 fi
 
 echo

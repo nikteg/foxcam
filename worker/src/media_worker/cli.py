@@ -7,6 +7,7 @@ import logging
 import os
 import platform
 import shutil
+import signal
 import socket
 import sys
 import tempfile
@@ -95,6 +96,17 @@ def _detail(response: httpx.Response) -> str:
         return str(response.status_code)
 
 
+def graceful_signals() -> None:
+    """Ctrl+C and SIGTERM stop the worker cleanly. SIGINT is re-enabled because processes
+    started in the background (scripts/dev.sh, watchfiles reload) inherit it as ignored."""
+
+    def stop(*_: object) -> None:
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+    signal.signal(signal.SIGTERM, stop)
+
+
 def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "detect-file":
         from .local import main as detect_file_main
@@ -133,6 +145,7 @@ def main() -> None:
 
     if shutil.which("ffmpeg") is None:
         sys.exit("ffmpeg not found on PATH (run `media-worker doctor` for install hints)")
+    graceful_signals()
     detector = create_detector(args)
     info = {**detector.info(), "version": __version__, "host": platform.node(),
             "python": platform.python_version(), "platform": environment()}

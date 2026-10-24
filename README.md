@@ -23,7 +23,7 @@ mise task (`mise tasks` lists them all):
 
 ```sh
 mise run setup      # Python + web deps, config.yaml, MediaMTX binary, fox sample clips
-mise run dev        # whole stack with a dummy worker (Ctrl+C stops it)
+mise run dev        # whole stack with a dummy worker; reloads on code changes (Ctrl+C stops)
 mise run seed       # with the stack running: a fake camera per sample clip
 ```
 
