@@ -26,12 +26,13 @@ import {
   Edit20Regular,
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { api, type Profile, type ProfileInput } from "../api";
 import {
   LabelCombobox,
   LabelPicker,
+  TagsPicker,
   useLabelSuggestions,
   useSuggestionList,
 } from "../components/LabelPicker";
@@ -42,15 +43,6 @@ import { Navigate } from "react-router";
 import { Empty, QueryState, Tag } from "../components/ui";
 import { percent } from "../format";
 import { useI18n } from "../i18n";
-
-/** Tags as the server stores them: lower case, no spaces, unique. */
-const normalizeTags = (tags: string[]) => [
-  ...new Set(
-    tags
-      .map((s) => s.trim().toLowerCase().replace(/\s+/g, "-"))
-      .filter((s) => /^[a-z0-9][a-z0-9_.-]*$/.test(s)),
-  ),
-];
 
 type AliasRow = { from: string; to: string };
 
@@ -240,7 +232,6 @@ function ProfileCard({
 function ProfileDialog({ profile, onClose }: { profile: Profile | null; onClose: () => void }) {
   const { t } = useI18n();
   const client = useQueryClient();
-  const tags = useQuery({ queryKey: ["worker-tags"], queryFn: api.workerTags });
   const [id, setId] = useState(profile?.id ?? "");
   const [name, setName] = useState(profile?.name ?? "");
   const [targets, setTargets] = useState<string[]>(profile?.targets ?? []);
@@ -278,19 +269,6 @@ function ProfileDialog({ profile, onClose }: { profile: Profile | null; onClose:
       onClose();
     },
   });
-  const known = useMemo(() => tags.data ?? [], [tags.data]);
-  // Tags suggest which workers have them; free text pins a worker not connected yet.
-  const tagSuggestions = useMemo(() => {
-    const workers = labels.data?.workers ?? [];
-    return known.map((tag) => {
-      const holders = workers.filter((w) => w.tags.includes(tag)).map((w) => w.id);
-      return {
-        label: tag,
-        sources: [holders.length ? holders.join(", ") : t("profiles.tagNoWorker")],
-        seen: holders.length,
-      };
-    });
-  }, [known, labels.data, t]);
   const matching = (labels.data?.workers ?? []).filter((w) =>
     requires.every((tag) => w.tags.includes(tag)),
   );
@@ -414,10 +392,9 @@ function ProfileDialog({ profile, onClose }: { profile: Profile | null; onClose:
                   </>
                 }
               >
-                <LabelPicker
+                <TagsPicker
                   value={requires}
-                  onChange={(v) => setRequires(normalizeTags(v))}
-                  suggestions={tagSuggestions}
+                  onChange={setRequires}
                   placeholder="speciesnet"
                   ariaLabel={t("profiles.requires")}
                 />

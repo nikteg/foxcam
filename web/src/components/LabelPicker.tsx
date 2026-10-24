@@ -185,3 +185,54 @@ export function LabelCombobox({
     </Combobox>
   );
 }
+
+/** Tags as the server stores them: lower case, no spaces, unique. */
+export const normalizeTags = (tags: string[]) => [
+  ...new Set(
+    tags
+      .map((s) => s.trim().toLowerCase().replace(/\s+/g, "-"))
+      .filter((s) => /^[a-z0-9][a-z0-9_.-]*$/.test(s)),
+  ),
+];
+
+/** Known worker tags (workers, tokens, profiles), each with the workers that have it. */
+export function useTagSuggestions(): Suggestion[] {
+  const { t } = useI18n();
+  const tags = useQuery({ queryKey: ["worker-tags"], queryFn: api.workerTags });
+  const labels = useLabelSuggestions();
+  return useMemo(() => {
+    const workers = labels.data?.workers ?? [];
+    return (tags.data ?? []).map((tag) => {
+      const holders = workers.filter((w) => w.tags.includes(tag)).map((w) => w.id);
+      return {
+        label: tag,
+        sources: [holders.length ? holders.join(", ") : t("profiles.tagNoWorker")],
+        seen: holders.length,
+      };
+    });
+  }, [tags.data, labels.data, t]);
+}
+
+/** Worker capability tags: known ones suggested, new ones typed (e.g. a machine's own). */
+export function TagsPicker({
+  value,
+  onChange,
+  placeholder,
+  ariaLabel,
+}: {
+  value: string[];
+  onChange: (tags: string[]) => void;
+  placeholder?: string;
+  ariaLabel: string;
+}) {
+  const suggestions = useTagSuggestions();
+  return (
+    <LabelPicker
+      value={value}
+      onChange={(v) => onChange(normalizeTags(v))}
+      suggestions={suggestions}
+      placeholder={placeholder}
+      ariaLabel={ariaLabel}
+    />
+  );
+}

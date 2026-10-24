@@ -507,7 +507,7 @@ export const en = {
   "queue.running": "Running",
   "workers.tags": "Tags",
   "workers.tagsHint":
-    "Optional, comma separated. Lets profiles that require these tags use this worker (e.g. gpu, or its own name to pin profiles to it).",
+    "Optional. Lets profiles that require these tags use this worker (e.g. gpu, or its own name to pin profiles to it): pick a known tag or type a new one.",
   "workers.editTags": "Tags",
   "workers.tagsTitle": "Tags for {name}",
 

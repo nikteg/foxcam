@@ -591,7 +591,7 @@ export const sv: Record<MessageKey, string> = {
   "queue.running": "Pågår",
   "workers.tags": "Taggar",
   "workers.tagsHint":
-    "Valfritt, kommaseparerat. Låter profiler som kräver taggarna använda arbetaren (t.ex. gpu, eller dess eget namn för att låsa profiler till den).",
+    "Valfritt. Låter profiler som kräver dessa taggar använda arbetaren (t.ex. gpu, eller dess eget namn för att låsa profiler till den): välj en känd tagg eller skriv en ny.",
   "workers.editTags": "Taggar",
   "workers.tagsTitle": "Taggar för {name}",
 

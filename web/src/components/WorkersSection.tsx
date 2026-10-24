@@ -7,7 +7,6 @@ import {
   DialogSurface,
   DialogTitle,
   Field,
-  Input,
   MessageBar,
   MessageBarBody,
   Subtitle2,
@@ -27,7 +26,7 @@ import { useState } from "react";
 import { api, type Worker, type WorkerToken } from "../api";
 import { useI18n } from "../i18n";
 import { AddWorkerDialog } from "./AddWorkerDialog";
-import { splitTags } from "../workerSetup";
+import { TagsPicker } from "./LabelPicker";
 import { Dot, Empty, Tag, Time } from "./ui";
 
 interface Row {
@@ -210,9 +209,9 @@ export function WorkersSection({ workers }: { workers: Worker[] }) {
 function TagsDialog({ token, onClose }: { token: WorkerToken; onClose: () => void }) {
   const { t } = useI18n();
   const client = useQueryClient();
-  const [tags, setTags] = useState(token.tags.join(", "));
+  const [tags, setTags] = useState<string[]>(token.tags);
   const save = useMutation({
-    mutationFn: () => api.setTokenTags(token.id, splitTags(tags)),
+    mutationFn: () => api.setTokenTags(token.id, tags),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["workers"] });
       void client.invalidateQueries({ queryKey: ["profiles"] });
@@ -232,7 +231,7 @@ function TagsDialog({ token, onClose }: { token: WorkerToken; onClose: () => voi
             <DialogTitle>{t("workers.tagsTitle", { name: token.name })}</DialogTitle>
             <DialogContent className="form-stack">
               <Field label={t("workers.tags")} hint={t("workers.tagsHint")}>
-                <Input value={tags} onChange={(_, d) => setTags(d.value)} />
+                <TagsPicker value={tags} onChange={setTags} ariaLabel={t("workers.tags")} />
               </Field>
               {save.error && (
                 <MessageBar intent="error">

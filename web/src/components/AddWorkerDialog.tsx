@@ -23,11 +23,11 @@ import { useState } from "react";
 
 import { api } from "../api";
 import { useI18n, type MessageKey } from "../i18n";
+import { TagsPicker } from "./LabelPicker";
 import {
   guessPlatform,
   PLATFORMS,
   setupSteps,
-  splitTags,
   type DetectorChoice,
   type Platform,
 } from "../workerSetup";
@@ -88,9 +88,9 @@ export function AddWorkerDialog({ open, onClose }: { open: boolean; onClose: () 
   const [name, setName] = useState("gpu-box");
   const [detector, setDetector] = useState<DetectorChoice>("speciesnet");
   const [platform, setPlatform] = useState<Platform>(guessPlatform);
-  const [tags, setTags] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const create = useMutation({
-    mutationFn: () => api.createWorkerToken(name.trim(), detector, splitTags(tags)),
+    mutationFn: () => api.createWorkerToken(name.trim(), detector, tags),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["workers"] });
       void client.invalidateQueries({ queryKey: ["queue"] });
@@ -136,7 +136,12 @@ export function AddWorkerDialog({ open, onClose }: { open: boolean; onClose: () 
                   </Select>
                 </Field>
                 <Field label={t("workers.tags")} hint={t("workers.tagsHint")}>
-                  <Input value={tags} placeholder="gpu" onChange={(_, d) => setTags(d.value)} />
+                  <TagsPicker
+                    value={tags}
+                    onChange={setTags}
+                    placeholder="gpu"
+                    ariaLabel={t("workers.tags")}
+                  />
                 </Field>
                 {create.error && (
                   <MessageBar intent="error">
