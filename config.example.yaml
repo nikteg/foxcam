@@ -55,10 +55,10 @@ mediamtx:
 
 # Recording profiles (quality and retention per camera, chosen on the Cameras page).
 # Built in: original (as the camera sends it), 1080p, 720p, 480p, h265 (1080p H.265).
-# The default for cameras without their own choice can also be set in the UI (Recording
-# dialog, admins), which wins over recording_profile_default. Add your own or
-# replace a built-in one by id:
+# Cameras without their own choice use the default. Admins can also set it in the UI
+# (Recording dialog), which wins over this:
 recording_profile_default: original
+# Add your own, or replace a built-in one by id:
 recording_profiles: []
 #  - id: archive
 #    name: Long-term, small
