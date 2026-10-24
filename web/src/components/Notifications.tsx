@@ -187,7 +187,7 @@ function ChannelCard({
             <dd>
               {[c.labels?.join(", "), c.min_confidence > 0 && `≥ ${percent(c.min_confidence)}`]
                 .filter(Boolean)
-                .join(" · ")}
+                .join(" – ")}
             </dd>
           </>
         )}
@@ -267,7 +267,7 @@ function Deliveries({ channelName }: { channelName: (id: string) => string }) {
                 {channelName(d.channel_id)}
               </TableCell>
               <TableCell data-label={t("notify.col.event")}>
-                {d.label ?? "–"} · {cameraName(d.camera_id)} ·{" "}
+                {d.label ?? "–"} – {cameraName(d.camera_id)} –{" "}
                 <span className="muted">{t(TRIGGER_LABELS[d.kind])}</span>
               </TableCell>
               <TableCell data-label={t("col.state")}>

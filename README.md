@@ -83,14 +83,14 @@ anything else, and keep the clips.
 
 ```mermaid
 flowchart LR
-  cams["📷 Cameras<br/>RTSP · Tapo cloud"] --> mtx["MediaMTX<br/>record segments · live view"]
+  cams["📷 Cameras<br/>RTSP, Tapo cloud"] --> mtx["MediaMTX<br/>record segments, live view"]
   mtx -->|segments| pre
-  subgraph server ["Server · FastAPI + SQLite"]
+  subgraph server ["Server – FastAPI + SQLite"]
     direction TB
-    pre["Preprocess<br/>censor · day/night"] --> q["Job queue<br/>one job per profile"]
-    q --> ev["Events & clips"] --> ret["Retention · S3"]
+    pre["Preprocess<br/>censor, day/night"] --> q["Job queue<br/>one job per profile"]
+    q --> ev["Events & clips"] --> ret["Retention – S3"]
   end
-  q <-->|"HTTP lease / result<br/>censored video only"| workers["🖥️ Workers<br/>SpeciesNet · YOLO-World · your model"]
+  q <-->|"HTTP lease / result<br/>censored video only"| workers["🖥️ Workers<br/>SpeciesNet, YOLO-World, your model"]
   server --> ui["🌐 Web UI"]
   mtx -->|WebRTC / HLS| ui
 ```
@@ -220,7 +220,7 @@ detection profiles, censor areas and worker tokens can also be managed in the UI
 | `s3:local` | a local S3 server to try `storage.s3` |
 | `docker:up`, `docker:test` | Docker stacks (the test stack runs next to dev on :18000) |
 | `reset:events`, `reset:detections`, `reset:queue`, … | delete one kind of data, keep the rest |
-| `reset`, `clean:all` | wipe all data · back to a fresh checkout |
+| `reset`, `clean:all` | wipe all data – back to a fresh checkout |
 
 | Part | Stack |
 |---|---|

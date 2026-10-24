@@ -233,7 +233,7 @@ def texts(settings: Settings, data: dict[str, Any]) -> tuple[str, str]:
     parts = [f"{round(ev['confidence'] * 100)}%", when, ev["profile_name"]]
     if ev["is_night"]:
         parts.append("night")
-    body = " · ".join(str(p) for p in parts if p)
+    body = " – ".join(str(p) for p in parts if p)
     if data["type"] == "event.clip" and ev["clip_duration_s"]:
         body += f"\nClip ready ({round(ev['clip_duration_s'])} s)"
     if data["type"] == "test":
