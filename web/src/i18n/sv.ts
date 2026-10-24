@@ -664,6 +664,10 @@ export const sv: Record<MessageKey, string> = {
   "dashboard.oldest": "äldsta {age}",
   "dashboard.avgEach": "{s} s vardera",
   "mask.discard": "Släng de osparade ändringarna av censurområdena?",
+  "install.ios":
+    "Använd den som en app: tryck på {share} (rutan med en pil) i Safari och sedan {add}. Den öppnas i helskärm från hemskärmen; där loggar du in en gång till.",
+  "install.share": "Dela",
+  "install.addToHomeScreen": "Lägg till på hemskärmen",
   "dashboard.overview": "Översikt",
   "recordings.playerTitle": "Inspelning {id}",
   "cameras.censorSummary":

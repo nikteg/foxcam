@@ -575,6 +575,10 @@ export const en = {
   "dashboard.oldest": "oldest {age}",
   "dashboard.avgEach": "{s} s each",
   "mask.discard": "Discard the unsaved censor-area changes?",
+  "install.ios":
+    "Use this as an app: in Safari, tap {share} (the square with an arrow), then {add}. It opens full screen from your home screen; you sign in once more there.",
+  "install.share": "Share",
+  "install.addToHomeScreen": "Add to Home Screen",
   "dashboard.overview": "Overview",
   "recordings.playerTitle": "Recording {id}",
   "cameras.censorSummary":

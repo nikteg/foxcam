@@ -1,4 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="22" fill="#171b21"/>
-  <text x="50" y="68" font-size="58" text-anchor="middle">🦊</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="88 88 336 344">
+  <!-- Favicon and logo. The home screen icons (apple-touch-icon.png, icon-192/512.png) are
+       this fox on a full-bleed #171b21 square: iOS needs an opaque icon. -->
+  <!-- ears -->
+  <path d="M120 96 L214 196 L132 262 Z" fill="#e8640c"/>
+  <path d="M392 96 L298 196 L380 262 Z" fill="#e8640c"/>
+  <path d="M138 140 L192 200 L146 236 Z" fill="#3b1d0a"/>
+  <path d="M374 140 L320 200 L366 236 Z" fill="#3b1d0a"/>
+  <!-- head -->
+  <path d="M96 236 Q100 172 176 168 L336 168 Q412 172 416 236 L256 424 Z" fill="#f47b20"/>
+  <!-- cheeks -->
+  <path d="M96 236 L256 424 L190 300 Q150 262 96 236 Z" fill="#fff4e8"/>
+  <path d="M416 236 L256 424 L322 300 Q362 262 416 236 Z" fill="#fff4e8"/>
+  <!-- eyes and nose -->
+  <ellipse cx="196" cy="262" rx="17" ry="22" fill="#1d1208"/>
+  <ellipse cx="316" cy="262" rx="17" ry="22" fill="#1d1208"/>
+  <path d="M232 378 Q256 366 280 378 L256 404 Z" fill="#1d1208"/>
 </svg>

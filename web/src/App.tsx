@@ -142,7 +142,8 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
       <header className="topbar">
         <RouterLink to="/" className="brand">
           <Text weight="semibold" size={500}>
-            🦊 Media Streamer
+            <img className="brand-icon" src="/icon.svg" alt="" />
+            Media Streamer
           </Text>
         </RouterLink>
         <TabList

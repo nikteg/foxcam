@@ -1141,13 +1141,15 @@ Fluent's text styles would otherwise reset the margins. */
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--spacingVerticalXXL) var(--spacingHorizontalL);
+  /* The installed app (iOS) draws under the status bar and home indicator. */
+  padding: max(var(--spacingVerticalXXL), env(safe-area-inset-top)) var(--spacingHorizontalL)
+    max(var(--spacingVerticalXXL), env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 .auth-corner {
   position: absolute;
-  top: var(--spacingVerticalM);
-  right: var(--spacingHorizontalM);
+  top: max(var(--spacingVerticalM), env(safe-area-inset-top));
+  right: max(var(--spacingHorizontalM), env(safe-area-inset-right));
   display: flex;
   gap: var(--spacingHorizontalXS);
 }
@@ -1580,4 +1582,11 @@ h3.panel-heading {
 .fui-Button.danger-primary:hover {
   background: var(--colorStatusDangerBackground3Hover, var(--colorPaletteRedBackground3));
   color: var(--colorNeutralForegroundOnBrand);
+}
+/* The fox (public/icon.svg) next to the name, in the top bar and on the sign-in page. */
+.brand-icon {
+  height: 1.15em;
+  width: auto;
+  vertical-align: -0.18em;
+  margin-inline-end: 0.35em;
 }

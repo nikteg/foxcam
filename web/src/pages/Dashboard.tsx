@@ -18,6 +18,7 @@ import { useIsAdmin } from "../auth";
 
 import { CameraCard } from "../components/CameraCard";
 import { EventsGrid } from "../components/EventsGrid";
+import { InstallHint } from "../components/InstallHint";
 import { LiveDrawer } from "../components/LiveDrawer";
 import { SectionLink, Empty, PageTitle, QueryState, RouterLink, Stat } from "../components/ui";
 import { useI18n } from "../i18n";
@@ -42,6 +43,7 @@ export function Dashboard() {
   return (
     <>
       <PageTitle title={t("nav.status")} />
+      <InstallHint />
       <QueryState error={status.error} loading={status.isPending} />
       {s && !s.mediamtx_reachable && (
         <MessageBar intent="warning" className="block">
