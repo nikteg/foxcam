@@ -13,6 +13,8 @@ import {
   Title2,
   Tooltip,
   type BadgeProps,
+  Tab,
+  TabList,
 } from "@fluentui/react-components";
 import {
   WeatherMoon16Regular,
@@ -21,7 +23,7 @@ import {
   WeatherSunny20Regular,
 } from "@fluentui/react-icons";
 import { useEffect, type MouseEvent, type ReactNode } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 
 import { localTime, percent, relativeTime } from "../format";
 import { useI18n } from "../i18n";
@@ -306,5 +308,42 @@ export function ActionRow({ back, children }: { back?: ReactNode; children?: Rea
       {back && <div className="action-row-back">{back}</div>}
       <div className="action-row-end">{children}</div>
     </div>
+  );
+}
+
+/** The sub-page of a tabbed page, from the URL: /settings/users -> "users". The base path
+ * (/settings) is the first tab. */
+export function useSubPage<T extends string>(base: string, ids: readonly T[]): T {
+  const { pathname } = useLocation();
+  const rest = pathname.slice(base.length).replace(/^\//, "").split("/")[0];
+  return ids.find((id) => id === rest) ?? ids[0]!;
+}
+
+/** Tabs that are sub-pages with their own URL (links and the back button work, and
+ * nothing depends on scrolling to an anchor). The first tab is the base path. */
+export function PageTabs<T extends string>({
+  base,
+  current,
+  tabs,
+}: {
+  base: string;
+  current: T;
+  tabs: { id: T; label: string }[];
+}) {
+  const navigate = useNavigate();
+  return (
+    <TabList
+      className="block"
+      selectedValue={current}
+      onTabSelect={(_, d) =>
+        void navigate(d.value === tabs[0]?.id ? base : `${base}/${String(d.value)}`)
+      }
+    >
+      {tabs.map((tab) => (
+        <Tab key={tab.id} value={tab.id}>
+          {tab.label}
+        </Tab>
+      ))}
+    </TabList>
   );
 }

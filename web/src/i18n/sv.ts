@@ -306,6 +306,7 @@ export const sv: Record<MessageKey, string> = {
   "mask.burnInHint": "Kodar om kameran på servern, så att områdena aldrig sparas eller strömmas.",
 
   // Inställningar
+  "settings.general": "Allmänt",
   "settings.language": "Språk",
   "settings.languageHint": "Sparas i den här webbläsaren.",
   "settings.theme": "Tema",
@@ -314,7 +315,6 @@ export const sv: Record<MessageKey, string> = {
   "theme.system": "System",
   "theme.light": "Ljust",
   "theme.dark": "Mörkt",
-  "settings.manageCameras": "Hantera kameror och integrationer",
   "settings.configuration": "Konfiguration",
   "settings.storage": "Lagring",
   "settings.notifications": "Aviseringar",
@@ -654,7 +654,6 @@ export const sv: Record<MessageKey, string> = {
   "account.myCameras": "Mina kameror",
   "account.noCameras": "Inga kameror är delade med dig än.",
   "account.leave": "Sluta se",
-  "settings.manageAccount": "Kontoinställningar ({name})",
 
   // Delning
   "share.button": "Dela",

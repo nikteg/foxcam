@@ -305,6 +305,7 @@ export const en = {
     "Re-encodes this camera on the server, so the areas are never stored or streamed.",
 
   // Settings
+  "settings.general": "General",
   "settings.language": "Language",
   "settings.languageHint": "Saved in this browser.",
   "settings.theme": "Theme",
@@ -312,7 +313,6 @@ export const en = {
   "theme.system": "System",
   "theme.light": "Light",
   "theme.dark": "Dark",
-  "settings.manageCameras": "Manage cameras and integrations",
   "settings.configuration": "Configuration",
   "settings.storage": "Storage",
   "settings.notifications": "Notifications",
@@ -655,7 +655,6 @@ export const en = {
   "account.myCameras": "My cameras",
   "account.noCameras": "No cameras are shared with you yet.",
   "account.leave": "Stop seeing",
-  "settings.manageAccount": "Account settings ({name})",
 
   // Sharing
   "share.button": "Share",

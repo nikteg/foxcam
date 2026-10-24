@@ -35,7 +35,7 @@ import {
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 
 import { api, type Camera, type CameraSource, type RecordingProfile } from "../api";
 import { useIsAdmin, hasRole, useMe } from "../auth";
@@ -52,6 +52,8 @@ import {
   Tag,
   useRouterHref,
   useSourceLabel,
+  PageTabs,
+  useSubPage,
 } from "../components/ui";
 import { useI18n } from "../i18n";
 
@@ -81,15 +83,9 @@ export function Cameras() {
   const me = useMe();
   const isAdmin = me?.is_admin ?? false;
   // Sub-pages with their own URL (links work even while parts are still loading).
-  const { pathname } = useLocation();
   const navigate = useNavigate();
-  const tab = !isAdmin
-    ? "cameras"
-    : pathname.endsWith("/profiles")
-      ? "profiles"
-      : pathname.endsWith("/integrations")
-        ? "integrations"
-        : "cameras";
+  const subPage = useSubPage("/cameras", ["cameras", "profiles", "integrations"] as const);
+  const tab = isAdmin ? subPage : "cameras";
 
   return (
     <>
@@ -122,17 +118,15 @@ export function Cameras() {
       </PageHeader>
 
       {isAdmin && (
-        <TabList
-          className="block"
-          selectedValue={tab}
-          onTabSelect={(_, d) =>
-            void navigate(d.value === "cameras" ? "/cameras" : `/cameras/${String(d.value)}`)
-          }
-        >
-          <Tab value="cameras">{t("nav.cameras")}</Tab>
-          <Tab value="profiles">{t("profiles.title")}</Tab>
-          <Tab value="integrations">{t("cameras.integrations")}</Tab>
-        </TabList>
+        <PageTabs
+          base="/cameras"
+          current={tab}
+          tabs={[
+            { id: "cameras", label: t("nav.cameras") },
+            { id: "profiles", label: t("profiles.title") },
+            { id: "integrations", label: t("cameras.integrations") },
+          ]}
+        />
       )}
 
       {tab === "integrations" && (

@@ -18,7 +18,17 @@ import { useNavigate } from "react-router";
 import { api, type Job, type JobState } from "../api";
 import { useCameraName } from "../components/CameraSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
-import { Empty, PageHeader, QueryState, Stat, Tag, Time, useStateLabel } from "../components/ui";
+import {
+  Empty,
+  PageHeader,
+  PageTabs,
+  QueryState,
+  Stat,
+  Tag,
+  Time,
+  useStateLabel,
+  useSubPage,
+} from "../components/ui";
 import { decimal, duration } from "../format";
 import { useProfileName, useProfiles } from "../components/ProfileSelect";
 import { WorkersSection } from "../components/WorkersSection";
@@ -55,6 +65,7 @@ export function Queue() {
   );
   const q = queue.data;
   const avgMs = q?.stats.avg_processing_ms_last_hour;
+  const tab = useSubPage("/queue", ["jobs", "workers"] as const);
 
   return (
     <>
@@ -69,7 +80,8 @@ export function Queue() {
                 label={stateLabel(st)}
                 value={q.stats.counts[st]}
                 selected={state === st}
-                onClick={() => setFilter("state", state === st ? "" : st)}
+                // The counters filter the job list, so they bring you to it.
+                onClick={() => void navigate(state === st ? "/queue" : `/queue?state=${st}`)}
               />
             ))}
             <Stat label={t("queue.oldestWaiting")} value={duration(q.stats.oldest_pending_age_s)} />
@@ -80,77 +92,87 @@ export function Queue() {
             />
           </section>
 
-          {profiles.data && profiles.data.length > 1 && (
+          <PageTabs
+            base="/queue"
+            current={tab}
+            tabs={[
+              { id: "jobs", label: t("queue.jobs") },
+              { id: "workers", label: t("queue.workers") },
+            ]}
+          />
+
+          {tab === "workers" && <WorkersSection workers={q.workers} />}
+
+          {tab === "jobs" && (
             <>
-              <Subtitle2 as="h2" className="section">
-                {t("queue.byProfile")}
-              </Subtitle2>
-              <Table className="table responsive" aria-label={t("queue.byProfile")}>
-                <TableHeader>
-                  <TableRow>
-                    <TableHeaderCell>{t("profiles.profile")}</TableHeaderCell>
-                    <TableHeaderCell>{t("profiles.waiting")}</TableHeaderCell>
-                    <TableHeaderCell>{t("queue.running")}</TableHeaderCell>
-                    <TableHeaderCell>{t("profiles.workers")}</TableHeaderCell>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {profiles.data.map((p) => (
-                    <TableRow key={p.id}>
-                      <TableCell data-label={t("profiles.profile")}>
-                        <Text weight="semibold">{p.display_name}</Text>
-                      </TableCell>
-                      <TableCell data-label={t("profiles.waiting")}>{p.waiting_jobs}</TableCell>
-                      <TableCell data-label={t("queue.running")}>
-                        {q.stats.by_profile[p.id]?.leased ?? 0}
-                      </TableCell>
-                      <TableCell data-label={t("profiles.workers")}>
-                        {p.workers_online.length ? (
-                          p.workers_online.join(", ")
-                        ) : p.waiting_jobs > 0 ? (
-                          <Tag kind="warn" title={t("profiles.stuck")}>
-                            {t("profiles.noWorkers")}
-                          </Tag>
-                        ) : (
-                          "–"
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              {profiles.data && profiles.data.length > 1 && (
+                <>
+                  <Subtitle2 as="h2" className="section">
+                    {t("queue.byProfile")}
+                  </Subtitle2>
+                  <Table className="table responsive" aria-label={t("queue.byProfile")}>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHeaderCell>{t("profiles.profile")}</TableHeaderCell>
+                        <TableHeaderCell>{t("profiles.waiting")}</TableHeaderCell>
+                        <TableHeaderCell>{t("queue.running")}</TableHeaderCell>
+                        <TableHeaderCell>{t("profiles.workers")}</TableHeaderCell>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {profiles.data.map((p) => (
+                        <TableRow key={p.id}>
+                          <TableCell data-label={t("profiles.profile")}>
+                            <Text weight="semibold">{p.display_name}</Text>
+                          </TableCell>
+                          <TableCell data-label={t("profiles.waiting")}>{p.waiting_jobs}</TableCell>
+                          <TableCell data-label={t("queue.running")}>
+                            {q.stats.by_profile[p.id]?.leased ?? 0}
+                          </TableCell>
+                          <TableCell data-label={t("profiles.workers")}>
+                            {p.workers_online.length ? (
+                              p.workers_online.join(", ")
+                            ) : p.waiting_jobs > 0 ? (
+                              <Tag kind="warn" title={t("profiles.stuck")}>
+                                {t("profiles.noWorkers")}
+                              </Tag>
+                            ) : (
+                              "–"
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </>
+              )}
+
+              {state && (
+                <div className="row block">
+                  <Tag kind={state}>{stateLabel(state)}</Tag>
+                  <Button
+                    size="small"
+                    appearance="subtle"
+                    icon={<Dismiss16Regular />}
+                    onClick={() => setFilter("state", "")}
+                  >
+                    {t("queue.clearFilter")}
+                  </Button>
+                </div>
+              )}
+              {q.jobs.length > 0 && (
+                <DataTable
+                  ariaLabel="Jobs"
+                  items={q.jobs}
+                  columns={jobColumns}
+                  getRowId={(j) => j.id}
+                  defaultSort={{ column: "id", direction: "descending" }}
+                  onRowClick={(j) => navigate(`/recordings?selected=${j.segment_id}`)}
+                />
+              )}
+              {q.jobs.length === 0 && <Empty>{t("queue.noJobs")}</Empty>}
             </>
           )}
-
-          <WorkersSection workers={q.workers} />
-
-          <Subtitle2 as="h2" className="section row">
-            {t("queue.jobs")}
-            {state && (
-              <>
-                <Tag kind={state}>{stateLabel(state)}</Tag>
-                <Button
-                  size="small"
-                  appearance="subtle"
-                  icon={<Dismiss16Regular />}
-                  onClick={() => setFilter("state", "")}
-                >
-                  {t("queue.clearFilter")}
-                </Button>
-              </>
-            )}
-          </Subtitle2>
-          {q.jobs.length > 0 && (
-            <DataTable
-              ariaLabel="Jobs"
-              items={q.jobs}
-              columns={jobColumns}
-              getRowId={(j) => j.id}
-              defaultSort={{ column: "id", direction: "descending" }}
-              onRowClick={(j) => navigate(`/recordings?selected=${j.segment_id}`)}
-            />
-          )}
-          {q.jobs.length === 0 && <Empty>{t("queue.noJobs")}</Empty>}
         </>
       )}
     </>

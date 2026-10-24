@@ -13,8 +13,6 @@ import {
   MessageBar,
   MessageBarBody,
   Select,
-  Tab,
-  TabList,
   Text,
   Tooltip,
 } from "@fluentui/react-components";
@@ -26,14 +24,24 @@ import {
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { useSearchParams } from "react-router";
+import { Navigate, useNavigate } from "react-router";
 
 import { api, type Segment, type SegmentJob } from "../api";
 import { CameraSelect, useCameraName } from "../components/CameraSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
 import { Feedback } from "../components/Feedback";
-import { Empty, Light, PageHeader, QueryState, Tag, Time, useStateLabel } from "../components/ui";
+import {
+  Empty,
+  Light,
+  PageHeader,
+  PageTabs,
+  QueryState,
+  Tag,
+  Time,
+  useStateLabel,
+  useSubPage,
+} from "../components/ui";
 import { decimal, duration, fileSize, localTime, percent } from "../format";
 import { useI18n, type I18n } from "../i18n";
 import { hasRole, useCameraRole } from "../auth";
@@ -130,9 +138,10 @@ export function Recordings() {
     "status",
     "selected",
     "view",
-    "hour",
+    "file",
   ] as const);
-  const [, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  const tab = useSubPage("/recordings", ["segments", "joined"] as const);
   const segments = useQuery({
     queryKey: ["segments", f.camera, f.day, f.only_targets, f.status],
     queryFn: () =>
@@ -161,15 +170,17 @@ export function Recordings() {
   return (
     <>
       <PageHeader title={t("nav.recordings")} />
-      <TabList
-        className="block"
-        selectedValue={f.view === "hourly" ? "hourly" : "segments"}
-        onTabSelect={(_, d) => setFilter("view", d.value === "hourly" ? "hourly" : "")}
-      >
-        <Tab value="segments">{t("recordings.segmentsTab")}</Tab>
-        <Tab value="hourly">{t("hourly.title")}</Tab>
-      </TabList>
-      {f.view === "hourly" ? (
+      {/* Old links: /recordings?view=hourly&hour=12 */}
+      {f.view === "hourly" && <Navigate to="/recordings/joined" replace />}
+      <PageTabs
+        base="/recordings"
+        current={tab}
+        tabs={[
+          { id: "segments", label: t("recordings.segmentsTab") },
+          { id: "joined", label: t("hourly.title") },
+        ]}
+      />
+      {tab === "joined" ? (
         <>
           <div className="filters">
             <CameraSelect value={f.camera} onChange={(v) => setFilter("camera", v)} />
@@ -183,10 +194,10 @@ export function Recordings() {
           <HourlyFiles
             camera={f.camera}
             day={f.day}
-            selectedId={Number(f.hour) || null}
-            onSelect={(id) => setFilter("hour", id ? String(id) : "")}
+            selectedId={Number(f.file) || null}
+            onSelect={(id) => setFilter("file", id ? String(id) : "")}
             onShowSegments={(a) =>
-              setParams({ camera: a.camera_id, day: a.start_at.slice(0, 10) }, { replace: true })
+              void navigate(`/recordings?camera=${a.camera_id}&day=${a.start_at.slice(0, 10)}`)
             }
           />
         </>
@@ -247,7 +258,7 @@ export function Recordings() {
               {selected && (
                 <RecordingDetail
                   segment={selected}
-                  onOpenHourly={(id) => setParams({ view: "hourly", hour: String(id) })}
+                  onOpenHourly={(id) => void navigate(`/recordings/joined?file=${id}`)}
                 />
               )}
             </DetailPanel>
