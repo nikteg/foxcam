@@ -230,3 +230,141 @@ def test_reanalysis_recounts_the_models(wildlife):
         [ev] = s.query(Event).all()
         assert (ev.detectors, ev.agreement) == (["yolo"], 1)
     assert first
+
+
+# --- part 3: cascades -----------------------------------------------------------------
+
+def cascade(**confirm) -> ProfileConfig:
+    """A cheap first pass on every segment; SpeciesNet only when it found a fox."""
+    return ProfileConfig.model_validate({
+        "id": "wildlife", "targets": ["fox"], "default": True,
+        "detectors": [
+            {"id": "yolo", "requires": ["open-vocabulary"]},
+            {"id": "speciesnet", "requires": ["speciesnet"], "run": "on_hit",
+             "after": "yolo", **confirm},
+        ]})
+
+
+def test_cascade_validation():
+    base = {"id": "p", "targets": ["fox"]}
+    bad = [
+        [{"id": "a"}, {"id": "b", "run": "on_hit"}],                      # no after
+        [{"id": "a"}, {"id": "b", "run": "on_hit", "after": "nope"}],     # unknown
+        [{"id": "a", "run": "on_hit", "after": "b"},
+         {"id": "b", "run": "on_hit", "after": "a"}],                     # circle
+        [{"id": "a", "confirm": True}],                                   # confirm, always
+        [{"id": "a", "after": "a"}],                                      # after, always
+    ]
+    for detectors in bad:
+        with pytest.raises(ValidationError):
+            ProfileConfig.model_validate({**base, "detectors": detectors})
+    chain = ProfileConfig.model_validate({**base, "detectors": [
+        {"id": "a"}, {"id": "b", "run": "on_hit", "after": "a"},
+        {"id": "c", "run": "on_hit", "after": "b", "confirm": True}]})
+    assert [d.id for d in chain.always] == ["a"] and chain.confirming == {"c"}
+    assert [d.id for d in chain.followers("b")] == ["c"]
+
+
+@needs_ffmpeg
+def test_preprocess_queues_only_detectors_that_always_run(settings):
+    settings.profiles = [cascade()]
+    seg_id = add_segment(settings, status=SegmentStatus.NEW)
+    preprocess.preprocess_segment(settings, seg_id)
+    with session_scope() as s:
+        assert [j.detector_id for j in s.query(Job).filter(Job.segment_id == seg_id)] == \
+            ["yolo"]
+
+
+def _first_pass(settings, found: bool) -> int:
+    seg_id = add_segment(settings, status=SegmentStatus.QUEUED)
+    with session_scope() as s:
+        s.get(Segment, seg_id).derived_path = "derived/x.mp4"
+        s.add(Job(segment_id=seg_id, profile_id="wildlife", detector_id="yolo"))
+    job = queue.lease(settings, "y", tags=["open-vocabulary"])
+    queue.complete(settings, job.id, job.lease_token,
+                   [DET(100, "fox", 0.9)] if found else [DET(100, "cat", 0.9)], "y", 1)
+    return seg_id
+
+
+def _jobs(seg_id):
+    with session_scope() as s:
+        seg = s.get(Segment, seg_id)
+        return ({j.detector_id: (j.state, j.priority, j.error)
+                 for j in s.query(Job).filter(Job.segment_id == seg_id)},
+                seg.status, seg.has_target)
+
+
+def test_a_hit_queues_the_follow_up_before_the_segment_settles(settings):
+    settings.profiles = [cascade()]
+    seg_id = _first_pass(settings, found=True)
+    jobs, status, _ = _jobs(seg_id)
+    assert jobs["speciesnet"][0] == JobState.PENDING and jobs["speciesnet"][1] == 10
+    assert status == SegmentStatus.QUEUED  # not done: SpeciesNet still has to look
+    job = queue.lease(settings, "s", tags=["speciesnet"])
+    assert job.detector_id == "speciesnet"
+    queue.complete(settings, job.id, job.lease_token, [DET(100, "fox", 0.8)], "s", 1)
+    jobs, status, has_target = _jobs(seg_id)
+    assert status == SegmentStatus.DONE and has_target
+
+
+def test_no_hit_skips_the_follow_up(settings):
+    settings.profiles = [cascade()]
+    seg_id = _first_pass(settings, found=False)
+    jobs, status, has_target = _jobs(seg_id)
+    assert jobs["speciesnet"][0] == JobState.SKIPPED
+    assert jobs["speciesnet"][2] == "skipped – no hit from yolo"
+    assert status == SegmentStatus.DONE and not has_target
+    assert queue.lease(settings, "s", tags=["speciesnet"]) is None
+    with app_client(settings) as c:
+        runs = c.get(f"/api/segments/{seg_id}/jobs").json()
+    assert [(r["detector_id"], r["state"]) for r in runs] == \
+        [("yolo", "done"), ("speciesnet", "skipped")]
+
+
+def test_a_dead_first_pass_skips_the_follow_up(settings):
+    settings.profiles = [cascade()]
+    seg_id = add_segment(settings, status=SegmentStatus.QUEUED)
+    with session_scope() as s:
+        s.add(Job(segment_id=seg_id, profile_id="wildlife", detector_id="yolo"))
+    job = queue.lease(settings, "y", tags=["open-vocabulary"])
+    queue.fail(settings, job.id, job.lease_token, "model crashed", retryable=False)
+    jobs, status, _ = _jobs(seg_id)
+    assert jobs["speciesnet"] == (JobState.SKIPPED, 0, "skipped – yolo gave up")
+    assert status == SegmentStatus.FAILED
+
+
+def test_confirming_detector_gates_events_and_the_target_flag(settings):
+    from media_streamer.config import ChannelConfig
+    from media_streamer.models import Event, Notification
+    from media_streamer.pipeline import events
+
+    settings.profiles = [cascade(confirm=True)]
+    settings.notifications.channels = [ChannelConfig(id="phone", type="webhook", url="http://x")]
+    seg_id = _first_pass(settings, found=True)
+    events.assign_events(settings)
+    with session_scope() as s:
+        [ev] = s.query(Event).all()
+        assert ev.confirmed is False and s.query(Notification).count() == 0
+
+    # SpeciesNet disagrees: the segment has no (confirmed) target, nobody is notified.
+    job = queue.lease(settings, "s", tags=["speciesnet"])
+    queue.complete(settings, job.id, job.lease_token, [], "s", 1)
+    assert _jobs(seg_id)[2] is False
+
+    # Another segment where it agrees: confirmed, notified, a target.
+    with session_scope() as s:
+        start = s.get(Segment, seg_id).start_at
+    seg2 = add_segment(settings, status=SegmentStatus.QUEUED, start=start + timedelta(seconds=3))
+    with session_scope() as s:
+        s.get(Segment, seg2).derived_path = "derived/y.mp4"
+        s.add(Job(segment_id=seg2, profile_id="wildlife", detector_id="yolo"))
+    job = queue.lease(settings, "y", tags=["open-vocabulary"])
+    queue.complete(settings, job.id, job.lease_token, [DET(100, "fox", 0.9)], "y", 1)
+    job = queue.lease(settings, "s", tags=["speciesnet"])
+    queue.complete(settings, job.id, job.lease_token, [DET(100, "fox", 0.7)], "s", 1)
+    events.assign_events(settings)
+    with session_scope() as s:
+        [ev] = s.query(Event).all()
+        assert ev.confirmed is True and ev.agreement == 2
+        assert [n.channel_id for n in s.query(Notification)] == ["phone"]
+    assert _jobs(seg2)[2] is True

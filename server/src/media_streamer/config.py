@@ -209,6 +209,13 @@ class DetectorSpec(BaseModel):
     # Overrides of the profile's values for this detector's detections / frames.
     min_confidence: float | None = Field(default=None, ge=0, le=1)
     fps: float | None = Field(default=None, gt=0)
+    # Cascade: `always` runs on every segment; `on_hit` only when detector `after` found a
+    # target in it (e.g. a cheap model first, SpeciesNet to confirm), else it is skipped.
+    run: Literal["always", "on_hit"] = "always"
+    after: str | None = Field(default=None, pattern=PROFILE_ID, max_length=40)
+    # on_hit only: the profile's events count (notifications, a segment's target flag)
+    # once this detector agrees.
+    confirm: bool = False
 
     @property
     def display_name(self) -> str:
@@ -251,6 +258,24 @@ class ProfileConfig(BaseModel):
         ids = [d.id for d in self.detectors]
         if len(ids) != len(set(ids)):
             raise ValueError("detector ids must be unique within a profile")
+        by_id = {d.id: d for d in self.detectors}
+        for d in self.detectors:
+            if d.run == "always":
+                if d.after or d.confirm:
+                    raise ValueError(f"detector {d.id}: `after` and `confirm` are for "
+                                     "run: on_hit")
+                continue
+            if not d.after or d.after not in by_id:
+                raise ValueError(f"detector {d.id}: run: on_hit needs `after`, the id of "
+                                 "another detector of the profile")
+            seen, cur = {d.id}, by_id[d.after]
+            while cur.run == "on_hit":  # follow the chain back to a detector that always runs
+                if cur.id in seen:
+                    raise ValueError(f"detector {d.id}: `after` goes round in a circle")
+                seen.add(cur.id)
+                cur = by_id[cur.after]
+        if not any(d.run == "always" for d in self.detectors):
+            raise ValueError("at least one detector must run always")
         return self
 
     @property
@@ -262,6 +287,21 @@ class ProfileConfig(BaseModel):
         if detector_id is None:
             return self.detectors[0]
         return next((d for d in self.detectors if d.id == detector_id), None)
+
+    @property
+    def always(self) -> list[DetectorSpec]:
+        """Detectors that get a job on every segment (the start of any cascade)."""
+        return [d for d in self.detectors if d.run == "always"]
+
+    def followers(self, detector_id: str | None) -> list[DetectorSpec]:
+        """Detectors that run when this one found a target (run: on_hit, after it)."""
+        did = detector_id or self.detectors[0].id
+        return [d for d in self.detectors if d.run == "on_hit" and d.after == did]
+
+    @property
+    def confirming(self) -> set[str]:
+        """Detectors whose agreement makes the profile's events count (empty = any)."""
+        return {d.id for d in self.detectors if d.confirm}
 
     def detector_requires(self, d: DetectorSpec) -> set[str]:
         return set(self.requires) | set(d.requires)

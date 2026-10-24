@@ -52,6 +52,11 @@ export interface DetectorInput {
   /** Overrides of the profile's values; null = the profile's. */
   min_confidence: number | null;
   fps: number | null;
+  /** Cascade: on_hit runs only when detector `after` found a target in the segment. */
+  run: "always" | "on_hit";
+  after: string | null;
+  /** on_hit only: the profile's events count once this detector agrees. */
+  confirm: boolean;
 }
 
 export interface Detector extends DetectorInput {
@@ -137,7 +142,7 @@ export interface TapoDevice {
   camera_id: string | null;
 }
 
-export type JobState = "pending" | "leased" | "done" | "failed" | "dead";
+export type JobState = "pending" | "leased" | "done" | "failed" | "dead" | "skipped";
 
 export interface QueueStats {
   counts: Record<JobState, number>;
@@ -225,7 +230,7 @@ export interface SegmentJob {
   profile_name: string | null;
   detector_id: string | null;
   detector_name: string | null;
-  state: "pending" | "leased" | "done" | "failed" | "dead";
+  state: JobState;
   model: string | null;
   worker_id: string | null;
   attempts: number;
@@ -325,6 +330,8 @@ export interface DetectionEvent {
   /** The profile's detectors (models) that saw it, and how many. */
   detectors: string[];
   agreement: number;
+  /** False while the profile's confirming detector has not seen it. */
+  confirmed: boolean;
   is_night: boolean | null;
   clip_url: string | null;
   thumb_url: string | null;

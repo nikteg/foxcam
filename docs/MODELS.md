@@ -30,7 +30,10 @@ One profile can also have **several detectors** (`detectors:`, see
 [ARCHITECTURE.md](ARCHITECTURE.md#detection-profiles)): every recording then gets a job per
 model, e.g. YOLO-World and SpeciesNet both looking for foxes, each with its own threshold.
 Their detections merge into the same events instead of duplicating them, which makes it easy
-to compare models on the same footage.
+to compare models on the same footage. A detector can also run only when another found
+something (`run: on_hit`, `after: yolo`), so an expensive model confirms a cheap one's finds
+(`confirm: true`: no notification until it agrees); see
+[cascades](ARCHITECTURE.md#detection-profiles).
 
 **Give YOLO-World one word per thing.** Distinct targets are fine together, but synonyms of the
 same thing compete for the same object and pull every score down, often below the threshold.

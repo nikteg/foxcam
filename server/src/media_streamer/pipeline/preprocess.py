@@ -107,5 +107,7 @@ def preprocess_segment(settings: Settings, segment_id: int) -> None:
             setattr(seg, k, v)
         if seg.status == SegmentStatus.QUEUED:
             for p in profiles:
-                for d in p.detectors:
+                # Cascade detectors (run: on_hit) get theirs when the one before finds
+                # something (queue.complete).
+                for d in p.always:
                     s.add(Job(segment_id=seg.id, profile_id=p.id, detector_id=d.id))

@@ -7,6 +7,11 @@ Expired leases are reclaimed by ``reap``; a job is retried up to ``max_attempts`
 Each segment has one job per detection profile and detector (model); a worker only
 leases jobs of detectors whose tags (the profile's ``requires`` plus the detector's) it
 has. The segment is finished when all its jobs are.
+
+Cascades (``run: on_hit``): a detector's job is only created when the detector it follows
+found a target in the segment, in the same transaction that stores that result and before
+the segment is settled, so a segment is never finished while a follow-up could still come.
+When nothing was found (or the job gave up) the follow-up is recorded as ``skipped``.
 """
 
 from __future__ import annotations
@@ -138,20 +143,23 @@ def complete(settings: Settings, job_id: int, token: str, detections: list[Detec
         job = _get_leased(s, job_id, token)
         seg = job.segment
         profile = settings.profile(job.profile_id)
+        hit = False
         for d in detections:
             label = profile.canonical(d.label) if profile else d.label
             extra = d.extra
             if label != d.label:
                 extra = {**(extra or {}), "raw_label": d.label}
             bbox = d.bbox or [None] * 4
+            is_target = bool(profile and profile.is_target(d.label, d.confidence,
+                                                           job.detector_id))
+            hit = hit or is_target
             s.add(Detection(
                 segment_id=seg.id, job_id=job.id, profile_id=job.profile_id,
                 detector_id=job.detector_id, camera_id=seg.camera_id,
                 ts=seg.start_at + timedelta(milliseconds=d.offset_ms), offset_ms=d.offset_ms,
                 label=label, confidence=d.confidence,
                 bbox_x=bbox[0], bbox_y=bbox[1], bbox_w=bbox[2], bbox_h=bbox[3],
-                is_target=bool(profile and profile.is_target(d.label, d.confidence,
-                                                             job.detector_id)),
+                is_target=is_target,
                 model=model, worker_id=job.leased_by, extra=extra,
             ))
         job.state = JobState.DONE
@@ -164,8 +172,39 @@ def complete(settings: Settings, job_id: int, token: str, detections: list[Detec
             worker.jobs_done += 1
             worker.current_job_id = None
             worker.last_seen = utcnow()
+        _cascade(settings, job, hit)
         s.flush()
         settle_segment(settings, seg)
+
+
+def _cascade(settings: Settings, job: Job, hit: bool, reason: str | None = None) -> None:
+    """Queue (or skip) the detectors that follow ``job``'s (run: on_hit, after it)."""
+    profile = settings.profile(job.profile_id)
+    if profile is None:
+        return
+    s = object_session(job)
+    me = profile.detector(job.detector_id)
+    for d in profile.followers(job.detector_id):
+        row = s.scalar(select(Job).where(Job.segment_id == job.segment_id,
+                                         Job.profile_id == job.profile_id,
+                                         Job.detector_id == d.id))
+        if row is None:
+            row = Job(segment_id=job.segment_id, profile_id=job.profile_id, detector_id=d.id)
+            s.add(row)
+        elif row.state == JobState.LEASED:
+            continue
+        row.attempts, row.error, row.lease_token = 0, None, None
+        if hit:
+            # Confirmation soon: ahead of the backlog of first passes.
+            row.state, row.finished_at = JobState.PENDING, None
+            row.priority = (job.priority or 0) + 10
+            row.available_at = utcnow()
+        else:
+            row.state, row.finished_at = JobState.SKIPPED, utcnow()
+            name = me.display_name if me else job.detector_id
+            row.error = reason or f"skipped – no hit from {name}"
+            s.flush()
+            _cascade(settings, row, False, row.error)  # and whatever follows it
 
 
 def settle_segment(settings: Settings, seg: Segment) -> None:
@@ -174,14 +213,22 @@ def settle_segment(settings: Settings, seg: Segment) -> None:
     s = object_session(seg)
     s.flush()
     states = list(s.scalars(select(Job.state).where(Job.segment_id == seg.id)))
-    if any(st not in (JobState.DONE, JobState.DEAD) for st in states):
+    if any(st not in JobState.FINISHED for st in states):
         if seg.status in SegmentStatus.TERMINAL and seg.derived_path:
             seg.status = SegmentStatus.QUEUED
         return
-    targets = s.execute(select(func.count(), func.max(Detection.confidence)).where(
-        Detection.segment_id == seg.id, Detection.is_target.is_(True))).one()
-    seg.has_target = bool(targets[0])
-    seg.max_confidence = targets[1]
+    # Targets of profiles with a confirming detector (cascade `confirm`) only count when
+    # that detector reported them.
+    confs = []
+    for pid, did, conf in s.execute(select(
+            Detection.profile_id, Detection.detector_id, Detection.confidence).where(
+            Detection.segment_id == seg.id, Detection.is_target.is_(True))):
+        profile = settings.profile(pid)
+        confirming = profile.confirming if profile else set()
+        if not confirming or did in confirming:
+            confs.append(conf)
+    seg.has_target = bool(confs)
+    seg.max_confidence = max(confs) if confs else None
     if JobState.DONE in states or not states:
         seg.status = SegmentStatus.DONE
     else:
@@ -213,6 +260,10 @@ def _fail_job(settings: Settings, job: Job, error: str, retryable: bool) -> None
     else:
         job.state = JobState.DEAD
         job.finished_at = utcnow()
+        profile = settings.profile(job.profile_id)
+        me = profile.detector(job.detector_id) if profile else None
+        _cascade(settings, job, False,
+                 f"skipped – {me.display_name if me else job.detector_id} gave up")
         settle_segment(settings, job.segment)
 
 

@@ -111,6 +111,9 @@ detection:
 #     # detectors:
 #     #   - { id: yolo, requires: [open-vocabulary], min_confidence: 0.3, fps: 1 }
 #     #   - { id: speciesnet, requires: [speciesnet] }
+#     # Or as a cascade: SpeciesNet only looks where YOLO found something, and events
+#     # count once it agrees:
+#     #   - { id: speciesnet, requires: [speciesnet], run: on_hit, after: yolo, confirm: true }
 #   - id: vehicles
 #     targets: [car, person]
 #     requires: [open-vocabulary]

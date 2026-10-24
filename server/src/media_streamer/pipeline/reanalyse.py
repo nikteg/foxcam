@@ -82,7 +82,7 @@ def _refresh_event(settings: Settings, s, event_id: int, seg: Segment) -> None:
     ev.max_confidence = best.confidence
     ev.best_detection_id = best.id
     ev.detection_count = len(left)
-    refresh_models(s, ev)
+    refresh_models(settings, s, ev)
     if not any(d.segment_id == seg.id for d in left) and seg in ev.segments:
         ev.segments.remove(seg)
     ev.clip_dirty = True

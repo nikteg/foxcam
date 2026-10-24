@@ -172,6 +172,11 @@ function ProfileCard({
                 ))}{" "}
                 <Caption1 className="muted">
                   {[
+                    d.run === "on_hit" &&
+                      t(d.confirm ? "detectors.confirmsAfter" : "detectors.onHitAfter", {
+                        name:
+                          p.detectors.find((o) => o.id === d.after)?.display_name ?? d.after ?? "",
+                      }),
                     d.min_confidence !== null && `≥ ${percent(d.min_confidence)}`,
                     d.fps !== null && `${d.fps} fps`,
                     d.workers_online.length

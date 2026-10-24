@@ -532,6 +532,18 @@ export const sv: Record<MessageKey, string> = {
   "notify.minAgreement": "Modeller som måste hålla med",
   "notify.minAgreementHint":
     "Avisera först när så här många av profilens detektorer har sett händelsen (1 = den första räcker).",
+  "state.skipped": "hoppades över",
+  "detectors.run": "Körs",
+  "detectors.runAlways": "på varje inspelning",
+  "detectors.runOnHit": "när en annan hittat något",
+  "detectors.after": "Efter",
+  "detectors.confirm":
+    "Bekräftar: händelser räknas (och aviseras) när den här detektorn håller med",
+  "detectors.onHitAfter": "när {name} hittar något",
+  "detectors.confirmsAfter": "bekräftar fynd från {name}",
+  "events.unconfirmed": "obekräftad",
+  "events.unconfirmedHint":
+    "Profilens bekräftande modell har inte sett den (än): inga aviseringar.",
   "profiles.title": "Detekteringsprofiler",
   "profiles.profile": "Profil",
   "profiles.all": "Alla profiler",

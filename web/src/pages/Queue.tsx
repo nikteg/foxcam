@@ -13,6 +13,7 @@ import {
 import {
   Add20Regular,
   ArrowClockwise16Regular,
+  ArrowForward20Regular,
   ArrowSync20Regular,
   ArrowTrending20Regular,
   CheckmarkCircle20Regular,
@@ -50,7 +51,7 @@ import { WorkersSection } from "../components/WorkersSection";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
 
-const STATES: JobState[] = ["pending", "leased", "done", "failed", "dead"];
+const STATES: JobState[] = ["pending", "leased", "done", "failed", "dead", "skipped"];
 
 const STATE_ICON: Record<JobState, ReactElement> = {
   pending: <Hourglass20Regular />,
@@ -58,6 +59,7 @@ const STATE_ICON: Record<JobState, ReactElement> = {
   done: <CheckmarkCircle20Regular />,
   failed: <ErrorCircle20Regular />,
   dead: <DismissCircle20Regular />,
+  skipped: <ArrowForward20Regular />,
 };
 
 export function Queue() {

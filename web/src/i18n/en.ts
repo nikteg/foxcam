@@ -449,6 +449,17 @@ export const en = {
   "notify.minAgreement": "Models that must agree",
   "notify.minAgreementHint":
     "Notify only once this many of the profile's detectors saw the event (1 = the first one is enough).",
+  "state.skipped": "skipped",
+  "detectors.run": "Runs",
+  "detectors.runAlways": "on every recording",
+  "detectors.runOnHit": "when another one found something",
+  "detectors.after": "After",
+  "detectors.confirm": "Confirms: events count (and notify) once this detector agrees",
+  "detectors.onHitAfter": "when {name} finds something",
+  "detectors.confirmsAfter": "confirms {name}'s finds",
+  "events.unconfirmed": "unconfirmed",
+  "events.unconfirmedHint":
+    "The profile's confirming model has not seen it (yet): no notifications.",
   "profiles.title": "Detection profiles",
   "profiles.profile": "Profile",
   "profiles.all": "All profiles",

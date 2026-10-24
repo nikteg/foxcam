@@ -82,6 +82,28 @@ profiles:
       - { id: speciesnet, requires: [speciesnet] }
 ```
 
+**Cascades.** A detector with `run: on_hit` and `after: <detector id>` only runs on segments
+where that detector found a target, e.g. a fast first pass on everything and SpeciesNet to
+look closer:
+
+```yaml
+    detectors:
+      - { id: yolo, requires: [open-vocabulary], min_confidence: 0.3 }
+      - { id: speciesnet, requires: [speciesnet], run: on_hit, after: yolo, confirm: true }
+```
+
+Preprocessing only queues the `always` detectors. When a job's result contains a target,
+the jobs of the detectors that follow it are created in the same transaction (with a higher
+priority, so the confirmation runs soon) and before the segment is settled, so a segment is
+never finished while a follow-up could still come. When it found nothing, or gave up, each
+follow-up is stored as a job in state `skipped` with the reason ("skipped – no hit from
+yolo"), which the recording's run list shows; chains skip all the way down. With
+`confirm: true` the profile's events only count once that detector agrees: until then the
+event is marked unconfirmed and sends no notifications, and a segment only gets its target
+flag from the confirming detector's detections. Analysing a recording again starts the
+cascade over. `after` must name another detector of the profile, chains may not go round in
+circles, and at least one detector must run always.
+
 Profiles come from `config.yaml` or the web UI (Cameras → Detection profiles). A camera
 runs its UI selection, else its `profiles:` in config, else all `default` profiles; an empty
 selection means "record only". Without any configured profiles there is one built-in
@@ -111,7 +133,7 @@ Events page can filter on "seen by ≥ N models", and notification channels can 
 | Table | Holds |
 |---|---|
 | `segment` | One recording file: camera, start (UTC), duration, status, light tags, mask version used, fox flag, pinned, `deleted_at`. |
-| `job` | Work item per segment, profile and detector: state (`pending/leased/done/failed/dead`), lease token and expiry, attempts, model, timing. |
+| `job` | Work item per segment, profile and detector: state (`pending/leased/done/failed/dead`, `skipped` for cascade detectors that did not run), lease token and expiry, attempts, model, timing. |
 | `detection` | Worker result: profile, detector, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, event. |
 | `event` | Merged sighting of one label for one profile: time range, best detection, detectors that saw it and how many (`agreement`), clip and thumbnail paths. |
 | `worker` | Last-seen info and tags per worker id (shown in the queue tab). |

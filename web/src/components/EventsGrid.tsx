@@ -78,6 +78,11 @@ export function EventsGrid({ events }: { events: DetectionEvent[] }) {
                     {percent(e.max_confidence)}
                   </Text>
                   <Light night={e.is_night} />
+                  {!e.confirmed && (
+                    <Tag kind="pending" title={t("events.unconfirmedHint")}>
+                      {t("events.unconfirmed")}
+                    </Tag>
+                  )}
                   <Caption1 className="muted">{cameraName(e.camera_id)}</Caption1>
                 </span>
               }

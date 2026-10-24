@@ -207,8 +207,12 @@ class JobState:
     DONE = "done"
     FAILED = "failed"  # failed, will be retried after backoff
     DEAD = "dead"  # gave up after max_attempts
+    # Cascade (run: on_hit): the detector it follows found nothing (or gave up), so it did
+    # not run. Kept as a row so the recording's run list can say why.
+    SKIPPED = "skipped"
 
-    ALL = (PENDING, LEASED, DONE, FAILED, DEAD)
+    ALL = (PENDING, LEASED, DONE, FAILED, DEAD, SKIPPED)
+    FINISHED = (DONE, DEAD, SKIPPED)
 
 
 class Job(Base):
@@ -314,6 +318,9 @@ class Event(Base):
     # The profile's detectors (models) that saw it, and how many (pipeline/events.py).
     detectors: Mapped[list[Any] | None] = mapped_column(JSON)
     agreement: Mapped[int | None] = mapped_column(Integer, default=1)
+    # False while a profile's confirming detector (cascade `confirm`) has not seen it:
+    # no notifications until it has.
+    confirmed: Mapped[bool | None] = mapped_column(Boolean, default=True)
     is_night: Mapped[bool | None] = mapped_column(Boolean)
     clip_path: Mapped[str | None] = mapped_column(String)
     clip_start: Mapped[datetime | None] = mapped_column(DateTime)

@@ -324,6 +324,7 @@ def events(camera_id: str | None = None, limit: int = 100,
             "last_ts": iso(e.last_ts), "max_confidence": round(e.max_confidence, 3),
             "detection_count": e.detection_count, "is_night": e.is_night,
             "detectors": e.detectors or [], "agreement": e.agreement or 1,
+            "confirmed": e.confirmed is not False,
             "clip_url": f"/api/events/{e.id}/clip" if e.clip_path or e.clip_remote_key else None,
             "thumb_url": f"/api/events/{e.id}/thumb" if e.thumb_path or e.thumb_remote_key
             else None,

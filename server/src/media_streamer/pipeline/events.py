@@ -63,7 +63,7 @@ def assign_events(settings: Settings) -> int:
             for d in dets:
                 d.event_id = event.id
             event.detection_count += len(dets)
-            refresh_models(s, event)
+            refresh_models(settings, s, event)
             # New events notify at once; a later rise above a channel's min_confidence, or
             # another model agreeing (min_agreement), too - once per channel.
             notify.enqueue(s, settings, event, "event.new")
@@ -76,13 +76,17 @@ def assign_events(settings: Settings) -> int:
     return changed
 
 
-def refresh_models(s, event: Event) -> None:
-    """Which detectors saw the event, from its detections (also after some are removed)."""
+def refresh_models(settings: Settings, s, event: Event) -> None:
+    """Which detectors saw the event, from its detections (also after some are removed),
+    and whether a confirming detector (cascade ``confirm``) is among them."""
     s.flush()
     found = s.scalars(select(Detection.detector_id).where(Detection.event_id == event.id)
                       .distinct()).all()
     event.detectors = sorted(d or "default" for d in found)
     event.agreement = len(event.detectors)
+    profile = settings.profile(event.profile_id)
+    confirming = profile.confirming if profile else set()
+    event.confirmed = not confirming or bool(confirming & set(event.detectors))
 
 
 def build_clips(settings: Settings) -> int:

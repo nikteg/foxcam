@@ -163,6 +163,8 @@ export function useStateLabel() {
         return t("state.leased");
       case "dead":
         return t("state.dead");
+      case "skipped":
+        return t("state.skipped");
       default:
         return state;
     }

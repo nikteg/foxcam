@@ -1,6 +1,6 @@
 // The models (detectors) of a detection profile: each gets its own job per recording, run
 // by workers with all its tags; their detections merge into the profile's events.
-import { Button, Caption1, Field, Input } from "@fluentui/react-components";
+import { Button, Caption1, Checkbox, Field, Input, Select } from "@fluentui/react-components";
 import { Add20Regular, Dismiss20Regular } from "@fluentui/react-icons";
 
 import type { DetectorInput, LabelSuggestions } from "../api";
@@ -14,6 +14,9 @@ export interface DetectorRow {
   requires: string[];
   minConf: string;
   fps: string;
+  run: "always" | "on_hit";
+  after: string;
+  confirm: boolean;
 }
 
 const DEFAULT: DetectorInput = {
@@ -22,6 +25,9 @@ const DEFAULT: DetectorInput = {
   requires: [],
   min_confidence: null,
   fps: null,
+  run: "always",
+  after: null,
+  confirm: false,
 };
 
 export const toRows = (detectors: DetectorInput[] | undefined): DetectorRow[] =>
@@ -31,6 +37,9 @@ export const toRows = (detectors: DetectorInput[] | undefined): DetectorRow[] =>
     requires: d.requires,
     minConf: d.min_confidence == null ? "" : String(Math.round(d.min_confidence * 100)),
     fps: d.fps == null ? "" : String(d.fps),
+    run: d.run ?? "always",
+    after: d.after ?? "",
+    confirm: d.confirm ?? false,
   }));
 
 export const fromRows = (rows: DetectorRow[]): DetectorInput[] =>
@@ -40,13 +49,21 @@ export const fromRows = (rows: DetectorRow[]): DetectorInput[] =>
     requires: r.requires,
     min_confidence: r.minConf === "" ? null : Math.min(Math.max(Number(r.minConf) / 100, 0), 1),
     fps: r.fps === "" ? null : Number(r.fps),
+    run: r.run,
+    after: r.run === "on_hit" ? r.after.trim() || null : null,
+    confirm: r.run === "on_hit" && r.confirm,
   }));
 
-/** Detector ids: unique slugs. */
+/** Detector ids: unique slugs; at least one runs always; cascades follow another one.
+ * (The server also refuses circles.) */
 export const rowsValid = (rows: DetectorRow[]) =>
   rows.length > 0 &&
   rows.every((r) => /^[a-z0-9][a-z0-9_-]*$/.test(r.id.trim())) &&
-  new Set(rows.map((r) => r.id.trim())).size === rows.length;
+  new Set(rows.map((r) => r.id.trim())).size === rows.length &&
+  rows.some((r) => r.run === "always") &&
+  rows.every(
+    (r) => r.run === "always" || rows.some((o) => o !== r && o.id.trim() === r.after.trim()),
+  );
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
 
@@ -139,6 +156,49 @@ export function DetectorsEditor({
                 />
               </Field>
             </div>
+            {rows.length > 1 && (
+              <div className="detector-numbers">
+                <Field label={t("detectors.run")} size="small">
+                  <Select
+                    size="small"
+                    value={row.run}
+                    onChange={(_, d) =>
+                      set(i, {
+                        run: d.value as DetectorRow["run"],
+                        after: row.after || rows.find((o) => o !== row)?.id || "",
+                      })
+                    }
+                  >
+                    <option value="always">{t("detectors.runAlways")}</option>
+                    <option value="on_hit">{t("detectors.runOnHit")}</option>
+                  </Select>
+                </Field>
+                {row.run === "on_hit" && (
+                  <Field label={t("detectors.after")} size="small">
+                    <Select
+                      size="small"
+                      value={row.after}
+                      onChange={(_, d) => set(i, { after: d.value })}
+                    >
+                      {rows
+                        .filter((o) => o !== row)
+                        .map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.name || o.id}
+                          </option>
+                        ))}
+                    </Select>
+                  </Field>
+                )}
+              </div>
+            )}
+            {row.run === "on_hit" && rows.length > 1 && (
+              <Checkbox
+                label={t("detectors.confirm")}
+                checked={row.confirm}
+                onChange={(_, d) => set(i, { confirm: d.checked === true })}
+              />
+            )}
             {workers.length > 0 && (
               <Caption1 className="muted">
                 {able.length
@@ -154,7 +214,19 @@ export function DetectorsEditor({
         icon={<Add20Regular />}
         className="alias-add"
         onClick={() =>
-          onChange([...rows, { id: free(), name: "", requires: [], minConf: "", fps: "" }])
+          onChange([
+            ...rows,
+            {
+              id: free(),
+              name: "",
+              requires: [],
+              minConf: "",
+              fps: "",
+              run: "always",
+              after: "",
+              confirm: false,
+            },
+          ])
         }
       >
         {t("detectors.add")}

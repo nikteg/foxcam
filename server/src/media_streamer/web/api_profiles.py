@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -25,6 +25,9 @@ class DetectorIn(BaseModel):
     requires: list[str] = Field(default=[], max_length=20)
     min_confidence: float | None = Field(default=None, ge=0, le=1)
     fps: float | None = Field(default=None, gt=0, le=30)
+    run: Literal["always", "on_hit"] = "always"
+    after: str | None = Field(default=None, max_length=40)
+    confirm: bool = False
 
 
 class ProfileIn(BaseModel):
