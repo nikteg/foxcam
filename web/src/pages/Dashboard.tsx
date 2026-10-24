@@ -1,5 +1,4 @@
 import {
-  Button,
   Caption1,
   Card,
   MessageBar,
@@ -27,15 +26,7 @@ import { JobsChart } from "../components/JobsChart";
 
 import { CameraCard } from "../components/CameraCard";
 import { EventsGrid } from "../components/EventsGrid";
-import {
-  Dot,
-  Empty,
-  PageTitle,
-  QueryState,
-  RouterLink,
-  Stat,
-  useRouterHref,
-} from "../components/ui";
+import { Dot, SectionLink, Empty, PageTitle, QueryState, RouterLink, Stat } from "../components/ui";
 import { useI18n } from "../i18n";
 import { CameraSettingsDialog } from "./Cameras";
 import { decimal, duration, fileSize } from "../format";
@@ -52,7 +43,6 @@ export function Dashboard() {
   const [settingsFor, setSettingsFor] = useState<string | null>(null);
   const settingsCamera = s?.cameras.find((c) => c.id === settingsFor);
   const { t, rich } = useI18n();
-  const routerHref = useRouterHref();
 
   return (
     <>
@@ -63,32 +53,10 @@ export function Dashboard() {
           <MessageBarBody>{t("dashboard.mediamtxDown")}</MessageBarBody>
         </MessageBar>
       )}
-      {s && (
-        <section className="stats">
-          <Stat
-            icon={<Video20Regular />}
-            label={t("dashboard.camerasOnline")}
-            value={`${s.cameras.filter((c) => c.online).length} / ${s.cameras.length}`}
-          />
-          <Stat icon={<Alert20Regular />} label={t("dashboard.events24h")} value={s.events_24h} />
-          <Stat
-            icon={<Database20Regular />}
-            label={t("dashboard.recordingsStored")}
-            value={fileSize(s.recordings_bytes)}
-          />
-          <Stat
-            icon={<HardDrive20Regular />}
-            label={t("dashboard.diskFree")}
-            value={fileSize(s.disk_free_bytes)}
-          />
-        </section>
-      )}
 
       <Subtitle2 as="h2" className="section">
         {t("nav.cameras")}
-        <Button as="a" className="section-action" {...routerHref("/cameras")}>
-          {t("dashboard.manage")}
-        </Button>
+        <SectionLink to="/cameras" label={t("dashboard.manage")} />
       </Subtitle2>
       <div className="cards">
         {s?.cameras.map((c) => (
@@ -108,11 +76,35 @@ export function Dashboard() {
         </Empty>
       )}
 
+      {s && (
+        <>
+          <Subtitle2 as="h2" className="section">
+            {t("dashboard.overview")}
+          </Subtitle2>
+          <section className="stats">
+            <Stat
+              icon={<Video20Regular />}
+              label={t("dashboard.camerasOnline")}
+              value={`${s.cameras.filter((c) => c.online).length} / ${s.cameras.length}`}
+            />
+            <Stat icon={<Alert20Regular />} label={t("dashboard.events24h")} value={s.events_24h} />
+            <Stat
+              icon={<Database20Regular />}
+              label={t("dashboard.recordingsStored")}
+              value={fileSize(s.recordings_bytes)}
+            />
+            <Stat
+              icon={<HardDrive20Regular />}
+              label={t("dashboard.diskFree")}
+              value={fileSize(s.disk_free_bytes)}
+            />
+          </section>
+        </>
+      )}
+
       <Subtitle2 as="h2" className="section">
         {t("dashboard.latestEvents")}
-        <Button as="a" className="section-action" {...routerHref("/events")}>
-          {t("dashboard.all")}
-        </Button>
+        <SectionLink to="/events" label={t("dashboard.all")} />
       </Subtitle2>
       <EventsGrid events={events.data ?? []} />
 
@@ -133,7 +125,6 @@ export function Dashboard() {
 function JobsSummary({ stats: q }: { stats: QueueStats }) {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const routerHref = useRouterHref();
   const queue = useQuery({
     queryKey: ["queue", "summary"],
     queryFn: () => api.queue({ limit: 1 }),
@@ -146,9 +137,7 @@ function JobsSummary({ stats: q }: { stats: QueueStats }) {
     <>
       <Subtitle2 as="h2" className="section">
         {t("nav.queue")}
-        <Button as="a" className="section-action" {...routerHref("/jobs")}>
-          {t("dashboard.allJobs")}
-        </Button>
+        <SectionLink to="/jobs" label={t("dashboard.allJobs")} />
       </Subtitle2>
       <section className="stats">
         <Stat

@@ -19,6 +19,7 @@ import {
   TabList,
 } from "@fluentui/react-components";
 import {
+  ArrowRight20Regular,
   Checkmark16Filled,
   Dismiss20Regular,
   ChevronRight16Regular,
@@ -130,6 +131,24 @@ export function InfoBanner({ id, children }: { id: string; children: ReactNode }
         }
       />
     </MessageBar>
+  );
+}
+
+/** A section heading's link to its full page (Status: all cameras, events, jobs): a
+ * small arrow next to the heading, named by its tooltip. */
+export function SectionLink({ to, label }: { to: string; label: string }) {
+  const routerHref = useRouterHref();
+  return (
+    <Tooltip content={label} relationship="label">
+      <Button
+        as="a"
+        size="small"
+        appearance="subtle"
+        className="section-link"
+        icon={<ArrowRight20Regular />}
+        {...routerHref(to)}
+      />
+    </Tooltip>
   );
 }
 

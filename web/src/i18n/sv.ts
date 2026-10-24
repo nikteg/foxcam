@@ -578,6 +578,7 @@ export const sv: Record<MessageKey, string> = {
   "dashboard.jobsDone": "{n} klara",
   "dashboard.jobsFailed": "{n} gav upp",
   "mask.discard": "Släng de osparade ändringarna av censurområdena?",
+  "dashboard.overview": "Översikt",
   "profiles.title": "Detekteringsprofiler",
   "profiles.profile": "Profil",
   "profiles.all": "Alla profiler",

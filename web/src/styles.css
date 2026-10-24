@@ -171,10 +171,9 @@ h2.section {
   gap: var(--spacingHorizontalM);
   margin: 28px 0 12px;
 }
-/* A link from a section to its page (Status: Manage cameras, All events), next to its
-   heading. */
-h2.section > .section-action {
-  font-size: var(--fontSizeBase300);
+/* A section heading's arrow to its full page (components/ui.tsx SectionLink). */
+h2.section > .section-link {
+  margin-inline-start: calc(-1 * var(--spacingHorizontalXS));
 }
 
 /* App shell */
