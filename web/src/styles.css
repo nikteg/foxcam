@@ -1308,6 +1308,35 @@ Fluent's text styles would otherwise reset the margins. */
 .drawer-content {
   padding-bottom: var(--spacingVerticalL);
 }
+/* Drawer content never gets wider than the drawer (a phone's screen): flex items may
+   shrink below their content, long words, keys and URLs wrap, media and code scale down,
+   and the body never scrolls sideways (a wide table scrolls in its own box instead). */
+.drawer-surface,
+.drawer-surface > form,
+.drawer-column,
+.drawer-content,
+.drawer-content :where(div, form, section, fieldset, li, p, dl, dd) {
+  min-width: 0;
+}
+.app-drawer .fui-DrawerBody {
+  overflow-x: hidden;
+}
+.drawer-content {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.drawer-content :where(img, video, canvas, svg, iframe) {
+  max-width: 100%;
+}
+.drawer-content pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.drawer-content .fui-Table:not(.responsive) {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
 .fui-DrawerFooter.drawer-actions {
   justify-content: flex-end;
   flex-wrap: wrap;

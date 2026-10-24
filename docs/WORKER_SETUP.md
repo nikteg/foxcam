@@ -166,8 +166,8 @@ LOCAL_WORKER_TOKEN=msw_... docker compose -f docker-compose.yml -f docker-compos
   -f docker-compose.worker.yml up --build -d
 ```
 
-The GPU detects, but decoding and preparing frames still take CPU: the worker gets one
-core (`WORKER_CPUS=1`) so the box stays quiet. Raise it when jobs pile up. To check that
+The GPU detects, but decoding and preparing frames still take CPU: the worker gets at most
+two cores. Set `WORKER_CPUS=1` for a quieter box (jobs take a little longer). To check that
 detection really runs on the GPU, look for `on GPU.0` in the worker's log, or watch
 `sudo intel_gpu_top` on the host while a job runs.
 
