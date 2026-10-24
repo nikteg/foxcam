@@ -9,11 +9,19 @@ so one worker looks for foxes on one camera and people or cars on another, and p
 new profiles without a restart. It advertises the ``open-vocabulary`` tag. ``--classes``
 is only the prompt for jobs that name no targets (e.g. ``media-worker-detect`` runs).
 
+Intel GPUs (integrated UHD / Iris Xe / Arc, e.g. an N100 home server) run the model through
+OpenVINO with ``--device intel:gpu`` (N100: ~100 ms per frame, 3x the CPU). OpenVINO models
+have their classes built in, so each prompt is exported once (a few seconds) and kept in
+``~/.cache/media-worker/openvino``. Needs the ``openvino`` extra.
+
 Note: Ultralytics is AGPL-3.0.
 """
 
 from __future__ import annotations
 
+import hashlib
+import os
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -36,8 +44,14 @@ class UltralyticsDetector(Detector):
         self.conf = conf
         self.batch = batch
         self.device = device
+        # OpenVINO models, one per prompt (classes are fixed at export).
+        self.openvino = bool(device and device.startswith("intel"))
+        self.ov_models: dict[tuple[str, ...], Any] = {}
+        self.predictor = self.model
         # The weights file, not its path (which may be long and personal).
         self.name = f"ultralytics:{Path(model).name}"
+        if self.openvino and not self.open_vocabulary:
+            self.predictor = self._openvino_model(())
 
     def info(self) -> dict[str, Any]:
         classes = "from profile" if self.open_vocabulary else "model default"
@@ -62,16 +76,42 @@ class UltralyticsDetector(Detector):
         targets = list(dict.fromkeys(t.strip() for t in hints.get("target_labels", [])
                                      if t.strip())) or list(self.classes or [])
         if targets and targets != self.prompt:
-            self.model.set_classes(targets)
+            if self.openvino:
+                self.predictor = self._openvino_model(tuple(targets))
+            else:
+                self.model.set_classes(targets)
             self.prompt = targets
+
+    def _openvino_model(self, targets: tuple[str, ...]) -> Any:
+        """The model exported to OpenVINO with this prompt, exported on first use."""
+        if targets in self.ov_models:
+            return self.ov_models[targets]
+        from ultralytics import YOLO
+
+        weights = Path(self.model.ckpt_path or self.model_path)
+        key = hashlib.sha256("\n".join([weights.name, *targets]).encode()).hexdigest()[:12]
+        cache = Path(os.environ.get("MEDIA_WORKER_CACHE", Path.home() / ".cache/media-worker"))
+        target = cache / "openvino" / f"{weights.stem}-{key}_openvino_model"
+        if not target.exists():
+            if targets:
+                self.model.set_classes(list(targets))
+            exported = Path(self.model.export(format="openvino", verbose=False))
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.rmtree(target, ignore_errors=True)
+            shutil.move(exported, target)
+        model = YOLO(str(target), task="detect")
+        self.ov_models[targets] = model
+        return model
 
     def detect(self, frames: list[Frame], hints: dict[str, Any]) -> list[Detection]:
         self._prompt_for(hints)
+        if self.predictor is self.model and self.openvino:  # no prompt: the model's own
+            self.predictor = self._openvino_model(())
         out: list[Detection] = []
         for i in range(0, len(frames), self.batch):
             chunk = frames[i:i + self.batch]
-            results = self.model.predict([str(f.path) for f in chunk], conf=self.conf,
-                                         device=self.device, verbose=False)
+            results = self.predictor.predict([str(f.path) for f in chunk], conf=self.conf,
+                                             device=self.device, verbose=False)
             for frame, res in zip(chunk, results, strict=True):
                 names = res.names
                 for (cx, cy, w, h), conf, cls in zip(res.boxes.xywhn.tolist(),

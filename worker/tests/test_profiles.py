@@ -33,6 +33,7 @@ def _ultralytics(classes=None) -> UltralyticsDetector:
     det = object.__new__(UltralyticsDetector)  # skip loading real weights
     det.model, det.classes, det.open_vocabulary, det.prompt = FakeModel(), classes, True, None
     det.batch, det.conf, det.device, det.name = 16, 0.1, None, "ultralytics:x"
+    det.openvino, det.ov_models, det.predictor = False, {}, det.model
     return det
 
 

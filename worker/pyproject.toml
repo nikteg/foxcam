@@ -15,6 +15,8 @@ ultralytics = [
     # clip-anytorch imports pkg_resources, which setuptools 82 removed.
     "setuptools<82",
 ]
+# Ultralytics models on Intel GPUs (and faster on Intel CPUs): --device intel:gpu.
+openvino = ["openvino>=2024.6"]
 # Google's camera-trap ensemble: MegaDetector + species classifier (has "red fox").
 speciesnet = ["speciesnet>=5.0"]
 

@@ -14,7 +14,8 @@ def add_detector_args(p: argparse.ArgumentParser) -> None:
                    "local file runs). Server jobs are always prompted with their profile's "
                    "targets")
     p.add_argument("--conf", type=float, default=0.15, help="minimum confidence to report")
-    p.add_argument("--device", help="torch device, e.g. cuda:0, mps, cpu")
+    p.add_argument("--device", help="torch device, e.g. cuda:0, mps, cpu; intel:gpu / intel:cpu "
+                   "runs ultralytics models through OpenVINO (Intel GPUs)")
     p.add_argument("--dummy-label", help="dummy detector: label to fake (e.g. fox)")
     p.add_argument("--dummy-every", type=int, default=3, help="dummy: fake every N-th job")
 

@@ -11,6 +11,7 @@ The dialog also shows ready-to-paste commands for each option below.
 | [Windows (native)](#windows-native) | YOLO-World without WSL | NVIDIA |
 | [Docker](#docker-linux-or-docker-desktop) | Linux servers, Docker Desktop on Windows | NVIDIA |
 | [Linux](#linux) | a dedicated Linux box | NVIDIA (AMD via ROCm, untested) |
+| [Intel GPU, next to the server](#intel-gpu-next-to-the-server) | the recorder box itself (N100, Core with UHD / Iris Xe, Arc) | Intel, via OpenVINO |
 
 Whatever you choose, finish with `media-worker doctor`: it checks ffmpeg, the GPU driver,
 PyTorch's CUDA support, the installed detectors and the connection + token to the server.
@@ -153,6 +154,21 @@ docker compose -f worker/compose.yaml logs -f
 
 Weights and caches are kept in the `models` volume. `TORCH_BACKEND` (default `cu128`)
 selects the PyTorch CUDA build; use `cu126` for older drivers.
+
+## Intel GPU, next to the server
+
+`docker-compose.worker.yml` adds a YOLO-World worker to the server's stack that runs on the
+Intel GPU through OpenVINO (`--device intel:gpu`; N100: ~100 ms per frame, 3x its CPU).
+Create a token under **Jobs → Add worker**, then:
+
+```sh
+LOCAL_WORKER_TOKEN=msw_... docker compose -f docker-compose.yml -f docker-compose.vaapi.yml \
+  -f docker-compose.worker.yml up --build -d
+```
+
+Each new prompt (a profile's targets) is exported to OpenVINO once, which takes a few
+seconds; the first job also downloads the weights. In LXC containers, pass
+`/dev/dri/renderD128` through to the container (as for hardware encoding, [HARDWARE.md](HARDWARE.md)).
 
 ## Linux
 

@@ -1,0 +1,33 @@
+# A detection worker on the recorder box itself, on an Intel GPU (integrated UHD / Iris Xe /
+# Arc, e.g. an N100) through OpenVINO. Workers with an NVIDIA GPU: worker/compose.yaml.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.vaapi.yml \
+#     -f docker-compose.worker.yml up --build -d
+#
+# Needs a worker token: start the stack without this file first, create one under Jobs →
+# Add worker and set LOCAL_WORKER_TOKEN. WORKER_DEVICE=intel:cpu runs on the CPU instead.
+services:
+  worker:
+    build:
+      context: ./worker
+      args:
+        BASE: python:3.12-slim-bookworm # Intel OpenCL runtime (worker/Dockerfile)
+        DETECTOR: ultralytics,openvino
+        TORCH_BACKEND: cpu # only for prompting YOLO-World; detection runs in OpenVINO
+    image: media-worker:openvino
+    pull_policy: build
+    restart: unless-stopped
+    command: ["--detector", "ultralytics", "--model", "${WORKER_MODEL:-yolov8s-worldv2.pt}",
+              "--device", "${WORKER_DEVICE:-intel:gpu}"]
+    depends_on: [server]
+    environment:
+      MEDIA_SERVER: http://mediamtx:8000 # the server shares MediaMTX's network
+      MEDIA_WORKER_TOKEN: ${LOCAL_WORKER_TOKEN:?create a worker token in the web UI (Jobs → Add worker)}
+      MEDIA_WORKER_ID: ${LOCAL_WORKER_ID:-local-intel}
+    devices:
+      - ${MEDIA_HW_DEVICE:-/dev/dri/renderD128}:${MEDIA_HW_DEVICE:-/dev/dri/renderD128}
+    volumes:
+      - worker-models:/models # weights, CLIP and the exported OpenVINO models
+
+volumes:
+  worker-models:
