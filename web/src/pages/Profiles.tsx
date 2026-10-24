@@ -213,7 +213,11 @@ function ProfileCard({
         )}
         <Fact label={t("nav.cameras")}>
           {p.cameras.length ? (
-            p.cameras.map(cameraName).join(", ")
+            <span className="chips">
+              {p.cameras.map((id) => (
+                <Tag key={id}>{cameraName(id)}</Tag>
+              ))}
+            </span>
           ) : (
             <span className="muted">{t("profiles.noCameras")}</span>
           )}
