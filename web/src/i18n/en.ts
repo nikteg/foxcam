@@ -624,7 +624,7 @@ export const en = {
   "profiles.keepEventsHint": "Empty = the global retention setting. 0 = forever.",
   "profiles.stationary": "Ignore stationary after (minutes)",
   "profiles.stationaryHint":
-    "A target that stays in the same place this long, like a parked car, stops counting: no new or longer events (and no kept footage) until it moves or leaves. Its arrival is still an event.",
+    "A target that stays in the same place this long, like a parked car, stops counting: no new or longer events (and no kept footage) until it moves or leaves. Its arrival is still an event. 0 = off.",
   "profiles.stationaryOff": "Off",
   "profiles.defaultSwitch": "Run on cameras without their own selection",
   "profiles.enabled": "Enabled",

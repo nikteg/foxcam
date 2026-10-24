@@ -192,11 +192,13 @@ function ProfileCard({
         <Fact label={t("profiles.fps")}>
           {p.fps ? `${p.fps} fps` : <span className="muted">{t("profiles.allFrames")}</span>}
         </Fact>
-        {p.ignore_stationary_minutes !== null && (
-          <Fact label={t("profiles.stationary")}>
-            {t("notify.minutes", { n: p.ignore_stationary_minutes })}
-          </Fact>
-        )}
+        <Fact label={t("profiles.stationary")}>
+          {p.ignore_stationary_minutes ? (
+            t("notify.minutes", { n: p.ignore_stationary_minutes })
+          ) : (
+            <span className="muted">{t("profiles.stationaryOff")}</span>
+          )}
+        </Fact>
         {p.events_days !== null && (
           <>
             <Fact label={t("profiles.keepEvents")}>
@@ -271,7 +273,7 @@ export function ProfileDialog({
   const [fps, setFps] = useState(profile?.fps?.toString() ?? "");
   const [eventsDays, setEventsDays] = useState(profile?.events_days?.toString() ?? "");
   const [stationary, setStationary] = useState(
-    profile?.ignore_stationary_minutes?.toString() ?? "",
+    (profile?.ignore_stationary_minutes ?? 10).toString(),
   );
   const [isDefault, setDefault] = useState(profile?.default ?? false);
   const [enabled, setEnabled] = useState(profile?.enabled ?? true);
@@ -287,7 +289,7 @@ export function ProfileDialog({
     fps: fps ? Number(fps) : null,
     default: isDefault,
     events_days: eventsDays === "" ? null : Number(eventsDays),
-    ignore_stationary_minutes: stationary ? Number(stationary) : null,
+    ignore_stationary_minutes: stationary === "" ? 10 : Number(stationary),
     enabled,
   });
   const save = useMutation({
@@ -470,10 +472,9 @@ export function ProfileDialog({
               <Field label={t("profiles.stationary")} hint={t("profiles.stationaryHint")}>
                 <Input
                   type="number"
-                  min={1}
+                  min={0}
                   max={1440}
                   value={stationary}
-                  placeholder={t("profiles.stationaryOff")}
                   onChange={(_, d) => setStationary(d.value)}
                 />
               </Field>

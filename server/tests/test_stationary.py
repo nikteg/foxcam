@@ -24,8 +24,7 @@ def merge_gap(settings):
 
 @pytest.fixture
 def cars(settings):
-    settings.profiles.append(ProfileConfig(id="cars", targets=["car"],
-                                           ignore_stationary_minutes=10))
+    settings.profiles.append(ProfileConfig(id="cars", targets=["car"]))  # 10 min by default
     return settings
 
 
@@ -77,8 +76,9 @@ def test_a_long_absence_breaks_the_chain(cars):
     assert _stationary() == 0
 
 
-def test_off_by_default(settings):
-    settings.profiles.append(ProfileConfig(id="plain", targets=["car"]))
+def test_zero_turns_it_off(settings):
+    settings.profiles.append(ProfileConfig(id="plain", targets=["car"],
+                                           ignore_stationary_minutes=0))
     _seen(settings, range(20), profile="plain")
     [(_, last)] = _events()
     assert last >= T0 + timedelta(minutes=19)

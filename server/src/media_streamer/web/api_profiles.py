@@ -42,7 +42,7 @@ class ProfileIn(BaseModel):
     fps: float | None = Field(default=None, gt=0, le=30)
     default: bool = False
     events_days: float | None = Field(default=None, ge=0)
-    ignore_stationary_minutes: float | None = Field(default=None, gt=0, le=1440)
+    ignore_stationary_minutes: float = Field(default=10, ge=0, le=1440)
     enabled: bool = True
 
 

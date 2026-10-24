@@ -118,7 +118,7 @@ detection:
 #     targets: [car, person]
 #     requires: [open-vocabulary]
 #     fps: 1                   # fewer frames: cheaper
-#     ignore_stationary_minutes: 10   # parked cars stop counting (their arrival still does)
+#     ignore_stationary_minutes: 10   # default; parked cars stop counting (arrival still does), 0 = off
 #     events_days: 14          # overrides retention.events_days
 #
 # Per camera (or in the UI: Cameras → Detection):  profiles: [wildlife, vehicles]

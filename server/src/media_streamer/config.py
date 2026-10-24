@@ -250,8 +250,8 @@ class ProfileConfig(BaseModel):
     # Delete this profile's events after N days (None = retention.events_days).
     events_days: float | None = None
     # A target that stays in the same place this long (a parked car) stops counting: it
-    # neither makes nor extends events until it moves or leaves. None = off.
-    ignore_stationary_minutes: float | None = Field(default=None, gt=0, le=1440)
+    # neither makes nor extends events until it moves or leaves. 0 = off.
+    ignore_stationary_minutes: float = Field(default=10, ge=0, le=1440)
     enabled: bool = True
     managed: Literal["config", "ui"] = "config"
 

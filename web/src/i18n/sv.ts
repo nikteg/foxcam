@@ -709,7 +709,7 @@ export const sv: Record<MessageKey, string> = {
   "profiles.keepEventsHint": "Tomt = den globala inställningen. 0 = för alltid.",
   "profiles.stationary": "Ignorera stillastående efter (minuter)",
   "profiles.stationaryHint":
-    "Ett mål som står på samma plats så här länge, som en parkerad bil, slutar räknas: inga nya eller längre händelser (och inget sparat material) förrän det flyttar sig eller åker iväg. Ankomsten blir fortfarande en händelse.",
+    "Ett mål som står på samma plats så här länge, som en parkerad bil, slutar räknas: inga nya eller längre händelser (och inget sparat material) förrän det flyttar sig eller åker iväg. Ankomsten blir fortfarande en händelse. 0 = av.",
   "profiles.stationaryOff": "Av",
   "profiles.defaultSwitch": "Kör på kameror utan eget profilval",
   "profiles.enabled": "Aktiverad",
