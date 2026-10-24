@@ -412,7 +412,8 @@ export const en = {
   "notify.add": "Add channel",
   "notify.none": "No notification channels yet.",
   "notify.noPublicUrl":
-    "Set {key} in {file} (how you open this UI, e.g. http://192.168.1.10:8000) so notifications can link to events and clips.",
+    "Set the {link} (how you open this site, e.g. https://cams.example.org) so notifications can link to events and clips.",
+  "notify.publicUrlLink": "web address in Settings → General",
   "notify.type": "Type",
   "notify.type.ntfy": "ntfy push",
   "notify.type.webhook": "Webhook",

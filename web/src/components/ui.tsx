@@ -27,7 +27,14 @@ import {
   WeatherSunny16Regular,
   WeatherSunny20Regular,
 } from "@fluentui/react-icons";
-import { useEffect, useState, type MouseEvent, type ReactElement, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { useLocation, useNavigate } from "react-router";
 
 import { localTime, percent, relativeTime } from "../format";
@@ -473,8 +480,16 @@ export function PageTabs<T extends string>({
   tabs: { id: T; label: string }[];
 }) {
   const navigate = useNavigate();
+  // Scrolls sideways on narrow screens: keep the open tab in view.
+  const list = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    list.current
+      ?.querySelector('[aria-selected="true"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [current]);
   return (
     <TabList
+      ref={list}
       className="block page-tabs"
       selectedValue={current}
       onTabSelect={(_, d) =>

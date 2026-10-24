@@ -44,7 +44,18 @@ import { useI18n, type MessageKey } from "../i18n";
 import { LabelPicker, useLabelSuggestions, useSuggestionList } from "./LabelPicker";
 import { useCameraName } from "./CameraSelect";
 import { useProfileName, useProfiles } from "./ProfileSelect";
-import { ConfigTag, Empty, Fact, Facts, InfoBanner, QueryState, Tag, Time, Toolbar } from "./ui";
+import {
+  ConfigTag,
+  Empty,
+  Fact,
+  Facts,
+  InfoBanner,
+  QueryState,
+  RouterLink,
+  Tag,
+  Time,
+  Toolbar,
+} from "./ui";
 import {
   Dialog,
   DialogActions,
@@ -103,8 +114,7 @@ export function Notifications() {
         <MessageBar intent="info" className="block">
           <MessageBarBody>
             {rich("notify.noPublicUrl", {
-              key: <code>public_url</code>,
-              file: <code>config.yaml</code>,
+              link: <RouterLink to="/settings">{t("notify.publicUrlLink")}</RouterLink>,
             })}
           </MessageBarBody>
         </MessageBar>

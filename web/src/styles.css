@@ -1308,6 +1308,23 @@ Fluent's text styles would otherwise reset the margins. */
   margin-top: calc(-1 * var(--spacingVerticalM));
   margin-inline-start: calc(-1 * var(--spacingHorizontalMNudge));
 }
+/* Sub-page tabs (and the tabs in drawers) scroll sideways when they do not fit, instead of
+   squeezing or wrapping; no scrollbar, a swipe is enough. */
+.page-tabs,
+.drawer-column > .fui-TabList {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.page-tabs::-webkit-scrollbar,
+.drawer-column > .fui-TabList::-webkit-scrollbar {
+  display: none;
+}
+.page-tabs > .fui-Tab,
+.drawer-column > .fui-TabList > .fui-Tab {
+  flex-shrink: 0;
+}
 
 /* Recordings player (components/VideoPlayer.tsx, Vidstack): the app's brand colour. */
 .video-player {

@@ -412,7 +412,8 @@ export const sv: Record<MessageKey, string> = {
   "notify.add": "Lägg till kanal",
   "notify.none": "Inga aviseringskanaler än.",
   "notify.noPublicUrl":
-    "Ange {key} i {file} (adressen du öppnar gränssnittet på, t.ex. http://192.168.1.10:8000) så att aviseringar kan länka till händelser och klipp.",
+    "Ange {link} (adressen du öppnar sidan på, t.ex. https://cams.example.org) så att aviseringar kan länka till händelser och klipp.",
+  "notify.publicUrlLink": "webbadressen i Inställningar → Allmänt",
   "notify.type": "Typ",
   "notify.type.ntfy": "ntfy-push",
   "notify.type.webhook": "Webhook",
