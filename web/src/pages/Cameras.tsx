@@ -30,10 +30,12 @@ import {
   Video20Regular,
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router";
 
 import { api, type Camera, type CameraSource } from "../api";
 import { AddCameraDialog } from "../components/AddCameraDialog";
+import { ProfilesSection } from "./Profiles";
 import { useProfileName, useProfiles } from "../components/ProfileSelect";
 import { TapoAccountCard } from "../components/TapoAccount";
 import {
@@ -71,8 +73,11 @@ export function Cameras() {
   const [editing, setEditing] = useState<Camera | null>(null);
   const [removing, setRemoving] = useState<Camera | null>(null);
   const [choosing, setChoosing] = useState<Camera | null>(null);
-  const routerHref = useRouterHref();
-  const profiles = useProfiles();
+  const { hash } = useLocation();
+  const loaded = !cameras.isPending;
+  useEffect(() => {
+    if (hash && loaded) document.getElementById(hash.slice(1))?.scrollIntoView();
+  }, [hash, loaded]);
 
   return (
     <>
@@ -95,16 +100,6 @@ export function Cameras() {
       </div>
 
       <Subtitle2 as="h2" className="section">
-        {t("profiles.title")}
-      </Subtitle2>
-      <p className="muted">
-        {t("cameras.profilesIntro", { n: profiles.data?.length ?? 0 })}{" "}
-        <Button as="a" size="small" icon={<ScanObject20Regular />} {...routerHref("/profiles")}>
-          {t("cameras.manageProfiles")}
-        </Button>
-      </p>
-
-      <Subtitle2 as="h2" className="section">
         {t("nav.cameras")}
       </Subtitle2>
       <QueryState error={cameras.error} loading={cameras.isPending} />
@@ -120,6 +115,8 @@ export function Cameras() {
           />
         ))}
       </div>
+
+      <ProfilesSection />
 
       <AddCameraDialog open={adding} onClose={() => setAdding(false)} />
       {editing && <EditCameraDialog camera={editing} onClose={() => setEditing(null)} />}

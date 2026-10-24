@@ -15,6 +15,7 @@ import {
   Input,
   MessageBar,
   MessageBarBody,
+  Subtitle2,
   Switch,
   Text,
   Textarea,
@@ -25,7 +26,9 @@ import { useState } from "react";
 
 import { api, type Profile, type ProfileInput } from "../api";
 import { useProfiles } from "../components/ProfileSelect";
-import { Empty, PageHeader, QueryState, Tag } from "../components/ui";
+import { Navigate } from "react-router";
+
+import { Empty, QueryState, Tag } from "../components/ui";
 import { percent } from "../format";
 import { useI18n } from "../i18n";
 
@@ -49,7 +52,8 @@ const formatAliases = (aliases: Record<string, string>) =>
     .map(([from, to]) => `${from} = ${to}`)
     .join("\n");
 
-export function Profiles() {
+/** Detection profiles: shown on the Cameras page (anchor #profiles). */
+export function ProfilesSection() {
   const { t, rich } = useI18n();
   const profiles = useProfiles();
   const cameras = useQuery({ queryKey: ["cameras"], queryFn: api.cameras });
@@ -58,17 +62,19 @@ export function Profiles() {
   const cameraName = (id: string) => cameras.data?.find((c) => c.id === id)?.name ?? id;
 
   return (
-    <>
-      <PageHeader
-        title={t("profiles.title")}
-        actions={
-          <Button appearance="primary" icon={<Add20Regular />} onClick={() => setEditing("new")}>
-            {t("profiles.add")}
-          </Button>
-        }
-      >
-        {rich("profiles.intro", { file: <code>config.yaml</code> })}
-      </PageHeader>
+    <section id="profiles">
+      <Subtitle2 as="h2" className="section">
+        {t("profiles.title")}
+        <Button
+          size="small"
+          appearance="primary"
+          icon={<Add20Regular />}
+          onClick={() => setEditing("new")}
+        >
+          {t("profiles.add")}
+        </Button>
+      </Subtitle2>
+      <p className="muted">{rich("profiles.intro", { file: <code>config.yaml</code> })}</p>
       <QueryState error={profiles.error} loading={profiles.isPending} />
       {profiles.data?.length === 0 && <Empty>{t("profiles.none")}</Empty>}
       <div className="cards">
@@ -89,8 +95,13 @@ export function Profiles() {
         />
       )}
       {removing && <RemoveProfileDialog profile={removing} onClose={() => setRemoving(null)} />}
-    </>
+    </section>
   );
+}
+
+/** Old /profiles links land on the Cameras page section. */
+export function Profiles() {
+  return <Navigate to="/cameras#profiles" replace />;
 }
 
 function ProfileCard({

@@ -1,5 +1,5 @@
 import { Button, Caption1, Checkbox, Input, Link, Text } from "@fluentui/react-components";
-import { Folder20Regular } from "@fluentui/react-icons";
+import { Folder20Regular, ScanObject20Regular } from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 
 import { api, detectionFrameUrl, segmentPlayUrl, type Detection } from "../api";
@@ -96,11 +96,24 @@ export function Detections() {
   });
   const selected = detections.data?.find((d) => String(d.id) === f.selected);
   const { t, rich } = useI18n();
+  const routerHref = useRouterHref();
   const cameraName = useCameraName();
 
   return (
     <>
-      <PageHeader title={t("nav.detections")}>
+      <PageHeader
+        title={t("nav.detections")}
+        actions={
+          <Button
+            as="a"
+            appearance="subtle"
+            icon={<ScanObject20Regular />}
+            {...routerHref("/cameras#profiles")}
+          >
+            {t("profiles.title")}
+          </Button>
+        }
+      >
         {rich("detections.intro", {
           export: <Link href="/api/detections/feedback-export">{t("detections.exportJson")}</Link>,
         })}

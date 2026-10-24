@@ -499,9 +499,6 @@ export const sv: Record<MessageKey, string> = {
   "profiles.removeTitle": "Ta bort {name}?",
   "profiles.removeBody":
     "Profilens väntande jobb avbryts. Detektioner och händelser som redan hittats sparas.",
-  "cameras.profilesIntro":
-    "{n} {n:profil|profiler} styr vad varje kameras inspelningar analyseras för.",
-  "cameras.manageProfiles": "Hantera detekteringsprofiler",
   "cameras.noProfiles": "inga (analyseras inte)",
   "cameras.detect": "Detektering",
   "cameras.profilesTitle": "Detektering på {name}",
