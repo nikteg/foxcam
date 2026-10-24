@@ -322,6 +322,9 @@ export interface DetectionEvent {
   last_ts: string;
   max_confidence: number;
   detection_count: number;
+  /** The profile's detectors (models) that saw it, and how many. */
+  detectors: string[];
+  agreement: number;
   is_night: boolean | null;
   clip_url: string | null;
   thumb_url: string | null;
@@ -436,6 +439,8 @@ export interface ChannelInput {
   profiles: string[] | null;
   labels: string[] | null;
   min_confidence: number;
+  /** Only once this many detectors saw the event. */
+  min_agreement: number;
   quiet_hours: string | null;
   cooldown_minutes: number;
   include_image: boolean;
@@ -681,11 +686,12 @@ export const api = {
     only_targets?: boolean;
     min_confidence?: number;
     profile?: string;
+    detector?: string;
     limit?: number;
   }) => request<Detection[]>("GET", withQuery("/api/detections", q)),
   feedback: (id: number, correct: boolean | null) =>
     request<{ status: string }>("POST", `/api/detections/${id}/feedback`, { correct }),
-  events: (q: { camera?: string; profile?: string; limit?: number }) =>
+  events: (q: { camera?: string; profile?: string; min_agreement?: number; limit?: number }) =>
     request<DetectionEvent[]>("GET", withQuery("/api/events", q)),
   queue: (q: { state?: string; limit?: number }) =>
     request<QueueView>("GET", withQuery("/api/queue", q)),

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pytest
 from media_streamer import profiles
 from media_streamer.config import ProfileConfig
@@ -33,8 +35,8 @@ def wildlife(settings):
     return settings
 
 
-def _queued_segment(settings) -> int:
-    seg_id = add_segment(settings, status=SegmentStatus.QUEUED)
+def _queued_segment(settings, start=None) -> int:
+    seg_id = add_segment(settings, status=SegmentStatus.QUEUED, start=start)
     with session_scope() as s:
         seg = s.get(Segment, seg_id)
         derived = settings.derived_dir / f"{seg_id}.mp4"
@@ -149,3 +151,82 @@ def test_profiles_api_lists_detectors_with_their_workers(wildlife):
     assert [(d["id"], d["workers_online"]) for d in p["detectors"]] == \
         [("yolo", ["y"]), ("speciesnet", [])]
     assert p["workers_online"] == ["y"]
+
+
+# --- part 2: one event across models ----------------------------------------------------
+
+def _two_model_results(settings, yolo=(("red fox", 0.6),), sn=(("fox", 0.7),)) -> int:
+    """Both detectors report on one segment; returns the segment id."""
+    seg_id = _queued_segment(settings)
+    for worker, tags, dets in (("y", ["gpu", "open-vocabulary"], yolo),
+                               ("s", ["gpu", "speciesnet"], sn)):
+        job = queue.lease(settings, worker, tags=tags)
+        queue.complete(settings, job.id, job.lease_token,
+                       [DET(100 + i * 500, label, conf) for i, (label, conf) in enumerate(dets)],
+                       worker, 10)
+    return seg_id
+
+
+def test_detections_of_both_models_make_one_event(wildlife):
+    from media_streamer.models import Event
+    from media_streamer.pipeline import events
+
+    _two_model_results(wildlife)
+    events.assign_events(wildlife)
+    with session_scope() as s:
+        [ev] = s.query(Event).all()
+        assert (ev.detectors, ev.agreement, ev.detection_count) == \
+            (["speciesnet", "yolo"], 2, 2)
+    with app_client(wildlife) as c:
+        assert [e["agreement"] for e in c.get("/api/events").json()] == [2]
+        assert c.get("/api/events?min_agreement=3").json() == []
+        dets = c.get("/api/detections?detector=yolo").json()
+        assert [d["detector_id"] for d in dets] == ["yolo"]
+
+
+def test_channels_can_wait_for_models_to_agree(wildlife):
+    from media_streamer.config import ChannelConfig
+    from media_streamer.models import Notification
+    from media_streamer.pipeline import events
+
+    wildlife.notifications.channels = [
+        ChannelConfig(id="any", type="webhook", url="http://x"),
+        ChannelConfig(id="both", type="webhook", url="http://x", min_agreement=2)]
+    seg_id = _queued_segment(wildlife)
+
+    def result(worker, tags, offset):
+        job = queue.lease(wildlife, worker, tags=tags)
+        queue.complete(wildlife, job.id, job.lease_token, [DET(offset, "fox", 0.8)], worker, 1)
+        events.assign_events(wildlife)
+        with session_scope() as s:
+            return sorted(n.channel_id for n in s.query(Notification))
+
+    assert result("y", ["gpu", "open-vocabulary"], 100) == ["any"]
+    # The second model agrees: `both` now, `any` not again.
+    assert result("s", ["gpu", "speciesnet"], 200) == ["any", "both"]
+    assert seg_id
+
+
+def test_reanalysis_recounts_the_models(wildlife):
+    from media_streamer.models import Event
+    from media_streamer.pipeline import events
+    from media_streamer.pipeline.reanalyse import reanalyse_segment
+
+    first = _two_model_results(wildlife, sn=())  # only YOLO on the first segment
+    with session_scope() as s:
+        start = s.get(Segment, first).start_at
+    second = _queued_segment(wildlife, start + timedelta(seconds=3))
+    job = queue.lease(wildlife, "s", tags=["gpu", "speciesnet"])
+    assert job.segment_id == second
+    queue.complete(wildlife, job.id, job.lease_token, [DET(300, "fox", 0.9)], "s", 1)
+    job = queue.lease(wildlife, "y", tags=["gpu", "open-vocabulary"])
+    queue.complete(wildlife, job.id, job.lease_token, [], "y", 1)
+    events.assign_events(wildlife)
+    with session_scope() as s:
+        [ev] = s.query(Event).all()
+        assert ev.agreement == 2
+    reanalyse_segment(wildlife, second)  # SpeciesNet's detection goes
+    with session_scope() as s:
+        [ev] = s.query(Event).all()
+        assert (ev.detectors, ev.agreement) == (["yolo"], 1)
+    assert first

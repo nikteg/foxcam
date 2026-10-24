@@ -51,9 +51,15 @@ notifications:
       type: apprise
       url: tgram://${TELEGRAM_BOT_TOKEN}/${TELEGRAM_CHAT_ID}
       min_confidence: 0.7
+      min_agreement: 2                  # only when two of the profile's models saw it
 ```
 
 > Use `when:`, not `on:` — YAML reads a bare `on` as the boolean `true`.
+
+`min_agreement` (default 1) is for profiles with several detectors (models, see
+[ARCHITECTURE.md](ARCHITECTURE.md#detection-profiles)): the channel is notified once that
+many of them have seen the event. Each event notifies a channel at most once per trigger,
+so a second model joining an event never sends it again.
 
 ## ntfy
 
@@ -80,6 +86,7 @@ A `POST` with `Content-Type: application/json` per notification:
     "label": "fox", "confidence": 0.91,
     "first_ts": "2026-10-24T13:04:58Z", "last_ts": "2026-10-24T13:05:03Z",
     "detection_count": 12, "is_night": true,
+    "detectors": ["speciesnet", "yolo"], "agreement": 2,
     "clip_ready": false, "clip_duration_s": null
   },
   "links": {

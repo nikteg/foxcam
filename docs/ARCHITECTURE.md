@@ -101,7 +101,10 @@ new model. Closed-set models (SpeciesNet, fine-tuned YOLO) report what they know
 profile's targets and aliases pick the relevant labels.
 
 **Events** are per camera, profile and label: a fox and a car seen at the same time are two
-events with two clips.
+events with two clips. Detections of a profile's different detectors join the same event;
+the event records which detectors saw it (`detectors`) and how many (`agreement`), the
+Events page can filter on "seen by ≥ N models", and notification channels can wait for
+`min_agreement` models.
 
 ## Data model (SQLite)
 
@@ -110,7 +113,7 @@ events with two clips.
 | `segment` | One recording file: camera, start (UTC), duration, status, light tags, mask version used, fox flag, pinned, `deleted_at`. |
 | `job` | Work item per segment, profile and detector: state (`pending/leased/done/failed/dead`), lease token and expiry, attempts, model, timing. |
 | `detection` | Worker result: profile, detector, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, event. |
-| `event` | Merged sighting of one label for one profile: time range, best detection, clip and thumbnail paths. |
+| `event` | Merged sighting of one label for one profile: time range, best detection, detectors that saw it and how many (`agreement`), clip and thumbnail paths. |
 | `worker` | Last-seen info and tags per worker id (shown in the queue tab). |
 | `detection_profile` | Detection profiles added in the web UI. |
 | `notification_channel` | Notification channels added in the web UI. |

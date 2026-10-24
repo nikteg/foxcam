@@ -80,6 +80,14 @@ def _backfill(engine: Engine, added: set[str]) -> None:
                 "UPDATE user_account SET email_verified = (is_admin = 1 OR EXISTS (SELECT 1 "
                 "FROM oauth_identity o WHERE o.user_id = user_account.id "
                 "AND lower(o.email) = user_account.email))"))
+        if "event.agreement" in added:
+            # Which detectors saw each event (one, `default`, before there were several).
+            conn.execute(text(
+                "UPDATE event SET detectors = (SELECT json_group_array(DISTINCT d.detector_id) "
+                "FROM detection d WHERE d.event_id = event.id), agreement = (SELECT "
+                "COUNT(DISTINCT d.detector_id) FROM detection d WHERE d.event_id = event.id)"))
+            conn.execute(text("UPDATE event SET detectors = '[\"default\"]', agreement = 1 "
+                              "WHERE agreement IS NULL OR agreement = 0"))
         if "detection.event_id" in added:
             # Events used to be per segment: link their target detections.
             conn.execute(text(

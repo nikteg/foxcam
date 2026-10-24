@@ -35,3 +35,17 @@ export function ProfileSelect({
     </Select>
   );
 }
+
+/** Detector ids across all profiles, with their names (for filters and chips). */
+export function useDetectorNames(): Map<string, string> {
+  const { data = [] } = useProfiles();
+  const out = new Map<string, string>();
+  for (const p of data) for (const d of p.detectors) out.set(d.id, d.display_name);
+  return out;
+}
+
+/** Whether any profile has several detectors (else detector filters are pointless). */
+export function useSeveralDetectors(): boolean {
+  const { data = [] } = useProfiles();
+  return data.some((p) => p.detectors.length > 1);
+}

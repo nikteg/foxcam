@@ -26,6 +26,7 @@ class ChannelIn(BaseModel):
     profiles: list[str] | None = None
     labels: list[str] | None = None
     min_confidence: float = Field(default=0, ge=0, le=1)
+    min_agreement: int = Field(default=1, ge=1, le=10)
     quiet_hours: str | None = None
     cooldown_minutes: float = Field(default=0, ge=0)
     include_image: bool = True

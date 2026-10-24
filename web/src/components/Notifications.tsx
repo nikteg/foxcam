@@ -189,11 +189,15 @@ function ChannelCard({
             <dd>{c.profiles.map((p) => profileName(p)).join(", ")}</dd>
           </>
         )}
-        {(c.labels || c.min_confidence > 0) && (
+        {(c.labels || c.min_confidence > 0 || c.min_agreement > 1) && (
           <>
             <dt>{t("notify.only")}</dt>
             <dd>
-              {[c.labels?.join(", "), c.min_confidence > 0 && `≥ ${percent(c.min_confidence)}`]
+              {[
+                c.labels?.join(", "),
+                c.min_confidence > 0 && `≥ ${percent(c.min_confidence)}`,
+                c.min_agreement > 1 && t("events.seenByAtLeast", { n: c.min_agreement }),
+              ]
                 .filter(Boolean)
                 .join(" – ")}
             </dd>
@@ -321,6 +325,7 @@ function ChannelDialog({
   );
   const labelSuggestions = useSuggestionList(labelData.data, profileTargets);
   const [minConf, setMinConf] = useState(String(Math.round((channel?.min_confidence ?? 0) * 100)));
+  const [minAgreement, setMinAgreement] = useState(String(channel?.min_agreement ?? 1));
   const [quietFrom, setQuietFrom] = useState(channel?.quiet_hours?.split("-")[0] ?? "");
   const [quietTo, setQuietTo] = useState(channel?.quiet_hours?.split("-")[1] ?? "");
   const [cooldown, setCooldown] = useState(String(channel?.cooldown_minutes ?? 0));
@@ -349,6 +354,7 @@ function ChannelDialog({
     profiles: profs,
     labels: labels.length ? labels : null,
     min_confidence: Math.min(Math.max(Number(minConf) / 100, 0), 1),
+    min_agreement: Math.min(Math.max(Math.round(Number(minAgreement)) || 1, 1), 10),
     quiet_hours: quietFrom && quietTo ? `${quietFrom}-${quietTo}` : null,
     cooldown_minutes: Math.max(Number(cooldown) || 0, 0),
     include_image: image,
@@ -560,6 +566,15 @@ function ChannelDialog({
                   max={100}
                   value={minConf}
                   onChange={(_, d) => setMinConf(d.value)}
+                />
+              </Field>
+              <Field label={t("notify.minAgreement")} hint={t("notify.minAgreementHint")}>
+                <Input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={minAgreement}
+                  onChange={(_, d) => setMinAgreement(d.value)}
                 />
               </Field>
               <Field label={t("notify.quietHours")} hint={t("notify.quietHint")}>

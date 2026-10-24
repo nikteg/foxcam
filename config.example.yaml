@@ -211,6 +211,7 @@ auth:
 #       topic: foxes-at-the-cabin-7f3k
 #       when: [event.new, event.clip]   # note: `when`, not `on` (YAML reads on as true)
 #       quiet_hours: "23:00-06:00"
+#       # min_agreement: 2            # wait until two of the profile's models saw it
 #     - id: home-assistant
 #       type: webhook                # JSON POST, optionally HMAC-signed
 #       url: http://homeassistant.local:8123/api/webhook/media-streamer-events

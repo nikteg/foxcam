@@ -2,7 +2,9 @@
 
 Target detections (per detection profile, e.g. foxes) are merged into an event with the
 same camera, profile and label when within ``merge_gap_seconds``; a fox and a car seen at
-the same time become two events. Once an event has been quiet for
+the same time become two events. Detections of the profile's different detectors (models)
+join the same event; ``Event.detectors`` / ``agreement`` say which and how many saw it,
+so notification channels can wait for several models to agree (``min_agreement``). Once an event has been quiet for
 ``settle_seconds`` (and the post-roll footage exists) its clip is (re)built from the
 original, unmasked recordings, and the underlying segments are pinned.
 """
@@ -60,9 +62,11 @@ def assign_events(settings: Settings) -> int:
                     event.best_detection_id = best.id
             for d in dets:
                 d.event_id = event.id
-            # New events notify at once; a later rise above a channel's min_confidence too.
-            notify.enqueue(s, settings, event, "event.new")
             event.detection_count += len(dets)
+            refresh_models(s, event)
+            # New events notify at once; a later rise above a channel's min_confidence, or
+            # another model agreeing (min_agreement), too - once per channel.
+            notify.enqueue(s, settings, event, "event.new")
             seg = s.get(Segment, segment_id)
             if seg not in event.segments:
                 event.segments.append(seg)
@@ -70,6 +74,15 @@ def assign_events(settings: Settings) -> int:
             event.updated_at = utcnow()
             changed += 1
     return changed
+
+
+def refresh_models(s, event: Event) -> None:
+    """Which detectors saw the event, from its detections (also after some are removed)."""
+    s.flush()
+    found = s.scalars(select(Detection.detector_id).where(Detection.event_id == event.id)
+                      .distinct()).all()
+    event.detectors = sorted(d or "default" for d in found)
+    event.agreement = len(event.detectors)
 
 
 def build_clips(settings: Settings) -> int:

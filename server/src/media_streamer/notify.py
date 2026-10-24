@@ -148,6 +148,8 @@ def _matches(ch: ChannelConfig, event: Event, kind: str) -> bool:
         return False
     if ch.labels is not None and event.label.lower() not in {x.lower() for x in ch.labels}:
         return False
+    if (event.agreement or 1) < ch.min_agreement:
+        return False  # checked again when another model's detections join the event
     return event.max_confidence >= ch.min_confidence
 
 
@@ -212,6 +214,7 @@ def payload(settings: Settings, event_id: int, kind: str) -> dict[str, Any]:
                 "label": ev.label, "confidence": round(ev.max_confidence, 3),
                 "first_ts": _iso(ev.first_ts), "last_ts": _iso(ev.last_ts),
                 "detection_count": ev.detection_count, "is_night": ev.is_night,
+                "detectors": ev.detectors or [], "agreement": ev.agreement or 1,
                 "clip_ready": bool(ev.clip_path and not ev.clip_dirty),
                 "clip_duration_s": ev.clip_duration_s,
             },

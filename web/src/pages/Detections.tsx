@@ -1,10 +1,10 @@
-import { Button, Caption1, Checkbox, Input, Link, Text } from "@fluentui/react-components";
+import { Button, Caption1, Checkbox, Input, Link, Select, Text } from "@fluentui/react-components";
 import { Folder20Regular, ScanObject20Regular } from "@fluentui/react-icons";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { api, detectionFrameUrl, segmentPlayUrl, type Detection } from "../api";
 import { CameraSelect, useCameraName } from "../components/CameraSelect";
-import { ProfileSelect } from "../components/ProfileSelect";
+import { ProfileSelect, useDetectorNames, useSeveralDetectors } from "../components/ProfileSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
 import { Feedback } from "../components/Feedback";
@@ -79,11 +79,13 @@ export function Detections() {
     "label",
     "only_targets",
     "min_confidence",
+    "detector",
     "selected",
   ] as const);
   const query = {
     camera: f.camera,
     profile: f.profile,
+    detector: f.detector || undefined,
     label: f.label,
     only_targets: f.only_targets === "true",
     min_confidence: Number(f.min_confidence) || 0,
@@ -100,6 +102,8 @@ export function Detections() {
   const { t, rich } = useI18n();
   const routerHref = useRouterHref();
   const cameraName = useCameraName();
+  const severalDetectors = useSeveralDetectors();
+  const detectorNames = useDetectorNames();
 
   return (
     <>
@@ -118,6 +122,20 @@ export function Detections() {
       <div className="filters">
         <CameraSelect value={f.camera} onChange={(v) => setFilter("camera", v)} />
         <ProfileSelect value={f.profile} onChange={(v) => setFilter("profile", v)} />
+        {(severalDetectors || f.detector) && (
+          <Select
+            value={f.detector}
+            aria-label={t("col.detector")}
+            onChange={(_, d) => setFilter("detector", d.value)}
+          >
+            <option value="">{t("detections.allDetectors")}</option>
+            {[...detectorNames].map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </Select>
+        )}
         <Input
           placeholder={t("detections.labelPlaceholder")}
           aria-label={t("col.label")}

@@ -20,7 +20,12 @@ import type { DetectionEvent } from "../api";
 import { duration, localTime, percent } from "../format";
 import { useI18n } from "../i18n";
 import { useCameraName } from "./CameraSelect";
-import { useProfileName, useProfiles } from "./ProfileSelect";
+import {
+  useDetectorNames,
+  useProfileName,
+  useProfiles,
+  useSeveralDetectors,
+} from "./ProfileSelect";
 import { Empty, Light, Tag, Time } from "./ui";
 
 export function EventsGrid({ events }: { events: DetectionEvent[] }) {
@@ -29,6 +34,8 @@ export function EventsGrid({ events }: { events: DetectionEvent[] }) {
   const profileName = useProfileName();
   const cameraName = useCameraName();
   const manyProfiles = (useProfiles().data?.length ?? 0) > 1;
+  const severalDetectors = useSeveralDetectors();
+  const detectorNames = useDetectorNames();
   if (events.length === 0) return <Empty>{t("events.none")}</Empty>;
 
   return (
@@ -76,6 +83,13 @@ export function EventsGrid({ events }: { events: DetectionEvent[] }) {
               }
               description={
                 <Caption1 className="muted">
+                  {severalDetectors && e.detectors.length > 0 && (
+                    <span className="chips event-models" title={t("events.seenByModels")}>
+                      {e.detectors.map((d) => (
+                        <span key={d}>{detectorNames.get(d) ?? d}</span>
+                      ))}
+                    </span>
+                  )}
                   {manyProfiles && <>{profileName(e.profile_id)} – </>}
                   <Time iso={e.first_ts} /> –{" "}
                   {t("events.detectionCount", { count: e.detection_count })} –{" "}

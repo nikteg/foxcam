@@ -311,6 +311,9 @@ class Event(Base):
     max_confidence: Mapped[float] = mapped_column(Float)
     detection_count: Mapped[int] = mapped_column(Integer, default=0)
     best_detection_id: Mapped[int | None] = mapped_column(Integer)
+    # The profile's detectors (models) that saw it, and how many (pipeline/events.py).
+    detectors: Mapped[list[Any] | None] = mapped_column(JSON)
+    agreement: Mapped[int | None] = mapped_column(Integer, default=1)
     is_night: Mapped[bool | None] = mapped_column(Boolean)
     clip_path: Mapped[str | None] = mapped_column(String)
     clip_start: Mapped[datetime | None] = mapped_column(DateTime)

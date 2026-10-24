@@ -272,7 +272,8 @@ def detections(camera_id: str | None = None, label: str | None = None,
                only_targets: bool = False, min_confidence: float = 0.0,
                limit: int = 200, segment_id: int | None = None,
                profile_id: str | None = None,
-               camera_ids: set[str] | None = None) -> list[dict[str, Any]]:
+               camera_ids: set[str] | None = None,
+               detector_id: str | None = None) -> list[dict[str, Any]]:
     q = _only(select(Detection), Detection.camera_id, camera_ids) \
         .where(Detection.confidence >= min_confidence) \
         .order_by(Detection.ts.desc()).limit(limit)
@@ -284,6 +285,8 @@ def detections(camera_id: str | None = None, label: str | None = None,
         q = q.where(func.lower(Detection.label) == label.lower())
     if profile_id:
         q = q.where(Detection.profile_id == profile_id)
+    if detector_id:
+        q = q.where(Detection.detector_id == detector_id)
     if only_targets:
         q = q.where(Detection.is_target.is_(True))
     with session_scope() as s:
@@ -302,7 +305,8 @@ def set_feedback(detection_id: int, correct: bool | None) -> bool:
 
 def events(camera_id: str | None = None, limit: int = 100,
            profile_id: str | None = None, label: str | None = None,
-           camera_ids: set[str] | None = None) -> list[dict[str, Any]]:
+           camera_ids: set[str] | None = None,
+           min_agreement: int = 1) -> list[dict[str, Any]]:
     q = _only(select(Event), Event.camera_id, camera_ids) \
         .order_by(Event.first_ts.desc()).limit(limit)
     if camera_id:
@@ -311,12 +315,15 @@ def events(camera_id: str | None = None, limit: int = 100,
         q = q.where(Event.profile_id == profile_id)
     if label:
         q = q.where(func.lower(Event.label) == label.lower())
+    if min_agreement > 1:
+        q = q.where(func.coalesce(Event.agreement, 1) >= min_agreement)
     with session_scope() as s:
         return [{
             "id": e.id, "camera_id": e.camera_id, "profile_id": e.profile_id, "label": e.label,
             "first_ts": iso(e.first_ts),
             "last_ts": iso(e.last_ts), "max_confidence": round(e.max_confidence, 3),
             "detection_count": e.detection_count, "is_night": e.is_night,
+            "detectors": e.detectors or [], "agreement": e.agreement or 1,
             "clip_url": f"/api/events/{e.id}/clip" if e.clip_path or e.clip_remote_key else None,
             "thumb_url": f"/api/events/{e.id}/thumb" if e.thumb_path or e.thumb_remote_key
             else None,

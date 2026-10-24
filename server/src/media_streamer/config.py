@@ -372,6 +372,8 @@ class ChannelConfig(BaseModel):
     profiles: list[str] | None = None
     labels: list[str] | None = None
     min_confidence: float = Field(default=0, ge=0, le=1)
+    # Only once this many of the profile's detectors (models) saw the event.
+    min_agreement: int = Field(default=1, ge=1, le=10)
     # e.g. "22:00-07:00": no notifications in that window (notifications.timezone).
     quiet_hours: str | None = Field(default=None, pattern=rf"^{_HHMM}-{_HHMM}$")
     # At most one notification per camera within this many minutes.
