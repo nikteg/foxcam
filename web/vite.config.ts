@@ -17,14 +17,16 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: "dist",
       emptyOutDir: true,
-      // Fluent UI alone is ~520 kB minified (135 kB gzip) in its own long-cached chunk.
-      chunkSizeWarningLimit: 600,
+      // Fluent UI alone is ~700 kB minified (185 kB gzip) in its own long-cached chunk.
+      chunkSizeWarningLimit: 750,
       rolldownOptions: {
         output: {
           // Long-lived vendor chunks: app deploys don't invalidate the cached Fluent UI bundle.
           codeSplitting: {
             groups: [
               { name: "fluent", test: /node_modules[\\/]@fluentui/ },
+              // The recordings player, only loaded where recordings play.
+              { name: "player", test: /node_modules[\\/](@vidstack|media-captions|media-icons)/ },
               { name: "vendor", test: /node_modules/ },
             ],
           },

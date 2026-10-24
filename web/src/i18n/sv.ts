@@ -575,6 +575,7 @@ export const sv: Record<MessageKey, string> = {
   "dashboard.noWorkers": "Inga: jobben väntar tills en arbetare ansluter (Jobb → Arbetare).",
   "mask.discard": "Släng de osparade ändringarna av censurområdena?",
   "dashboard.overview": "Översikt",
+  "recordings.playerTitle": "Inspelning {id}",
   "profiles.title": "Detekteringsprofiler",
   "profiles.profile": "Profil",
   "profiles.all": "Alla profiler",

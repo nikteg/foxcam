@@ -9,6 +9,7 @@ import { DetailPanel } from "../components/DetailPanel";
 import { Empty, InfoBanner, QueryState, Tag, Time } from "../components/ui";
 import { duration, fileSize, localTime } from "../format";
 import { useI18n, type I18n } from "../i18n";
+import { VideoPlayer } from "../components/VideoPlayer";
 
 /** How an hourly file was made: "joined" (stream copy) or the encoder and profile. */
 function useHowMade(): (a: ArchiveFile) => string {
@@ -136,15 +137,15 @@ export function HourlyFiles({
           {selected && (
             <div className="detail-stack">
               {selected.play_url ? (
-                <video
-                  key={selected.id}
-                  className="detail-media"
-                  src={selected.play_url}
-                  poster={selected.thumb_url ?? undefined}
-                  controls
-                  playsInline
-                  preload="metadata"
-                />
+                <div className="detail-media">
+                  <VideoPlayer
+                    key={selected.id}
+                    title={`${cameraName(selected.camera_id)} – ${localTime(selected.start_at)}`}
+                    src={selected.play_url}
+                    poster={selected.thumb_url}
+                    thumbnails={`/api/archives/${selected.id}/thumbnails.vtt`}
+                  />
+                </div>
               ) : (
                 <Empty>{t("hourly.deleted")}</Empty>
               )}

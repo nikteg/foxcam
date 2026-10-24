@@ -1320,3 +1320,10 @@ Fluent's text styles would otherwise reset the margins. */
   margin-top: calc(-1 * var(--spacingVerticalM));
   margin-inline-start: calc(-1 * var(--spacingHorizontalMNudge));
 }
+
+/* Recordings player (components/VideoPlayer.tsx, Vidstack): the app's brand colour. */
+.video-player {
+  --video-brand: var(--colorBrandBackground);
+  --video-border-radius: var(--borderRadiusMedium);
+  --video-focus-ring-color: var(--colorStrokeFocus2);
+}

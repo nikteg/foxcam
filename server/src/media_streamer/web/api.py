@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field, field_validator
 
-from .. import ffmpeg, mediamtx_auth, model_stats, recording
+from .. import ffmpeg, mediamtx_auth, model_stats, recording, sprites
 from ..accounts import Principal
 from ..config import Settings
 from ..db import session_scope
@@ -291,6 +291,57 @@ def segment_download(segment_id: int, settings: Settings = Depends(settings_dep)
 def segment_play(segment_id: int, settings: Settings = Depends(settings_dep),
                  p: Principal = Depends(principal)) -> Response:
     return _serve_segment(settings, _segment(p, segment_id))
+
+
+async def _thumbnails(make, item_id: int, image_url: str) -> Response:
+    """WebVTT thumbnails track for the player (made on first request when missing)."""
+    try:
+        sprite = await asyncio.to_thread(make, item_id)
+    except RuntimeError as e:
+        raise HTTPException(503, str(e)) from e
+    if sprite is None:
+        raise HTTPException(404, "no footage")
+    return Response(sprites.vtt(sprite, image_url), media_type="text/vtt",
+                    headers={"Cache-Control": "private, max-age=3600"})
+
+
+@router.get("/segments/{segment_id}/thumbnails.vtt")
+async def segment_thumbnails(segment_id: int, settings: Settings = Depends(settings_dep),
+                             p: Principal = Depends(principal)) -> Response:
+    """Timeline previews for the player: which tile of the sprite shows which second."""
+    _segment(p, segment_id)
+    return await _thumbnails(lambda i: sprites.segment_sprite(settings, i), segment_id,
+                             f"/api/segments/{segment_id}/sprite.jpg")
+
+
+@router.get("/segments/{segment_id}/sprite.jpg")
+def segment_sprite_image(segment_id: int, settings: Settings = Depends(settings_dep),
+                         p: Principal = Depends(principal)) -> FileResponse:
+    _segment(p, segment_id)
+    image = sprites.segment_files(settings, segment_id)[0]
+    if not image.exists():
+        raise HTTPException(404, "load thumbnails.vtt first")
+    return FileResponse(image, media_type="image/jpeg",
+                        headers={"Cache-Control": "private, max-age=3600"})
+
+
+@router.get("/archives/{archive_id}/thumbnails.vtt")
+async def archive_thumbnails(archive_id: int, settings: Settings = Depends(settings_dep),
+                             p: Principal = Depends(principal)) -> Response:
+    _archive(p, archive_id)
+    return await _thumbnails(lambda i: sprites.archive_sprite(settings, i), archive_id,
+                             f"/api/archives/{archive_id}/sprite.jpg")
+
+
+@router.get("/archives/{archive_id}/sprite.jpg")
+def archive_sprite_image(archive_id: int, settings: Settings = Depends(settings_dep),
+                         p: Principal = Depends(principal)) -> FileResponse:
+    _archive(p, archive_id)
+    image = sprites.archive_files(settings, archive_id)[0]
+    if not image.exists():
+        raise HTTPException(404, "load thumbnails.vtt first")
+    return FileResponse(image, media_type="image/jpeg",
+                        headers={"Cache-Control": "private, max-age=3600"})
 
 
 @router.get("/segments/{segment_id}/thumb")

@@ -16,7 +16,7 @@ from datetime import timedelta
 
 from sqlalchemy import func, select
 
-from .. import notify
+from .. import notify, sprites
 from ..config import Settings
 from ..db import session_scope
 from ..models import (
@@ -173,6 +173,7 @@ def _remove_empty_archives(settings: Settings) -> int:
                                                    Archive.id.not_in(live))).all()
         for arc in archives:
             (settings.recordings_dir / arc.path).unlink(missing_ok=True)
+            sprites.remove_archive(settings, arc.id)
             arc.deleted_at = utcnow()
         return len(archives)
 

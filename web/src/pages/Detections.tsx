@@ -7,7 +7,7 @@ import {
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Fragment } from "react";
 
-import { api, detectionFrameUrl, segmentPlayUrl, type Detection } from "../api";
+import { api, detectionFrameUrl, type Detection } from "../api";
 import { CameraSelect, useCameraName } from "../components/CameraSelect";
 import { ProfileSelect, useDetectorNames, useSeveralDetectors } from "../components/ProfileSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
@@ -27,6 +27,7 @@ import {
 import { decimal, percent } from "../format";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
+import { VideoPlayer } from "../components/VideoPlayer";
 
 const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detection>[] => [
   {
@@ -261,14 +262,15 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
         <dd>{d.worker_id ?? "–"}</dd>
       </dl>
       {/* key: reload the player when switching detections */}
-      <video
-        key={d.id}
-        className="detail-media"
-        src={segmentPlayUrl(d.segment_id, d.offset_ms)}
-        controls
-        playsInline
-        preload="metadata"
-      />
+      <div className="detail-media">
+        <VideoPlayer
+          key={d.id}
+          title={d.label}
+          src={`/api/segments/${d.segment_id}/play`}
+          startAt={Math.max(d.offset_ms / 1000 - 1, 0)}
+          thumbnails={`/api/segments/${d.segment_id}/thumbnails.vtt`}
+        />
+      </div>
       <Button
         as="a"
         icon={<Folder20Regular />}

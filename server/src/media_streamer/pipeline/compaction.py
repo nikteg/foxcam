@@ -34,7 +34,7 @@ from pathlib import Path
 
 from sqlalchemy import func, select
 
-from .. import ffmpeg, hwaccel
+from .. import ffmpeg, hwaccel, sprites
 from ..config import RecordingProfileConfig, Settings
 from ..db import session_scope
 from ..models import Archive, Segment, SegmentStatus, utcnow
@@ -391,6 +391,10 @@ def build(settings: Settings, plan: Plan, encoder: Encoder = local_encoder) -> i
         "camera_id": plan.camera_id, "start_at": start.isoformat(timespec="seconds") + "Z",
         "segments": len(plan.segment_ids), "encoder": how, "bytes_before": before,
         "bytes_after": size, "seconds": round(took, 1), "at": _now_iso()})
+    try:  # the player's timeline thumbnails, while the file is fresh in the page cache
+        sprites.archive_sprite(settings, arc_id)
+    except Exception as e:  # noqa: BLE001 - made later on demand instead
+        log.warning("archive %s: no thumbnail sprite: %s", arc_id, e)
     return arc_id
 
 
@@ -411,13 +415,16 @@ def delete_replaced(settings: Settings, now: datetime | None = None) -> int:
 
 
 def clean_cache(settings: Settings) -> None:
-    folder = cache_dir(settings)
-    if not folder.is_dir():
-        return
-    cutoff = time.time() - CACHE_SECONDS
-    for f in folder.iterdir():
-        if f.stat().st_mtime < cutoff:
-            f.unlink(missing_ok=True)
+    """Segments cut out for playback after an hour; segment thumbnail sprites (cheap to
+    make again) after a week."""
+    for folder, age in ((cache_dir(settings), CACHE_SECONDS),
+                        (sprites.segment_files(settings, 0)[0].parent, 7 * 86400)):
+        if not folder.is_dir():
+            continue
+        cutoff = time.time() - age
+        for f in folder.iterdir():
+            if f.stat().st_mtime < cutoff:
+                f.unlink(missing_ok=True)
 
 
 def compact_once(settings: Settings, encoder: Encoder = local_encoder) -> int:
@@ -429,6 +436,8 @@ def compact_once(settings: Settings, encoder: Encoder = local_encoder) -> int:
     for plan in plans(settings):
         if build(settings, plan, encoder) is not None:
             built += 1
+    if built == 0:  # quiet: thumbnail sprites for archives made before there were any
+        sprites.backfill_archives(settings)
     return built
 
 

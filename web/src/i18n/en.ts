@@ -491,6 +491,7 @@ export const en = {
   "dashboard.noWorkers": "None: jobs wait until a worker connects (Jobs → Workers).",
   "mask.discard": "Discard the unsaved censor-area changes?",
   "dashboard.overview": "Overview",
+  "recordings.playerTitle": "Recording {id}",
   "profiles.title": "Detection profiles",
   "profiles.profile": "Profile",
   "profiles.all": "All profiles",

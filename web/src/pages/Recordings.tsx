@@ -49,6 +49,7 @@ import {
   DialogSurface,
   DialogTitle,
 } from "../components/Drawer";
+import { VideoPlayer, type PlayerHandle } from "../components/VideoPlayer";
 
 const SEGMENT_STATES = ["new", "queued", "done", "private", "failed"] as const;
 
@@ -277,7 +278,8 @@ function RecordingDetail({
   segment: Segment;
   onOpenHourly: (archiveId: number) => void;
 }) {
-  const video = useRef<HTMLVideoElement>(null);
+  const player = useRef<PlayerHandle>(null);
+  const playerBox = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
   const role = useCameraRole(s.camera_id);
   const canEdit = role !== undefined && hasRole({ role }, "editor");
@@ -292,12 +294,12 @@ function RecordingDetail({
     queryFn: () => api.segmentJobs(s.id),
   });
   const seek = (ms: number) => {
-    if (!video.current) return;
-    video.current.currentTime = ms / 1000;
-    void video.current.play();
+    if (!player.current) return;
+    player.current.currentTime = ms / 1000;
+    void player.current.play();
     // The detections list is below the player: bring the player into view (only scrolls
     // when it is not already visible).
-    video.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    playerBox.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
   return (
@@ -305,16 +307,16 @@ function RecordingDetail({
       {s.deleted ? (
         <Empty>{t("recordings.deleted")}</Empty>
       ) : (
-        <video
-          key={s.id}
-          ref={video}
-          className="detail-media"
-          src={`/api/segments/${s.id}/play`}
-          poster={s.thumb_url ?? undefined}
-          controls
-          playsInline
-          preload="metadata"
-        />
+        <div ref={playerBox} className="detail-media">
+          <VideoPlayer
+            key={s.id}
+            playerRef={player}
+            title={t("recordings.playerTitle", { id: s.id })}
+            src={`/api/segments/${s.id}/play`}
+            poster={s.thumb_url}
+            thumbnails={`/api/segments/${s.id}/thumbnails.vtt`}
+          />
+        </div>
       )}
       <div className="row wrap">
         {s.download_url && (
