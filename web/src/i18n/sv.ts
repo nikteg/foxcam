@@ -1,0 +1,325 @@
+import type { MessageKey } from "./en";
+
+// Svenska. Samma nycklar som en.ts; TypeScript klagar om någon saknas.
+export const sv: Record<MessageKey, string> = {
+  // Navigering
+  "nav.status": "Status",
+  "nav.live": "Live",
+  "nav.events": "Rävhändelser",
+  "nav.eventsShort": "Rävar",
+  "nav.detections": "Detektioner",
+  "nav.detectionsShort": "Detekt.",
+  "nav.recordings": "Inspelningar",
+  "nav.recordingsShort": "Filer",
+  "nav.queue": "Arbetskö",
+  "nav.queueShort": "Kö",
+  "nav.cameras": "Kameror",
+  "nav.settings": "Inställningar",
+  "nav.main": "Huvudmeny",
+  "notFound.title": "Sidan finns inte",
+  "notFound.back": "Tillbaka till status",
+
+  // Gemensamt
+  "common.add": "Lägg till",
+  "common.allCameras": "Alla kameror",
+  "common.back": "Tillbaka",
+  "common.camera": "Kamera",
+  "common.cancel": "Avbryt",
+  "common.close": "Stäng",
+  "common.done": "Klar",
+  "common.download": "Ladda ner",
+  "common.edit": "Redigera",
+  "common.language": "Språk",
+  "common.loadFailed": "Kunde inte läsa in",
+  "common.loading": "Läser in…",
+  "common.no": "nej",
+  "common.yes": "ja",
+  "common.offline": "frånkopplad",
+  "common.online": "ansluten",
+  "common.play": "Spela upp",
+  "common.remove": "Ta bort",
+  "common.save": "Spara",
+  "light.day": "dag",
+  "light.night": "natt",
+  "light.nightIr": "natt / IR",
+  "feedback.correct": "Rätt",
+  "feedback.wrong": "Fel",
+
+  // Status för jobb och segment
+  "state.new": "ny",
+  "state.queued": "i kö",
+  "state.done": "klar",
+  "state.private": "privat",
+  "state.failed": "misslyckad",
+  "state.pending": "väntar",
+  "state.leased": "bearbetas",
+  "state.dead": "gav upp",
+
+  // Kamerakällor
+  "source.tapo_cloud": "Tapo-moln",
+  "source.rtsp": "RTSP",
+  "source.file": "Videofil",
+  "source.test": "Testbild",
+
+  // Tabellkolumner
+  "col.time": "Tid",
+  "col.label": "Etikett",
+  "col.confidence": "Säkerhet",
+  "col.light": "Ljus",
+  "col.model": "Modell",
+  "col.modelWorker": "Modell / arbetare",
+  "col.correct": "Rätt?",
+  "col.preview": "Bild",
+  "col.start": "Start",
+  "col.length": "Längd",
+  "col.size": "Storlek",
+  "col.status": "Status",
+  "col.fox": "Räv",
+  "col.job": "Jobb",
+  "col.segmentStart": "Segmentstart",
+  "col.state": "Status",
+  "col.attempts": "Försök",
+  "col.worker": "Arbetare",
+  "col.took": "Tid",
+  "col.error": "Fel",
+  "col.actions": "Åtgärder",
+
+  // Kamerauppgifter
+  "camera.name": "Namn",
+  "camera.segmentLength": "Segmentlängd",
+  "camera.segmentLengthSeconds": "Segmentlängd (sekunder)",
+  "camera.segmentLengthHint": "Lämna tomt för att använda standardvärdet från konfigurationen.",
+  "camera.default": "standard",
+  "camera.lastSegment": "Senaste segment",
+  "camera.censorAreas": "Maskerade områden",
+  "camera.viewers": "Tittare",
+
+  // Statussidan
+  "dashboard.mediamtxDown":
+    "MediaMTX går inte att nå, så livestatus och inspelning är inte tillgängliga.",
+  "dashboard.camerasOnline": "Kameror anslutna",
+  "dashboard.events24h": "Rävhändelser (24 h)",
+  "dashboard.queueWaiting": "Väntar i kö",
+  "dashboard.processedLastHour": "Klara senaste timmen",
+  "dashboard.recordingsStored": "Lagrade inspelningar",
+  "dashboard.diskFree": "Ledigt diskutrymme",
+  "dashboard.manage": "hantera →",
+  "dashboard.noCameras": "Inga kameror än. {link} för att börja spela in.",
+  "dashboard.addCameraLink": "Lägg till en kamera",
+  "dashboard.latestEvents": "Senaste rävhändelser",
+  "dashboard.all": "alla →",
+  "dashboard.segments": "Segment",
+  "dashboard.snapshotAlt": "Ögonblicksbild från {name}",
+
+  // Live
+  "live.noCameras": "Inga kameror är konfigurerade.",
+  "live.hlsFallback": "HLS-reserv",
+  "live.frameTitle": "{name} live",
+  "live.offline": "Kameran är frånkopplad",
+
+  // Rävhändelser
+  "events.none": "Inga rävhändelser än.",
+  "events.intro":
+    "Segment i följd med en {labels}-detektion (≥ {confidence}) slås ihop till ett klipp, med {before} s före och {after} s efter. Klippen tas från originalfilmen, utan maskering.",
+  "events.playClip": "Spela upp klipp med {label}",
+  "events.thumbAlt": "{label} på {camera}",
+  "events.buildingClip": "Skapar klipp…",
+  "events.noThumbnail": "Ingen miniatyrbild",
+  "events.clipFailed": "Klippet misslyckades",
+  "events.detectionCount": "{count} {count:detektion|detektioner}",
+
+  // Detektioner
+  "detections.intro":
+    "Alla objekt som arbetarna har rapporterat. Välj en för att se bildrutan och videon; markera den som rätt eller fel för att bygga en träningsmängd ({export}).",
+  "detections.exportJson": "exportera JSON",
+  "detections.labelPlaceholder": "Etikett, t.ex. fox",
+  "detections.minConfidence": "Lägsta säkerhet",
+  "detections.min": "min",
+  "detections.onlyTargets": "Endast mål",
+  "detections.none": "Inga detektioner än.",
+  "detections.frameAlt": "Bildruta med {label}",
+  "detections.frameNote":
+    "Originalbildrutan med den upptäckta rutan. Arbetarna såg bara den maskerade kopian.",
+  "detections.target": "Mål",
+  "detections.box": "Ruta",
+  "detections.openRecording": "Öppna inspelningen",
+
+  // Inspelningar
+  "recordings.dayUtc": "Dag (UTC)",
+  "recordings.onlyWithFox": "Endast med räv",
+  "recordings.none": "Inga inspelningar än.",
+  "recordings.pinnedTooltip": "Sparas: ingår i en rävhändelse",
+  "recordings.deleted": "Videon har raderats enligt lagringsreglerna; detektionerna finns kvar.",
+  "recordings.keptForEvent": "sparas för rävhändelse",
+  "recordings.saturation": "färgmättnad {value}",
+  "recordings.sunElevation": "Solhöjd",
+  "recordings.censorMask": "Maskering",
+  "recordings.maskVersion": "version {version}",
+  "recordings.noMask": "ingen",
+  "recordings.noDetections": "Inga i den här inspelningen.",
+
+  // Arbetskö
+  "queue.oldestWaiting": "Äldsta väntande",
+  "queue.doneLastHour": "Klara senaste timmen",
+  "queue.avgProcessing": "Snittid per jobb",
+  "queue.workers": "Arbetare",
+  "queue.info": "Info",
+  "queue.lastSeen": "Senast sedd",
+  "queue.currentJob": "Aktuellt jobb",
+  "queue.noWorkers":
+    "Ingen arbetare har anslutit än. Lägg till en nedan för att få startkommandot.",
+  "queue.jobs": "Jobb",
+  "queue.clearFilter": "Rensa filter",
+  "queue.noJobs": "Inga jobb.",
+  "queue.retry": "Försök igen",
+  "queue.doneCount": "Klara",
+  "queue.failedCount": "Misslyckade",
+  "workers.access": "Åtkomst för arbetare",
+  "workers.add": "Lägg till arbetare",
+  "workers.addTitle": "Lägg till en arbetare",
+  "workers.addIntro":
+    "En arbetare är en dator (t.ex. din GPU-dator) som hämtar maskerade inspelningar, kör objektdetektering och skickar tillbaka resultaten. Varje arbetare får en egen åtkomsttoken.",
+  "workers.name": "Namn",
+  "workers.nameHint": "Visas i kön, t.ex. gpu-box. Bokstäver, siffror, '.', '_' eller '-'.",
+  "workers.detector": "Detektor",
+  "workers.detectorHint": "Ändrar bara det föreslagna kommandot; arbetaren bestämmer vad den kör.",
+  "workers.detector.speciesnet": "SpeciesNet: träffsäkrast för rävar (rekommenderas)",
+  "workers.detector.ultralytics": "YOLO-World: snabb, behöver CUDA-GPU för realtid",
+  "workers.detector.dummy": "Dummy: låtsasdetektioner för att testa flödet",
+  "workers.createToken": "Skapa token",
+  "workers.tokenOnce": "Kopiera token nu",
+  "workers.tokenOnceBody":
+    "Den visas bara en gång. Om du tappar bort den: återkalla arbetaren och lägg till den igen.",
+  "workers.token": "Åtkomsttoken",
+  "workers.setupTitle": "Konfigurera arbetsdatorn",
+  "workers.step.prereqs": "Installera {uv} och {ffmpeg} på arbetsdatorn.",
+  "workers.step.code":
+    "Kopiera det här projektet (minst mappen {folder}) dit och öppna en terminal där.",
+  "workers.step.run": "Kör:",
+  "workers.copy": "Kopiera",
+  "workers.copied": "Kopierat",
+  "workers.localhostHint":
+    "Sidan är öppnad på localhost. Byt localhost i kommandot mot den här datorns nätverksadress så att arbetaren når den.",
+  "workers.lockedNote":
+    "Från och med nu behöver alla arbetare en token. Arbetare som startas utan (t.ex. scripts/dev.sh) behöver MEDIA_WORKER_TOKEN.",
+  "workers.modeOpen":
+    "Öppen: vilken enhet som helst i nätverket kan vara arbetare. När du lägger till en arbetare skapas en token och arbetar-API:t låses.",
+  "workers.modeLocked": "Låst: arbetare behöver en åtkomsttoken.",
+  "workers.sharedToken": "En gemensam worker_token från config.yaml accepteras också.",
+  "workers.created": "Skapad",
+  "workers.lastUsed": "Senast använd",
+  "workers.never": "aldrig",
+  "workers.revoke": "Återkalla",
+  "workers.revokeTitle": "Återkalla {name}?",
+  "workers.revokeBody":
+    "Arbetaren kan inte längre hämta jobb. Jobb den håller går tillbaka till kön när deras lån går ut.",
+
+  // Maskeringsredigeraren
+  "mask.title": "Maskerade områden · {name}",
+  "mask.helpMouse":
+    "Dra på bilden för att rita en rektangel. Dra en rektangel för att flytta den, dra i ett hörn för att ändra storlek och tryck på {key} eller klicka på × för att ta bort den.",
+  "mask.helpTouch":
+    "Rita en rektangel med fingret. Tryck på en för att markera den och dra sedan i den eller dess hörn; tryck på × för att ta bort den.",
+  "mask.helpCommon":
+    "De här områdena svärtas ner i allt som skickas till detektionsarbetarna. Ändringar gäller bara nya segment.",
+  "mask.actions": "Åtgärder för maskering",
+  "mask.revert": "Ångra",
+  "mask.clearAll": "Rensa alla",
+  "mask.newSnapshot": "Ny ögonblicksbild",
+  "mask.unsaved": "Osparade ändringar",
+  "mask.saved": "Sparat",
+  "mask.snapshotAlt": "Ögonblicksbild från kameran",
+  "mask.loadingSnapshot": "Läser in ögonblicksbild…",
+  "mask.preview": "Förhandsvisa som arbetaren ser det",
+  "mask.private": "Privat kamera (skickas aldrig till arbetare)",
+
+  // Inställningar
+  "settings.language": "Språk",
+  "settings.languageHint": "Sparas i den här webbläsaren.",
+  "settings.manageCameras": "Hantera kameror och integrationer",
+  "settings.configuration": "Konfiguration",
+  "settings.configIntro":
+    "Skrivskyddad vy av {file}. Ändra i filen och starta om för att ändra. Hemligheter visas inte.",
+
+  // Kamerasidan
+  "cameras.intro":
+    "Kameror som läggs till här börjar spela in inom några sekunder, utan omstart. Kameror som definieras i {file} visas skrivskyddade.",
+  "cameras.integrations": "Integrationer",
+  "cameras.none": "Inga kameror än. Lägg till en för att börja spela in.",
+  "cameras.disabled": "Avstängd",
+  "cameras.recording": "Spelar in",
+  "cameras.source": "Källa",
+  "cameras.synthetic": "syntetisk",
+  "cameras.disableHint": "Avstängda kameror slutar spela in",
+  "cameras.configHint": "Definierad i config.yaml",
+  "cameras.editTitle": "Redigera {name}",
+  "cameras.changeSourceHint": "För att byta själva källan: ta bort kameran och lägg till den igen.",
+  "cameras.removeTitle": "Ta bort {name}?",
+  "cameras.removeBody":
+    "Inspelningen stoppas. Befintliga inspelningar, detektioner och rävhändelser sparas tills lagringsreglerna raderar dem.",
+
+  // Lägg till kamera
+  "addCamera.title": "Lägg till kamera",
+  "addCamera.titleKind": "Lägg till: {kind}",
+  "addCamera.otherTypes": "Andra källtyper",
+  "addCamera.kind.tapo": "Tapo-kamera (moln)",
+  "addCamera.kind.tapoHelp":
+    "Logga in med ditt Tapo-konto och välj kameror. Fungerar utan åtkomst till kamerans nätverk.",
+  "addCamera.kind.rtsp": "RTSP-kamera",
+  "addCamera.kind.rtspHelp":
+    "Alla kameror med en RTSP-ström i det här nätverket eller via VPN (Tapo: skapa ett kamerakonto i appen).",
+  "addCamera.kind.file": "Videofil",
+  "addCamera.kind.fileHelp": "Spela upp ett klipp från samples-mappen i loop som en låtsaskamera.",
+  "addCamera.kind.test": "Testbild",
+  "addCamera.kind.testHelp": "Syntetisk testbild för utveckling.",
+  "addCamera.probeOk": "Anslutningen fungerar: {detail}",
+  "addCamera.probeFailed": "Kunde inte ansluta: {detail}",
+  "addCamera.tapoWarning":
+    "Använder TP-Links molnrelä via ett inofficiellt bibliotek. Det kan sluta fungera om TP-Link ändrar sin tjänst. För långsiktig drift är en liten dator på plats som hämtar RTSP via VPN mer robust.",
+  "addCamera.streamQuality": "Strömkvalitet",
+  "addCamera.qualityHd": "HD (bäst för detektion, mer uppladdningsbandbredd)",
+  "addCamera.qualityVga": "VGA (låg bandbredd)",
+  "addCamera.findingCameras": "Söker kameror på ditt konto…",
+  "addCamera.noTapoCameras": "Inga kameror hittades på det här Tapo-kontot.",
+  "addCamera.addedAs": "tillagd som {id}",
+  "addCamera.namePlaceholder": "t.ex. Trädgården",
+  "addCamera.rtspUrl": "RTSP-adress",
+  "addCamera.rtspUrlHint": "Lösenordet sparas på servern och visas inte i gränssnittet.",
+  "addCamera.tapoHelper": "Tapo-kamera i det här nätverket eller via VPN? Bygg adressen",
+  "addCamera.tapoHelperIntro":
+    "I Tapo-appen: kamera → Inställningar → Avancerade inställningar → Kamerakonto. Använd det användarnamnet och lösenordet här, inte inloggningen till Tapo-molnet.",
+  "addCamera.cameraIp": "Kamerans IP-adress",
+  "addCamera.quality": "Kvalitet",
+  "addCamera.streamHd": "HD (stream1)",
+  "addCamera.streamSd": "SD (stream2)",
+  "addCamera.accountUser": "Kamerakontots användarnamn",
+  "addCamera.accountPassword": "Kamerakontots lösenord",
+  "addCamera.useThisCamera": "Använd den här kameran",
+  "addCamera.testConnection": "Testa anslutningen",
+  "addCamera.add": "Lägg till kamera",
+  "addCamera.noSamples":
+    "Det finns inga videor i samples-mappen än. Kör {command} för att ladda ner rävklipp.",
+  "addCamera.video": "Video",
+
+  // Tapo-konto
+  "tapo.account": "Tapo-molnkonto",
+  "tapo.accountDescription":
+    "Strömma kameror via TP-Links moln, som Tapo-appen gör. Ingen åtkomst till det lokala nätverket behövs. Inofficiellt och experimentellt.",
+  "tapo.connected": "ansluten",
+  "tapo.notConnected": "inte ansluten",
+  "tapo.notInstalledTag": "inte installerat",
+  "tapo.notInstalled":
+    "Stöd för Tapo-molnet är inte installerat på servern. Kör {command} och starta om servern.",
+  "tapo.signInIntro":
+    "Logga in med kontot du använder i Tapo-appen. Bara en sessionstoken sparas på servern (inte ditt lösenord).",
+  "tapo.email": "E-post för Tapo-kontot",
+  "tapo.password": "Lösenord",
+  "tapo.code": "Verifieringskod",
+  "tapo.codeSentEmail": "Tapo har skickat en kod till din e-post.",
+  "tapo.codeSentApp": "Tapo har skickat en kod till din Tapo-app.",
+  "tapo.verify": "Verifiera",
+  "tapo.signIn": "Logga in",
+  "tapo.startOver": "Börja om",
+  "tapo.signedInAs": "Inloggad som {email}",
+  "tapo.signOut": "Logga ut",
+};

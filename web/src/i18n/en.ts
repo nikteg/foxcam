@@ -1,0 +1,325 @@
+// English source strings. `{name}` = placeholder, `{n:one|many}` = plural form.
+// Every key here must exist in sv.ts too (enforced by its type).
+export const en = {
+  // Navigation
+  "nav.status": "Status",
+  "nav.live": "Live",
+  "nav.events": "Fox events",
+  "nav.eventsShort": "Foxes",
+  "nav.detections": "Detections",
+  "nav.detectionsShort": "Detect",
+  "nav.recordings": "Recordings",
+  "nav.recordingsShort": "Files",
+  "nav.queue": "Worker queue",
+  "nav.queueShort": "Queue",
+  "nav.cameras": "Cameras",
+  "nav.settings": "Settings",
+  "nav.main": "Main",
+  "notFound.title": "Not found",
+  "notFound.back": "Back to status",
+
+  // Shared
+  "common.add": "Add",
+  "common.allCameras": "All cameras",
+  "common.back": "Back",
+  "common.camera": "Camera",
+  "common.cancel": "Cancel",
+  "common.close": "Close",
+  "common.done": "Done",
+  "common.download": "Download",
+  "common.edit": "Edit",
+  "common.language": "Language",
+  "common.loadFailed": "Failed to load",
+  "common.loading": "Loading…",
+  "common.no": "no",
+  "common.yes": "yes",
+  "common.offline": "offline",
+  "common.online": "online",
+  "common.play": "Play",
+  "common.remove": "Remove",
+  "common.save": "Save",
+  "light.day": "day",
+  "light.night": "night",
+  "light.nightIr": "night / IR",
+  "feedback.correct": "Correct",
+  "feedback.wrong": "Wrong",
+
+  // Job and segment states
+  "state.new": "new",
+  "state.queued": "queued",
+  "state.done": "done",
+  "state.private": "private",
+  "state.failed": "failed",
+  "state.pending": "pending",
+  "state.leased": "processing",
+  "state.dead": "gave up",
+
+  // Camera source types
+  "source.tapo_cloud": "Tapo cloud",
+  "source.rtsp": "RTSP",
+  "source.file": "Video file",
+  "source.test": "Test pattern",
+
+  // Table columns
+  "col.time": "Time",
+  "col.label": "Label",
+  "col.confidence": "Confidence",
+  "col.light": "Light",
+  "col.model": "Model",
+  "col.modelWorker": "Model / worker",
+  "col.correct": "Correct?",
+  "col.preview": "Preview",
+  "col.start": "Start",
+  "col.length": "Length",
+  "col.size": "Size",
+  "col.status": "Status",
+  "col.fox": "Fox",
+  "col.job": "Job",
+  "col.segmentStart": "Segment start",
+  "col.state": "State",
+  "col.attempts": "Attempts",
+  "col.worker": "Worker",
+  "col.took": "Took",
+  "col.error": "Error",
+  "col.actions": "Actions",
+
+  // Camera facts
+  "camera.name": "Name",
+  "camera.segmentLength": "Segment length",
+  "camera.segmentLengthSeconds": "Segment length (seconds)",
+  "camera.segmentLengthHint": "Leave empty to use the default from config.",
+  "camera.default": "default",
+  "camera.lastSegment": "Last segment",
+  "camera.censorAreas": "Censor areas",
+  "camera.viewers": "Viewers",
+
+  // Status page
+  "dashboard.mediamtxDown":
+    "MediaMTX is not reachable, so live status and recording are unavailable.",
+  "dashboard.camerasOnline": "Cameras online",
+  "dashboard.events24h": "Fox events (24h)",
+  "dashboard.queueWaiting": "Queue waiting",
+  "dashboard.processedLastHour": "Processed last hour",
+  "dashboard.recordingsStored": "Recordings stored",
+  "dashboard.diskFree": "Disk free",
+  "dashboard.manage": "manage →",
+  "dashboard.noCameras": "No cameras yet. {link} to start recording.",
+  "dashboard.addCameraLink": "Add a camera",
+  "dashboard.latestEvents": "Latest fox events",
+  "dashboard.all": "all →",
+  "dashboard.segments": "Segments",
+  "dashboard.snapshotAlt": "Snapshot from {name}",
+
+  // Live
+  "live.noCameras": "No cameras configured.",
+  "live.hlsFallback": "HLS fallback",
+  "live.frameTitle": "{name} live",
+  "live.offline": "Camera offline",
+
+  // Fox events
+  "events.none": "No fox events yet.",
+  "events.intro":
+    "Consecutive segments with a {labels} detection (≥ {confidence}) are merged into one clip, with {before} s before and {after} s after. Clips are cut from the original, uncensored footage.",
+  "events.playClip": "Play {label} clip",
+  "events.thumbAlt": "{label} on {camera}",
+  "events.buildingClip": "Building clip…",
+  "events.noThumbnail": "No thumbnail",
+  "events.clipFailed": "Clip failed",
+  "events.detectionCount": "{count} {count:detection|detections}",
+
+  // Detections
+  "detections.intro":
+    "Every object the workers reported. Select one to see the frame and video; mark it correct or wrong to build a training set ({export}).",
+  "detections.exportJson": "export JSON",
+  "detections.labelPlaceholder": "Label, e.g. fox",
+  "detections.minConfidence": "Minimum confidence",
+  "detections.min": "min",
+  "detections.onlyTargets": "Only targets",
+  "detections.none": "No detections yet.",
+  "detections.frameAlt": "{label} detection frame",
+  "detections.frameNote":
+    "Original frame with the detected box. Workers only ever saw the censored copy.",
+  "detections.target": "Target",
+  "detections.box": "Box",
+  "detections.openRecording": "Open recording",
+
+  // Recordings
+  "recordings.dayUtc": "Day (UTC)",
+  "recordings.onlyWithFox": "Only with fox",
+  "recordings.none": "No recordings yet.",
+  "recordings.pinnedTooltip": "Kept: part of a fox event",
+  "recordings.deleted": "The video was deleted by retention; detections are kept.",
+  "recordings.keptForEvent": "kept for fox event",
+  "recordings.saturation": "saturation {value}",
+  "recordings.sunElevation": "Sun elevation",
+  "recordings.censorMask": "Censor mask",
+  "recordings.maskVersion": "version {version}",
+  "recordings.noMask": "none",
+  "recordings.noDetections": "None in this recording.",
+
+  // Worker queue
+  "queue.oldestWaiting": "Oldest waiting",
+  "queue.doneLastHour": "Done last hour",
+  "queue.avgProcessing": "Avg processing",
+  "queue.workers": "Workers",
+  "queue.info": "Info",
+  "queue.lastSeen": "Last seen",
+  "queue.currentJob": "Current job",
+  "queue.noWorkers": "No worker has connected yet. Add one below to get the setup command.",
+  "queue.jobs": "Jobs",
+  "queue.clearFilter": "Clear filter",
+  "queue.noJobs": "No jobs.",
+  "queue.retry": "Retry",
+  "queue.doneCount": "Done",
+  "queue.failedCount": "Failed",
+  "workers.access": "Worker access",
+  "workers.add": "Add worker",
+  "workers.addTitle": "Add a worker",
+  "workers.addIntro":
+    "A worker is a computer (e.g. your GPU PC) that fetches censored recordings, runs object detection and sends the results back. Each worker gets its own access token.",
+  "workers.name": "Name",
+  "workers.nameHint": "Shown in the queue, e.g. gpu-box. Letters, digits, '.', '_' or '-'.",
+  "workers.detector": "Detector",
+  "workers.detectorHint": "Only changes the suggested command; the worker decides what it runs.",
+  "workers.detector.speciesnet": "SpeciesNet: most accurate for foxes (recommended)",
+  "workers.detector.ultralytics": "YOLO-World: fast, needs a CUDA GPU for real-time",
+  "workers.detector.dummy": "Dummy: fake detections for testing the pipeline",
+  "workers.createToken": "Create token",
+  "workers.tokenOnce": "Copy the token now",
+  "workers.tokenOnceBody":
+    "It is only shown once. If you lose it, revoke this worker and add it again.",
+  "workers.token": "Access token",
+  "workers.setupTitle": "Set up the worker machine",
+  "workers.step.prereqs": "Install {uv} and {ffmpeg} on the worker machine.",
+  "workers.step.code":
+    "Copy this project (at least the {folder} folder) to it and open a terminal there.",
+  "workers.step.run": "Run:",
+  "workers.copy": "Copy",
+  "workers.copied": "Copied",
+  "workers.localhostHint":
+    "This page is open on localhost. Replace localhost in the command with this computer's network address so the worker can reach it.",
+  "workers.lockedNote":
+    "From now on every worker needs a token. Workers started without one (e.g. scripts/dev.sh) need MEDIA_WORKER_TOKEN set.",
+  "workers.modeOpen":
+    "Open: any device on the network can act as a worker. Adding a worker creates a token and locks the worker API.",
+  "workers.modeLocked": "Locked: workers need an access token.",
+  "workers.sharedToken": "A shared worker_token from config.yaml is also accepted.",
+  "workers.created": "Created",
+  "workers.lastUsed": "Last used",
+  "workers.never": "never",
+  "workers.revoke": "Revoke",
+  "workers.revokeTitle": "Revoke {name}?",
+  "workers.revokeBody":
+    "The worker can no longer fetch jobs. Jobs it holds go back to the queue when their lease expires.",
+
+  // Censor-area editor
+  "mask.title": "Censor areas · {name}",
+  "mask.helpMouse":
+    "Drag on the image to draw a rectangle. Drag a rectangle to move it, drag its corner to resize, and press {key} or click × to remove it.",
+  "mask.helpTouch":
+    "Draw a rectangle with your finger. Tap one to select it, then drag it or its corners; tap × to remove it.",
+  "mask.helpCommon":
+    "These areas are blacked out in everything sent to the detection workers. Changes apply to new segments only.",
+  "mask.actions": "Censor area actions",
+  "mask.revert": "Revert",
+  "mask.clearAll": "Clear all",
+  "mask.newSnapshot": "New snapshot",
+  "mask.unsaved": "Unsaved changes",
+  "mask.saved": "Saved",
+  "mask.snapshotAlt": "Camera snapshot",
+  "mask.loadingSnapshot": "Loading snapshot…",
+  "mask.preview": "Preview as the worker sees it",
+  "mask.private": "Private camera (never send to workers)",
+
+  // Settings
+  "settings.language": "Language",
+  "settings.languageHint": "Saved in this browser.",
+  "settings.manageCameras": "Manage cameras and integrations",
+  "settings.configuration": "Configuration",
+  "settings.configIntro":
+    "Read-only view of {file}. Edit the file and restart to change it. Secrets are hidden.",
+
+  // Cameras page
+  "cameras.intro":
+    "Cameras added here start recording within a few seconds; no restart needed. Cameras defined in {file} are shown read-only.",
+  "cameras.integrations": "Integrations",
+  "cameras.none": "No cameras yet. Add one to start recording.",
+  "cameras.disabled": "Disabled",
+  "cameras.recording": "Recording",
+  "cameras.source": "Source",
+  "cameras.synthetic": "synthetic",
+  "cameras.disableHint": "Disabled cameras stop recording",
+  "cameras.configHint": "Defined in config.yaml",
+  "cameras.editTitle": "Edit {name}",
+  "cameras.changeSourceHint": "To change the source itself, remove the camera and add it again.",
+  "cameras.removeTitle": "Remove {name}?",
+  "cameras.removeBody":
+    "Recording stops. Existing recordings, detections and fox events are kept until retention deletes them.",
+
+  // Add camera wizard
+  "addCamera.title": "Add camera",
+  "addCamera.titleKind": "Add: {kind}",
+  "addCamera.otherTypes": "Other source types",
+  "addCamera.kind.tapo": "Tapo camera (cloud)",
+  "addCamera.kind.tapoHelp":
+    "Sign in with your Tapo account and pick cameras. Works without access to the camera's network.",
+  "addCamera.kind.rtsp": "RTSP camera",
+  "addCamera.kind.rtspHelp":
+    "Any camera with an RTSP stream on this network or over a VPN (Tapo: create a Camera Account in the app).",
+  "addCamera.kind.file": "Video file",
+  "addCamera.kind.fileHelp": "Loop a clip from the samples folder as a fake camera.",
+  "addCamera.kind.test": "Test pattern",
+  "addCamera.kind.testHelp": "Synthetic test pattern for development.",
+  "addCamera.probeOk": "Connection works: {detail}",
+  "addCamera.probeFailed": "Could not connect: {detail}",
+  "addCamera.tapoWarning":
+    "Uses TP-Link's cloud relay through an unofficial library. It can break when TP-Link changes their service. For long-term use, a small box at the camera's site pulling RTSP over a VPN is more robust.",
+  "addCamera.streamQuality": "Stream quality",
+  "addCamera.qualityHd": "HD (best for detection, more upload bandwidth)",
+  "addCamera.qualityVga": "VGA (low bandwidth)",
+  "addCamera.findingCameras": "Finding cameras on your account…",
+  "addCamera.noTapoCameras": "No cameras found on this Tapo account.",
+  "addCamera.addedAs": "added as {id}",
+  "addCamera.namePlaceholder": "e.g. Garden",
+  "addCamera.rtspUrl": "RTSP URL",
+  "addCamera.rtspUrlHint": "The password is stored on the server and hidden in the UI.",
+  "addCamera.tapoHelper": "Tapo camera on this network or VPN? Build the URL",
+  "addCamera.tapoHelperIntro":
+    "In the Tapo app: camera → Settings → Advanced settings → Camera account. Use that username/password here, not your Tapo cloud login.",
+  "addCamera.cameraIp": "Camera IP",
+  "addCamera.quality": "Quality",
+  "addCamera.streamHd": "HD (stream1)",
+  "addCamera.streamSd": "SD (stream2)",
+  "addCamera.accountUser": "Camera account username",
+  "addCamera.accountPassword": "Camera account password",
+  "addCamera.useThisCamera": "Use this camera",
+  "addCamera.testConnection": "Test connection",
+  "addCamera.add": "Add camera",
+  "addCamera.noSamples":
+    "No videos in the samples folder yet. Run {command} to download fox clips.",
+  "addCamera.video": "Video",
+
+  // Tapo account
+  "tapo.account": "Tapo cloud account",
+  "tapo.accountDescription":
+    "Stream cameras through TP-Link's cloud, like the Tapo app. No local network access needed. Unofficial and experimental.",
+  "tapo.connected": "connected",
+  "tapo.notConnected": "not connected",
+  "tapo.notInstalledTag": "not installed",
+  "tapo.notInstalled":
+    "Tapo cloud support is not installed on the server. Run {command} and restart the server.",
+  "tapo.signInIntro":
+    "Sign in with the account you use in the Tapo app. Only a session token is stored on the server (not your password).",
+  "tapo.email": "Tapo account e-mail",
+  "tapo.password": "Password",
+  "tapo.code": "Verification code",
+  "tapo.codeSentEmail": "Tapo sent a code to your e-mail.",
+  "tapo.codeSentApp": "Tapo sent a code to your Tapo app.",
+  "tapo.verify": "Verify",
+  "tapo.signIn": "Sign in",
+  "tapo.startOver": "Start over",
+  "tapo.signedInAs": "Signed in as {email}",
+  "tapo.signOut": "Sign out",
+} as const;
+
+export type MessageKey = keyof typeof en;

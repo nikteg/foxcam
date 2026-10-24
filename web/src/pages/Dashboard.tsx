@@ -1,0 +1,175 @@
+import {
+  Button,
+  Caption1,
+  Card,
+  CardFooter,
+  CardHeader,
+  CardPreview,
+  MessageBar,
+  MessageBarBody,
+  Subtitle2,
+  Text,
+} from "@fluentui/react-components";
+import { Edit20Regular, Folder20Regular, Video20Regular } from "@fluentui/react-icons";
+import { useQuery } from "@tanstack/react-query";
+
+import { api, snapshotUrl, type Camera } from "../api";
+import { EventsGrid } from "../components/EventsGrid";
+import {
+  Dot,
+  Empty,
+  Light,
+  PageHeader,
+  QueryState,
+  RouterLink,
+  Stat,
+  Tag,
+  Time,
+  useRouterHref,
+  useSourceLabel,
+  useStateLabel,
+} from "../components/ui";
+import { useI18n } from "../i18n";
+import { fileSize } from "../format";
+
+export function Dashboard() {
+  const status = useQuery({ queryKey: ["status"], queryFn: api.status, refetchInterval: 10_000 });
+  const events = useQuery({
+    queryKey: ["events", "latest"],
+    queryFn: () => api.events({ limit: 6 }),
+    refetchInterval: 15_000,
+  });
+  const s = status.data;
+  const { t, rich } = useI18n();
+  const stateLabel = useStateLabel();
+
+  return (
+    <>
+      <PageHeader title={t("nav.status")} />
+      <QueryState error={status.error} loading={status.isPending} />
+      {s && !s.mediamtx_reachable && (
+        <MessageBar intent="warning" className="block">
+          <MessageBarBody>{t("dashboard.mediamtxDown")}</MessageBarBody>
+        </MessageBar>
+      )}
+      {s && (
+        <section className="stats">
+          <Stat
+            label={t("dashboard.camerasOnline")}
+            value={`${s.cameras.filter((c) => c.online).length} / ${s.cameras.length}`}
+          />
+          <Stat label={t("dashboard.events24h")} value={s.events_24h} />
+          <Stat
+            label={t("dashboard.queueWaiting")}
+            value={s.queue.counts.pending + s.queue.counts.failed}
+          />
+          <Stat label={t("dashboard.processedLastHour")} value={s.queue.done_last_hour} />
+          <Stat label={t("dashboard.recordingsStored")} value={fileSize(s.recordings_bytes)} />
+          <Stat label={t("dashboard.diskFree")} value={fileSize(s.disk_free_bytes)} />
+        </section>
+      )}
+
+      <Subtitle2 as="h2" className="section">
+        {t("nav.cameras")} <RouterLink to="/cameras">{t("dashboard.manage")}</RouterLink>
+      </Subtitle2>
+      <div className="cards">
+        {s?.cameras.map((c) => (
+          <CameraCard
+            key={c.id}
+            camera={c}
+            refreshKey={Math.floor(status.dataUpdatedAt / 10_000)}
+          />
+        ))}
+      </div>
+      {s && s.cameras.length === 0 && (
+        <Empty>
+          {rich("dashboard.noCameras", {
+            link: <RouterLink to="/cameras">{t("dashboard.addCameraLink")}</RouterLink>,
+          })}
+        </Empty>
+      )}
+
+      <Subtitle2 as="h2" className="section">
+        {t("dashboard.latestEvents")} <RouterLink to="/events">{t("dashboard.all")}</RouterLink>
+      </Subtitle2>
+      <EventsGrid events={events.data ?? []} />
+
+      {s && (
+        <>
+          <Subtitle2 as="h2" className="section">
+            {t("dashboard.segments")}
+          </Subtitle2>
+          <div className="row wrap">
+            {Object.entries(s.segments).map(([state, n]) => (
+              <Tag key={state} kind={state}>
+                {stateLabel(state)}: {n}
+              </Tag>
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+function CameraCard({ camera: c, refreshKey }: { camera: Camera; refreshKey: number }) {
+  const routerHref = useRouterHref();
+  const { t } = useI18n();
+  const sourceLabel = useSourceLabel();
+  return (
+    <Card>
+      <CardHeader
+        header={
+          <span className="row">
+            <Dot ok={c.online} />
+            <Text weight="semibold">{c.name}</Text>
+            <Caption1 className="muted">{sourceLabel(c.source)}</Caption1>
+          </span>
+        }
+        action={
+          <span className="row">
+            {c.private && <Tag kind="private">{t("state.private")}</Tag>}
+            {c.last_is_night !== null && (
+              <Tag>
+                <Light night={c.last_is_night} long />
+              </Tag>
+            )}
+          </span>
+        }
+      />
+      <CardPreview>
+        {/* refreshKey re-requests the snapshot together with the status poll. */}
+        <img
+          className="thumb"
+          loading="lazy"
+          src={`${snapshotUrl(c.id)}?t=${refreshKey}`}
+          alt={t("dashboard.snapshotAlt", { name: c.name })}
+          onError={(e) => (e.currentTarget.style.visibility = "hidden")}
+        />
+      </CardPreview>
+      <dl className="facts">
+        <dt>{t("camera.segmentLength")}</dt>
+        <dd>{c.segment_seconds}s</dd>
+        <dt>{t("camera.lastSegment")}</dt>
+        <dd>
+          <Time iso={c.last_segment_at} />
+        </dd>
+        <dt>{t("camera.censorAreas")}</dt>
+        <dd>{c.rects.length}</dd>
+        <dt>{t("camera.viewers")}</dt>
+        <dd>{c.readers}</dd>
+      </dl>
+      <CardFooter className="wrap">
+        <Button as="a" {...routerHref(`/live?camera=${c.id}`)} icon={<Video20Regular />}>
+          {t("nav.live")}
+        </Button>
+        <Button as="a" {...routerHref(`/recordings?camera=${c.id}`)} icon={<Folder20Regular />}>
+          {t("nav.recordings")}
+        </Button>
+        <Button as="a" {...routerHref(`/cameras/${c.id}/mask`)} icon={<Edit20Regular />}>
+          {t("camera.censorAreas")}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}

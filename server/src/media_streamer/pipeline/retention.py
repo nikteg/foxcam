@@ -1,0 +1,113 @@
+"""Delete old recordings.
+
+Rules, in order:
+- Events older than ``events_days`` (if > 0) are deleted and their segments unpinned.
+- Unpinned segments older than ``segments_days`` are deleted, except segments still
+  waiting for a worker, which are kept until ``unprocessed_max_days``.
+- If ``max_disk_gb`` is set, the oldest unpinned segments are deleted until under the cap.
+
+Segment rows are kept (``deleted_at`` set) so detection history remains browsable.
+"""
+
+from __future__ import annotations
+
+import logging
+from datetime import timedelta
+
+from sqlalchemy import func, select
+
+from ..config import Settings
+from ..db import session_scope
+from ..models import Event, Job, JobState, Segment, SegmentStatus, event_segments, utcnow
+
+log = logging.getLogger(__name__)
+
+
+def _remove_files(settings: Settings, seg: Segment) -> None:
+    (settings.recordings_dir / seg.path).unlink(missing_ok=True)
+    for rel in (seg.derived_path, seg.thumb_path):
+        if rel:
+            (settings.data_dir / rel).unlink(missing_ok=True)
+    seg.derived_path = None
+    seg.thumb_path = None
+    seg.deleted_at = utcnow()
+
+
+def _expire_events(settings: Settings) -> int:
+    days = settings.retention.events_days
+    if not days:
+        return 0
+    cutoff = utcnow() - timedelta(days=days)
+    with session_scope() as s:
+        events = s.scalars(select(Event).where(Event.last_ts < cutoff)).all()
+        for ev in events:
+            for rel in (ev.clip_path, ev.thumb_path):
+                if rel:
+                    (settings.data_dir / rel).unlink(missing_ok=True)
+            seg_ids = [g.id for g in ev.segments]
+            s.delete(ev)
+            s.flush()
+            # Unpin segments no other event refers to; age-based retention then removes them.
+            still = set(s.scalars(select(event_segments.c.segment_id)
+                                  .where(event_segments.c.segment_id.in_(seg_ids))))
+            for g in s.scalars(select(Segment).where(Segment.id.in_(seg_ids))):
+                if g.id not in still:
+                    g.pinned = False
+        return len(events)
+
+
+def _expire_by_age(settings: Settings) -> int:
+    r = settings.retention
+    if not r.segments_days:
+        return 0
+    now = utcnow()
+    cutoff = now - timedelta(days=r.segments_days)
+    hard_cutoff = now - timedelta(days=max(r.unprocessed_max_days, r.segments_days))
+    waiting = select(Job.segment_id).where(
+        Job.state.in_([JobState.PENDING, JobState.LEASED, JobState.FAILED]))
+    with session_scope() as s:
+        segs = s.scalars(select(Segment).where(
+            Segment.deleted_at.is_(None), Segment.pinned.is_(False), Segment.start_at < cutoff,
+            # Unprocessed footage gets extra time, so a GPU box that is offline for a few
+            # days does not lose data.
+            (Segment.start_at < hard_cutoff)
+            | (Segment.id.not_in(waiting) & (Segment.status != SegmentStatus.NEW)),
+        )).all()
+        for seg in segs:
+            _remove_files(settings, seg)
+        return len(segs)
+
+
+def _enforce_disk_cap(settings: Settings) -> int:
+    cap = settings.retention.max_disk_gb
+    if not cap:
+        return 0
+    cap_bytes = cap * 1024**3
+    deleted = 0
+    with session_scope() as s:
+        used = s.scalar(select(func.coalesce(func.sum(Segment.size_bytes), 0))
+                        .where(Segment.deleted_at.is_(None))) or 0
+        if used <= cap_bytes:
+            return 0
+        for seg in s.scalars(select(Segment).where(Segment.deleted_at.is_(None),
+                                                   Segment.pinned.is_(False))
+                             .order_by(Segment.start_at)):
+            if used <= cap_bytes:
+                break
+            used -= seg.size_bytes
+            _remove_files(settings, seg)
+            deleted += 1
+    if deleted:
+        log.warning("disk cap %.2f GB reached: deleted %d oldest segment(s)", cap, deleted)
+    return deleted
+
+
+def run_retention(settings: Settings) -> dict[str, int]:
+    result = {
+        "events": _expire_events(settings),
+        "segments_age": _expire_by_age(settings),
+        "segments_disk": _enforce_disk_cap(settings),
+    }
+    if any(result.values()):
+        log.info("retention: %s", result)
+    return result

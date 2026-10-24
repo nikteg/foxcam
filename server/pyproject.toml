@@ -1,0 +1,34 @@
+[project]
+name = "media-streamer"
+version = "0.1.0"
+description = "Tapo camera recorder: segments streams, queues detection jobs for external workers, serves a web UI."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy>=2.0",
+    "pydantic>=2.7",
+    "pyyaml>=6.0",
+    "httpx>=0.27",
+    "astral>=3.2",
+]
+
+[project.optional-dependencies]
+# Experimental: stream Tapo cameras through the TP-Link cloud relay (unofficial, reverse engineered).
+tapo-cloud = ["ontapo>=0.1.0"]
+
+[project.scripts]
+media-streamer = "media_streamer.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/media_streamer"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

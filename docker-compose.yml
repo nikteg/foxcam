@@ -1,0 +1,54 @@
+# Recorder box: MediaMTX + media-streamer (web/pipeline) + ingest publishers.
+# Workers run elsewhere (GPU machine) and only need HTTP access to port 8000.
+#
+#   docker compose up --build
+#
+# Optional environment (e.g. in .env): MEDIA_CONFIG (config file), MEDIA_DATA_PATH (data
+# folder), PUBLIC_HOST_URL (how browsers reach this box), *_PORT (host ports),
+# MEDIA_WORKER_TOKEN.
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    restart: unless-stopped
+    volumes:
+      - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
+      - ${MEDIA_DATA_PATH:-./data}/recordings:/data/recordings
+    environment:
+      TZ: UTC # recording file names are parsed as UTC
+    ports:
+      - "${RTSP_PORT:-8554}:8554" # RTSP
+      - "${HLS_PORT:-8888}:8888" # HLS (live view fallback)
+      - "${WEBRTC_PORT:-8889}:8889" # WebRTC (live view)
+      - "${WEBRTC_UDP_PORT:-8189}:8189/udp" # WebRTC media
+
+  server:
+    build: { context: ., dockerfile: server/Dockerfile }
+    restart: unless-stopped
+    command: ["serve"]
+    depends_on: [mediamtx]
+    volumes:
+      - ${MEDIA_CONFIG:-./config.yaml}:/app/config.yaml:ro
+      - ${MEDIA_DATA_PATH:-./data}:/data
+      - ./samples:/app/samples:ro
+    environment:
+      MEDIA_DATA_DIR: /data
+      MEDIAMTX_API_URL: http://mediamtx:9997
+      MEDIAMTX_RTSP_URL: rtsp://mediamtx:8554
+      MEDIAMTX_WEBRTC_PUBLIC_URL: ${PUBLIC_HOST_URL:-http://localhost}:${WEBRTC_PORT:-8889}
+      MEDIAMTX_HLS_PUBLIC_URL: ${PUBLIC_HOST_URL:-http://localhost}:${HLS_PORT:-8888}
+      MEDIA_WORKER_TOKEN: ${MEDIA_WORKER_TOKEN:-}
+    ports:
+      - "${HTTP_PORT:-8000}:8000"
+
+  ingest:
+    build: { context: ., dockerfile: server/Dockerfile }
+    restart: unless-stopped
+    command: ["ingest"]
+    depends_on: [mediamtx]
+    volumes:
+      - ${MEDIA_CONFIG:-./config.yaml}:/app/config.yaml:ro
+      - ${MEDIA_DATA_PATH:-./data}:/data
+      - ./samples:/app/samples:ro
+    environment:
+      MEDIA_DATA_DIR: /data
+      MEDIAMTX_RTSP_URL: rtsp://mediamtx:8554

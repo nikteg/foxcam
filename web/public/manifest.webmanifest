@@ -1,0 +1,10 @@
+{
+  "name": "Media Streamer",
+  "short_name": "Foxcam",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f1216",
+  "theme_color": "#171b21",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

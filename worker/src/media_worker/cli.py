@@ -1,0 +1,148 @@
+"""media-worker: lease a job, run the detector, post results, repeat."""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import os
+import platform
+import socket
+import sys
+import tempfile
+import threading
+import time
+from pathlib import Path
+from typing import Self
+
+import httpx
+
+from . import __version__
+from .client import Client, LeaseLost
+from .detectors import add_detector_args, create_detector
+from .frames import extract_frames
+
+log = logging.getLogger("media_worker")
+
+
+class Heartbeat:
+    """Keeps the lease alive while a (possibly slow) detector runs."""
+
+    def __init__(self, client: Client, job: dict, interval: float):
+        self.client, self.job, self.interval = client, job, interval
+        self.stop = threading.Event()
+        self.lost = False
+        self.thread = threading.Thread(target=self._run, daemon=True)
+
+    def _run(self) -> None:
+        while not self.stop.wait(self.interval):
+            try:
+                self.client.heartbeat(self.job)
+            except LeaseLost:
+                self.lost = True
+                return
+            except httpx.HTTPError as e:
+                log.warning("heartbeat failed: %s", e)
+
+    def __enter__(self) -> Self:
+        self.thread.start()
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.stop.set()
+        self.thread.join(timeout=5)
+
+
+def process(client: Client, detector, job: dict, args: argparse.Namespace) -> None:
+    seg = job["segment"]
+    log.info("job %s: camera=%s start=%s (attempt %s)", job["job_id"], seg["camera_id"],
+             seg["start_at"], job["attempt"])
+    started = time.monotonic()
+    with tempfile.TemporaryDirectory(prefix="media-worker-") as tmp, \
+            Heartbeat(client, job, args.heartbeat) as hb:
+        tmp_path = Path(tmp)
+        video = tmp_path / "input.mp4"
+        try:
+            client.download_input(job, video)
+            fps = min(args.fps or job["input_fps"], job["input_fps"])
+            frames = extract_frames(video, tmp_path / "frames", fps)
+            detections = detector.detect(frames, job.get("hints", {}))
+        except LeaseLost:
+            log.warning("job %s: lease lost, dropping", job["job_id"])
+            return
+        except Exception as e:
+            log.exception("job %s failed", job["job_id"])
+            client.fail(job, f"{type(e).__name__}: {e}")
+            return
+        if hb.lost:
+            log.warning("job %s: lease lost while processing, dropping result", job["job_id"])
+            return
+    ms = int((time.monotonic() - started) * 1000)
+    client.result(job, [d.to_json() for d in detections], detector.name, ms)
+    labels = sorted({d.label for d in detections})
+    log.info("job %s: %d frames, %d detections %s in %.1fs", job["job_id"], len(frames),
+             len(detections), labels, ms / 1000)
+
+
+def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "detect-file":
+        from .local import main as detect_file_main
+
+        detect_file_main(sys.argv[2:])
+        return
+
+    p = argparse.ArgumentParser(
+        prog="media-worker", description=__doc__,
+        epilog="Offline test on a local video: media-worker detect-file --help")
+    p.add_argument("--server", default=os.environ.get("MEDIA_SERVER", "http://localhost:8000"))
+    p.add_argument("--token", default=os.environ.get("MEDIA_WORKER_TOKEN"))
+    p.add_argument("--worker-id", default=os.environ.get("MEDIA_WORKER_ID", socket.gethostname()))
+    add_detector_args(p)
+    p.add_argument("--fps", type=float, help="subsample frames further (default: all)")
+    p.add_argument("--poll", type=float, default=5, help="seconds to wait when queue is empty")
+    p.add_argument("--heartbeat", type=float, default=30)
+    p.add_argument("--once", action="store_true", help="process at most one job and exit")
+    p.add_argument("-v", "--verbose", action="store_true")
+    args = p.parse_args()
+
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
+                        format="%(asctime)s %(levelname)-7s %(message)s")
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+
+    detector = create_detector(args)
+    info = {**detector.info(), "version": __version__, "host": platform.node(),
+            "python": platform.python_version()}
+    client = Client(args.server, args.worker_id, args.token, info)
+    log.info("worker %s using %s -> %s", args.worker_id, detector.name, args.server)
+
+    backoff = args.poll
+    try:
+        while True:
+            try:
+                job = client.lease()
+                backoff = args.poll
+            except httpx.HTTPError as e:
+                log.warning("server unreachable (%s); retrying in %.0fs", e, backoff)
+                time.sleep(backoff)
+                backoff = min(backoff * 2, 120)
+                continue
+            if job is None:
+                if args.once:
+                    log.info("no work")
+                    return
+                time.sleep(args.poll)
+                continue
+            try:
+                process(client, detector, job, args)
+            except httpx.HTTPError as e:
+                log.warning("job %s: server error %s (lease will expire and be retried)",
+                            job["job_id"], e)
+            if args.once:
+                return
+    except KeyboardInterrupt:
+        log.info("bye")
+    finally:
+        client.close()
+
+
+if __name__ == "__main__":
+    main()

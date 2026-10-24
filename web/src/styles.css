@@ -1,0 +1,874 @@
+/*
+ * Layout only. Controls, typography and colours come from Fluent UI; the
+ * --color* / --spacing* / --borderRadius* variables are Fluent design tokens
+ * provided by <FluentProvider>.
+ */
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  background: #0f1216;
+}
+.app-root {
+  min-height: 100vh;
+  background: var(--colorNeutralBackground2);
+  color: var(--colorNeutralForeground1);
+}
+.facts dd.mono,
+div.mono {
+  word-break: break-all;
+}
+code,
+.mono {
+  font-family: var(--fontFamilyMonospace);
+  font-size: var(--fontSizeBase200);
+}
+kbd {
+  font-family: var(--fontFamilyMonospace);
+  font-size: var(--fontSizeBase200);
+  padding: 0 4px;
+  border: 1px solid var(--colorNeutralStroke1);
+  border-radius: var(--borderRadiusSmall);
+}
+.muted {
+  color: var(--colorNeutralForeground3);
+}
+.brand-text {
+  color: var(--colorBrandForeground1);
+}
+.err {
+  color: var(--colorPaletteRedForeground1);
+}
+.ok-icon {
+  color: var(--colorPaletteGreenForeground1);
+}
+.bad-icon {
+  color: var(--colorPaletteRedForeground1);
+}
+.row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacingHorizontalS);
+}
+.wrap {
+  flex-wrap: wrap;
+}
+.block {
+  margin-bottom: var(--spacingVerticalL);
+}
+.contents {
+  display: contents;
+}
+.empty {
+  display: block;
+  padding: var(--spacingVerticalL) 0;
+}
+/* Element+class selectors so these win over Fluent's single-class atomic styles. */
+h2.section {
+  display: flex;
+  align-items: center;
+  gap: var(--spacingHorizontalM);
+  margin: 28px 0 12px;
+}
+
+/* App shell */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacingHorizontalXL);
+  padding: max(8px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 8px
+    max(20px, env(safe-area-inset-left));
+  background: var(--colorNeutralBackground1);
+  border-bottom: 1px solid var(--colorNeutralStroke2);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.brand {
+  flex-shrink: 0;
+}
+.brand,
+.brand:hover,
+.brand > * {
+  color: var(--colorNeutralForeground1);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.top-tabs {
+  flex-wrap: wrap;
+}
+.topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--spacingHorizontalXS);
+  flex-shrink: 0;
+}
+.topbar .settings-button,
+.bottom-tabs {
+  display: none;
+}
+main {
+  padding: 20px max(20px, env(safe-area-inset-right)) 40px max(20px, env(safe-area-inset-left));
+  max-width: 1500px;
+  margin: 0 auto;
+}
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalS);
+  margin-bottom: var(--spacingVerticalL);
+}
+.page-title {
+  flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacingHorizontalM);
+}
+.page-title h1 {
+  margin: 0;
+}
+.page-title > :not(h1) {
+  flex-shrink: 0;
+}
+/* Dates and small values never break across lines. */
+time,
+.fui-Badge,
+button.fui-Button,
+a.fui-Button,
+.nowrap {
+  white-space: nowrap;
+}
+/* Large option buttons carry a description that should wrap. */
+button.fui-CompoundButton {
+  white-space: normal;
+}
+/* Button rows in forms: wrap whole buttons onto the next line instead of squeezing them. */
+.form-stack .row,
+.fui-CardFooter {
+  flex-wrap: wrap;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.chips > span {
+  white-space: nowrap;
+}
+.filters {
+  display: flex;
+  gap: var(--spacingHorizontalS);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: var(--spacingVerticalL);
+}
+.filters .narrow {
+  width: 120px;
+}
+
+/* Stats */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: var(--spacingHorizontalM);
+}
+.stat {
+  gap: 2px;
+}
+/* Labels can be lowercase state names ("väntar"): capitalise the first letter only. */
+.stat-label {
+  display: block;
+}
+.stat-label::first-letter {
+  text-transform: uppercase;
+}
+.stat.selected {
+  outline: 2px solid var(--colorBrandStroke1);
+}
+
+/* Cards */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  gap: var(--spacingHorizontalL);
+}
+.fui-CardPreview > a {
+  display: block;
+}
+img.thumb,
+div.thumb {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
+div.thumb.placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--colorNeutralForeground3);
+}
+.facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px var(--spacingHorizontalM);
+  margin: 0;
+  font-size: var(--fontSizeBase300);
+}
+.facts dt {
+  color: var(--colorNeutralForeground3);
+}
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.light {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Tables */
+.data-table-scroll {
+  overflow-x: auto;
+}
+/* Size columns to their content (Fluent's default is equal fixed widths). */
+table.table {
+  table-layout: auto;
+}
+.table th,
+.data-table .fui-DataGridHeaderCell {
+  white-space: nowrap;
+}
+.table {
+  background: var(--colorNeutralBackground1);
+  border-radius: var(--borderRadiusLarge);
+  overflow: hidden;
+}
+.table .col-thumb {
+  width: 112px;
+}
+.table .col-actions {
+  width: 100px;
+}
+.mini {
+  width: 96px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--borderRadiusMedium);
+  display: block;
+  margin: 4px 0;
+}
+.table tr.target {
+  background: color-mix(in srgb, var(--colorBrandBackground) 12%, transparent);
+}
+.conf-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacingHorizontalS);
+}
+.conf-bar {
+  width: 64px;
+  flex-shrink: 0;
+}
+.conf-cell > :last-child {
+  white-space: nowrap;
+}
+
+/* Data tables (Fluent DataGrid) */
+.data-table {
+  background: var(--colorNeutralBackground1);
+  border-radius: var(--borderRadiusLarge);
+  overflow: hidden;
+}
+.data-table.clickable div.dt-row {
+  cursor: pointer;
+}
+.data-table div.dt-row.target {
+  box-shadow: inset 3px 0 0 var(--colorBrandStroke1);
+}
+.data-table div.dt-row.selected {
+  background: var(--colorNeutralBackground1Selected);
+  box-shadow: inset 3px 0 0 var(--colorNeutralForeground1);
+}
+.data-table div.dt-cell,
+.data-table div.dt-cell * {
+  white-space: nowrap;
+}
+.data-table div.dt-cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Master-detail: list on the left, inline detail drawer on the right (desktop). */
+.master-detail {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+.master {
+  flex: 1;
+  min-width: 0;
+  /* Columns keep a readable minimum width; scroll sideways instead of truncating. */
+  overflow-x: auto;
+}
+.fui-InlineDrawer.detail-inline {
+  /* Scale with the window so the list keeps room for its columns. */
+  --fui-Drawer--size: clamp(360px, 34vw, 560px);
+  position: sticky;
+  top: 72px;
+  max-height: calc(100vh - 88px);
+  margin-left: var(--spacingHorizontalL);
+  background: var(--colorNeutralBackground1);
+  border-radius: var(--borderRadiusLarge);
+}
+.detail-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalM);
+  padding-bottom: var(--spacingVerticalXL);
+}
+.detail-media {
+  width: 100%;
+  border-radius: var(--borderRadiusMedium);
+  background: #000;
+  display: block;
+}
+.detection-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.detection-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--spacingHorizontalS);
+  padding: 2px 4px;
+  border-radius: var(--borderRadiusMedium);
+}
+.detection-list li.target {
+  box-shadow: inset 3px 0 0 var(--colorBrandStroke1);
+}
+.spacer {
+  flex: 1;
+}
+
+/* Event cards: the thumbnail is a play button. */
+.thumb-button {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.play-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  background: rgb(0 0 0 / 35%);
+  color: #fff;
+  font-size: 48px;
+}
+.play-overlay svg {
+  width: 56px;
+  height: 56px;
+}
+.thumb-button:hover .play-overlay,
+.thumb-button:focus-visible .play-overlay {
+  opacity: 1;
+}
+.clip-dialog video {
+  max-height: 70vh;
+  object-fit: contain;
+}
+.fui-DialogSurface.clip-dialog {
+  max-width: min(1100px, 95vw);
+  width: 100%;
+}
+
+/* Live */
+.live-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(520px, 100%), 1fr));
+  gap: var(--spacingHorizontalL);
+}
+.live-grid.single {
+  grid-template-columns: 1fr;
+}
+.live-frame {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: var(--borderRadiusMedium);
+  background: #000;
+}
+.live-frame.offline {
+  display: grid;
+  place-items: center;
+  color: var(--colorNeutralForeground3);
+}
+
+/* Mask editor */
+.mask-toolbar {
+  margin-bottom: var(--spacingVerticalM);
+}
+.mask-options {
+  display: flex;
+  gap: var(--spacingHorizontalL);
+  flex-wrap: wrap;
+  margin-top: var(--spacingVerticalM);
+}
+.mask-stage {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.mask-stage img {
+  display: block;
+  max-width: 100%;
+  max-height: 75vh;
+  border-radius: var(--borderRadiusMedium);
+}
+.mask-stage.loading {
+  min-width: min(640px, 100%);
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: var(--borderRadiusMedium);
+}
+.mask-stage.loading .overlay {
+  display: none;
+}
+.stage-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  cursor: crosshair;
+  touch-action: none;
+}
+.mrect {
+  position: absolute;
+  background: rgb(0 0 0 / 55%)
+    repeating-linear-gradient(45deg, transparent 0 8px, rgb(255 122 26 / 25%) 8px 10px);
+  outline: 2px solid var(--colorBrandStroke1);
+  cursor: move;
+}
+.mrect.selected {
+  outline: 2px dashed #fff;
+}
+.overlay.preview .mrect {
+  background: #000;
+  outline: none;
+}
+.overlay.preview .handle,
+.overlay.preview .del {
+  display: none;
+}
+.handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border: 2px solid var(--colorBrandStroke1);
+  border-radius: 2px;
+}
+.handle.nw {
+  left: -6px;
+  top: -6px;
+  cursor: nwse-resize;
+}
+.handle.se {
+  right: -6px;
+  bottom: -6px;
+  cursor: nwse-resize;
+}
+.handle.ne {
+  right: -6px;
+  top: -6px;
+  cursor: nesw-resize;
+}
+.handle.sw {
+  left: -6px;
+  bottom: -6px;
+  cursor: nesw-resize;
+}
+.mrect:not(.selected) .handle {
+  display: none;
+}
+.del {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  display: none;
+  place-items: center;
+  background: var(--colorPaletteRedBackground3);
+  color: #fff;
+  cursor: pointer;
+}
+.mrect.selected .del,
+.mrect:hover .del {
+  display: grid;
+}
+.only-touch {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Touch screens: bigger targets                                       */
+/* ------------------------------------------------------------------ */
+@media (pointer: coarse) {
+  .only-touch {
+    display: inline;
+  }
+  .only-mouse {
+    display: none;
+  }
+  /* iOS zooms into inputs with a font size below 16px. */
+  input,
+  select {
+    font-size: 16px !important;
+  }
+  .handle {
+    width: 26px;
+    height: 26px;
+    border-width: 3px;
+  }
+  .handle.nw {
+    left: -13px;
+    top: -13px;
+  }
+  .handle.se {
+    right: -13px;
+    bottom: -13px;
+  }
+  .handle.ne {
+    right: -13px;
+    top: -13px;
+  }
+  .handle.sw {
+    left: -13px;
+    bottom: -13px;
+  }
+  .del {
+    width: 34px;
+    height: 34px;
+  }
+  .mrect:hover:not(.selected) .del {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Tablets and phones: bottom tab bar instead of top tabs              */
+/* ------------------------------------------------------------------ */
+@media (max-width: 1279px) {
+  .topbar .top-tabs {
+    display: none;
+  }
+  .topbar {
+    justify-content: space-between;
+  }
+  .topbar .settings-button {
+    display: inline-flex;
+  }
+  .bottom-tabs {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    background: var(--colorNeutralBackground1);
+    border-top: 1px solid var(--colorNeutralStroke2);
+    padding: 4px max(4px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom))
+      max(4px, env(safe-area-inset-left));
+  }
+  .bottom-tabs button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 0;
+    border: 0;
+    border-radius: var(--borderRadiusLarge);
+    background: none;
+    color: var(--colorNeutralForeground3);
+    cursor: pointer;
+    font: inherit;
+  }
+  .bottom-tabs button.active {
+    color: var(--colorBrandForeground1);
+    background: var(--colorNeutralBackground1Selected);
+  }
+  main {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+}
+
+/* iPad portrait and small laptops. */
+@media (max-width: 1024px) {
+  main {
+    padding-top: 16px;
+  }
+  .live-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Phones: tables become stacked cards                                 */
+/* ------------------------------------------------------------------ */
+@media (max-width: 720px) {
+  main {
+    padding: 12px 12px calc(80px + env(safe-area-inset-bottom));
+  }
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacingHorizontalS);
+  }
+  .filters > * {
+    flex: 1 1 140px;
+  }
+
+  /* Tables: each row becomes a card with labelled fields. */
+  .table.responsive,
+  .table.responsive tbody {
+    display: block;
+    background: none;
+  }
+  .table.responsive thead {
+    display: none;
+  }
+  .table.responsive tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+    background: var(--colorNeutralBackground1);
+    border: 1px solid var(--colorNeutralStroke2);
+    border-radius: var(--borderRadiusXLarge);
+    padding: 12px;
+    margin-bottom: 10px;
+    height: auto;
+  }
+  .table.responsive td {
+    display: block;
+    padding: 0;
+    height: auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .table.responsive td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--colorNeutralForeground3);
+    font-size: var(--fontSizeBase100);
+  }
+  .table.responsive td.full,
+  .table.responsive td.cell-thumb {
+    grid-column: 1 / -1;
+  }
+  .table.responsive td.hide-sm,
+  .table.responsive td:empty {
+    display: none;
+  }
+  .table.responsive .mini {
+    width: 100%;
+    margin: 0;
+  }
+  .table.responsive tr.target {
+    border-color: var(--colorBrandStroke1);
+  }
+
+  /* Data tables: each row becomes a card with labelled fields. */
+  .data-table .fui-DataGridHeader {
+    display: none;
+  }
+  .data-table,
+  .data-table .fui-DataGridBody {
+    background: none;
+  }
+  .data-table div.dt-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+    background: var(--colorNeutralBackground1);
+    border: 1px solid var(--colorNeutralStroke2);
+    border-radius: var(--borderRadiusXLarge);
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .data-table div.dt-row.target {
+    border-color: var(--colorBrandStroke1);
+    box-shadow: none;
+  }
+  .data-table div.dt-cell,
+  .data-table div.dt-cell * {
+    white-space: normal;
+  }
+  .data-table div.dt-cell {
+    padding: 0;
+    min-height: 0;
+    overflow-wrap: anywhere;
+    display: block;
+  }
+  .data-table div.dt-cell[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--colorNeutralForeground3);
+    font-size: var(--fontSizeBase100);
+  }
+  .data-table div.dt-cell.phone-full,
+  .data-table div.dt-cell.phone-thumb,
+  .data-table div.dt-cell.phone-nolabel {
+    grid-column: 1 / -1;
+  }
+  .data-table div.dt-cell.phone-hide,
+  .data-table div.dt-cell:empty {
+    display: none;
+  }
+  .data-table .phone-thumb .mini {
+    width: 100%;
+    aspect-ratio: 21 / 9;
+    margin: 0;
+  }
+
+  .mask-options {
+    flex-direction: column;
+  }
+  .mask-stage {
+    display: block;
+  }
+  .mask-stage img {
+    width: 100%;
+    max-height: none;
+  }
+}
+
+/* Camera management */
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalM);
+}
+.fui-DialogSurface.add-camera-dialog {
+  max-width: min(720px, 95vw);
+  width: 100%;
+}
+.kind-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  gap: var(--spacingHorizontalM);
+}
+button.kind-option {
+  justify-content: flex-start;
+  max-width: none;
+  height: 100%;
+  text-align: left;
+}
+.device-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalS);
+}
+.device-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacingHorizontalM);
+  padding: var(--spacingVerticalS) var(--spacingHorizontalM);
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: var(--borderRadiusMedium);
+}
+.device-name {
+  display: flex;
+  flex-direction: column;
+}
+details.helper {
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: var(--borderRadiusMedium);
+  padding: var(--spacingVerticalS) var(--spacingHorizontalM);
+}
+details.helper[open] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalS);
+}
+details.helper summary {
+  cursor: pointer;
+  color: var(--colorBrandForeground1);
+}
+.helper-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacingHorizontalM);
+}
+.integration-card {
+  max-width: 640px;
+}
+
+.fui-Badge {
+  white-space: nowrap;
+}
+
+/* Keep "71,9 %" on one line, also inside phone table cards (which allow wrapping). */
+.conf-cell > span:last-child,
+.data-table div.dt-cell .conf-cell > span:last-child {
+  white-space: nowrap;
+}
+
+/* Copyable command / token blocks (Add worker dialog) */
+.copy-block {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacingHorizontalS);
+  background: var(--colorNeutralBackground3);
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: var(--borderRadiusMedium);
+  padding: var(--spacingVerticalS) var(--spacingHorizontalM);
+}
+.copy-block pre {
+  flex: 1;
+  margin: 0;
+  font-family: var(--fontFamilyMonospace);
+  font-size: var(--fontSizeBase200);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.setup-steps {
+  margin: 0;
+  padding-left: 1.25em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalS);
+}

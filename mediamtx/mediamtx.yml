@@ -1,0 +1,41 @@
+# MediaMTX config. Camera paths are NOT defined here: media-streamer pushes them through
+# the control API on startup (source, recording, segment length).
+
+logLevel: info
+
+api: yes
+apiAddress: :9997
+
+rtsp: yes
+rtspAddress: :8554
+rtmp: no
+srt: no
+
+hls: yes
+hlsAddress: :8888
+hlsAlwaysRemux: no
+
+webrtc: yes
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+# When running in Docker, add the host's LAN IP (or Tailscale IP) so browsers can connect:
+# webrtcAdditionalHosts: [192.168.1.10]
+
+# DEV ONLY: everyone may read, publish and use the API. See docs/AUTH.md before exposing.
+authMethod: internal
+authInternalUsers:
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: publish
+      - action: read
+      - action: playback
+      - action: api
+      - action: metrics
+
+pathDefaults:
+  record: no
+
+paths:
+  all_others:

@@ -1,0 +1,76 @@
+# Copy to config.yaml. ${VAR} and ${VAR:-default} are expanded from the environment.
+
+data_dir: ${MEDIA_DATA_DIR:-./data}
+
+# Length of each recorded file. Can be overridden per camera.
+segment_seconds: 60
+
+# Optional shared secret for worker endpoints. Workers send "Authorization: Bearer <token>".
+worker_token: ${MEDIA_WORKER_TOKEN:-}
+
+cameras:
+  # Development: synthetic test pattern, no camera needed.
+  - id: test
+    name: Test pattern
+    source: { type: test }
+
+  # Loop a local video file as a fake camera (handy with a fox clip to test detection).
+  # - id: foxclip
+  #   source: { type: file, path: ./samples/fox.mp4 }
+
+  # EXPERIMENTAL: Tapo camera via the TP-Link cloud relay (no LAN access needed).
+  # Run `uv run media-streamer tapo-login` once to create the session, then `ingest`.
+  # - id: garden
+  #   name: Garden
+  #   source: { type: tapo_cloud, device_name: "Garden", resolution: HD }
+
+  # Tapo camera reachable over RTSP (same LAN, or via Tailscale/WireGuard to the cabin).
+  # Create a "Camera Account" in the Tapo app first. stream1 = HD, stream2 = SD.
+  # - id: porch
+  #   name: Porch
+  #   segment_seconds: 120
+  #   source: { type: rtsp, url: "rtsp://${TAPO_USER}:${TAPO_PASS}@192.168.1.50:554/stream1" }
+
+mediamtx:
+  api_url: ${MEDIAMTX_API_URL:-http://localhost:9997}
+  rtsp_url: ${MEDIAMTX_RTSP_URL:-rtsp://localhost:8554}
+  # As reachable from the viewer's browser:
+  webrtc_public_url: ${MEDIAMTX_WEBRTC_PUBLIC_URL:-http://localhost:8889}
+  hls_public_url: ${MEDIAMTX_HLS_PUBLIC_URL:-http://localhost:8888}
+  # Where MediaMTX writes recordings, as seen by the MediaMTX process.
+  # Leave unset when MediaMTX and the server see the same path.
+  record_dir: ${MEDIAMTX_RECORD_DIR:-}
+
+processing:
+  sample_fps: 2          # frames/s in the censored copy sent to workers
+  max_width: 1280
+  concurrency: 2
+  night_saturation_threshold: 4.0   # IR night footage is grayscale
+
+queue:
+  lease_seconds: 300
+  max_attempts: 3
+  retry_backoff_seconds: 60
+
+detection:
+  target_labels: [fox, red fox, vulpes vulpes]
+  min_confidence: 0.5
+
+events:
+  pre_roll_seconds: 10
+  post_roll_seconds: 10
+  merge_gap_seconds: 30
+  settle_seconds: 90
+
+retention:
+  segments_days: 7          # ordinary footage
+  unprocessed_max_days: 14  # footage still waiting for a worker
+  events_days: 0            # fox events (clip + footage); 0 = keep forever
+  max_disk_gb: null         # e.g. 200 - oldest unpinned footage deleted first
+  delete_derived_after_done: true
+
+location:
+  # Used for sun elevation (day/night fallback) and as a hint to workers (SpeciesNet geofence).
+  latitude: null
+  longitude: null
+  country: SWE

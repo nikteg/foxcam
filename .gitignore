@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+data/
+config.yaml
+.env
+*.pt
+.tools/
+out/
+samples/*
+!samples/README.md
+node_modules/
+web/dist/
+# Self-signed certificate MediaMTX generates on first start
+auto.key
+auto.crt

@@ -1,0 +1,308 @@
+import {
+  Body1,
+  Button,
+  Caption1,
+  Card,
+  CardFooter,
+  CardHeader,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  Field,
+  Input,
+  MessageBar,
+  MessageBarBody,
+  Subtitle2,
+  Switch,
+  Text,
+  Tooltip,
+} from "@fluentui/react-components";
+import {
+  Add20Regular,
+  Delete20Regular,
+  Edit20Regular,
+  EyeOff20Regular,
+  Video20Regular,
+} from "@fluentui/react-icons";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+
+import { api, type Camera, type CameraSource } from "../api";
+import { AddCameraDialog } from "../components/AddCameraDialog";
+import { TapoAccountCard } from "../components/TapoAccount";
+import {
+  Dot,
+  Empty,
+  PageHeader,
+  QueryState,
+  Tag,
+  useRouterHref,
+  useSourceLabel,
+} from "../components/ui";
+import { useI18n } from "../i18n";
+
+function sourceDetail(source: CameraSource, synthetic: string): string {
+  switch (source.type) {
+    case "rtsp":
+      return source.url;
+    case "tapo_cloud":
+      return `${source.device_name ?? source.device_id ?? "?"} · ${source.resolution ?? "HD"}`;
+    case "file":
+      return source.path.split("/").pop() ?? source.path;
+    case "test":
+      return synthetic;
+  }
+}
+
+export function Cameras() {
+  const { t, rich } = useI18n();
+  const cameras = useQuery({
+    queryKey: ["cameras"],
+    queryFn: api.cameras,
+    refetchInterval: 10_000,
+  });
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Camera | null>(null);
+  const [removing, setRemoving] = useState<Camera | null>(null);
+
+  return (
+    <>
+      <PageHeader
+        title={t("nav.cameras")}
+        actions={
+          <Button appearance="primary" icon={<Add20Regular />} onClick={() => setAdding(true)}>
+            {t("addCamera.title")}
+          </Button>
+        }
+      >
+        {rich("cameras.intro", { file: <code>config.yaml</code> })}
+      </PageHeader>
+
+      <Subtitle2 as="h2" className="section">
+        {t("cameras.integrations")}
+      </Subtitle2>
+      <div className="cards">
+        <TapoAccountCard />
+      </div>
+
+      <Subtitle2 as="h2" className="section">
+        {t("nav.cameras")}
+      </Subtitle2>
+      <QueryState error={cameras.error} loading={cameras.isPending} />
+      {cameras.data?.length === 0 && <Empty>{t("cameras.none")}</Empty>}
+      <div className="cards">
+        {cameras.data?.map((c) => (
+          <CameraCard
+            key={c.id}
+            camera={c}
+            onEdit={() => setEditing(c)}
+            onRemove={() => setRemoving(c)}
+          />
+        ))}
+      </div>
+
+      <AddCameraDialog open={adding} onClose={() => setAdding(false)} />
+      {editing && <EditCameraDialog camera={editing} onClose={() => setEditing(null)} />}
+      {removing && <RemoveCameraDialog camera={removing} onClose={() => setRemoving(null)} />}
+    </>
+  );
+}
+
+function CameraCard({
+  camera: c,
+  onEdit,
+  onRemove,
+}: {
+  camera: Camera;
+  onEdit: () => void;
+  onRemove: () => void;
+}) {
+  const { t } = useI18n();
+  const sourceLabel = useSourceLabel();
+  const client = useQueryClient();
+  const routerHref = useRouterHref();
+  const toggle = useMutation({
+    mutationFn: (enabled: boolean) => api.updateCamera(c.id, { enabled }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["cameras"] }),
+  });
+  const editable = c.managed === "ui";
+
+  return (
+    <Card>
+      <CardHeader
+        header={
+          <span className="row">
+            <Dot ok={c.online} />
+            <Text weight="semibold">{c.name}</Text>
+            <Caption1 className="muted">{c.id}</Caption1>
+          </span>
+        }
+        description={
+          <span className="row wrap">
+            <Tag>{sourceLabel(c.source_config.type)}</Tag>
+            {!editable && <Tag kind="pending">config.yaml</Tag>}
+            {!c.enabled && <Tag kind="warn">{t("cameras.disabled")}</Tag>}
+            {c.private && <Tag kind="private">{t("state.private")}</Tag>}
+          </span>
+        }
+      />
+      <dl className="facts">
+        <dt>{t("cameras.source")}</dt>
+        <dd className="mono">{sourceDetail(c.source_config, t("cameras.synthetic"))}</dd>
+        <dt>{t("camera.segmentLength")}</dt>
+        <dd>
+          {c.segment_seconds} s
+          {c.segment_seconds_override === null && (
+            <span className="muted"> ({t("camera.default")})</span>
+          )}
+        </dd>
+        <dt>{t("camera.censorAreas")}</dt>
+        <dd>{c.rects.length}</dd>
+      </dl>
+      <Tooltip
+        content={editable ? t("cameras.disableHint") : t("cameras.configHint")}
+        relationship="description"
+      >
+        <Switch
+          label={c.enabled ? t("cameras.recording") : t("cameras.disabled")}
+          checked={c.enabled}
+          disabled={!editable || toggle.isPending}
+          onChange={(_, d) => toggle.mutate(d.checked)}
+        />
+      </Tooltip>
+      <CardFooter className="wrap">
+        <Button
+          as="a"
+          size="small"
+          icon={<Video20Regular />}
+          {...routerHref(`/live?camera=${c.id}`)}
+        >
+          {t("nav.live")}
+        </Button>
+        <Button
+          as="a"
+          size="small"
+          icon={<EyeOff20Regular />}
+          {...routerHref(`/cameras/${c.id}/mask`)}
+        >
+          {t("camera.censorAreas")}
+        </Button>
+        {editable && (
+          <>
+            <Button size="small" icon={<Edit20Regular />} onClick={onEdit}>
+              {t("common.edit")}
+            </Button>
+            <Button size="small" icon={<Delete20Regular />} onClick={onRemove}>
+              {t("common.remove")}
+            </Button>
+          </>
+        )}
+      </CardFooter>
+    </Card>
+  );
+}
+
+function EditCameraDialog({ camera, onClose }: { camera: Camera; onClose: () => void }) {
+  const { t } = useI18n();
+  const client = useQueryClient();
+  const [name, setName] = useState(camera.name);
+  const [segment, setSegment] = useState(camera.segment_seconds_override?.toString() ?? "");
+  const save = useMutation({
+    mutationFn: () =>
+      api.updateCamera(camera.id, {
+        name,
+        ...(segment ? { segment_seconds: Number(segment) } : { clear_segment_seconds: true }),
+      }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["cameras"] });
+      onClose();
+    },
+  });
+  return (
+    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
+      <DialogSurface>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            save.mutate();
+          }}
+        >
+          <DialogBody>
+            <DialogTitle>{t("cameras.editTitle", { name: camera.name })}</DialogTitle>
+            <DialogContent className="form-stack">
+              <Field label={t("camera.name")} required>
+                <Input value={name} onChange={(_, d) => setName(d.value)} />
+              </Field>
+              <Field label={t("camera.segmentLengthSeconds")} hint={t("camera.segmentLengthHint")}>
+                <Input
+                  type="number"
+                  min={5}
+                  max={3600}
+                  value={segment}
+                  placeholder={t("camera.default")}
+                  onChange={(_, d) => setSegment(d.value)}
+                />
+              </Field>
+              <Caption1 className="muted">{t("cameras.changeSourceHint")}</Caption1>
+              {save.error && (
+                <MessageBar intent="error">
+                  <MessageBarBody>{save.error.message}</MessageBarBody>
+                </MessageBar>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={onClose}>{t("common.cancel")}</Button>
+              <Button type="submit" appearance="primary" disabled={!name || save.isPending}>
+                {t("common.save")}
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </form>
+      </DialogSurface>
+    </Dialog>
+  );
+}
+
+function RemoveCameraDialog({ camera, onClose }: { camera: Camera; onClose: () => void }) {
+  const { t } = useI18n();
+  const client = useQueryClient();
+  const remove = useMutation({
+    mutationFn: () => api.deleteCamera(camera.id),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["cameras"] });
+      void client.invalidateQueries({ queryKey: ["status"] });
+      onClose();
+    },
+  });
+  return (
+    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
+      <DialogSurface>
+        <DialogBody>
+          <DialogTitle>{t("cameras.removeTitle", { name: camera.name })}</DialogTitle>
+          <DialogContent>
+            <Body1>{t("cameras.removeBody")}</Body1>
+            {remove.error && (
+              <MessageBar intent="error">
+                <MessageBarBody>{remove.error.message}</MessageBarBody>
+              </MessageBar>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={onClose}>{t("common.cancel")}</Button>
+            <Button
+              appearance="primary"
+              icon={<Delete20Regular />}
+              disabled={remove.isPending}
+              onClick={() => remove.mutate()}
+            >
+              {t("common.remove")}
+            </Button>
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
+  );
+}
