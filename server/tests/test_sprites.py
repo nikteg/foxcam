@@ -80,3 +80,14 @@ def test_older_archives_are_filled_in_one_at_a_time(settings):
     assert sprites.backfill_archives(settings) == 1
     assert sprites.archive_files(settings, arc_id)[0].exists()
     assert sprites.backfill_archives(settings) == 0
+
+
+@needs_ffmpeg
+def test_preprocessing_makes_the_segments_sprite(settings):
+    from media_streamer.models import SegmentStatus
+    from media_streamer.pipeline import preprocess
+
+    seg = add_segment(settings, seconds=4, status=SegmentStatus.NEW)
+    preprocess.preprocess_segment(settings, seg)
+    image, meta = sprites.segment_files(settings, seg)
+    assert image.exists() and sprites.load(meta).tiles == 2

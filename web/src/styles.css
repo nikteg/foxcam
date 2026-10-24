@@ -1480,3 +1480,7 @@ h3.panel-heading {
   font-size: var(--fontSizeBase300);
   font-weight: var(--fontWeightRegular);
 }
+/* The drawer's heading already names the recording: no title (and "•") in the controls. */
+.video-player .vds-chapter-title {
+  display: none;
+}

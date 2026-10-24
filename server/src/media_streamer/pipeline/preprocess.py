@@ -14,7 +14,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-from .. import ffmpeg
+from .. import ffmpeg, sprites
 from ..config import Settings
 from ..db import session_scope
 from ..models import CameraState, Job, MaskVersion, Segment, SegmentStatus
@@ -76,6 +76,10 @@ def preprocess_segment(settings: Settings, segment_id: int) -> None:
         thumb = settings.thumbs_dir / Path(rel).with_suffix(".jpg")
         ffmpeg.thumbnail(src, thumb, at_s=min(1.0, seg.duration_s / 2))
         updates["thumb_path"] = str(thumb.relative_to(settings.data_dir))
+        try:  # the player's timeline previews, ready before anyone plays it (<1 s)
+            sprites.segment_sprite(settings, segment_id)
+        except Exception as e:  # noqa: BLE001 - made on first play instead
+            log.warning("segment %s: no thumbnail sprite: %s", segment_id, e)
 
         private, mask = current_mask(camera_id)
         profiles = [] if private else camera_profiles(settings, camera_id)

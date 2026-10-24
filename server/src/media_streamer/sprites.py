@@ -5,7 +5,8 @@ plus a WebVTT file mapping each time range to a tile (``#xywh=``), which the pla
 Only keyframes are decoded (``-skip_frame nokey``) and a hardware decoder is used when
 there is one, so this is cheap: a 60 s segment takes well under a second; an hour of 3K
 takes ~20 s, so archives get theirs from the archiving process right after they are built
-(and older ones one at a time in the background), segments the first time they are played.
+(older ones, up to ten per pass, when it has nothing to join) and segments theirs when
+they are preprocessed; either is made on first play if still missing.
 
 Archive sprites live in ``thumbs/sprites`` and go with their archive; segment sprites are a
 cache (``cache/sprites``) cleaned up by age.

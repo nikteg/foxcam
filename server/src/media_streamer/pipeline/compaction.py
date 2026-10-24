@@ -437,7 +437,7 @@ def compact_once(settings: Settings, encoder: Encoder = local_encoder) -> int:
         if build(settings, plan, encoder) is not None:
             built += 1
     if built == 0:  # quiet: thumbnail sprites for archives made before there were any
-        sprites.backfill_archives(settings)
+        sprites.backfill_archives(settings, limit=10)
     return built
 
 

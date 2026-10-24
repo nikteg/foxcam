@@ -47,7 +47,13 @@ export function VideoPlayer({
       <MediaProvider>
         {poster && <Poster className="vds-poster" src={poster} alt="" />}
       </MediaProvider>
-      <DefaultVideoLayout icons={defaultLayoutIcons} thumbnails={thumbnails} />
+      <DefaultVideoLayout
+        icons={defaultLayoutIcons}
+        thumbnails={thumbnails}
+        // The compact layout hides the timeline until playback starts; the drawers are
+        // wide enough for the full one, so scrubbing (with previews) works right away.
+        smallLayoutWhen={({ width }) => width < 400}
+      />
     </MediaPlayer>
   );
 }
