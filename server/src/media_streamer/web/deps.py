@@ -6,7 +6,7 @@ from urllib.parse import urlsplit
 
 from fastapi import Depends, Header, HTTPException, Request
 
-from .. import accounts, worker_tokens
+from .. import accounts, api_keys, worker_tokens
 from ..accounts import Principal
 from ..config import CameraConfig, Settings
 from ..mediamtx import MediaMtx
@@ -48,15 +48,28 @@ def require_worker(request: Request,
 
 # --- people ---------------------------------------------------------------------------
 
+def _api_key(request: Request) -> str | None:
+    auth = request.headers.get("authorization", "")
+    key = auth[7:].strip() if auth.startswith("Bearer ") else ""
+    return key if key.startswith(api_keys.KEY_PREFIX) else None
+
+
 def current_principal(request: Request) -> Principal | None:
-    """The signed-in user (from the session cookie), cached on the request."""
+    """The signed-in user (from the session cookie, or an API key outside /api/auth/),
+    cached on the request."""
     settings: Settings = request.app.state.settings
     if not settings.auth.enabled:
         return OPEN_ACCESS
     cached = getattr(request.state, "principal", _UNSET)
     if cached is _UNSET:
         token = request.cookies.get(SESSION_COOKIE)
-        cached = accounts.session_principal(settings, token) if token else None
+        key = _api_key(request)
+        if token:
+            cached = accounts.session_principal(settings, token)
+        elif key and not request.url.path.startswith("/api/auth/"):
+            cached = api_keys.principal(key)
+        else:
+            cached = None
         request.state.principal = cached
     return cached
 
@@ -87,8 +100,13 @@ def authenticate(request: Request) -> None:
         raise HTTPException(403, "cross-site request refused")
     if path.startswith("/api/auth/"):
         return
-    if current_principal(request) is None:
+    p = current_principal(request)
+    if p is None:
+        if _api_key(request):
+            raise HTTPException(401, "invalid or expired API key")
         raise HTTPException(401, "sign in first")
+    if p.read_only and request.method not in SAFE_METHODS:
+        raise HTTPException(403, "this API key is read-only")
 
 
 def principal(request: Request) -> Principal:

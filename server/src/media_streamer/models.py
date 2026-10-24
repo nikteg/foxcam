@@ -432,6 +432,24 @@ class UserSession(Base):
     user_agent: Mapped[str | None] = mapped_column(String)
 
 
+class ApiKey(Base):
+    """A key for scripts and other programs (`Authorization: Bearer msk_…`), acting as its
+    user. Only its SHA-256 is stored; the key itself is shown once."""
+
+    __tablename__ = "api_key"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user_account.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String)
+    token_hash: Mapped[str] = mapped_column(String, unique=True)
+    # The first characters, to tell keys apart in the list.
+    prefix: Mapped[str] = mapped_column(String)
+    read_only: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
 class CameraRole:
     VIEWER = "viewer"  # live view, recordings, events, detections
     EDITOR = "editor"  # + censor areas, profiles, recording settings, feedback, rename

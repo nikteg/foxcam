@@ -4,21 +4,36 @@ import {
   Caption1,
   Card,
   CardHeader,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
   Field,
   Input,
   MessageBar,
   MessageBarBody,
+  MessageBarTitle,
+  Select,
   Subtitle2,
+  Switch,
   Text,
 } from "@fluentui/react-components";
-import { Key20Regular, LinkDismiss20Regular } from "@fluentui/react-icons";
+import {
+  Add20Regular,
+  Delete20Regular,
+  Key20Regular,
+  LinkDismiss20Regular,
+} from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 
 import { api } from "../api";
 import { AUTH_KEY, useMe } from "../auth";
-import { Empty, PageHeader, Tag } from "../components/ui";
+import { CopyBlock } from "../components/AddWorkerDialog";
+import { Empty, PageHeader, Tag, Time } from "../components/ui";
 import { useRoleName } from "../components/ShareDialog";
 import { useI18n } from "../i18n";
 
@@ -45,6 +60,7 @@ export function Account() {
           <PasswordForm />
           <LinkedAccounts />
           <MyCameras />
+          <ApiKeys />
         </>
       )}
     </>
@@ -258,5 +274,175 @@ function MyCameras() {
         ))}
       </div>
     </>
+  );
+}
+
+const EXPIRY_DAYS = [null, 30, 90, 365] as const;
+
+/** Keys for scripts and other programs, acting as this user. */
+function ApiKeys() {
+  const { t, rich } = useI18n();
+  const client = useQueryClient();
+  const keys = useQuery({ queryKey: ["api-keys"], queryFn: api.apiKeys });
+  const [adding, setAdding] = useState(false);
+  const revoke = useMutation({
+    mutationFn: api.revokeApiKey,
+    onSuccess: () => client.invalidateQueries({ queryKey: ["api-keys"] }),
+  });
+  return (
+    <>
+      <Subtitle2 as="h2" className="section">
+        {t("apiKeys.title")}
+      </Subtitle2>
+      <p className="muted">
+        {rich("apiKeys.intro", { header: <code>Authorization: Bearer msk_…</code> })}
+      </p>
+      {keys.data?.length === 0 && <Empty>{t("apiKeys.none")}</Empty>}
+      <div className="cards">
+        {keys.data?.map((k) => (
+          <Card key={k.id} size="small">
+            <CardHeader
+              header={
+                <span className="row tags">
+                  <Text weight="semibold">{k.name}</Text>
+                  {k.read_only && <Tag>{t("apiKeys.readOnly")}</Tag>}
+                </span>
+              }
+              description={
+                <Caption1 className="muted">
+                  <code>{k.prefix}…</code> – {t("apiKeys.lastUsed")}{" "}
+                  {k.last_used_at ? <Time iso={k.last_used_at} relative /> : t("apiKeys.never")}
+                  {k.expires_at && (
+                    <>
+                      {" "}
+                      – {t("apiKeys.expires")} <Time iso={k.expires_at} />
+                    </>
+                  )}
+                </Caption1>
+              }
+              action={
+                <Button
+                  size="small"
+                  icon={<Delete20Regular />}
+                  disabled={revoke.isPending}
+                  onClick={() => {
+                    if (window.confirm(t("apiKeys.revokeConfirm", { name: k.name }))) {
+                      revoke.mutate(k.id);
+                    }
+                  }}
+                >
+                  {t("apiKeys.revoke")}
+                </Button>
+              }
+            />
+          </Card>
+        ))}
+      </div>
+      <div className="block">
+        <Button icon={<Add20Regular />} onClick={() => setAdding(true)}>
+          {t("apiKeys.add")}
+        </Button>
+      </div>
+      <AddApiKeyDialog open={adding} onClose={() => setAdding(false)} />
+    </>
+  );
+}
+
+function AddApiKeyDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useI18n();
+  const client = useQueryClient();
+  const [name, setName] = useState("");
+  const [readOnly, setReadOnly] = useState(false);
+  const [expires, setExpires] = useState("");
+  const create = useMutation({
+    mutationFn: () =>
+      api.createApiKey({
+        name: name.trim(),
+        read_only: readOnly,
+        expires_days: expires ? Number(expires) : null,
+      }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["api-keys"] }),
+  });
+  const close = () => {
+    create.reset();
+    setName("");
+    setReadOnly(false);
+    setExpires("");
+    onClose();
+  };
+  const created = create.data;
+  return (
+    <Dialog open={open} onOpenChange={(_, d) => !d.open && close()}>
+      <DialogSurface>
+        <DialogBody>
+          <DialogTitle>{t("apiKeys.add")}</DialogTitle>
+          <DialogContent className="form-stack">
+            {!created ? (
+              <form
+                id="add-api-key"
+                className="form-stack"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  create.mutate();
+                }}
+              >
+                <Field label={t("apiKeys.name")} hint={t("apiKeys.nameHint")} required>
+                  <Input value={name} maxLength={80} onChange={(_, d) => setName(d.value)} />
+                </Field>
+                <Switch
+                  label={t("apiKeys.readOnlySwitch")}
+                  checked={readOnly}
+                  onChange={(_, d) => setReadOnly(d.checked)}
+                />
+                <Field label={t("apiKeys.expiry")}>
+                  <Select value={expires} onChange={(_, d) => setExpires(d.value)}>
+                    {EXPIRY_DAYS.map((days) => (
+                      <option key={days ?? "never"} value={days ?? ""}>
+                        {days ? t("profiles.days", { n: days }) : t("apiKeys.noExpiry")}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                {create.error && (
+                  <MessageBar intent="error">
+                    <MessageBarBody>{create.error.message}</MessageBarBody>
+                  </MessageBar>
+                )}
+              </form>
+            ) : (
+              <>
+                <MessageBar intent="warning">
+                  <MessageBarBody>
+                    <MessageBarTitle>{t("apiKeys.once")}</MessageBarTitle>
+                    {t("apiKeys.onceBody")}
+                  </MessageBarBody>
+                </MessageBar>
+                <CopyBlock text={created.key} label={t("apiKeys.title")} />
+              </>
+            )}
+          </DialogContent>
+          <DialogActions>
+            {!created ? (
+              <>
+                <Button onClick={close}>{t("common.cancel")}</Button>
+                <Button
+                  type="submit"
+                  form="add-api-key"
+                  appearance="primary"
+                  icon={<Key20Regular />}
+                  disabled={!name.trim() || create.isPending}
+                >
+                  {t("apiKeys.create")}
+                </Button>
+              </>
+            ) : (
+              <Button appearance="primary" onClick={close}>
+                {t("common.done")}
+              </Button>
+            )}
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
   );
 }

@@ -823,6 +823,26 @@ export const sv: Record<MessageKey, string> = {
   "account.myCameras": "Mina kameror",
   "account.noCameras": "Inga kameror är delade med dig än.",
   "account.leave": "Sluta se",
+  "apiKeys.title": "API-nycklar",
+  "apiKeys.intro":
+    "För skript och andra program: skicka {header}. En nyckel agerar som du, med dina rättigheter, men kan inte ändra ditt konto eller skapa fler nycklar.",
+  "apiKeys.none": "Inga API-nycklar.",
+  "apiKeys.add": "Ny API-nyckel",
+  "apiKeys.name": "Namn",
+  "apiKeys.nameHint": "Vad som använder den, t.ex. Home Assistant.",
+  "apiKeys.readOnlySwitch": "Endast läsning (kan titta, inte ändra något)",
+  "apiKeys.readOnly": "Endast läsning",
+  "apiKeys.expiry": "Går ut",
+  "apiKeys.noExpiry": "Aldrig",
+  "apiKeys.create": "Skapa nyckel",
+  "apiKeys.once": "Kopiera nyckeln nu",
+  "apiKeys.onceBody": "Den visas bara den här gången. Den som har den kan använda API:t som du.",
+  "apiKeys.lastUsed": "senast använd",
+  "apiKeys.never": "aldrig",
+  "apiKeys.expires": "går ut",
+  "apiKeys.revoke": "Återkalla",
+  "apiKeys.revokeConfirm":
+    "Återkalla nyckeln {name}? Program som använder den förlorar åtkomst direkt.",
 
   // Delning
   "share.button": "Dela",

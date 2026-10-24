@@ -128,6 +128,17 @@ export interface WorkerAuth {
   tokens: number;
 }
 
+export interface ApiKey {
+  id: number;
+  name: string;
+  /** The first characters, e.g. "msk_Ab12cd". */
+  prefix: string;
+  read_only: boolean;
+  created_at: string;
+  last_used_at: string | null;
+  expires_at: string | null;
+}
+
 export interface WorkerToken {
   id: number;
   name: string;
@@ -671,6 +682,10 @@ export const api = {
     request<{ status: string }>("POST", "/api/auth/password", { current, new: next }),
   unlinkProvider: (id: string) =>
     request<{ status: string }>("DELETE", `/api/auth/providers/${encodeURIComponent(id)}`),
+  apiKeys: () => request<ApiKey[]>("GET", "/api/auth/api-keys"),
+  createApiKey: (body: { name: string; read_only: boolean; expires_days: number | null }) =>
+    request<ApiKey & { key: string }>("POST", "/api/auth/api-keys", body),
+  revokeApiKey: (id: number) => request<{ status: string }>("DELETE", `/api/auth/api-keys/${id}`),
   invitePreview: (token: string) =>
     request<InvitePreview>("GET", `/api/auth/invite/${encodeURIComponent(token)}`),
   acceptInvite: (token: string) =>

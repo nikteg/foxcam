@@ -63,7 +63,7 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-function CopyBlock({ text, label }: { text: string; label: string }) {
+export function CopyBlock({ text, label }: { text: string; label: string }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   return (

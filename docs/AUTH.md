@@ -54,6 +54,23 @@ valid for `auth.session_days` since the last visit. Only a hash is stored. Chang
 signs out the account's other browsers; disabling an account signs it out everywhere. Writes
 with a foreign `Origin` header are refused (CSRF).
 
+## API keys
+
+For scripts and other programs (Home Assistant, cron jobs, …): **Account → API keys → New
+API key**, then send it with every request:
+
+```sh
+curl -H "Authorization: Bearer msk_…" https://cams.example.org/api/events
+```
+
+A key acts as the user who made it, with that user's rights at the time of each request:
+an admin's key can do what the admin can, a user's key sees only that user's cameras, and
+the keys of a disabled or removed account stop working. A key can be **read-only** (GET
+requests only) and can **expire**. Keys can't reach `/api/auth/`: no making more keys,
+changing the password or signing in. Only a SHA-256 of each key is stored, and the key
+itself is shown once; revoke it on the Account page. Workers use their own tokens
+(`msw_…`, Jobs → Add worker), not API keys.
+
 ## Who may create an account
 
 `auth.registration`:

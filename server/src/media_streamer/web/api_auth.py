@@ -1,7 +1,8 @@
 """Login, setup, sign-up, OAuth and the signed-in user's own account.
 
 Everything under /api/auth/ is reachable without a session (see deps.authenticate); the
-routes that need one depend on `principal` explicitly.
+routes that need one depend on `principal` explicitly. API keys don't work here (a key
+can't make more keys or change the password).
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
-from .. import accounts, oauth
+from .. import accounts, api_keys, oauth
 from ..accounts import AccountError, Principal
 from ..config import OAuthProviderConfig, Settings
 from .deps import SESSION_COOKIE, current_principal, principal, settings_dep
@@ -323,6 +324,38 @@ async def change_password(body: PasswordIn, request: Request,
 def unlink_provider(provider_id: str, p: Principal = Depends(principal)) -> dict[str, str]:
     try:
         accounts.unlink_provider(_user(p), provider_id)
+    except AccountError as e:
+        raise _error(e) from e
+    return {"status": "ok"}
+
+
+# --- API keys -------------------------------------------------------------------------
+
+class ApiKeyIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    read_only: bool = False
+    expires_days: int | None = Field(default=None, ge=1, le=3650)  # None = never
+
+
+@router.get("/api-keys")
+def list_api_keys(p: Principal = Depends(principal)) -> list[dict[str, Any]]:
+    return api_keys.list_keys(_user(p))
+
+
+@router.post("/api-keys", status_code=201)
+def create_api_key(body: ApiKeyIn, p: Principal = Depends(principal)) -> dict[str, Any]:
+    """The key itself is in the response only, never again."""
+    try:
+        info, key = api_keys.create(_user(p), body.name, body.read_only, body.expires_days)
+    except AccountError as e:
+        raise _error(e) from e
+    return {**info, "key": key}
+
+
+@router.delete("/api-keys/{key_id}")
+def revoke_api_key(key_id: int, p: Principal = Depends(principal)) -> dict[str, str]:
+    try:
+        api_keys.revoke(_user(p), key_id)
     except AccountError as e:
         raise _error(e) from e
     return {"status": "ok"}

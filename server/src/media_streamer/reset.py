@@ -15,6 +15,7 @@ from sqlalchemy import delete, select, update
 from .config import Settings
 from .db import session_scope
 from .models import (
+    ApiKey,
     Archive,
     CameraAccess,
     CameraState,
@@ -144,10 +145,11 @@ def profiles(settings: Settings) -> str:
 
 
 def users(settings: Settings) -> str:
-    """All accounts, sessions, shares and invites (the next start asks for a new admin)."""
+    """All accounts, sessions, API keys, shares and invites (the next start asks for a new
+    admin)."""
     with session_scope() as s:
         n = s.query(User).count()
-        for model in (UserSession, OAuthIdentity, CameraAccess, Invite, User):
+        for model in (UserSession, ApiKey, OAuthIdentity, CameraAccess, Invite, User):
             s.execute(delete(model))
     return f"{n} accounts removed; create the first admin again with the setup code"
 

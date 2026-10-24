@@ -25,7 +25,16 @@ from sqlalchemy import delete, func, select, update
 
 from .config import Settings
 from .db import session_scope
-from .models import CameraAccess, CameraRole, Invite, OAuthIdentity, User, UserSession, utcnow
+from .models import (
+    ApiKey,
+    CameraAccess,
+    CameraRole,
+    Invite,
+    OAuthIdentity,
+    User,
+    UserSession,
+    utcnow,
+)
 
 log = logging.getLogger(__name__)
 
@@ -54,6 +63,9 @@ class Principal:
     is_admin: bool = False
     # camera id -> role (admins have every role on every camera without entries here).
     cameras: dict[str, str] = field(default_factory=dict)
+    # Signed in with an API key (api_keys.py) rather than a browser session.
+    api_key_id: int | None = None
+    read_only: bool = False  # an API key that may only read (GET)
 
     def role(self, camera_id: str) -> str | None:
         return CameraRole.OWNER if self.is_admin else self.cameras.get(camera_id)
@@ -249,7 +261,7 @@ def delete_user(user_id: int) -> None:
         if u.is_admin and _admins_left(s, user_id) == 0:
             raise AccountError("the last admin cannot be removed", 409)
         # SQLite only cascades with foreign keys on; delete explicitly to be sure.
-        for model in (UserSession, OAuthIdentity, CameraAccess):
+        for model in (UserSession, ApiKey, OAuthIdentity, CameraAccess):
             s.execute(delete(model).where(model.user_id == user_id))
         s.delete(u)
 
