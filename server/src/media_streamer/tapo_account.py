@@ -60,7 +60,10 @@ def status(settings: Settings) -> dict[str, Any]:
             email = json.loads(path.read_text()).get("email") or None
         except (OSError, ValueError):
             pass
-    return {"available": available, "connected": path.exists(), "email": email}
+    from .ingest.tapo_cloud import session_expired
+
+    return {"available": available, "connected": path.exists(), "email": email,
+            "expired": path.exists() and session_expired(settings)}
 
 
 async def login(settings: Settings, email: str, password: str) -> dict[str, Any]:
@@ -117,18 +120,15 @@ async def submit_mfa(settings: Settings, login_id: str, code: str) -> dict[str, 
 
 async def devices(settings: Settings) -> list[dict[str, Any]]:
     ontapo = _require()
-    from .ingest.tapo_cloud import load_session, save_session
+    from .ingest.tapo_cloud import TapoSessionExpired, call_with_refresh, load_session
 
     if not settings.tapo_session_file.exists():
         raise TapoError("not signed in to Tapo", 401)
     session = load_session(settings)
     try:
-        try:
-            cams = await session.cameras()
-        except ontapo.Unauthorized:
-            await session.refresh()
-            cams = await session.cameras()
-        save_session(settings, session)  # persist refreshed tokens
+        cams = await call_with_refresh(settings, session, session.cameras)
+    except TapoSessionExpired as e:
+        raise TapoError(str(e), 401) from e
     except ontapo.OnTapoError as e:
         raise TapoError(f"could not list Tapo cameras: {e}", 502) from e
     finally:
@@ -145,7 +145,10 @@ async def devices(settings: Settings) -> list[dict[str, Any]]:
 
 
 def logout(settings: Settings) -> None:
+    from .ingest.tapo_cloud import expired_marker
+
     settings.tapo_session_file.unlink(missing_ok=True)
+    expired_marker(settings).unlink(missing_ok=True)
 
 
 def _require():

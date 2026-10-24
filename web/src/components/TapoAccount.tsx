@@ -143,7 +143,9 @@ export function TapoAccountCard() {
         description={<Caption1 className="muted">{t("tapo.accountDescription")}</Caption1>}
         action={
           s &&
-          (s.connected ? (
+          (s.expired ? (
+            <Tag kind="bad">{t("tapo.expiredTag")}</Tag>
+          ) : s.connected ? (
             <Tag kind="ok">{t("tapo.connected")}</Tag>
           ) : s.available ? (
             <Tag>{t("tapo.notConnected")}</Tag>
@@ -154,7 +156,16 @@ export function TapoAccountCard() {
       />
       {s && !s.available && <TapoNotInstalled />}
       {s?.available &&
-        (s.connected ? (
+        (s.expired ? (
+          <>
+            <MessageBar intent="warning">
+              <MessageBarBody>
+                {rich("tapo.expired", { email: <b>{s.email ?? "?"}</b> })}
+              </MessageBarBody>
+            </MessageBar>
+            <TapoSignIn />
+          </>
+        ) : s.connected ? (
           <div className="row wrap">
             <Body1>{rich("tapo.signedInAs", { email: <b>{s.email ?? "?"}</b> })}</Body1>
             <Button

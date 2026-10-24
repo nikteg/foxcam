@@ -431,6 +431,9 @@ export const sv: Record<MessageKey, string> = {
     "Strömma kameror via TP-Links moln, som Tapo-appen gör. Ingen åtkomst till det lokala nätverket behövs. Inofficiellt och experimentellt.",
   "tapo.connected": "ansluten",
   "tapo.notConnected": "inte ansluten",
+  "tapo.expiredTag": "inloggningen har gått ut",
+  "tapo.expired":
+    "Tapo-inloggningen för {email} har gått ut och molnkamerorna är pausade. Logga in igen för att starta dem.",
   "tapo.notInstalledTag": "inte installerat",
   "tapo.notInstalled":
     "Stöd för Tapo-molnet är inte installerat på servern. Kör {command} och starta om servern.",

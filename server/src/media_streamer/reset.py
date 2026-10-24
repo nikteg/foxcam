@@ -136,7 +136,9 @@ def profiles(settings: Settings) -> str:
 
 def tapo(settings: Settings) -> str:
     """The saved Tapo cloud session."""
-    settings.tapo_session_file.unlink(missing_ok=True)
+    from .tapo_account import logout
+
+    logout(settings)
     return "Tapo session removed"
 
 

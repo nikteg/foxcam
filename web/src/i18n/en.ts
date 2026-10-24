@@ -502,6 +502,9 @@ export const en = {
     "Stream cameras through TP-Link's cloud, like the Tapo app. No local network access needed. Unofficial and experimental.",
   "tapo.connected": "connected",
   "tapo.notConnected": "not connected",
+  "tapo.expiredTag": "sign-in expired",
+  "tapo.expired":
+    "The Tapo sign-in for {email} has expired and the cloud cameras are paused. Sign in again to resume them.",
   "tapo.notInstalledTag": "not installed",
   "tapo.notInstalled":
     "Tapo cloud support is not installed on the server. Run {command} and restart the server.",

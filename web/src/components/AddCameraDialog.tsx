@@ -173,7 +173,7 @@ function ProbeBar({ result }: { result: ProbeResult | undefined }) {
 function TapoStep({ onDone }: { onDone: () => void }) {
   const { t } = useI18n();
   const status = useQuery({ queryKey: ["tapo", "status"], queryFn: api.tapoStatus });
-  const connected = status.data?.connected ?? false;
+  const connected = (status.data?.connected && !status.data.expired) ?? false;
   const devices = useQuery({
     queryKey: ["tapo", "devices"],
     queryFn: api.tapoDevices,

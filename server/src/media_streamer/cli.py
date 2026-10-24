@@ -119,7 +119,9 @@ def main() -> None:
         for scope in args.scopes:
             print(f"{scope}: {reset_mod.SCOPES[scope](settings)}")
     elif args.cmd == "tapo-logout":
-        settings.tapo_session_file.unlink(missing_ok=True)
+        from .tapo_account import logout
+
+        logout(settings)
         print(f"Removed {settings.tapo_session_file}")
 
 

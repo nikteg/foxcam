@@ -155,7 +155,9 @@ Cameras can also be defined in `config.yaml` (see [`config.example.yaml`](config
 
 Your Tapo password is only ever typed into a local prompt (or the local web UI) and sent
 straight to TP-Link. What is stored is a session token in `data/tapo-session.json`
-(mode 0600, git-ignored), which is as sensitive as the password.
+(mode 0600, git-ignored), which is as sensitive as the password. The server refreshes the
+token by itself when it expires; only if TP-Link rejects the refresh (for example after a
+password change) are the cloud cameras paused until you sign in again.
 
 ```sh
 uv run media-streamer tapo-login      # e-mail, password (hidden), then the MFA code

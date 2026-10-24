@@ -74,6 +74,8 @@ export interface TapoStatus {
   available: boolean;
   connected: boolean;
   email: string | null;
+  /** Signed in, but TP-Link rejected the refresh token: sign in again. */
+  expired: boolean;
 }
 
 export type TapoLoginResult =
