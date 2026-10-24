@@ -955,3 +955,8 @@ details.helper summary {
 .card-status .placeholder {
   visibility: hidden;
 }
+
+/* Lists of tags: tight vertical spacing when they wrap. */
+.row.tags {
+  row-gap: var(--spacingVerticalXS);
+}

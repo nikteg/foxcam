@@ -130,7 +130,7 @@ function ProfileCard({
           </span>
         }
         description={
-          <span className="row wrap">
+          <span className="row wrap tags">
             {!editable && <Tag kind="pending">config.yaml</Tag>}
             {p.default && <Tag title={t("profiles.defaultHint")}>{t("profiles.default")}</Tag>}
             {!p.enabled && <Tag kind="warn">{t("profiles.disabled")}</Tag>}
@@ -140,7 +140,7 @@ function ProfileCard({
       <dl className="facts">
         <dt>{t("profiles.targets")}</dt>
         <dd>
-          <span className="row wrap">
+          <span className="row wrap tags">
             {p.targets.map((x) => (
               <Tag key={x} kind="target">
                 {x}
@@ -167,7 +167,7 @@ function ProfileCard({
         <dt>{t("profiles.requires")}</dt>
         <dd>
           {p.requires.length ? (
-            <span className="row wrap">
+            <span className="row wrap tags">
               {p.requires.map((x) => (
                 <Tag key={x}>{x}</Tag>
               ))}

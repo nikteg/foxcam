@@ -159,7 +159,7 @@ function CameraCard({
           </span>
         }
         description={
-          <span className="row wrap">
+          <span className="row wrap tags">
             <Tag>{sourceLabel(c.source_config.type)}</Tag>
             {!editable && <Tag kind="pending">config.yaml</Tag>}
             {!c.enabled && <Tag kind="warn">{t("cameras.disabled")}</Tag>}
@@ -182,7 +182,7 @@ function CameraCard({
         <dt>{t("profiles.title")}</dt>
         <dd>
           {c.profiles.length ? (
-            <span className="row wrap">
+            <span className="row wrap tags">
               {c.profiles.map((id) => (
                 <Tag key={id}>{profileName(id)}</Tag>
               ))}

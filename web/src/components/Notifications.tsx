@@ -161,7 +161,7 @@ function ChannelCard({
           </span>
         }
         description={
-          <span className="row wrap">
+          <span className="row wrap tags">
             <Tag>{t(TYPE_LABELS[c.type])}</Tag>
             {c.managed === "config" && <Tag kind="pending">config.yaml</Tag>}
             {!c.enabled && <Tag kind="warn">{t("notify.disabled")}</Tag>}
