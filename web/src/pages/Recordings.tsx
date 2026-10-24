@@ -218,11 +218,10 @@ function RecordingDetail({ segment: s }: { segment: Segment }) {
         <dt>{t("col.size")}</dt>
         <dd>{fileSize(s.size_bytes)}</dd>
         <dt>{t("col.light")}</dt>
-        <dd>
+        <dd className="row">
           <Light night={s.is_night} long />
           {s.saturation_avg !== null && (
             <span className="muted">
-              {" "}
               ({t("recordings.saturation", { value: decimal(s.saturation_avg, 1) })})
             </span>
           )}

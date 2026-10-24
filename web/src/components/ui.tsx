@@ -226,7 +226,7 @@ export function Light({
   return (
     <span className="light" title={night ? t("light.nightIr") : t("light.day")}>
       <Icon />
-      {long && <Text size={200}>{label}</Text>}
+      {long && <span>{label}</span>}
     </span>
   );
 }
