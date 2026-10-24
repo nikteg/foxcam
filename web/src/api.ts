@@ -377,6 +377,8 @@ export const api = {
   workerTags: () => request<string[]>("GET", "/api/worker-tags"),
   setTokenTags: (id: number, tags: string[]) =>
     request<WorkerToken>("PUT", `/api/workers/tokens/${id}/tags`, { tags }),
+  removeWorker: (id: string) =>
+    request<{ status: string }>("DELETE", `/api/workers/${encodeURIComponent(id)}`),
   requeue: (jobId: number) =>
     request<{ status: string }>("POST", `/api/queue/jobs/${jobId}/requeue`),
 };

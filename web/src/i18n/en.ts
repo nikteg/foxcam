@@ -344,6 +344,8 @@ export const en = {
   "cameras.profilesFromDefault": "Currently the default profiles; saving here overrides them.",
   "cameras.profilesReset": "Use defaults",
   "queue.byProfile": "Per profile",
+  "queue.removeWorkerHint":
+    "Remove this offline worker from the list. It comes back if it connects again; revoke its token to keep it out.",
   "queue.running": "Running",
   "workers.tags": "Tags",
   "workers.tagsHint":

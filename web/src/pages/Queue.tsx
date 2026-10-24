@@ -9,8 +9,9 @@ import {
   TableHeaderCell,
   TableRow,
   Text,
+  Tooltip,
 } from "@fluentui/react-components";
-import { ArrowClockwise16Regular, Dismiss16Regular } from "@fluentui/react-icons";
+import { ArrowClockwise16Regular, Delete16Regular, Dismiss16Regular } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useNavigate } from "react-router";
@@ -46,6 +47,13 @@ export function Queue() {
   const requeue = useMutation({
     mutationFn: api.requeue,
     onSuccess: () => client.invalidateQueries({ queryKey: ["queue"] }),
+  });
+  const removeWorker = useMutation({
+    mutationFn: api.removeWorker,
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["queue"] });
+      void client.invalidateQueries({ queryKey: ["profiles"] });
+    },
   });
   const navigate = useNavigate();
   const { t } = useI18n();
@@ -140,6 +148,7 @@ export function Queue() {
                 <TableHeaderCell>{t("queue.currentJob")}</TableHeaderCell>
                 <TableHeaderCell>{t("queue.doneCount")}</TableHeaderCell>
                 <TableHeaderCell>{t("queue.failedCount")}</TableHeaderCell>
+                <TableHeaderCell aria-label={t("col.actions")} className="col-actions" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -175,6 +184,20 @@ export function Queue() {
                   </TableCell>
                   <TableCell data-label={t("queue.doneCount")}>{w.jobs_done}</TableCell>
                   <TableCell data-label={t("queue.failedCount")}>{w.jobs_failed}</TableCell>
+                  <TableCell className="full">
+                    {!w.online && (
+                      <Tooltip content={t("queue.removeWorkerHint")} relationship="description">
+                        <Button
+                          size="small"
+                          icon={<Delete16Regular />}
+                          disabled={removeWorker.isPending}
+                          onClick={() => removeWorker.mutate(w.id)}
+                        >
+                          {t("common.remove")}
+                        </Button>
+                      </Tooltip>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

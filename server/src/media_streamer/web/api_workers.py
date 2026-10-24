@@ -9,7 +9,10 @@ from pydantic import BaseModel, Field
 
 from .. import worker_tokens
 from ..config import Settings
+from ..db import session_scope
+from ..models import Worker, utcnow
 from .deps import settings_dep
+from .queries import WORKER_ONLINE_SECONDS
 
 router = APIRouter(prefix="/api/workers", tags=["workers"])
 
@@ -53,6 +56,21 @@ def set_token_tags(token_id: int, body: TagsIn) -> dict[str, Any]:
         return worker_tokens.set_tags(token_id, body.tags)
     except worker_tokens.TokenError as e:
         raise HTTPException(404, str(e)) from e
+
+
+@router.delete("/{worker_id}")
+def remove_worker(worker_id: str) -> dict[str, str]:
+    """Forget an offline worker (it reappears if it connects again; revoke its token to
+    keep it out)."""
+    now = utcnow()
+    with session_scope() as s:
+        w = s.get(Worker, worker_id)
+        if w is None:
+            raise HTTPException(404, "unknown worker")
+        if (now - w.last_seen).total_seconds() < WORKER_ONLINE_SECONDS:
+            raise HTTPException(409, "worker is online; stop it first")
+        s.delete(w)
+    return {"status": "ok"}
 
 
 @router.delete("/tokens/{token_id}")

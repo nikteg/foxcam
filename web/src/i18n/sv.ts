@@ -427,6 +427,8 @@ export const sv: Record<MessageKey, string> = {
   "cameras.profilesFromDefault": "Just nu standardprofilerna; sparar du här gäller det i stället.",
   "cameras.profilesReset": "Använd standard",
   "queue.byProfile": "Per profil",
+  "queue.removeWorkerHint":
+    "Ta bort den här offline-arbetaren från listan. Den kommer tillbaka om den ansluter igen; återkalla dess token för att stänga ute den.",
   "queue.running": "Pågår",
   "workers.tags": "Taggar",
   "workers.tagsHint":

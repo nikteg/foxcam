@@ -151,6 +151,20 @@ def test_worker_tokens_lock_the_api_and_fix_identity(settings, client):
     assert client.get("/api/workers/auth").json()["mode"] == "open"
 
 
+def test_offline_workers_can_be_removed(client):
+    from datetime import timedelta
+
+    from media_streamer.models import Worker, utcnow
+
+    assert client.post("/api/worker/lease", json={"worker_id": "dummy"}).status_code == 204
+    assert client.delete("/api/workers/dummy").status_code == 409  # still online
+    with session_scope() as s:
+        s.get(Worker, "dummy").last_seen = utcnow() - timedelta(hours=1)
+    assert client.delete("/api/workers/dummy").status_code == 200
+    assert client.get("/api/queue").json()["workers"] == []
+    assert client.delete("/api/workers/dummy").status_code == 404
+
+
 def test_whoami_checks_credentials_without_side_effects(client):
     assert client.get("/api/worker/whoami").json()["token_name"] is None
     token = client.post("/api/workers/tokens", json={"name": "wsl-pc"}).json()["token"]
