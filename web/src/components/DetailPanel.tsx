@@ -57,6 +57,9 @@ export function DetailPanel({
       position="end"
       size={phone ? "full" : "medium"}
       modalType="non-modal"
+      // Phones: the drawer covers the screen, so it just appears (no slide).
+      surfaceMotion={phone ? null : undefined}
+      backdropMotion={phone ? null : undefined}
       onOpenChange={(_, d) => !d.open && onClose()}
       className="app-drawer"
     >

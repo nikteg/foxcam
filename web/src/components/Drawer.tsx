@@ -42,6 +42,9 @@ export function Dialog({
       position="end"
       size={phone ? "full" : size}
       modalType={modal ? "modal" : "non-modal"}
+      // Phones: the drawer covers the screen, so it just appears (no slide).
+      surfaceMotion={phone ? null : undefined}
+      backdropMotion={phone ? null : undefined}
       onOpenChange={(e, d) => onOpenChange?.(e, { open: d.open })}
       className="app-drawer"
     >
