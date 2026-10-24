@@ -44,6 +44,7 @@ const TITLES: Record<Kind, MessageKey> = {
 export function AddCameraDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useI18n();
   const [kind, setKind] = useState<Kind | null>(null);
+  const tapoConnected = useTapoConnected();
   const close = () => {
     setKind(null);
     onClose();
@@ -67,7 +68,7 @@ export function AddCameraDialog({ open, onClose }: { open: boolean; onClose: () 
           </DialogTitle>
           <DialogContent>
             {kind === null && <ChooseKind onChoose={setKind} />}
-            {kind === "tapo" && <TapoStep onDone={close} />}
+            {kind === "tapo" && <TapoStep />}
             {kind === "rtsp" && <RtspStep onDone={close} />}
             {kind === "file" && <FileStep onDone={close} />}
             {kind === "test" && <TestStep onDone={close} />}
@@ -80,6 +81,13 @@ export function AddCameraDialog({ open, onClose }: { open: boolean; onClose: () 
                 onClick={() => setKind(null)}
               >
                 {t("addCamera.otherTypes")}
+              </Button>
+            </DialogActions>
+          )}
+          {kind === "tapo" && tapoConnected && (
+            <DialogActions position="end">
+              <Button appearance="primary" onClick={close}>
+                {t("common.done")}
               </Button>
             </DialogActions>
           )}
@@ -166,8 +174,7 @@ function ProbeBar({ result }: { result: ProbeResult | undefined }) {
 
 // --- Tapo cloud -------------------------------------------------------------------
 
-function TapoStep({ onDone }: { onDone: () => void }) {
-  const { t } = useI18n();
+function TapoStep() {
   const status = useQuery({ queryKey: ["tapo", "status"], queryFn: api.tapoStatus });
   const connected = (status.data?.connected && !status.data.expired) ?? false;
 
@@ -175,16 +182,13 @@ function TapoStep({ onDone }: { onDone: () => void }) {
   if (status.data && !status.data.available) return <TapoNotInstalled />;
   if (!connected) return <TapoSignIn />;
 
-  return (
-    <div className="form-stack">
-      <TapoCameraList />
-      <div className="row">
-        <Button appearance="primary" onClick={onDone}>
-          {t("common.done")}
-        </Button>
-      </div>
-    </div>
-  );
+  return <TapoCameraList />;
+}
+
+/** Signed in to Tapo: the camera list is showing and "Done" closes the dialog. */
+function useTapoConnected(): boolean {
+  const status = useQuery({ queryKey: ["tapo", "status"], queryFn: api.tapoStatus });
+  return (status.data?.available && status.data.connected && !status.data.expired) ?? false;
 }
 
 // --- RTSP ---------------------------------------------------------------------------
