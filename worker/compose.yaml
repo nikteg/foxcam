@@ -5,9 +5,6 @@
 #
 # Or put the variables in worker/.env. See docs/WORKER_SETUP.md.
 
-# Compose project name (container names foxcam-worker-...). Komodo and -p use their own.
-name: foxcam-worker
-
 services:
   worker:
     build:

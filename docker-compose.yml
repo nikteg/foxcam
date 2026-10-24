@@ -11,9 +11,6 @@
 # needs the internal login (mediamtx/mediamtx.yml), and browsers reach live view through
 # the server (behind the login). The
 # first start prints a setup code for the first account: docker compose logs server
-# Compose project name (container names foxcam-...). Komodo and -p use their own.
-name: foxcam
-
 services:
   mediamtx:
     # Same image as the server: MediaMTX runs `foxcam transcode` (masks, recording
