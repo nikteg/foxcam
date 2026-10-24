@@ -49,6 +49,15 @@ classes), list them; it then only gets jobs of profiles looking for at least one
 `null` = it can look for anything (open-vocabulary models are prompted with the job's
 `hints.target_labels`).
 
+`vocabulary` (optional): everything the detector can report, e.g. a COCO model's 80
+classes or SpeciesNet's ~3,500 taxonomy names. Not a filter: the server stores it per
+worker and suggests these labels in the profile and notification editors (`GET
+/api/labels`), and warns about targets no eligible worker can report. Send it with the
+first lease and then every few minutes (the reference worker: every 10 minutes), not with
+every lease; leases without it keep the stored list. Workers that send only `labels` have
+those stored as their vocabulary. Open-vocabulary workers send neither: they can report
+anything (tag `open-vocabulary`).
+
 `info` is free-form and shown in the web UI's worker queue tab. `tags` are capabilities:
 you only get jobs of [detection profiles](ARCHITECTURE.md#detection-profiles) whose
 `requires` tags you all have (tags on the access token are added by the server). Each

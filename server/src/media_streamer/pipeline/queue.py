@@ -39,7 +39,8 @@ class DetectionIn:
 
 def touch_worker(worker_id: str, info: dict[str, Any] | None = None,
                  current_job_id: int | None | type[...] = ...,
-                 tags: list[str] | None = None) -> None:
+                 tags: list[str] | None = None,
+                 vocabulary: list[str] | None = None) -> None:
     with session_scope() as s:
         w = s.get(Worker, worker_id)
         if w is None:
@@ -50,17 +51,26 @@ def touch_worker(worker_id: str, info: dict[str, Any] | None = None,
             w.info = info
         if tags is not None:
             w.tags = tags
+        if vocabulary is not None:
+            w.vocabulary = sorted({v.strip() for v in vocabulary if v and v.strip()},
+                                  key=str.lower)
+            w.vocabulary_at = utcnow()
         if current_job_id is not ...:
             w.current_job_id = current_job_id
 
 
 def lease(settings: Settings, worker_id: str, info: dict[str, Any] | None = None,
-          tags: list[str] | None = None, labels: list[str] | None = None) -> Job | None:
+          tags: list[str] | None = None, labels: list[str] | None = None,
+          vocabulary: list[str] | None = None) -> Job | None:
+    """``labels``: a lease filter (only profiles looking for one of these; None =
+    anything). ``vocabulary``: everything the detector can report, stored for the label
+    pickers; older workers only send ``labels``, which then count as the vocabulary."""
     now = utcnow()
     token = secrets.token_urlsafe(24)
     expires = now + timedelta(seconds=settings.queue.lease_seconds)
     tags = tags or []
-    touch_worker(worker_id, info, tags=tags)
+    touch_worker(worker_id, info, tags=tags,
+                 vocabulary=vocabulary if vocabulary is not None else labels)
     profiles = eligible_profiles(settings, tags, labels)
     if not profiles:
         touch_worker(worker_id, current_job_id=None)

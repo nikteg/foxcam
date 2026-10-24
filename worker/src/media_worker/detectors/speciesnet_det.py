@@ -15,6 +15,7 @@ VERIFY on your GPU machine before relying on it.
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 import sys
 import tempfile
@@ -22,6 +23,8 @@ from pathlib import Path
 from typing import Any
 
 from ..frames import Frame
+
+log = logging.getLogger(__name__)
 from .base import Detection, Detector
 
 
@@ -66,12 +69,58 @@ def _classification(pred: dict[str, Any]) -> tuple[str | None, float | None, str
     return None, None, None
 
 
+# What MegaDetector reports for boxes the classifier does not name.
+DETECTOR_LABELS = ("animal", "person", "vehicle")
+# Taxonomy entries that are not something seen.
+_NOT_A_THING = {"blank", "no cv result", ""}
+
+
+def _taxonomy_name(line: str) -> str:
+    """"uuid;class;order;family;genus;species;common name" -> the common name, or the most
+    specific taxonomy level for roll-ups without one."""
+    parts = [p.strip() for p in line.strip().split(";")]
+    if not any(parts[1:]):
+        return ""
+    return _common_name(line) or next((p for p in reversed(parts[1:]) if p), "")
+
+
+def model_vocabulary(model_dir: Path) -> list[str]:
+    """Names SpeciesNet can report: its classifier labels and taxonomy roll-ups (e.g.
+    "canine family"), plus MegaDetector's animal / person / vehicle."""
+    info = json.loads((model_dir / "info.json").read_text())
+    names = set(DETECTOR_LABELS)
+    for key in ("classifier_labels", "taxonomy"):
+        path = model_dir / info.get(key, "")
+        if info.get(key) and path.is_file():
+            names.update(_taxonomy_name(line) for line in path.read_text().splitlines())
+    return sorted(n for n in names if n.lower() not in _NOT_A_THING)
+
+
 class SpeciesNetDetector(Detector):
     name = "speciesnet"
 
     def __init__(self, min_detection_conf: float = 0.1, extra_args: list[str] | None = None):
         self.min_detection_conf = min_detection_conf
         self.extra_args = extra_args or []
+        self._vocabulary: list[str] | None = None
+
+    def vocabulary(self) -> list[str] | None:
+        """The model's label names (from its files; downloads the model the first time,
+        like the first job would). None if they cannot be read. Not a lease filter: jobs
+        stay routed by tags, as before."""
+        if self._vocabulary is None:
+            try:
+                from speciesnet import DEFAULT_MODEL
+                from speciesnet.utils import ModelInfo
+
+                args = self.extra_args
+                model = args[args.index("--model") + 1] if "--model" in args else DEFAULT_MODEL
+                info = ModelInfo(model)
+                self._vocabulary = model_vocabulary(Path(info.classifier_labels).parent)
+            except Exception as e:  # noqa: BLE001 - suggestions only; never stop the worker
+                log.info("speciesnet: could not read the model's labels (%s)", e)
+                self._vocabulary = []
+        return self._vocabulary or None
 
     def detect(self, frames: list[Frame], hints: dict[str, Any]) -> list[Detection]:
         if not frames:

@@ -234,6 +234,11 @@ class Worker(Base):
     info: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     # Capability tags from the last lease (worker --tags, detector, token).
     tags: Mapped[list[Any] | None] = mapped_column(JSON)
+    # Labels its detector can report (closed-set models: COCO, a fine-tuned model,
+    # SpeciesNet's taxonomy). None = not reported (open-vocabulary: anything). Suggestions
+    # in the label pickers (GET /api/labels); kept until the worker reports a new list.
+    vocabulary: Mapped[list[Any] | None] = mapped_column(JSON)
+    vocabulary_at: Mapped[datetime | None] = mapped_column(DateTime)
     current_job_id: Mapped[int | None] = mapped_column(Integer)
     jobs_done: Mapped[int] = mapped_column(Integer, default=0)
     jobs_failed: Mapped[int] = mapped_column(Integer, default=0)

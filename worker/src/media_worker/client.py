@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import Any
 
@@ -12,10 +13,15 @@ class LeaseLost(Exception):
     """The server no longer recognises our lease (expired or reassigned)."""
 
 
+# How often the vocabulary (up to a few thousand names) goes along with a lease: often
+# enough that a restarted or reset server gets it again soon, rarely enough to stay small.
+VOCABULARY_EVERY = 600.0
+
+
 class Client:
     def __init__(self, server: str, worker_id: str, token: str | None = None,
                  info: dict[str, Any] | None = None, tags: list[str] | None = None,
-                 labels: list[str] | None = None):
+                 labels: list[str] | None = None, vocabulary: list[str] | None = None):
         headers = {"Authorization": f"Bearer {token}"} if token else {}
         self.http = httpx.Client(base_url=server.rstrip("/"), headers=headers,
                                  timeout=httpx.Timeout(30, read=300))
@@ -23,6 +29,8 @@ class Client:
         self.info = info or {}
         self.tags = tags or []
         self.labels = labels
+        self.vocabulary = vocabulary
+        self._vocabulary_sent = float("-inf")
 
     def close(self) -> None:
         self.http.close()
@@ -34,9 +42,15 @@ class Client:
         return r
 
     def lease(self) -> dict[str, Any] | None:
-        r = self._check(self.http.post("/api/worker/lease",
-                                       json={"worker_id": self.worker_id, "info": self.info,
-                                             "tags": self.tags, "labels": self.labels}))
+        body: dict[str, Any] = {"worker_id": self.worker_id, "info": self.info,
+                                "tags": self.tags, "labels": self.labels}
+        send_vocabulary = (self.vocabulary is not None
+                           and time.monotonic() - self._vocabulary_sent >= VOCABULARY_EVERY)
+        if send_vocabulary:
+            body["vocabulary"] = self.vocabulary
+        r = self._check(self.http.post("/api/worker/lease", json=body))
+        if send_vocabulary:
+            self._vocabulary_sent = time.monotonic()
         return None if r.status_code == 204 else r.json()
 
     def download_input(self, job: dict[str, Any], dst: Path) -> None:

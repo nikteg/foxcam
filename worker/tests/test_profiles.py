@@ -92,3 +92,47 @@ def test_job_frame_rate_comes_from_the_profile(tmp_path):
     det = CountingDetector()
     cli.process(FakeClient(clip), det, job, argparse.Namespace(fps=None, heartbeat=30))
     assert 3 <= det.frames <= 5  # ~1 fps over 4 s, not 16 frames
+
+
+def test_speciesnet_vocabulary_from_model_files(tmp_path):
+    from media_worker.detectors.speciesnet_det import model_vocabulary
+
+    (tmp_path / "info.json").write_text(
+        '{"classifier_labels": "labels.txt", "taxonomy": "taxonomy.txt"}')
+    (tmp_path / "labels.txt").write_text(
+        "a;mammalia;carnivora;canidae;vulpes;vulpes;red fox\n"
+        "b;;;;;;blank\n"
+        "c;mammalia;carnivora;mustelidae;;;\n")  # roll-up without a common name
+    (tmp_path / "taxonomy.txt").write_text(
+        "d;mammalia;carnivora;canidae;;;canine family\n"
+        "a;mammalia;carnivora;canidae;vulpes;vulpes;red fox\n")
+    assert model_vocabulary(tmp_path) == [
+        "animal", "canine family", "mustelidae", "person", "red fox", "vehicle"]
+
+
+def test_vocabulary_goes_with_the_first_lease_only(monkeypatch):
+    import json as _json
+
+    import httpx
+    from media_worker import client as client_mod
+
+    bodies = []
+
+    def handler(request):
+        bodies.append(_json.loads(request.content))
+        return httpx.Response(204)
+
+    c = client_mod.Client("http://server", "w1", labels=None, vocabulary=["fox", "badger"])
+    c.http = httpx.Client(base_url="http://server", transport=httpx.MockTransport(handler))
+    c.lease()
+    c.lease()
+    assert bodies[0]["vocabulary"] == ["fox", "badger"] and "vocabulary" not in bodies[1]
+    assert bodies[1]["labels"] is None  # the lease filter stays "anything"
+    monkeypatch.setattr(client_mod, "VOCABULARY_EVERY", 0)
+    c.lease()
+    assert bodies[2]["vocabulary"] == ["fox", "badger"]
+
+
+def test_open_vocabulary_has_no_vocabulary():
+    det = _ultralytics()
+    assert det.labels() is None and det.vocabulary() is None

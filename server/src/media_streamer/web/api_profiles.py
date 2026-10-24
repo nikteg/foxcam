@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from .. import profiles
+from .. import labels, profiles
 from ..accounts import Principal
 from ..config import PROFILE_ID, Settings
 from ..db import session_scope
@@ -112,6 +112,14 @@ def set_camera_profiles(camera_id: str, body: CameraProfilesIn,
     except profiles.ProfileError as e:
         raise _error(e) from e
     return {"profiles": [p.id for p in profiles.camera_profiles(settings, camera_id)]}
+
+
+@router.get("/labels", dependencies=[Depends(require_admin)])
+def label_suggestions() -> dict[str, Any]:
+    """Suggestions for label pickers: per worker its detector, tags and (closed-set models)
+    vocabulary; the open-vocabulary list (LVIS, Objects365); labels seen in detections;
+    synonym groups (see labels.py)."""
+    return labels.suggestions()
 
 
 @router.get("/worker-tags", dependencies=[Depends(require_admin)])

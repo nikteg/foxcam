@@ -386,8 +386,20 @@ export const en = {
     "e.g. tgram://bottoken/chatid, discord://webhook_id/token, pover://user@token. See the Apprise wiki for all services.",
   "notify.appriseMissing":
     "Apprise is not installed on the server (uv sync --all-packages --extra notify; the Docker image includes it).",
+  "labels.seen": "seen {n}x, up to {conf}",
+  "labels.openVocabulary": "open vocabulary",
+  "labels.profileTarget": "profile target",
+  "labels.useTyped": "use as typed",
+  "labels.targetsPlaceholder": "e.g. fox",
+  "labels.modelLabel": "Model label",
+  "labels.yourLabel": "Your label",
+  "labels.addAlias": "Add alias",
+  "labels.warnUnreportable":
+    "No worker that can run this profile can report {labels} (models: {detectors}), so it will never create an event. Pick a suggested label, or add an alias from a label the model knows.",
+  "labels.warnSynonyms":
+    "{labels} look like the same thing. YOLO-World splits its confidence between targets prompted together (person alone scored 0.89, with man, woman and child 0.43). Keep one as the target and add the others as aliases.",
   "notify.labels": "Only these labels",
-  "notify.labelsHint": "Comma separated, e.g. fox. Empty = every target of the profiles.",
+  "notify.labelsHint": "Pick or type labels. Empty = every target of the profiles.",
   "notify.removeTitle": "Remove {name}?",
   "notify.removeBody": "Its waiting notifications are dropped.",
 
@@ -447,9 +459,9 @@ export const en = {
   "profiles.id": "Id",
   "profiles.idHint": "Lower-case letters, digits, '-' or '_'. Cannot be changed later.",
   "profiles.targetsHint":
-    "Labels that create events, comma separated, e.g. fox, badger. Open-vocabulary workers (YOLO-World) are prompted with these: use one word per thing, since synonyms (person, man, woman) compete and lower every score. Map other names with aliases instead.",
+    "Labels that create events, e.g. fox, badger: pick a suggestion or type and press Enter. Open-vocabulary workers (YOLO-World) are prompted with these: use one word per thing, since synonyms (person, man, woman) compete and lower every score. Map other names with aliases instead.",
   "profiles.aliasesHint":
-    "One per line: model label = your label, e.g. red fox = fox. Lets different models agree on names.",
+    "Map a label a model reports to yours, e.g. red fox → fox, so different models agree on names.",
   "profiles.minConfidencePercent": "Minimum confidence (%)",
   "profiles.requiresHint":
     "Comma separated. Only workers with all these tags get this profile's jobs (e.g. speciesnet, or a machine's own tag to pin it). Empty = any worker.",

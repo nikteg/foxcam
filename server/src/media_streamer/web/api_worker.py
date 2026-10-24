@@ -6,7 +6,7 @@ lease -> download input -> heartbeat while working -> result | fail
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from fastapi.responses import FileResponse
@@ -37,6 +37,10 @@ class LeaseRequest(BaseModel):
     # What this worker can detect, if limited (e.g. fixed classes). null = anything: then
     # targets are taken from each job's profile (open-vocabulary models are prompted).
     labels: list[str] | None = Field(default=None, max_length=500)
+    # Everything the detector can report (e.g. SpeciesNet's ~2,500 taxonomy names), for the
+    # label pickers in the UI; not a filter. Sent now and then, not with every lease.
+    vocabulary: list[Annotated[str, Field(max_length=120)]] | None = Field(
+        default=None, max_length=20000)
 
 
 class SegmentOut(BaseModel):
@@ -104,7 +108,7 @@ def lease(body: LeaseRequest, settings: Settings = Depends(settings_dep),
     # A per-worker token decides who the worker is; the client's worker_id is ignored then.
     worker_id = identity.name or body.worker_id
     tags = normalize_tags([*body.tags, *identity.tags])
-    job = queue.lease(settings, worker_id, body.info, tags, body.labels)
+    job = queue.lease(settings, worker_id, body.info, tags, body.labels, body.vocabulary)
     if job is None:
         return Response(status_code=204)
     seg = job.segment

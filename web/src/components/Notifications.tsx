@@ -35,7 +35,7 @@ import {
   Send20Regular,
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   api,
@@ -47,6 +47,7 @@ import {
 } from "../api";
 import { percent } from "../format";
 import { useI18n, type MessageKey } from "../i18n";
+import { LabelPicker, useLabelSuggestions, useSuggestionList } from "./LabelPicker";
 import { useCameraName } from "./CameraSelect";
 import { useProfileName, useProfiles } from "./ProfileSelect";
 import { Empty, QueryState, Tag, Time } from "./ui";
@@ -309,7 +310,16 @@ function ChannelDialog({
   const [when, setWhen] = useState<NotifyTrigger[]>(channel?.when ?? ["event.new"]);
   const [cams, setCams] = useState<string[] | null>(channel?.cameras ?? null);
   const [profs, setProfs] = useState<string[] | null>(channel?.profiles ?? null);
-  const [labels, setLabels] = useState(channel?.labels?.join(", ") ?? "");
+  const [labels, setLabels] = useState<string[]>(channel?.labels ?? []);
+  const labelData = useLabelSuggestions();
+  const profileTargets = useMemo(
+    () => ({
+      labels: [...new Set((profiles.data ?? []).flatMap((p) => p.targets))],
+      source: t("labels.profileTarget"),
+    }),
+    [profiles.data, t],
+  );
+  const labelSuggestions = useSuggestionList(labelData.data, profileTargets);
   const [minConf, setMinConf] = useState(String(Math.round((channel?.min_confidence ?? 0) * 100)));
   const [quietFrom, setQuietFrom] = useState(channel?.quiet_hours?.split("-")[0] ?? "");
   const [quietTo, setQuietTo] = useState(channel?.quiet_hours?.split("-")[1] ?? "");
@@ -337,7 +347,7 @@ function ChannelDialog({
     when,
     cameras: cams,
     profiles: profs,
-    labels: splitList(labels).length ? splitList(labels) : null,
+    labels: labels.length ? labels : null,
     min_confidence: Math.min(Math.max(Number(minConf) / 100, 0), 1),
     quiet_hours: quietFrom && quietTo ? `${quietFrom}-${quietTo}` : null,
     cooldown_minutes: Math.max(Number(cooldown) || 0, 0),
@@ -535,7 +545,13 @@ function ChannelDialog({
                 </Field>
               )}
               <Field label={t("notify.labels")} hint={t("notify.labelsHint")}>
-                <Input value={labels} placeholder="fox" onChange={(_, d) => setLabels(d.value)} />
+                <LabelPicker
+                  value={labels}
+                  onChange={setLabels}
+                  suggestions={labelSuggestions}
+                  placeholder="fox"
+                  ariaLabel={t("notify.labels")}
+                />
               </Field>
               <Field label={t("profiles.minConfidencePercent")}>
                 <Input

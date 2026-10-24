@@ -386,8 +386,20 @@ export const sv: Record<MessageKey, string> = {
     "t.ex. tgram://bottoken/chatid, discord://webhook_id/token, pover://user@token. Se Apprise-wikin för alla tjänster.",
   "notify.appriseMissing":
     "Apprise är inte installerat på servern (uv sync --all-packages --extra notify; Docker-avbildningen har det).",
+  "labels.seen": "sedd {n} ggr, upp till {conf}",
+  "labels.openVocabulary": "öppen vokabulär",
+  "labels.profileTarget": "profilmål",
+  "labels.useTyped": "använd som skrivet",
+  "labels.targetsPlaceholder": "t.ex. fox",
+  "labels.modelLabel": "Modellens etikett",
+  "labels.yourLabel": "Din etikett",
+  "labels.addAlias": "Lägg till alias",
+  "labels.warnUnreportable":
+    "Ingen arbetare som kan köra profilen kan rapportera {labels} (modeller: {detectors}), så det skapar aldrig någon händelse. Välj en föreslagen etikett, eller lägg till ett alias från en etikett som modellen känner till.",
+  "labels.warnSynonyms":
+    "{labels} verkar vara samma sak. YOLO-World delar upp säkerheten mellan mål som efterfrågas samtidigt (person ensamt gav 0,89, tillsammans med man, woman och child 0,43). Behåll ett som mål och lägg de andra som alias.",
   "notify.labels": "Bara dessa etiketter",
-  "notify.labelsHint": "Kommaseparerade, t.ex. fox. Tomt = alla profilernas mål.",
+  "notify.labelsHint": "Välj eller skriv etiketter. Tomt = alla profilernas mål.",
   "notify.removeTitle": "Ta bort {name}?",
   "notify.removeBody": "Dess väntande aviseringar slängs.",
 
@@ -530,9 +542,9 @@ export const sv: Record<MessageKey, string> = {
   "profiles.id": "Id",
   "profiles.idHint": "Små bokstäver, siffror, '-' eller '_'. Kan inte ändras senare.",
   "profiles.targetsHint":
-    "Etiketter som skapar händelser, kommaseparerade, t.ex. fox, badger. Arbetare med öppet ordförråd (YOLO-World) får dessa som prompt: använd ett ord per sak, eftersom synonymer (person, man, woman) konkurrerar och sänker alla värden. Mappa andra namn med alias i stället.",
+    "Etiketter som skapar händelser, t.ex. fox, badger: välj ett förslag eller skriv och tryck Enter. Arbetare med öppen vokabulär (YOLO-World) får dessa som prompt: använd ett ord per sak, eftersom synonymer (person, man, woman) konkurrerar och sänker alla värden. Mappa andra namn med alias i stället.",
   "profiles.aliasesHint":
-    "En per rad: modellens etikett = din etikett, t.ex. red fox = fox. Får olika modeller att använda samma namn.",
+    "Koppla en etikett som en modell rapporterar till din, t.ex. red fox → fox, så att olika modeller använder samma namn.",
   "profiles.minConfidencePercent": "Minsta säkerhet (%)",
   "profiles.requiresHint":
     "Kommaseparerade. Bara arbetare med alla dessa taggar får profilens jobb (t.ex. speciesnet, eller en dators egen tagg för att låsa den). Tomt = alla arbetare.",

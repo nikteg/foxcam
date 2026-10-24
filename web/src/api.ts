@@ -242,6 +242,31 @@ export interface ArchiveFile {
   download_url: string | null;
 }
 
+/** GET /api/labels: suggestions for label pickers (admins). */
+export interface LabelSuggestions {
+  workers: {
+    id: string;
+    detector: string | null;
+    tags: string[];
+    online: boolean;
+    last_seen: string;
+    /** Prompted with any noun (YOLO-World / YOLOE): can report anything. */
+    open_vocabulary: boolean;
+    /** What a closed-set model can report; null = not reported (or open vocabulary). */
+    vocabulary: string[] | null;
+  }[];
+  open_vocabulary: { wildlife: string[]; lvis: string[]; objects365: string[] };
+  seen: {
+    label: string;
+    count: number;
+    max_confidence: number;
+    last_seen: string | null;
+    targets: number;
+  }[];
+  /** Words a detector treats as the same thing (prompting several splits confidence). */
+  synonym_groups: string[][];
+}
+
 export interface Detection {
   id: number;
   segment_id: number;
@@ -698,6 +723,7 @@ export const api = {
       { profiles },
     ),
   workerTags: () => request<string[]>("GET", "/api/worker-tags"),
+  labels: () => request<LabelSuggestions>("GET", "/api/labels"),
   setTokenTags: (id: number, tags: string[]) =>
     request<WorkerToken>("PUT", `/api/workers/tokens/${id}/tags`, { tags }),
   removeWorker: (id: string) =>

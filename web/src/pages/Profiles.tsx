@@ -18,14 +18,25 @@ import {
   Subtitle2,
   Switch,
   Text,
-  Textarea,
 } from "@fluentui/react-components";
-import { Add20Regular, Delete20Regular, Edit20Regular } from "@fluentui/react-icons";
+import {
+  Add20Regular,
+  Delete20Regular,
+  Dismiss20Regular,
+  Edit20Regular,
+} from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api, type Profile, type ProfileInput } from "../api";
+import {
+  LabelCombobox,
+  LabelPicker,
+  useLabelSuggestions,
+  useSuggestionList,
+} from "../components/LabelPicker";
 import { useProfiles } from "../components/ProfileSelect";
+import { profileWarnings } from "../labelWarnings";
 import { Navigate } from "react-router";
 
 import { Empty, QueryState, Tag } from "../components/ui";
@@ -38,19 +49,13 @@ const splitList = (text: string) =>
     .map((s) => s.trim())
     .filter(Boolean);
 
-/** "red fox = fox" lines <-> {"red fox": "fox"} */
-function parseAliases(text: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const line of text.split("\n")) {
-    const [from, to] = line.split("=").map((s) => s?.trim());
-    if (from && to) out[from] = to;
-  }
-  return out;
-}
-const formatAliases = (aliases: Record<string, string>) =>
-  Object.entries(aliases)
-    .map(([from, to]) => `${from} = ${to}`)
-    .join("\n");
+type AliasRow = { from: string; to: string };
+
+/** Complete rows only, as {"red fox": "fox"}. */
+const aliasMap = (rows: AliasRow[]): Record<string, string> =>
+  Object.fromEntries(
+    rows.filter((r) => r.from.trim() && r.to.trim()).map((r) => [r.from.trim(), r.to.trim()]),
+  );
 
 /** Detection profiles: shown on the Cameras page (anchor #profiles). */
 export function ProfilesSection() {
@@ -235,8 +240,12 @@ function ProfileDialog({ profile, onClose }: { profile: Profile | null; onClose:
   const tags = useQuery({ queryKey: ["worker-tags"], queryFn: api.workerTags });
   const [id, setId] = useState(profile?.id ?? "");
   const [name, setName] = useState(profile?.name ?? "");
-  const [targets, setTargets] = useState(profile?.targets.join(", ") ?? "");
-  const [aliases, setAliases] = useState(formatAliases(profile?.aliases ?? {}));
+  const [targets, setTargets] = useState<string[]>(profile?.targets ?? []);
+  const [aliases, setAliases] = useState<AliasRow[]>(() =>
+    Object.entries(profile?.aliases ?? {}).map(([from, to]) => ({ from, to })),
+  );
+  const labels = useLabelSuggestions();
+  const suggestions = useSuggestionList(labels.data);
   const [minConf, setMinConf] = useState(
     String(Math.round((profile?.min_confidence ?? 0.5) * 100)),
   );
@@ -249,8 +258,8 @@ function ProfileDialog({ profile, onClose }: { profile: Profile | null; onClose:
   const body = (): ProfileInput => ({
     id: id.trim(),
     name: name.trim() || null,
-    targets: splitList(targets),
-    aliases: parseAliases(aliases),
+    targets: targets.map((s) => s.trim()).filter(Boolean),
+    aliases: aliasMap(aliases),
     min_confidence: Math.min(Math.max(Number(minConf) / 100, 0), 1),
     requires: splitList(requires).map((s) => s.toLowerCase()),
     fps: fps ? Number(fps) : null,
@@ -267,11 +276,22 @@ function ProfileDialog({ profile, onClose }: { profile: Profile | null; onClose:
     },
   });
   const known = tags.data ?? [];
+  const warnings = profileWarnings(
+    targets,
+    aliasMap(aliases),
+    splitList(requires).map((s) => s.toLowerCase()),
+    labels.data,
+  );
+  const setAlias = (i: number, row: Partial<AliasRow>) =>
+    setAliases((rows) => rows.map((r, j) => (j === i ? { ...r, ...row } : r)));
 
   return (
     <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
       <DialogSurface className="add-camera-dialog">
         <form
+          // The browser's own check would count the picker's empty text box as a missing
+          // target; Save is disabled until there is an id and a target instead.
+          noValidate
           onSubmit={(e) => {
             e.preventDefault();
             save.mutate();
@@ -296,15 +316,64 @@ function ProfileDialog({ profile, onClose }: { profile: Profile | null; onClose:
                 </Field>
               )}
               <Field label={t("profiles.targets")} hint={t("profiles.targetsHint")} required>
-                <Input value={targets} onChange={(_, d) => setTargets(d.value)} />
-              </Field>
-              <Field label={t("profiles.aliases")} hint={t("profiles.aliasesHint")}>
-                <Textarea
-                  value={aliases}
-                  resize="vertical"
-                  placeholder="red fox = fox"
-                  onChange={(_, d) => setAliases(d.value)}
+                <LabelPicker
+                  value={targets}
+                  onChange={setTargets}
+                  suggestions={suggestions}
+                  placeholder={t("labels.targetsPlaceholder")}
+                  ariaLabel={t("profiles.targets")}
                 />
+              </Field>
+              {warnings.map((w) => (
+                <MessageBar key={`${w.kind}:${w.labels.join()}`} intent="warning">
+                  <MessageBarBody>
+                    {w.kind === "unreportable"
+                      ? t("labels.warnUnreportable", {
+                          labels: w.labels.join(", "),
+                          detectors: w.detectors.join(", "),
+                        })
+                      : t("labels.warnSynonyms", { labels: w.labels.join(", ") })}
+                  </MessageBarBody>
+                </MessageBar>
+              ))}
+              <Field label={t("profiles.aliases")} hint={t("profiles.aliasesHint")}>
+                <div className="alias-rows">
+                  {aliases.map((row, i) => (
+                    // oxlint-disable-next-line react/no-array-index-key -- rows have no id
+                    <div key={i} className="alias-row">
+                      <LabelCombobox
+                        value={row.from}
+                        onChange={(from) => setAlias(i, { from })}
+                        suggestions={suggestions}
+                        placeholder="red fox"
+                        ariaLabel={t("labels.modelLabel")}
+                      />
+                      <span aria-hidden className="muted">
+                        →
+                      </span>
+                      <Input
+                        value={row.to}
+                        placeholder="fox"
+                        aria-label={t("labels.yourLabel")}
+                        onChange={(_, d) => setAlias(i, { to: d.value })}
+                      />
+                      <Button
+                        appearance="subtle"
+                        icon={<Dismiss20Regular />}
+                        aria-label={t("common.remove")}
+                        onClick={() => setAliases((rows) => rows.filter((_, j) => j !== i))}
+                      />
+                    </div>
+                  ))}
+                  <Button
+                    size="small"
+                    icon={<Add20Regular />}
+                    className="alias-add"
+                    onClick={() => setAliases((rows) => [...rows, { from: "", to: "" }])}
+                  >
+                    {t("labels.addAlias")}
+                  </Button>
+                </div>
               </Field>
               <Field label={t("profiles.minConfidencePercent")}>
                 <Input
@@ -370,7 +439,7 @@ function ProfileDialog({ profile, onClose }: { profile: Profile | null; onClose:
               <Button
                 type="submit"
                 appearance="primary"
-                disabled={!id.trim() || !splitList(targets).length || save.isPending}
+                disabled={!id.trim() || !targets.length || save.isPending}
               >
                 {t("common.save")}
               </Button>

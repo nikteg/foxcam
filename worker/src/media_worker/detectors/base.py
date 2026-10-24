@@ -36,9 +36,14 @@ class Detector(ABC):
         return {"detector": self.name}
 
     def labels(self) -> list[str] | None:
-        """What this detector can report, if limited; the server then only hands out jobs
-        of profiles looking for one of these. None = anything / unknown."""
+        """A lease filter: the server only hands out jobs of profiles looking for one of
+        these. None = anything (open-vocabulary models, or no filtering wanted)."""
         return None
+
+    def vocabulary(self) -> list[str] | None:
+        """Everything this detector can report, for the label pickers in the web UI (not a
+        filter). None = anything / unknown. Defaults to ``labels()``."""
+        return self.labels()
 
     def tags(self) -> list[str]:
         """Capabilities sent with every lease; the server only hands out jobs of detection

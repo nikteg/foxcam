@@ -104,6 +104,33 @@ a.tag-link:focus-visible {
   outline: 2px solid var(--colorStrokeFocus2);
   outline-offset: 2px;
 }
+/* Profile aliases: "model label -> your label" rows. */
+.alias-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalS);
+}
+.alias-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--spacingHorizontalS);
+}
+.alias-row .fui-Combobox,
+.alias-row .fui-Input {
+  min-width: 0;
+}
+.alias-add {
+  align-self: flex-start;
+}
+/* Label suggestions: the label, and where it comes from underneath. */
+.label-option {
+  display: flex;
+  flex-direction: column;
+}
+.label-option-source {
+  font-size: var(--fontSizeBase200);
+}
 /* A spinner standing in for content: give it room. */
 .fui-Spinner.loading-block {
   padding: var(--spacingVerticalXL) 0;
