@@ -24,6 +24,7 @@ import { useIsAdmin, hasRole, useMe } from "../auth";
 import { AddCameraDialog } from "../components/AddCameraDialog";
 import { MaskDrawer } from "./MaskEditor";
 import { CameraCard } from "../components/CameraCard";
+import { LiveDrawer } from "../components/LiveDrawer";
 import { SharePanel } from "../components/ShareDialog";
 import { ProfileDialog, ProfilesSection } from "./Profiles";
 import { useProfiles } from "../components/ProfileSelect";
@@ -58,6 +59,7 @@ export function Cameras() {
   const [addingProfile, setAddingProfile] = useState(false);
   const [settingsFor, setSettingsFor] = useState<Camera | null>(null);
   const [maskFor, setMaskFor] = useState<string | null>(null);
+  const [liveFor, setLiveFor] = useState<string | null>(null);
   const me = useMe();
   const isAdmin = me?.is_admin ?? false;
   // Sub-pages with their own URL (links work even while parts are still loading).
@@ -123,6 +125,7 @@ export function Cameras() {
               <CameraCard
                 key={c.id}
                 camera={c}
+                onLive={() => setLiveFor(c.id)}
                 refreshKey={Math.floor(cameras.dataUpdatedAt / 10_000)}
                 manage
                 onSettings={() => setSettingsFor(c)}
@@ -135,6 +138,14 @@ export function Cameras() {
 
       <AddCameraDialog open={adding} onClose={() => setAdding(false)} />
       {maskFor && <MaskDrawer cameraId={maskFor} onClose={() => setMaskFor(null)} />}
+      {liveFor && (
+        <LiveDrawer
+          cameras={cameras.data ?? []}
+          cameraId={liveFor}
+          onCamera={setLiveFor}
+          onClose={() => setLiveFor(null)}
+        />
+      )}
       {addingProfile && (
         <ProfileDialog
           profile={null}

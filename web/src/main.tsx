@@ -12,7 +12,6 @@ import { Cameras } from "./pages/Cameras";
 import { Dashboard } from "./pages/Dashboard";
 import { Detections } from "./pages/Detections";
 import { Events } from "./pages/Events";
-import { Live } from "./pages/Live";
 import { Queue } from "./pages/Queue";
 import { Recordings } from "./pages/Recordings";
 import { Settings } from "./pages/Settings";
@@ -31,7 +30,6 @@ const router = createBrowserRouter([
     Component: Layout,
     children: [
       { index: true, Component: Dashboard },
-      { path: "live", Component: Live },
       { path: "events", Component: Events },
       { path: "detections", Component: Detections },
       { path: "recordings", Component: Recordings },

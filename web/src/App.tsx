@@ -25,7 +25,6 @@ import {
   Settings20Regular,
   Settings24Regular,
   Target24Regular,
-  Video24Regular,
 } from "@fluentui/react-icons";
 import type { ReactElement } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
@@ -49,7 +48,6 @@ interface NavItem {
 // `short` labels are used in the phone bottom bar.
 const TABS: NavItem[] = [
   { to: "/", label: "nav.status", short: "nav.status", icon: <DataBarVertical24Regular /> },
-  { to: "/live", label: "nav.live", short: "nav.live", icon: <Video24Regular /> },
   { to: "/events", label: "nav.events", short: "nav.eventsShort", icon: <Target24Regular /> },
   {
     to: "/detections",

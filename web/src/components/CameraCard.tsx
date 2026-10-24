@@ -1,5 +1,5 @@
 // One camera card for the Status page and the Cameras page: snapshot, status and small
-// buttons (Settings for editors and owners). ``manage`` adds what the Cameras page needs:
+// buttons (Settings for editors and owners); the picture opens the live view. ``manage`` adds what the Cameras page needs:
 // the camera's details, the recording switch and censor areas.
 import {
   Button,
@@ -17,7 +17,6 @@ import {
   Folder20Regular,
   Play20Filled,
   Settings20Regular,
-  Video20Regular,
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -55,6 +54,7 @@ export function CameraCard({
   manage = false,
   onSettings,
   onMask,
+  onLive,
 }: {
   camera: Camera;
   /** Changes re-request the snapshot (with the page's poll). */
@@ -65,6 +65,8 @@ export function CameraCard({
   onSettings?: () => void;
   /** Opens the censor-area editor (manage, editors). */
   onMask?: () => void;
+  /** Opens the live view (the picture is its button). */
+  onLive: () => void;
 }) {
   const { t } = useI18n();
   const me = useMe();
@@ -109,10 +111,11 @@ export function CameraCard({
         }
       />
       <CardPreview>
-        <a
+        <button
+          type="button"
           className="thumb-button"
           aria-label={t("dashboard.openLive", { name: c.name })}
-          {...routerHref(`/live?camera=${c.id}`)}
+          onClick={onLive}
         >
           <img
             className="thumb"
@@ -124,7 +127,7 @@ export function CameraCard({
           <span className="play-overlay" aria-hidden="true">
             <Play20Filled />
           </span>
-        </a>
+        </button>
       </CardPreview>
 
       {manage && (c.managed === "config" || (me?.enabled && c.role !== "owner") || !c.enabled) && (
@@ -203,14 +206,6 @@ export function CameraCard({
         </Tooltip>
       )}
       <CardFooter className="wrap">
-        <Button
-          as="a"
-          size="small"
-          icon={<Video20Regular />}
-          {...routerHref(`/live?camera=${c.id}`)}
-        >
-          {t("nav.live")}
-        </Button>
         <Button
           as="a"
           size="small"

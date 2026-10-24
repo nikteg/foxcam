@@ -604,14 +604,6 @@ table.table {
 }
 
 /* Live */
-.live-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(520px, 100%), 1fr));
-  gap: var(--spacingHorizontalL);
-}
-.live-grid.single {
-  grid-template-columns: 1fr;
-}
 .live-frame {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -837,10 +829,7 @@ table.table {
   main {
     padding-top: 16px;
   }
-  .live-grid {
-    grid-template-columns: 1fr;
   }
-}
 
 /* ------------------------------------------------------------------ */
 /* Phones: tables become stacked cards                                 */

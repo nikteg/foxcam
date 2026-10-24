@@ -25,6 +25,7 @@ import { useIsAdmin } from "../auth";
 
 import { CameraCard } from "../components/CameraCard";
 import { EventsGrid } from "../components/EventsGrid";
+import { LiveDrawer } from "../components/LiveDrawer";
 import { Dot, SectionLink, Empty, PageTitle, QueryState, RouterLink, Stat } from "../components/ui";
 import { useI18n } from "../i18n";
 import { CameraSettingsDialog } from "./Cameras";
@@ -40,6 +41,7 @@ export function Dashboard() {
   const s = status.data;
   const isAdmin = useIsAdmin();
   const [settingsFor, setSettingsFor] = useState<string | null>(null);
+  const [liveFor, setLiveFor] = useState<string | null>(null);
   const settingsCamera = s?.cameras.find((c) => c.id === settingsFor);
   const { t, rich } = useI18n();
 
@@ -88,6 +90,7 @@ export function Dashboard() {
           <CameraCard
             key={c.id}
             camera={c}
+            onLive={() => setLiveFor(c.id)}
             refreshKey={Math.floor(status.dataUpdatedAt / 10_000)}
             onSettings={() => setSettingsFor(c.id)}
           />
@@ -107,6 +110,14 @@ export function Dashboard() {
       </Subtitle2>
       <EventsGrid events={events.data ?? []} />
 
+      {liveFor && s && (
+        <LiveDrawer
+          cameras={s.cameras}
+          cameraId={liveFor}
+          onCamera={setLiveFor}
+          onClose={() => setLiveFor(null)}
+        />
+      )}
       {settingsCamera && (
         <CameraSettingsDialog
           key={settingsCamera.id}
