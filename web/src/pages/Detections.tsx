@@ -12,6 +12,8 @@ import { CameraSelect, useCameraName } from "../components/CameraSelect";
 import { ProfileSelect, useDetectorNames, useSeveralDetectors } from "../components/ProfileSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
+import { ModelsSection } from "../components/ModelsSection";
+import { useIsAdmin } from "../auth";
 import { Feedback } from "../components/Feedback";
 import {
   ConfidenceBar,
@@ -20,11 +22,13 @@ import {
   Facts,
   InfoBanner,
   Light,
+  PageTabs,
   PageTitle,
   QueryState,
   Time,
   Toolbar,
   useRouterHref,
+  useSubPage,
 } from "../components/ui";
 import { decimal, percent } from "../format";
 import { useI18n, type I18n } from "../i18n";
@@ -93,6 +97,32 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detec
 ];
 
 export function Detections() {
+  const { t } = useI18n();
+  const isAdmin = useIsAdmin();
+  // Models: how each profile's detectors did (admins; GET /api/models/stats).
+  const tab = useSubPage(
+    "/detections",
+    isAdmin ? (["detections", "models"] as const) : ["detections"],
+  );
+  return (
+    <>
+      <PageTitle title={t("nav.detections")} />
+      {isAdmin && (
+        <PageTabs
+          base="/detections"
+          current={tab}
+          tabs={[
+            { id: "detections", label: t("nav.detections") },
+            { id: "models", label: t("models.tab") },
+          ]}
+        />
+      )}
+      {tab === "models" ? <ModelsSection /> : <DetectionList />}
+    </>
+  );
+}
+
+function DetectionList() {
   const [f, setFilter] = useFilters([
     "camera",
     "profile",
@@ -127,7 +157,6 @@ export function Detections() {
 
   return (
     <>
-      <PageTitle title={t("nav.detections")} />
       <Toolbar>
         <Button as="a" icon={<ScanObject20Regular />} {...routerHref("/cameras/profiles")}>
           {t("profiles.title")}

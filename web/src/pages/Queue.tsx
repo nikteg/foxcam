@@ -38,7 +38,7 @@ import { decimal, duration } from "../format";
 import { useProfileName } from "../components/ProfileSelect";
 import { AddWorkerDialog } from "../components/AddWorkerDialog";
 import { ArchivingSection } from "../components/ArchivingSection";
-import { ModelsSection } from "../components/ModelsSection";
+
 import { WorkersSection } from "../components/WorkersSection";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
@@ -83,7 +83,7 @@ export function Queue() {
   );
   const q = queue.data;
   const avgMs = q?.stats.avg_processing_ms_last_hour;
-  const tab = useSubPage("/jobs", ["queue", "workers", "models", "archiving"] as const);
+  const tab = useSubPage("/jobs", ["queue", "workers", "archiving"] as const);
   const [addingWorker, setAddingWorker] = useState(false);
 
   return (
@@ -99,7 +99,6 @@ export function Queue() {
             tabs={[
               { id: "queue", label: t("queue.queueTab") },
               { id: "workers", label: t("queue.workers") },
-              { id: "models", label: t("models.tab") },
               { id: "archiving", label: t("compaction.title") },
             ]}
           />
@@ -118,7 +117,6 @@ export function Queue() {
               <WorkersSection workers={q.workers} />
             </>
           )}
-          {tab === "models" && <ModelsSection />}
           {tab === "archiving" && <ArchivingSection />}
 
           {tab === "queue" && (

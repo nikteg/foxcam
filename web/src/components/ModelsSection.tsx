@@ -1,4 +1,4 @@
-// Jobs → Models: compare each profile's detectors (models) on the same recordings.
+// Detections → Models: compare each profile's detectors (models) on the same recordings.
 import { Caption1, Select, Text } from "@fluentui/react-components";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
