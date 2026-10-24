@@ -566,6 +566,10 @@ export const en = {
   "profiles.fpsHint": "Analyse fewer frames per second to save GPU time (e.g. 1 for cars).",
   "profiles.keepEventsDays": "Keep events (days)",
   "profiles.keepEventsHint": "Empty = the global retention setting. 0 = forever.",
+  "profiles.stationary": "Ignore stationary after (minutes)",
+  "profiles.stationaryHint":
+    "A target that stays in the same place this long, like a parked car, stops counting: no new or longer events (and no kept footage) until it moves or leaves. Its arrival is still an event.",
+  "profiles.stationaryOff": "Off",
   "profiles.defaultSwitch": "Run on cameras without their own selection",
   "profiles.enabled": "Enabled",
   "profiles.removeTitle": "Remove {name}?",

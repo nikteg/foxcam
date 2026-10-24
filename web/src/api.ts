@@ -77,6 +77,8 @@ export interface ProfileInput {
   fps: number | null;
   default: boolean;
   events_days: number | null;
+  /** Targets that stay in one place this long stop counting (a parked car). */
+  ignore_stationary_minutes: number | null;
   enabled: boolean;
 }
 

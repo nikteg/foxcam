@@ -651,6 +651,10 @@ export const sv: Record<MessageKey, string> = {
     "Analysera färre bilder per sekund för att spara GPU-tid (t.ex. 1 för bilar).",
   "profiles.keepEventsDays": "Spara händelser (dagar)",
   "profiles.keepEventsHint": "Tomt = den globala inställningen. 0 = för alltid.",
+  "profiles.stationary": "Ignorera stillastående efter (minuter)",
+  "profiles.stationaryHint":
+    "Ett mål som står på samma plats så här länge, som en parkerad bil, slutar räknas: inga nya eller längre händelser (och inget sparat material) förrän det flyttar sig eller åker iväg. Ankomsten blir fortfarande en händelse.",
+  "profiles.stationaryOff": "Av",
   "profiles.defaultSwitch": "Kör på kameror utan eget profilval",
   "profiles.enabled": "Aktiverad",
   "profiles.removeTitle": "Ta bort {name}?",

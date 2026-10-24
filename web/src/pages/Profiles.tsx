@@ -192,6 +192,11 @@ function ProfileCard({
         <Fact label={t("profiles.fps")}>
           {p.fps ? `${p.fps} fps` : <span className="muted">{t("profiles.allFrames")}</span>}
         </Fact>
+        {p.ignore_stationary_minutes !== null && (
+          <Fact label={t("profiles.stationary")}>
+            {t("notify.minutes", { n: p.ignore_stationary_minutes })}
+          </Fact>
+        )}
         {p.events_days !== null && (
           <>
             <Fact label={t("profiles.keepEvents")}>
@@ -265,6 +270,9 @@ export function ProfileDialog({
   const [detectors, setDetectors] = useState<DetectorRow[]>(() => toRows(profile?.detectors));
   const [fps, setFps] = useState(profile?.fps?.toString() ?? "");
   const [eventsDays, setEventsDays] = useState(profile?.events_days?.toString() ?? "");
+  const [stationary, setStationary] = useState(
+    profile?.ignore_stationary_minutes?.toString() ?? "",
+  );
   const [isDefault, setDefault] = useState(profile?.default ?? false);
   const [enabled, setEnabled] = useState(profile?.enabled ?? true);
 
@@ -279,6 +287,7 @@ export function ProfileDialog({
     fps: fps ? Number(fps) : null,
     default: isDefault,
     events_days: eventsDays === "" ? null : Number(eventsDays),
+    ignore_stationary_minutes: stationary ? Number(stationary) : null,
     enabled,
   });
   const save = useMutation({
@@ -456,6 +465,16 @@ export function ProfileDialog({
                   value={eventsDays}
                   placeholder={t("camera.default")}
                   onChange={(_, d) => setEventsDays(d.value)}
+                />
+              </Field>
+              <Field label={t("profiles.stationary")} hint={t("profiles.stationaryHint")}>
+                <Input
+                  type="number"
+                  min={1}
+                  max={1440}
+                  value={stationary}
+                  placeholder={t("profiles.stationaryOff")}
+                  onChange={(_, d) => setStationary(d.value)}
                 />
               </Field>
               <Switch

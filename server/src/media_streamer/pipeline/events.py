@@ -2,7 +2,10 @@
 
 Target detections (per detection profile, e.g. foxes) are merged into an event with the
 same camera, profile and label when within ``merge_gap_seconds``; a fox and a car seen at
-the same time become two events. Detections of the profile's different detectors (models)
+the same time become two events. With the profile's ``ignore_stationary_minutes``, a target that
+has stayed in the same place that long (a parked car) is marked ``stationary`` and joins
+no event, so it neither keeps one open forever nor pins its footage; it counts again once
+it moves or leaves. Detections of the profile's different detectors (models)
 join the same event; ``Event.detectors`` / ``agreement`` say which and how many saw it,
 so notification channels can wait for several models to agree (``min_agreement``). Once an event has been quiet for
 ``settle_seconds`` (and the post-roll footage exists) its clip is (re)built from the
@@ -32,11 +35,15 @@ def assign_events(settings: Settings) -> int:
     changed = 0
     with session_scope() as s:
         pending = s.scalars(
-            select(Detection).where(Detection.is_target.is_(True), Detection.event_id.is_(None))
+            select(Detection).where(Detection.is_target.is_(True), Detection.event_id.is_(None),
+                                    Detection.stationary.is_not(True))
             .order_by(Detection.ts)
         ).all()
+        _mark_stationary(settings, s, pending)
         groups: dict[tuple, list[Detection]] = defaultdict(list)
         for d in pending:
+            if d.stationary:
+                continue
             groups[(d.segment_id, d.camera_id, d.profile_id, d.label.lower())].append(d)
         for (segment_id, camera_id, profile_id, _), dets in groups.items():
             first = min(d.ts for d in dets)
@@ -74,6 +81,58 @@ def assign_events(settings: Settings) -> int:
             event.updated_at = utcnow()
             changed += 1
     return changed
+
+
+# Boxes this similar (intersection over union) are the same object in the same place.
+STATIONARY_IOU = 0.6
+
+
+def _iou(a: Detection, b: Detection) -> float:
+    if None in (a.bbox_x, a.bbox_y, a.bbox_w, a.bbox_h, b.bbox_x, b.bbox_y, b.bbox_w,
+                b.bbox_h):
+        return 0.0
+    w = min(a.bbox_x + a.bbox_w, b.bbox_x + b.bbox_w) - max(a.bbox_x, b.bbox_x)
+    h = min(a.bbox_y + a.bbox_h, b.bbox_y + b.bbox_h) - max(a.bbox_y, b.bbox_y)
+    if w <= 0 or h <= 0:
+        return 0.0
+    inter = w * h
+    return inter / (a.bbox_w * a.bbox_h + b.bbox_w * b.bbox_h - inter)
+
+
+def _mark_stationary(settings: Settings, s, pending: list[Detection]) -> None:
+    """Mark detections of an object that has been in the same place for the profile's
+    ``ignore_stationary_minutes``: seen in an overlapping box all the way back that long,
+    never missing for more than ``max_gap`` (the model misses a frame now and then)."""
+    groups: dict[tuple, list[Detection]] = defaultdict(list)
+    for d in pending:
+        profile = settings.profile(d.profile_id) if d.profile_id else None
+        if profile is not None and profile.ignore_stationary_minutes:
+            groups[(d.camera_id, d.profile_id, d.label.lower())].append(d)
+    max_gap = timedelta(seconds=max(settings.events.merge_gap_seconds, 60))
+    for (camera_id, profile_id, label), dets in groups.items():
+        hold = timedelta(minutes=settings.profile(profile_id).ignore_stationary_minutes)
+        first, last = min(d.ts for d in dets), max(d.ts for d in dets)
+        # Every sighting of the label in the window, oldest first, including these.
+        history = s.scalars(
+            select(Detection).where(
+                Detection.camera_id == camera_id, Detection.profile_id == profile_id,
+                func.lower(Detection.label) == label, Detection.is_target.is_(True),
+                Detection.ts >= first - hold - max_gap, Detection.ts <= last)
+            .order_by(Detection.ts)
+        ).all()
+        for d in dets:
+            # Walk back from d through overlapping boxes until the chain is old enough or
+            # breaks (a gap longer than max_gap).
+            reached = d.ts
+            for h in reversed(history):
+                if h.ts >= d.ts or _iou(h, d) < STATIONARY_IOU:
+                    continue
+                if reached - h.ts > max_gap:
+                    break
+                reached = h.ts
+                if d.ts - reached >= hold:
+                    d.stationary = True
+                    break
 
 
 def refresh_models(settings: Settings, s, event: Event) -> None:
