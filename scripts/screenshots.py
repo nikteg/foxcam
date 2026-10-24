@@ -40,6 +40,9 @@ CAMERAS = [  # id, name, sample clip
     ("den", "Den cam", "fox-family-cam.mp4"),
     ("meadow", "Woodland edge", "fox-small.mp4"),
 ]
+# The demo admin the screenshots are taken as (exists only in out/screenshots/).
+ADMIN = ("admin@example.com", "screenshots-demo-password")
+SESSION: dict[str, str] = {}
 DESKTOP = {"viewport": {"width": 1280, "height": 800}, "device_scale_factor": 1.25}
 PHONE = {"viewport": {"width": 390, "height": 844}, "device_scale_factor": 1.5,
          "is_mobile": True, "has_touch": True}
@@ -121,15 +124,55 @@ class Stack:
                 os.killpg(p.pid, signal.SIGKILL)
 
 
+def _headers() -> dict[str, str]:
+    return {"Content-Type": "application/json",
+            **({"Cookie": f"ms_session={SESSION['token']}"} if SESSION else {})}
+
+
 def get(path: str):
-    with urllib.request.urlopen(SERVER + path, timeout=5) as r:
+    req = urllib.request.Request(SERVER + path, headers=_headers())
+    with urllib.request.urlopen(req, timeout=5) as r:
         return json.loads(r.read())
 
 
 def put(path: str, body: dict) -> None:
     req = urllib.request.Request(SERVER + path, data=json.dumps(body).encode(), method="PUT",
-                                 headers={"Content-Type": "application/json"})
+                                 headers=_headers())
     urllib.request.urlopen(req, timeout=5).read()
+
+
+def server_up() -> bool:
+    """Any HTTP answer counts, including 401 before signing in."""
+    import urllib.error
+
+    try:
+        urllib.request.urlopen(SERVER + "/api/status", timeout=2).close()
+    except urllib.error.HTTPError:
+        return True
+    return True
+
+
+def sign_in(stack: Stack) -> None:
+    """Create the demo admin and keep its session for the API calls and the browser."""
+    email, password = ADMIN
+    create = ("import sys\n"
+              "from media_streamer import accounts\n"
+              "from media_streamer.config import get_settings\n"
+              "from media_streamer.db import init_db\n"
+              "s = get_settings(); init_db(s)\n"
+              "accounts.create_user(s, sys.argv[1], sys.argv[2], 'Admin', True)")
+    subprocess.run([str(BIN / "python"), "-c", create, email, password], env=stack.env,
+                   check=True)
+    req = urllib.request.Request(SERVER + "/api/auth/login", method="POST",
+                                 data=json.dumps({"email": email, "password": password}).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=10) as r:
+        for header in r.headers.get_all("Set-Cookie") or []:
+            name, _, rest = header.partition("=")
+            if name.strip() == "ms_session":
+                SESSION["token"] = rest.split(";", 1)[0]
+    if not SESSION:
+        raise SystemExit("signing in to the demo server failed")
 
 
 def wait_for(what: str, check, timeout: float, every: float = 3,
@@ -182,7 +225,8 @@ def run_stack(stack: Stack, min_events: int, timeout: float) -> None:
 
     stack.start("mediamtx", [str(mediamtx), str(STACK / "mediamtx.yml")], cwd=STACK)
     stack.start("server", [str(BIN / "media-streamer"), "serve", "--port", str(PORT)])
-    wait_for("the server", lambda: get("/api/status") is not None, 60, every=1, stack=stack)
+    wait_for("the server", server_up, 60, every=1, stack=stack)
+    sign_in(stack)
     stack.start("ingest", [str(BIN / "media-streamer"), "ingest"])
     token = subprocess.run([str(BIN / "media-streamer"), "worker-token", "gpu-box",
                             "--tags", "gpu"], env=stack.env, check=True, capture_output=True,
@@ -276,7 +320,9 @@ def capture(tmp: Path) -> list[str]:
             browser = p.chromium.launch()
         init = ("localStorage.setItem('media-streamer.lang', 'en');"
                 "localStorage.setItem('media-streamer.theme', 'dark');")
+        cookie = [{"name": "ms_session", "value": SESSION["token"], "url": SERVER}]
         desk = browser.new_context(color_scheme="dark", **DESKTOP)
+        desk.add_cookies(cookie)
         desk.add_init_script(init)
         page = desk.new_page()
         shot(page, "dashboard", "/")
@@ -287,6 +333,7 @@ def capture(tmp: Path) -> list[str]:
         shot(page, "profiles", "/cameras#profiles", element="section#profiles")
         shot(page, "queue", "/queue")
         phone = browser.new_context(color_scheme="dark", **PHONE)
+        phone.add_cookies(cookie)
         phone.add_init_script(init)
         page = phone.new_page()
         shot(page, "mobile-events", "/events")

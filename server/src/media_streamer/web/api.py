@@ -209,10 +209,10 @@ def segment(segment_id: int, p: Principal = Depends(principal)) -> dict[str, Any
 
 
 @router.get("/segments/{segment_id}/jobs")
-def segment_jobs(segment_id: int,
-                 settings: Settings = Depends(settings_dep)) -> list[dict[str, Any]]:
+def segment_jobs(segment_id: int, settings: Settings = Depends(settings_dep),
+                 p: Principal = Depends(principal)) -> list[dict[str, Any]]:
     """Detection runs of a segment (one per profile) with their detection counts."""
-    _segment(segment_id)
+    _segment(p, segment_id)
     return queries.segment_jobs(settings, segment_id)
 
 
