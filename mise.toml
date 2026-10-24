@@ -4,7 +4,7 @@
 #   mise run dev          # whole stack with a dummy worker
 #   mise run seed         # (stack running) add a fake camera per sample clip
 #   mise run check        # lint + typecheck + tests
-#   mise run reset        # wipe recordings, database and events (asks first)
+#   mise run reset        # wipe all data (asks first); reset:events, reset:queue, ... for parts
 
 # --- setup -------------------------------------------------------------------------
 
@@ -199,8 +199,66 @@ find server worker scripts -name __pycache__ -type d -prune -exec rm -rf {} + 2>
 echo "cleaned build output and caches"
 """
 
+[tasks.server-stopped]
+hide = true
+run = """
+if lsof -ti tcp:8000 >/dev/null 2>&1; then
+  echo "the server is running on :8000; stop it first (Ctrl+C or mise run stop)" >&2
+  exit 1
+fi
+"""
+
+[tasks."reset:recordings"]
+description = "All footage plus segments, jobs, detections and events (keeps cameras, masks, profiles, workers)"
+depends = ["server-stopped"]
+confirm = "Delete recordings?"
+run = "uv run media-streamer reset recordings --yes"
+
+[tasks."reset:events"]
+description = "Events and clips only; rebuilt from the detections on the next start"
+depends = ["server-stopped"]
+confirm = "Delete events?"
+run = "uv run media-streamer reset events --yes"
+
+[tasks."reset:detections"]
+description = "Detections, events and jobs; recordings on disk are analysed again"
+depends = ["server-stopped"]
+confirm = "Delete detections?"
+run = "uv run media-streamer reset detections --yes"
+
+[tasks."reset:queue"]
+description = "Waiting jobs (the backlog); recordings and results kept"
+depends = ["server-stopped"]
+confirm = "Delete queue?"
+run = "uv run media-streamer reset queue --yes"
+
+[tasks."reset:workers"]
+description = "Known workers and all access tokens (worker access becomes open)"
+depends = ["server-stopped"]
+confirm = "Delete workers?"
+run = "uv run media-streamer reset workers --yes"
+
+[tasks."reset:cameras"]
+description = "Cameras added in the UI and every camera's masks, private flag, profile choice"
+depends = ["server-stopped"]
+confirm = "Delete cameras?"
+run = "uv run media-streamer reset cameras --yes"
+
+[tasks."reset:profiles"]
+description = "Profiles added in the UI and per-camera profile choices"
+depends = ["server-stopped"]
+confirm = "Delete profiles?"
+run = "uv run media-streamer reset profiles --yes"
+
+[tasks."reset:tapo"]
+description = "The saved Tapo cloud session"
+depends = ["server-stopped"]
+confirm = "Delete tapo?"
+run = "uv run media-streamer reset tapo --yes"
+
 [tasks.reset]
-description = "Delete ALL recordings, clips, events, cameras added in the UI and the database"
+description = "Delete ALL data: recordings, database, Tapo session (reset:<what> for parts)"
+depends = ["server-stopped"]
 confirm = "Delete data/ (recordings, database, Tapo session)?"
 run = """
 rm -rf data auto.key auto.crt

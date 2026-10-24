@@ -27,6 +27,14 @@ def main() -> None:
     check.add_argument("--seconds", type=float, default=10)
     check.add_argument("--resolution", choices=["HD", "VGA"], default="HD")
     sub.add_parser("tapo-logout", help="delete the saved Tapo session")
+    reset = sub.add_parser("reset", help="delete one kind of data, keep the rest "
+                                         "(stop the server first)")
+    reset.add_argument("scopes", nargs="+", metavar="SCOPE",
+                       choices=["recordings", "events", "detections", "queue", "workers",
+                                "cameras", "profiles", "tapo"],
+                       help="recordings | events | detections | queue | workers | cameras | "
+                            "profiles | tapo")
+    reset.add_argument("-y", "--yes", action="store_true", help="don't ask")
 
     args = parser.parse_args()
     if args.config:
@@ -63,6 +71,18 @@ def main() -> None:
             raise SystemExit(check(settings, args.camera, args.seconds, args.resolution))
         except RuntimeError as e:  # e.g. not signed in / ontapo not installed
             raise SystemExit(f"error: {e}") from None
+    elif args.cmd == "reset":
+        from . import reset as reset_mod
+        from .db import init_db
+
+        if not args.yes:
+            lines = [f"  {s}: {reset_mod.SCOPES[s].__doc__.splitlines()[0]}" for s in args.scopes]
+            print("This deletes:\n" + "\n".join(lines))
+            if input("Continue? [y/N] ").strip().lower() not in ("y", "yes"):
+                raise SystemExit("aborted")
+        init_db(settings)
+        for scope in args.scopes:
+            print(f"{scope}: {reset_mod.SCOPES[scope](settings)}")
     elif args.cmd == "tapo-logout":
         settings.tapo_session_file.unlink(missing_ok=True)
         print(f"Removed {settings.tapo_session_file}")
