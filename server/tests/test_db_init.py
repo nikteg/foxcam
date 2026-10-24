@@ -5,11 +5,11 @@ from __future__ import annotations
 
 import multiprocessing as mp
 
-from media_streamer.config import Settings
+from foxcam.config import Settings
 
 
 def _start(data_dir: str, q) -> None:
-    from media_streamer.db import init_db
+    from foxcam.db import init_db
     try:
         init_db(Settings(data_dir=data_dir))
         q.put("ok")

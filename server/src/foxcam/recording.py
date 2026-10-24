@@ -151,7 +151,7 @@ def source_path(settings: Settings, cam: CameraConfig) -> str:
 
 
 def transcode(settings: Settings, enc: Encode, src_path: str) -> list[str]:
-    """``media-streamer transcode`` from ``src_path`` to the hook's own path, run by
+    """``foxcam transcode`` from ``src_path`` to the hook's own path, run by
     MediaMTX (which fills in ``$RTSP_PORT`` and ``$MTX_PATH``)."""
     m = settings.mediamtx
     return transcode_command(enc, f"rtsp://localhost:$RTSP_PORT/{src_path}",

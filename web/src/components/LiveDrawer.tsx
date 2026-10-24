@@ -9,7 +9,7 @@ import { useI18n } from "../i18n";
 import { Dialog, DialogBody, DialogContent, DialogSurface, DialogTitle } from "./Drawer";
 import { Tag } from "./ui";
 
-const LOW_DATA_KEY = "media-streamer.live.lowData";
+const LOW_DATA_KEY = "foxcam.live.lowData";
 
 /** Low-data mode (a transcoded ~480p stream), remembered per browser. */
 function useLowData(): [boolean, (on: boolean) => void] {

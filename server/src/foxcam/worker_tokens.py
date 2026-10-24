@@ -1,7 +1,7 @@
 """Per-worker access tokens, created from the web UI.
 
 Every worker request needs `Authorization: Bearer <token>`: a per-worker token created in
-the web UI (or with `media-streamer worker-token`), or the shared `worker_token` from the
+the web UI (or with `foxcam worker-token`), or the shared `worker_token` from the
 config. Until one exists no worker can connect. `open_worker_access: true` lets any client
 act as a worker without a token (only for a trusted test network).
 

@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-  Start the media-streamer worker automatically when you sign in to Windows.
+  Start the foxcam worker automatically when you sign in to Windows.
 
 .DESCRIPTION
-  Registers a Scheduled Task "media-worker" that runs the worker either natively
-  (media-worker.exe installed with `uv tool install`) or inside a WSL distribution.
+  Registers a Scheduled Task "foxcam-worker" that runs the worker either natively
+  (foxcam-worker.exe installed with `uv tool install`) or inside a WSL distribution.
   For WSL the task keeps wsl.exe running, which also keeps the WSL VM alive.
 
   The token is stored in the task's arguments, visible to administrators of this PC.
@@ -26,7 +26,7 @@ param(
     [switch]$Uninstall
 )
 $ErrorActionPreference = "Stop"
-$TaskName = "media-worker"
+$TaskName = "foxcam-worker"
 
 if ($Uninstall) {
     Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
@@ -41,12 +41,12 @@ $workerCmd = "--server $Server $tokenArg $WorkerArgs".Trim()
 if ($Mode -eq "wsl") {
     # Login shell so ~/.local/bin (uv tool install) is on PATH.
     $exe = "wsl.exe"
-    $arguments = "-d $Distro -- bash -lc `"media-worker $workerCmd`""
+    $arguments = "-d $Distro -- bash -lc `"foxcam-worker $workerCmd`""
 } else {
-    $exe = Join-Path $env:USERPROFILE ".local\bin\media-worker.exe"
+    $exe = Join-Path $env:USERPROFILE ".local\bin\foxcam-worker.exe"
     if (-not (Test-Path $exe)) {
-        $found = Get-Command media-worker.exe -ErrorAction SilentlyContinue
-        if (-not $found) { throw "media-worker.exe not found; install it with uv tool install first." }
+        $found = Get-Command foxcam-worker.exe -ErrorAction SilentlyContinue
+        if (-not $found) { throw "foxcam-worker.exe not found; install it with uv tool install first." }
         $exe = $found.Source
     }
     $arguments = $workerCmd
@@ -57,7 +57,7 @@ $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
     -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings `
-    -Description "media-streamer detection worker ($Mode)" -Force | Out-Null
+    -Description "foxcam detection worker ($Mode)" -Force | Out-Null
 Start-ScheduledTask -TaskName $TaskName
 Write-Host "Registered and started scheduled task '$TaskName' ($Mode)."
 Write-Host "Check it in the server's Worker queue tab; stop with: Stop-ScheduledTask $TaskName"

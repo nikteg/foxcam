@@ -12,15 +12,15 @@ import httpx
 import pytest
 import yaml
 from fastapi.testclient import TestClient
-from media_streamer import accounts, camera_store, mediamtx_auth
-from media_streamer.config import CameraConfig, RtspSource
-from media_streamer.config import TestSource as PatternSource
-from media_streamer.db import session_scope
-from media_streamer.ingest.supervisor import ffmpeg_publisher_args, publish_url
-from media_streamer.models import Invite, User
-from media_streamer.web import api_auth, live
-from media_streamer.web.app import create_app
-from media_streamer.web.queries import _redact_url, public_settings
+from foxcam import accounts, camera_store, mediamtx_auth
+from foxcam.config import CameraConfig, RtspSource
+from foxcam.config import TestSource as PatternSource
+from foxcam.db import session_scope
+from foxcam.ingest.supervisor import ffmpeg_publisher_args, publish_url
+from foxcam.models import Invite, User
+from foxcam.web import api_auth, live
+from foxcam.web.app import create_app
+from foxcam.web.queries import _redact_url, public_settings
 from pydantic import ValidationError
 
 from .conftest import PASSWORD, add_segment, app_client, sign_in
@@ -94,7 +94,7 @@ def test_mediamtx_password_is_random_stable_and_private(settings):
     path = settings.data_dir / "mediamtx" / "password"
     assert path.stat().st_mode & 0o077 == 0 and path.parent.stat().st_mode & 0o077 == 0
     assert mediamtx_auth.process_env(pw) == {"MTX_AUTHINTERNALUSERS_0_PASS": pw,
-                                             "MEDIA_MTX_PASSWORD": pw}
+                                             "FOXCAM_MTX_PASSWORD": pw}
     settings.mediamtx.password = "from config"
     assert mediamtx_auth.password(settings) == "from config"
     # Never shown in the UI's configuration view.
@@ -104,14 +104,14 @@ def test_mediamtx_password_is_random_stable_and_private(settings):
 def test_everything_that_talks_to_mediamtx_signs_in(settings):
     pw = mediamtx_auth.password(settings)
     cam = settings.camera("cam")
-    assert publish_url(settings, cam) == f"rtsp://media-streamer:{pw}@127.0.0.1:1/cam"
+    assert publish_url(settings, cam) == f"rtsp://foxcam:{pw}@127.0.0.1:1/cam"
     assert publish_url(settings, cam) in ffmpeg_publisher_args(settings, cam)
-    assert mediamtx_auth.url(settings, "cam/raw").startswith("rtsp://media-streamer:")
+    assert mediamtx_auth.url(settings, "cam/raw").startswith("rtsp://foxcam:")
     # The transcoders MediaMTX runs get it from the environment (cli.py).
     hook = "rtsp://localhost:$RTSP_PORT/cam/raw"
     assert mediamtx_auth.is_local(hook)
     assert mediamtx_auth.with_login(hook, "p@ss") == \
-        "rtsp://media-streamer:p%40ss@localhost:$RTSP_PORT/cam/raw"
+        "rtsp://foxcam:p%40ss@localhost:$RTSP_PORT/cam/raw"
     assert mediamtx_auth.with_login("rtsp://a:b@host/x", "pw") == "rtsp://a:b@host/x"
     assert not mediamtx_auth.is_local("rtsp://192.168.1.50/x")
 
@@ -119,7 +119,7 @@ def test_everything_that_talks_to_mediamtx_signs_in(settings):
 def test_mediamtx_yml_trusts_no_address_with_video():
     conf = yaml.safe_load((Path(__file__).parents[2] / "mediamtx" / "mediamtx.yml").read_text())
     users = conf["authInternalUsers"]
-    # media-streamer first (MTX_AUTHINTERNALUSERS_0_PASS), with a password hash.
+    # foxcam first (MTX_AUTHINTERNALUSERS_0_PASS), with a password hash.
     assert users[0]["user"] == mediamtx_auth.USER and users[0]["pass"].startswith("sha256:")
     assert "api" in {p["action"] for p in users[0]["permissions"]}
     for u in users:
@@ -139,7 +139,7 @@ def test_the_password_moves_to_its_own_folder(settings):
 def test_the_control_api_client_signs_in(settings):
     import asyncio
 
-    from media_streamer.mediamtx import MediaMtx
+    from foxcam.mediamtx import MediaMtx
 
     seen: list[httpx.Request] = []
 
@@ -151,7 +151,7 @@ def test_the_control_api_client_signs_in(settings):
     mtx.client._transport = httpx.MockTransport(api)
     asyncio.run(mtx.paths())
     pw = mediamtx_auth.password(settings)
-    expected = "Basic " + base64.b64encode(f"media-streamer:{pw}".encode()).decode()
+    expected = "Basic " + base64.b64encode(f"foxcam:{pw}".encode()).decode()
     assert seen[0].headers["authorization"] == expected
     asyncio.run(mtx.aclose())
 
@@ -159,20 +159,20 @@ def test_the_control_api_client_signs_in(settings):
 def test_launcher_with_a_password_file_needs_no_config(tmp_path, monkeypatch):
     import sys
 
-    from media_streamer import cli
+    from foxcam import cli
 
     calls = []
     monkeypatch.setattr(cli.os, "execvpe", lambda *a: calls.append(a))
-    monkeypatch.setenv("MEDIA_STREAMER_CONFIG", str(tmp_path / "missing.yaml"))
+    monkeypatch.setenv("FOXCAM_CONFIG", str(tmp_path / "missing.yaml"))
     pw_file = tmp_path / "mediamtx" / "password"
-    monkeypatch.setattr(sys, "argv", ["media-streamer", "mediamtx", "m.yml", "--binary",
+    monkeypatch.setattr(sys, "argv", ["foxcam", "mediamtx", "m.yml", "--binary",
                                       "/bin/mtx", "--password-file", str(pw_file)])
     with pytest.raises(SystemExit):
         cli.main()
     binary, argv, env = calls[0]
     pw = pw_file.read_text().strip()
     assert (binary, argv) == ("/bin/mtx", ["/bin/mtx", "m.yml"])
-    assert env["MTX_AUTHINTERNALUSERS_0_PASS"] == pw == env["MEDIA_MTX_PASSWORD"]
+    assert env["MTX_AUTHINTERNALUSERS_0_PASS"] == pw == env["FOXCAM_MTX_PASSWORD"]
 
 
 def test_the_mediamtx_container_gets_no_secrets_but_its_password():
@@ -363,7 +363,7 @@ def test_one_invite_link_makes_one_oauth_account_even_at_once(settings):
         settings, "google", f"sub-{i}", f"guest{i}@example.org", True, None, token))
     assert len(ok) == 1 and [e.status for e in failed] == [410] * 3
     assert accounts.user_count() == before + 1
-    from media_streamer.models import OAuthIdentity
+    from foxcam.models import OAuthIdentity
 
     with session_scope() as s:
         assert s.query(OAuthIdentity).count() == 1

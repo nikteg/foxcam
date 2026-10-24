@@ -117,7 +117,7 @@ flowchart LR
    the detections back.
 4. Target detections become **events**. Their clips are cut from the original footage and
    the segments are kept until the event expires.
-5. **Compaction** (`media-streamer compact`, its own process) joins each finished hour into
+5. **Compaction** (`foxcam compact`, its own process) joins each finished hour into
    one file per camera, re-encoding it when the camera's recording profile says so.
 
 Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -159,7 +159,7 @@ Live view goes through the server (behind the login), so only port 8000 and the 
 media port 8189 (TCP, no UDP needed) have to be reachable. In Docker, add the host's LAN IP
 to `webrtcAdditionalHosts` in `mediamtx/mediamtx.yml` so WebRTC can connect from other
 devices, and set `public_url` for links in notifications. Check which video encoder the
-container can use with `docker compose exec mediamtx media-streamer hwaccel`.
+container can use with `docker compose exec mediamtx foxcam hwaccel`.
 
 ## Adding cameras
 
@@ -190,9 +190,9 @@ token by itself when it expires; only if TP-Link rejects the refresh (for exampl
 password change) are the cloud cameras paused until you sign in again.
 
 ```sh
-uv run media-streamer tapo-login      # e-mail, password (hidden), then the MFA code
-uv run media-streamer tapo-check      # lists cameras, records 10 s, prints codec/size only
-uv run media-streamer tapo-logout     # delete the saved session
+uv run foxcam tapo-login      # e-mail, password (hidden), then the MFA code
+uv run foxcam tapo-check      # lists cameras, records 10 s, prints codec/size only
+uv run foxcam tapo-logout     # delete the saved session
 ```
 
 `tapo-check` prints no secrets and is safe to share when asking for help.
@@ -205,9 +205,9 @@ token under **Jobs → Add worker**: the dialog shows ready-to-paste commands fo
 Windows + WSL 2, native Windows, Linux/macOS and Docker. For example:
 
 ```sh
-uv tool install --python 3.12 --torch-backend auto "media-worker[speciesnet] @ ./worker"
-media-worker doctor --server http://<server>:8000 --token msw_…   # checks ffmpeg, GPU, token
-media-worker --server http://<server>:8000 --token msw_… --detector speciesnet
+uv tool install --python 3.12 --torch-backend auto "foxcam-worker[speciesnet] @ ./worker"
+foxcam-worker doctor --server http://<server>:8000 --token msw_…   # checks ffmpeg, GPU, token
+foxcam-worker --server http://<server>:8000 --token msw_… --detector speciesnet
 ```
 
 | Detector | Good at | Notes |
@@ -264,7 +264,7 @@ detection profiles, censor areas and worker tokens can also be managed in the UI
 | `reset:events`, `reset:detections`, `reset:queue`, … | delete one kind of data, keep the rest |
 | `reset`, `clean:all` | wipe all data – back to a fresh checkout |
 
-`uv run media-streamer --help` lists the server commands, e.g. `hwaccel` (which video
+`uv run foxcam --help` lists the server commands, e.g. `hwaccel` (which video
 encoders work here), `worker-token`, `remove-cameras` and `reset`.
 
 | Part | Stack |

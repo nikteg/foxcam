@@ -13,7 +13,7 @@ The dialog also shows ready-to-paste commands for each option below.
 | [Linux](#linux) | a dedicated Linux box | NVIDIA (AMD via ROCm, untested) |
 | [Intel GPU, next to the server](#intel-gpu-next-to-the-server) | the recorder box itself (N100, Core with UHD / Iris Xe, Arc) | Intel, via OpenVINO |
 
-Whatever you choose, finish with `media-worker doctor`: it checks ffmpeg, the GPU driver,
+Whatever you choose, finish with `foxcam-worker doctor`: it checks ffmpeg, the GPU driver,
 PyTorch's CUDA support, the installed detectors and the connection + token to the server.
 Example output on a Windows PC with WSL:
 
@@ -55,15 +55,15 @@ WSL 2 runs the Linux version of the worker with full CUDA support. All detectors
    nvidia-smi                      # must list your GPU; if not: update the Windows driver, wsl --shutdown
    sudo apt update && sudo apt install -y ffmpeg git
    curl -LsSf https://astral.sh/uv/install.sh | sh && exec $SHELL
-   git clone <this repository> media-streamer && cd media-streamer   # or copy the folder
+   git clone <this repository> foxcam && cd foxcam   # or copy the folder
    # Keep it in the Linux file system (~), not /mnt/c: much faster model loading.
 
-   uv tool install --python 3.12 --torch-backend auto "media-worker[speciesnet] @ ./worker"
+   uv tool install --python 3.12 --torch-backend auto "foxcam-worker[speciesnet] @ ./worker"
    # or, for YOLO-World:
-   # uv tool install --torch-backend auto "media-worker[ultralytics] @ ./worker"
+   # uv tool install --torch-backend auto "foxcam-worker[ultralytics] @ ./worker"
 
-   media-worker doctor --server http://192.168.1.10:8000 --token msw_...
-   media-worker --server http://192.168.1.10:8000 --token msw_... --detector speciesnet
+   foxcam-worker doctor --server http://192.168.1.10:8000 --token msw_...
+   foxcam-worker --server http://192.168.1.10:8000 --token msw_... --detector speciesnet
    ```
 
 4. **Start automatically** when you sign in to Windows (PowerShell, in the repository folder):
@@ -110,9 +110,9 @@ winget install astral-sh.uv
 winget install Gyan.FFmpeg
 winget install Git.Git
 # open a new terminal so PATH is updated, then in the repository folder:
-uv tool install --torch-backend auto "media-worker[ultralytics] @ .\worker"
-media-worker doctor --server http://192.168.1.10:8000 --token msw_...
-media-worker --server http://192.168.1.10:8000 --token msw_... `
+uv tool install --torch-backend auto "foxcam-worker[ultralytics] @ .\worker"
+foxcam-worker doctor --server http://192.168.1.10:8000 --token msw_...
+foxcam-worker --server http://192.168.1.10:8000 --token msw_... `
   --detector ultralytics --model yolov8s-worldv2.pt --device cuda
 ```
 
@@ -121,12 +121,12 @@ Start at sign-in: `worker\deploy\windows\install-task.ps1 -Mode native -Server .
 
 Notes:
 
-- `uv tool install` puts `media-worker.exe` in `%USERPROFILE%\.local\bin`; run
+- `uv tool install` puts `foxcam-worker.exe` in `%USERPROFILE%\.local\bin`; run
   `uv tool update-shell` once if that folder is not on PATH.
 - Model weights download to the current folder (`yolov8s-worldv2.pt`) and to
   `%USERPROFILE%\.cache`. Run the worker from a fixed folder so they are reused.
 - Real-time antivirus scanning slows down frame extraction. Optionally exclude
-  `%TEMP%\media-worker-*` in Windows Security.
+  `%TEMP%\foxcam-worker-*` in Windows Security.
 
 ## Docker (Linux or Docker Desktop)
 
@@ -141,8 +141,8 @@ Check GPU access first: `docker run --rm --gpus all ubuntu nvidia-smi`.
 
 ```sh
 # worker/.env
-MEDIA_SERVER=http://192.168.1.10:8000
-MEDIA_WORKER_TOKEN=msw_...
+FOXCAM_SERVER=http://192.168.1.10:8000
+FOXCAM_WORKER_TOKEN=msw_...
 DETECTOR=speciesnet                           # or ultralytics
 WORKER_ARGS=--detector speciesnet
 # WORKER_ARGS=--detector ultralytics --model yolov8s-worldv2.pt --device cuda
@@ -175,11 +175,11 @@ seconds; the first job also downloads the weights. In LXC containers, pass
 ```sh
 sudo apt install -y ffmpeg              # plus the NVIDIA driver for your distribution
 curl -LsSf https://astral.sh/uv/install.sh | sh
-uv tool install --python 3.12 --torch-backend auto "media-worker[speciesnet] @ ./worker"
-media-worker doctor --server http://192.168.1.10:8000 --token msw_...
+uv tool install --python 3.12 --torch-backend auto "foxcam-worker[speciesnet] @ ./worker"
+foxcam-worker doctor --server http://192.168.1.10:8000 --token msw_...
 ```
 
-Run as a service with `worker/deploy/media-worker.service` (instructions in the file).
+Run as a service with `worker/deploy/foxcam-worker.service` (instructions in the file).
 AMD GPUs: `--torch-backend rocm7.1` (match your ROCm install), untested.
 
 ## Tags: which jobs a worker gets
@@ -187,7 +187,7 @@ AMD GPUs: `--torch-backend rocm7.1` (match your ROCm install), untested.
 Each recording is analysed once per [detection profile](ARCHITECTURE.md#detection-profiles)
 of its camera, and a profile may require worker tags. A worker's tags are its detector
 (`speciesnet`, `ultralytics`, plus `open-vocabulary` for YOLO-World / YOLOE,
-`dummy`), anything passed with `--tags gpu,winhack` (or `MEDIA_WORKER_TAGS`), and the tags
+`dummy`), anything passed with `--tags gpu,winhack` (or `FOXCAM_WORKER_TAGS`), and the tags
 set on its access token in the web UI (**Jobs → Workers → Tags**). To pin a profile to this
 machine, give the machine a unique tag and require it in the profile. The Profiles page and
 the queue tab show profiles that no online worker can run.
@@ -196,7 +196,7 @@ the queue tab show profiles that no online worker can run.
 
 | Symptom | Fix |
 |---|---|
-| doctor: `pytorch … no GPU acceleration`, version ends in `+cpu` | Reinstall with `--torch-backend auto`: `uv tool install --reinstall --torch-backend auto "media-worker[…] @ ./worker"`. |
+| doctor: `pytorch … no GPU acceleration`, version ends in `+cpu` | Reinstall with `--torch-backend auto`: `uv tool install --reinstall --torch-backend auto "foxcam-worker[…] @ ./worker"`. |
 | `nvidia-smi` not found in WSL | Update the **Windows** NVIDIA driver, `wsl --update`, `wsl --shutdown`. Never install the Linux driver inside WSL. |
 | `CUDA error: no kernel image is available` | GPU too old for the PyTorch build; try `--torch-backend cu126` (or older). |
 | `server … Connection refused` from WSL to `localhost` | Use the server's LAN address or [mirrored networking](#wsl-networking). |

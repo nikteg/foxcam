@@ -3,8 +3,8 @@
 The dummy-detector tests always run (they only need ffmpeg). The real-footage test runs
 when you drop fox clips into ``samples/`` and pick a detector:
 
-    MEDIA_WORKER_TEST_DETECTOR=speciesnet uv run --package media-worker pytest worker/tests
-    MEDIA_WORKER_TEST_DETECTOR=ultralytics MEDIA_WORKER_TEST_CLASSES=fox ...
+    FOXCAM_WORKER_TEST_DETECTOR=speciesnet uv run --package foxcam-worker pytest worker/tests
+    FOXCAM_WORKER_TEST_DETECTOR=ultralytics FOXCAM_WORKER_TEST_CLASSES=fox ...
 """
 
 from __future__ import annotations
@@ -16,8 +16,8 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from media_worker.detectors.speciesnet_det import _classification
-from media_worker.local import main
+from foxcam_worker.detectors.speciesnet_det import _classification
+from foxcam_worker.local import main
 
 ROOT = Path(__file__).resolve().parents[2]
 SAMPLES = ROOT / "samples"
@@ -75,8 +75,8 @@ def test_speciesnet_per_box_classification(tmp_path, monkeypatch):
     import json as _json
     import subprocess as _sp
 
-    from media_worker.detectors.speciesnet_det import SpeciesNetDetector
-    from media_worker.frames import Frame
+    from foxcam_worker.detectors.speciesnet_det import SpeciesNetDetector
+    from foxcam_worker.frames import Frame
 
     frame = tmp_path / "000001.jpg"
     frame.write_bytes(b"")
@@ -98,21 +98,21 @@ def test_speciesnet_per_box_classification(tmp_path, monkeypatch):
     assert found[0].extra["detector_conf"] == 0.82 and det.name == "speciesnet:4.0.3a"
 
 
-REAL_DETECTOR = os.environ.get("MEDIA_WORKER_TEST_DETECTOR")
+REAL_DETECTOR = os.environ.get("FOXCAM_WORKER_TEST_DETECTOR")
 FOX_CLIPS = sorted(SAMPLES.glob("fox*.*")) if SAMPLES.is_dir() else []
 
 
 @pytest.mark.skipif(not REAL_DETECTOR or not FOX_CLIPS,
-                    reason="set MEDIA_WORKER_TEST_DETECTOR and add samples/fox*.mp4")
+                    reason="set FOXCAM_WORKER_TEST_DETECTOR and add samples/fox*.mp4")
 @pytest.mark.parametrize("night", [False, True], ids=["day", "night-sim"])
 @pytest.mark.parametrize("path", FOX_CLIPS, ids=[p.name for p in FOX_CLIPS])
 def test_real_fox_footage(path: Path, night: bool, tmp_path: Path) -> None:
     argv = [str(path), "--detector", REAL_DETECTOR, "--expect",
-            os.environ.get("MEDIA_WORKER_TEST_LABEL", "fox"),
-            "--min-confidence", os.environ.get("MEDIA_WORKER_TEST_MIN_CONF", "0.5"),
+            os.environ.get("FOXCAM_WORKER_TEST_LABEL", "fox"),
+            "--min-confidence", os.environ.get("FOXCAM_WORKER_TEST_MIN_CONF", "0.5"),
             "--out", str(tmp_path / "out")]
-    if os.environ.get("MEDIA_WORKER_TEST_CLASSES"):
-        argv += ["--classes", os.environ["MEDIA_WORKER_TEST_CLASSES"]]
+    if os.environ.get("FOXCAM_WORKER_TEST_CLASSES"):
+        argv += ["--classes", os.environ["FOXCAM_WORKER_TEST_CLASSES"]]
     if night:
         argv.append("--night")
     assert run(argv) == 0, (tmp_path / "out" / "detections.json").read_text()
@@ -123,8 +123,8 @@ def test_speciesnet_keeps_top_guesses(tmp_path, monkeypatch):
     import json as _json
     import subprocess as _sp
 
-    from media_worker.detectors.speciesnet_det import SpeciesNetDetector
-    from media_worker.frames import Frame
+    from foxcam_worker.detectors.speciesnet_det import SpeciesNetDetector
+    from foxcam_worker.frames import Frame
 
     frames = [tmp_path / "000001.jpg", tmp_path / "000002.jpg"]
     for f in frames:

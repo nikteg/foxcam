@@ -22,18 +22,18 @@ More sources:
 
 ```sh
 # One-off check with an annotated output folder
-uv run media-worker detect-file samples/fox-garden.mp4 --detector speciesnet --country SWE \
+uv run foxcam-worker detect-file samples/fox-garden.mp4 --detector speciesnet --country SWE \
     --expect fox --out out/fox-day
 
 # Same clip with a simulated IR night look and a censor rectangle
-uv run media-worker detect-file samples/fox-garden.mp4 --detector ultralytics \
+uv run foxcam-worker detect-file samples/fox-garden.mp4 --detector ultralytics \
     --classes fox --night --mask 0,0,0.3,0.2 --expect fox
 
 # Negative control
-uv run media-worker detect-file samples/cat.mp4 --detector speciesnet --expect-none fox
+uv run foxcam-worker detect-file samples/cat.mp4 --detector speciesnet --expect-none fox
 
 # All fox*.mp4 clips, both day and simulated night, as tests
-MEDIA_WORKER_TEST_DETECTOR=speciesnet uv run --package media-worker pytest worker/tests
+FOXCAM_WORKER_TEST_DETECTOR=speciesnet uv run --package foxcam-worker pytest worker/tests
 ```
 
 `--expect fox` also matches more specific labels such as "red fox". The exit code is 0 when

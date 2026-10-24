@@ -93,7 +93,7 @@ export function PageTitle({ title }: { title: string }) {
   );
 }
 
-const DISMISSED = "media-streamer.banners-dismissed";
+const DISMISSED = "foxcam.banners-dismissed";
 
 /** An explanation at the top of a page or tab, until the user closes it (remembered in
  * this browser). ``id`` names it for that. */

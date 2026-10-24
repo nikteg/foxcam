@@ -9,7 +9,7 @@ COPY web/ ./
 RUN pnpm build
 
 # MediaMTX itself runs from this image too (docker-compose.yml), so the transcodes it starts
-# (`media-streamer transcode`) find ffmpeg and the GPU drivers.
+# (`foxcam transcode`) find ffmpeg and the GPU drivers.
 FROM bluenviron/mediamtx:1.21.2 AS mediamtx
 
 FROM python:3.12-slim
@@ -32,8 +32,8 @@ COPY server/src ./src
 RUN uv pip install --system ".[tapo-cloud,s3,notify]"
 COPY --from=web /web/dist /app/web-dist
 
-ENV MEDIA_STREAMER_CONFIG=/app/config.yaml \
-    MEDIA_STREAMER_WEB_DIST=/app/web-dist
+ENV FOXCAM_CONFIG=/app/config.yaml \
+    FOXCAM_WEB_DIST=/app/web-dist
 EXPOSE 8000
-ENTRYPOINT ["media-streamer"]
+ENTRYPOINT ["foxcam"]
 CMD ["serve"]

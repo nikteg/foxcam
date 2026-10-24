@@ -382,7 +382,7 @@ def setup_code(settings: Settings) -> str:
 def announce_setup(settings: Settings) -> None:
     if setup_required(settings):
         log.warning("no accounts yet: open the web UI and create the first admin with setup "
-                    "code %s (also in %s), or run `media-streamer user add <e-mail> --admin`",
+                    "code %s (also in %s), or run `foxcam user add <e-mail> --admin`",
                     setup_code(settings), settings.data_dir / "setup-code")
 
 
@@ -597,7 +597,7 @@ def register(settings: Settings, email: str, password: str, name: str | None,
     email = normalize_email(email)
     if not invite and settings.auth.registration != "open":
         # admin_emails don't skip the invite here: nothing proves the address is theirs
-        # (they sign up through OAuth, or with `media-streamer user add`).
+        # (they sign up through OAuth, or with `foxcam user add`).
         raise AccountError("you need an invite link to create an account", 403)
     pw_hash = hash_password(password)  # slow: before taking the write lock
     # One transaction: the invite claimed, the account made and granted, or none of it.

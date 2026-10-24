@@ -1,4 +1,4 @@
-// Typed client for the media-streamer JSON API. All timestamps are ISO-8601 UTC ("...Z").
+// Typed client for the foxcam JSON API. All timestamps are ISO-8601 UTC ("...Z").
 
 export type Rect = [x: number, y: number, w: number, h: number];
 

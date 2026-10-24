@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from media_streamer.config import load_settings
+from foxcam.config import load_settings
 
 
 def write(tmp_path: Path, text: str) -> Path:
@@ -59,9 +59,9 @@ def test_per_camera_segment_length(settings):
 
 
 def test_public_url_from_environment(tmp_path, monkeypatch):
-    from media_streamer.config import Settings
+    from foxcam.config import Settings
 
-    monkeypatch.setenv("MEDIA_STREAMER_PUBLIC_URL", "http://192.168.1.10:5173/")
+    monkeypatch.setenv("FOXCAM_PUBLIC_URL", "http://192.168.1.10:5173/")
     assert Settings.model_validate({"data_dir": str(tmp_path)}).public_url == \
         "http://192.168.1.10:5173"
     explicit = Settings.model_validate({"data_dir": str(tmp_path), "public_url": "https://cams"})

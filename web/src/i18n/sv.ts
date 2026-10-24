@@ -654,7 +654,7 @@ export const sv: Record<MessageKey, string> = {
   "detectors.requiresPlaceholder": "inga, t.ex. speciesnet",
   "detectors.profileValue": "profilens ({value})",
   "archiving.intro":
-    "Färdiga inspelningar fogas ihop till en arkivfil per kamera och {minutes} minuter, omkodade när kamerans inspelningsprofil säger så (media-streamer compact). Filerna finns under Inspelningar → Arkiv.",
+    "Färdiga inspelningar fogas ihop till en arkivfil per kamera och {minutes} minuter, omkodade när kamerans inspelningsprofil säger så (foxcam compact). Filerna finns under Inspelningar → Arkiv.",
   "archiving.segmentsHint": "{n} {n:segment|segment}",
   "archiving.files": "Arkivfiler",
   "archiving.period": "Period",

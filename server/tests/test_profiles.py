@@ -3,12 +3,12 @@
 from datetime import timedelta
 
 import pytest
-from media_streamer import db
-from media_streamer.config import ProfileConfig, Settings
-from media_streamer.db import session_scope
-from media_streamer.models import Detection, Event, Job, JobState, Segment, SegmentStatus, utcnow
-from media_streamer.pipeline import events, preprocess, queue, retention
-from media_streamer.profiles import camera_profiles, set_camera_profiles
+from foxcam import db
+from foxcam.config import ProfileConfig, Settings
+from foxcam.db import session_scope
+from foxcam.models import Detection, Event, Job, JobState, Segment, SegmentStatus, utcnow
+from foxcam.pipeline import events, preprocess, queue, retention
+from foxcam.profiles import camera_profiles, set_camera_profiles
 from sqlalchemy import text
 
 from .conftest import add_job, add_segment, app_client, needs_ffmpeg
@@ -226,7 +226,7 @@ def test_legacy_rows_join_the_default_profile(settings):
 
 
 def test_fixed_class_workers_only_get_matching_profiles(two_profiles):
-    from media_streamer.profiles import eligible_profiles
+    from foxcam.profiles import eligible_profiles
 
     two_profiles.profiles[1].requires = []  # vehicles: any worker
     both = [("default", "default"), ("vehicles", "default")]

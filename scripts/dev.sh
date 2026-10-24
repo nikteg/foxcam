@@ -35,8 +35,8 @@ start() { # name, command...  (output prefixed with [name])
 }
 
 # Recording file names include the UTC offset; TZ=UTC just keeps them in UTC. Started
-# through media-streamer, which gives it the login the server and ingest use.
-start mediamtx env TZ=UTC uv run media-streamer mediamtx --binary "$MEDIAMTX" mediamtx/mediamtx.yml
+# through foxcam, which gives it the login the server and ingest use.
+start mediamtx env TZ=UTC uv run foxcam mediamtx --binary "$MEDIAMTX" mediamtx/mediamtx.yml
 sleep 1
 # This machine's LAN address, so other devices can use the UI (and notifications link to it).
 lan_ip() {
@@ -50,11 +50,11 @@ lan_ip() {
 }
 LAN_IP="$(lan_ip)"
 if [ -n "$LAN_IP" ]; then
-  export MEDIA_STREAMER_PUBLIC_URL="${MEDIA_STREAMER_PUBLIC_URL:-http://$LAN_IP:5173}"
+  export FOXCAM_PUBLIC_URL="${FOXCAM_PUBLIC_URL:-http://$LAN_IP:5173}"
 fi
 
 # API docs (/docs) are off unless asked for: they are outside the login.
-export MEDIA_STREAMER_API_DOCS="${MEDIA_STREAMER_API_DOCS:-1}"
+export FOXCAM_API_DOCS="${FOXCAM_API_DOCS:-1}"
 
 RELOAD="${RELOAD:-1}"
 # Restart a command when Python files under the given directory change.
@@ -68,31 +68,31 @@ watch() { # dir, command...
   fi
 }
 if [ "$RELOAD" = 1 ]; then
-  start server uv run media-streamer serve --host 0.0.0.0 --port 8000 --reload
+  start server uv run foxcam serve --host 0.0.0.0 --port 8000 --reload
 else
-  start server uv run media-streamer serve --host 0.0.0.0 --port 8000
+  start server uv run foxcam serve --host 0.0.0.0 --port 8000
 fi
 # Ingest only restarts for changes to its own code: a restart drops every camera stream
 # (Tapo cloud sessions take ~20-30 s to come back), so server/web edits leave it alone.
 if [ "${RELOAD_INGEST:-$RELOAD}" = 1 ]; then
-  start ingest watch server/src/media_streamer/ingest media-streamer ingest
+  start ingest watch server/src/foxcam/ingest foxcam ingest
 else
-  start ingest uv run media-streamer ingest
+  start ingest uv run foxcam ingest
 fi
 # Joins finished hours into one file each (and re-encodes per recording profile).
 if [ "$RELOAD" = 1 ]; then
-  start compact watch server/src/media_streamer/pipeline media-streamer compact
+  start compact watch server/src/foxcam/pipeline foxcam compact
 else
-  start compact uv run media-streamer compact
+  start compact uv run foxcam compact
 fi
 start web pnpm --dir web dev --host
 if [ "$WORKER_ARGS" != none ]; then
   sleep 3
   # Workers need a token; a local "dev" token is created once and kept in data/.
-  token="${MEDIA_WORKER_TOKEN:-$(uv run media-streamer worker-token dev --save data/dev-worker.token)}"
+  token="${FOXCAM_WORKER_TOKEN:-$(uv run foxcam worker-token dev --save data/dev-worker.token)}"
   # shellcheck disable=SC2086
-  export MEDIA_WORKER_TOKEN="$token"
-  start worker watch worker/src media-worker --server http://localhost:8000 $WORKER_ARGS
+  export FOXCAM_WORKER_TOKEN="$token"
+  start worker watch worker/src foxcam-worker --server http://localhost:8000 $WORKER_ARGS
 fi
 
 echo

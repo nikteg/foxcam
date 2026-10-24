@@ -19,10 +19,10 @@
 
 | Process | Command | Role |
 |---|---|---|
-| MediaMTX | `media-streamer mediamtx mediamtx/mediamtx.yml` (starts `mediamtx` with the internal login, see docs/AUTH.md) | Pulls RTSP cameras, accepts published streams, records segments, serves live view. Configured by the server through its API, including an on-demand `<camera>/low` path per camera (`media-streamer transcode` to ~480p while someone watches it in low-data mode). |
-| server | `media-streamer serve` | API, web UI and the background pipeline (single process, single SQLite writer). |
-| ingest | `media-streamer ingest` | Publishes non-RTSP sources (Tapo cloud, file, test) into MediaMTX. Re-reads the camera list every 5 s. |
-| worker | `media-worker` | Runs anywhere with HTTP access to the server. Leases jobs, runs a detector, posts results. |
+| MediaMTX | `foxcam mediamtx mediamtx/mediamtx.yml` (starts `mediamtx` with the internal login, see docs/AUTH.md) | Pulls RTSP cameras, accepts published streams, records segments, serves live view. Configured by the server through its API, including an on-demand `<camera>/low` path per camera (`foxcam transcode` to ~480p while someone watches it in low-data mode). |
+| server | `foxcam serve` | API, web UI and the background pipeline (single process, single SQLite writer). |
+| ingest | `foxcam ingest` | Publishes non-RTSP sources (Tapo cloud, file, test) into MediaMTX. Re-reads the camera list every 5 s. |
+| worker | `foxcam-worker` | Runs anywhere with HTTP access to the server. Leases jobs, runs a detector, posts results. |
 
 ## Pipeline (server background loops)
 
@@ -183,7 +183,7 @@ with the new settings. Left out on purpose: secrets, auth and storage,
 `compaction.period_minutes` (archive boundaries) and the `mediamtx` encoder (every
 transcoder would restart).
 
-`media-streamer settings list | set KEY VALUE | reset [KEY...]` does the same from a shell,
+`foxcam settings list | set KEY VALUE | reset [KEY...]` does the same from a shell,
 e.g. to undo an https `public_url` that broke signing in over plain http.
 
 ## Object storage (S3)
@@ -219,7 +219,7 @@ SeaweedFS, Hetzner, Wasabi…), configured in `storage.s3` (`pipeline/uploader.p
 ## Code map
 
 ```
-server/src/media_streamer/
+server/src/foxcam/
   config.py          settings (config.yaml + ${ENV} expansion), camera list
   camera_store.py    cameras added from the UI
   profiles.py        detection profiles: camera selection, tag matching, UI profiles
@@ -231,7 +231,7 @@ server/src/media_streamer/
   ingest/            publishers for tapo_cloud / file / test sources
   tapo_account.py    Tapo cloud sign-in (MFA) and device discovery for the UI
   web/               FastAPI app, worker API, public API, camera API
-worker/src/media_worker/
+worker/src/foxcam_worker/
   cli.py             lease loop; `detect-file` for offline tests (local.py)
   detectors/         dummy, ultralytics (YOLO-World / YOLO), speciesnet
 web/src/             React + Fluent UI app (pages/, components/, i18n/)
@@ -244,7 +244,7 @@ censor areas are burned in, the server reconfigures MediaMTX:
 
 - the camera's own stream goes to `<camera>/raw` (the RTSP source moves there; ingest
   publishers switch their publish URL, see `recording.source_path`);
-- `<camera>` becomes a publisher path whose `runOnInit` (`media-streamer transcode`) reads `<camera>/raw`, draws
+- `<camera>` becomes a publisher path whose `runOnInit` (`foxcam transcode`) reads `<camera>/raw`, draws
   the masks, scales / limits fps, re-encodes (on the GPU when possible, see [HARDWARE.md](HARDWARE.md)) and publishes `<camera>`.
 
 Recording, live view, the low-data path, snapshots and worker jobs all keep reading
@@ -255,7 +255,7 @@ Recording, live view, the low-data path, snapshots and worker jobs all keep read
 
 Segments are short (`segment_seconds`) so detection starts soon after something happens,
 but thousands of small files per camera and day are a burden on disk and in S3.
-`media-streamer compact` (its own process; `compact` service in Docker) joins them into
+`foxcam compact` (its own process; `compact` service in Docker) joins them into
 archive files. Jobs → Archiving shows whether it runs, what it is doing, which periods wait
 and what was archived last (`GET /api/archiving`); the files are under Recordings →
 Archives, and the Status page has a one-line summary.

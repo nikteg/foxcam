@@ -4,7 +4,7 @@ import shutil
 
 import httpx
 import pytest
-from media_worker import doctor
+from foxcam_worker import doctor
 
 
 def test_checks_run_without_server():
@@ -54,8 +54,8 @@ def test_cli_exit_code(monkeypatch, capsys):
 
 
 def test_worker_stops_when_the_server_rejects_its_token(monkeypatch):
-    from media_worker import cli
-    from media_worker.client import Client
+    from foxcam_worker import cli
+    from foxcam_worker.client import Client
 
     def reject(self):
         request = httpx.Request("POST", "http://server/api/worker/lease")
@@ -63,7 +63,7 @@ def test_worker_stops_when_the_server_rejects_its_token(monkeypatch):
         raise httpx.HTTPStatusError("401", request=request, response=response)
 
     monkeypatch.setattr(Client, "lease", reject)
-    monkeypatch.setattr("sys.argv", ["media-worker", "--server", "http://server", "--once"])
+    monkeypatch.setattr("sys.argv", ["foxcam-worker", "--server", "http://server", "--once"])
     with pytest.raises(SystemExit) as exc:
         cli.main()
     assert "invalid worker token" in str(exc.value)

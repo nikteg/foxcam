@@ -1,7 +1,7 @@
 """Compaction: join each camera's finished segments into one file per period (hourly).
 
 MediaMTX records short segments so detection can start right away. Once a period is over
-and its segments are preprocessed, `media-streamer compact` (its own process) joins them:
+and its segments are preprocessed, `foxcam compact` (its own process) joins them:
 
 - **stream copy** for cameras on the `original` recording profile: no quality loss, the
   same bytes in far fewer files;
@@ -442,7 +442,7 @@ def compact_once(settings: Settings, encoder: Encoder = local_encoder) -> int:
 
 
 def run_compaction(settings: Settings, interval: float = 60.0) -> None:
-    """`media-streamer compact`: build archives as periods finish, until interrupted."""
+    """`foxcam compact`: build archives as periods finish, until interrupted."""
     from ..db import init_db
 
     init_db(settings)

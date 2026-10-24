@@ -9,12 +9,12 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from media_streamer import accounts
-from media_streamer.config import Settings
-from media_streamer.db import init_db, session_scope
-from media_streamer.models import Detection, Job, JobState, Segment, SegmentStatus, utcnow
-from media_streamer.pipeline.scanner import NAME_FORMAT
-from media_streamer.web.app import create_app
+from foxcam import accounts
+from foxcam.config import Settings
+from foxcam.db import init_db, session_scope
+from foxcam.models import Detection, Job, JobState, Segment, SegmentStatus, utcnow
+from foxcam.pipeline.scanner import NAME_FORMAT
+from foxcam.web.app import create_app
 
 needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg not installed")
 

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from media_streamer.db import session_scope
-from media_streamer.models import JobState, Worker
-from media_streamer.pipeline import queue
+from foxcam.db import session_scope
+from foxcam.models import JobState, Worker
+from foxcam.pipeline import queue
 
 from .conftest import add_detection, add_job, add_segment, app_client
 

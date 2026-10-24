@@ -1,4 +1,4 @@
-"""media-worker: lease a job, run the detector, post results, repeat."""
+"""foxcam-worker: lease a job, run the detector, post results, repeat."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ from .detectors import add_detector_args, create_detector
 from .doctor import environment, gpu_summary
 from .frames import extract_frames
 
-log = logging.getLogger("media_worker")
+log = logging.getLogger("foxcam_worker")
 
 
 class Heartbeat:
@@ -62,7 +62,7 @@ def process(client: Client, detector, job: dict, args: argparse.Namespace) -> No
              job["attempt"])
     started = time.monotonic()
     # ignore_cleanup_errors: on Windows a file may still be open (antivirus, model cache).
-    with tempfile.TemporaryDirectory(prefix="media-worker-", ignore_cleanup_errors=True) as tmp, \
+    with tempfile.TemporaryDirectory(prefix="foxcam-worker-", ignore_cleanup_errors=True) as tmp, \
             Heartbeat(client, job, args.heartbeat) as hb:
         tmp_path = Path(tmp)
         video = tmp_path / "input.mp4"
@@ -120,14 +120,14 @@ def main() -> None:
         return
 
     p = argparse.ArgumentParser(
-        prog="media-worker", description=__doc__,
-        epilog="Check this machine (ffmpeg, GPU, server): media-worker doctor --help\n"
-               "Offline test on a local video: media-worker detect-file --help",
+        prog="foxcam-worker", description=__doc__,
+        epilog="Check this machine (ffmpeg, GPU, server): foxcam-worker doctor --help\n"
+               "Offline test on a local video: foxcam-worker detect-file --help",
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--server", default=os.environ.get("MEDIA_SERVER", "http://localhost:8000"))
-    p.add_argument("--token", default=os.environ.get("MEDIA_WORKER_TOKEN"))
-    p.add_argument("--worker-id", default=os.environ.get("MEDIA_WORKER_ID", socket.gethostname()))
-    p.add_argument("--tags", default=os.environ.get("MEDIA_WORKER_TAGS", ""),
+    p.add_argument("--server", default=os.environ.get("FOXCAM_SERVER", "http://localhost:8000"))
+    p.add_argument("--token", default=os.environ.get("FOXCAM_WORKER_TOKEN"))
+    p.add_argument("--worker-id", default=os.environ.get("FOXCAM_WORKER_ID", socket.gethostname()))
+    p.add_argument("--tags", default=os.environ.get("FOXCAM_WORKER_TAGS", ""),
                    help="extra capability tags, comma separated (e.g. gpu,winhack). Detection "
                         "profiles that require tags only go to workers that have them; the "
                         "detector adds its own (speciesnet, ultralytics, open-vocabulary, dummy)")
@@ -144,11 +144,11 @@ def main() -> None:
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
     if shutil.which("ffmpeg") is None:
-        sys.exit("ffmpeg not found on PATH (run `media-worker doctor` for install hints)")
+        sys.exit("ffmpeg not found on PATH (run `foxcam-worker doctor` for install hints)")
     graceful_signals()
     detector = create_detector(args)
-    # MEDIA_WORKER_HOST: what the queue page shows as host (e.g. for demos and screenshots).
-    host = os.environ.get("MEDIA_WORKER_HOST") or platform.node()
+    # FOXCAM_WORKER_HOST: what the queue page shows as host (e.g. for demos and screenshots).
+    host = os.environ.get("FOXCAM_WORKER_HOST") or platform.node()
     info = {**detector.info(), "version": __version__, "host": host,
             "python": platform.python_version(), "platform": environment()}
     if gpu := gpu_summary():
@@ -172,7 +172,7 @@ def main() -> None:
                     hint = "" if "Add worker" in detail else (
                         "; create one under Worker queue → Add worker")
                     raise SystemExit(f"server rejected this worker: {detail}. Pass a valid "
-                                     f"--token (or MEDIA_WORKER_TOKEN){hint}.") from None
+                                     f"--token (or FOXCAM_WORKER_TOKEN){hint}.") from None
                 log.warning("server error (%s); retrying in %.0fs", e, backoff)
                 time.sleep(backoff)
                 backoff = min(backoff * 2, 120)

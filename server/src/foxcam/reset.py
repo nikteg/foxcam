@@ -1,4 +1,4 @@
-"""Partial resets for development (`media-streamer reset <what>`, `mise run reset:<what>`).
+"""Partial resets for development (`foxcam reset <what>`, `mise run reset:<what>`).
 
 Each scope removes one kind of data and keeps the rest. Stop the server first: the
 pipeline would otherwise keep writing while rows are deleted. Objects already uploaded to

@@ -1,18 +1,18 @@
 """Ultralytics models: YOLO-World / YOLOE (open vocabulary, prompt with "fox"), or any
 YOLO / RT-DETR weights you fine-tuned yourself.
 
-    media-worker --detector ultralytics --model yolov8s-worldv2.pt   # prompted per job
-    media-worker --detector ultralytics --model runs/detect/fox/weights/best.pt
+    foxcam-worker --detector ultralytics --model yolov8s-worldv2.pt   # prompted per job
+    foxcam-worker --detector ultralytics --model runs/detect/fox/weights/best.pt
 
 An open-vocabulary model (YOLO-World / YOLOE) is prompted with each job's profile targets,
 so one worker looks for foxes on one camera and people or cars on another, and picks up
 new profiles without a restart. It advertises the ``open-vocabulary`` tag. ``--classes``
-is only the prompt for jobs that name no targets (e.g. ``media-worker-detect`` runs).
+is only the prompt for jobs that name no targets (e.g. ``foxcam-worker-detect`` runs).
 
 Intel GPUs (integrated UHD / Iris Xe / Arc, e.g. an N100 home server) run the model through
 OpenVINO with ``--device intel:gpu`` (N100: ~100 ms per frame, 3x the CPU). OpenVINO models
 have their classes built in, so each prompt is exported once (a few seconds) and kept in
-``~/.cache/media-worker/openvino``. Needs the ``openvino`` extra.
+``~/.cache/foxcam-worker/openvino``. Needs the ``openvino`` extra.
 
 Note: Ultralytics is AGPL-3.0.
 """
@@ -90,7 +90,7 @@ class UltralyticsDetector(Detector):
 
         weights = Path(self.model.ckpt_path or self.model_path)
         key = hashlib.sha256("\n".join([weights.name, *targets]).encode()).hexdigest()[:12]
-        cache = Path(os.environ.get("MEDIA_WORKER_CACHE", Path.home() / ".cache/media-worker"))
+        cache = Path(os.environ.get("FOXCAM_WORKER_CACHE", Path.home() / ".cache/foxcam-worker"))
         target = cache / "openvino" / f"{weights.stem}-{key}_openvino_model"
         if not target.exists():
             if targets:

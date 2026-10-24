@@ -1,4 +1,4 @@
-"""``media-streamer ingest``: publish non-RTSP camera sources into MediaMTX.
+"""``foxcam ingest``: publish non-RTSP camera sources into MediaMTX.
 
 RTSP cameras are pulled by MediaMTX itself and need nothing here. Every other source
 type is turned into an RTSP *publish* to ``<mediamtx.rtsp_url>/<camera id>``, so from

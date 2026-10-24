@@ -5,10 +5,10 @@ from __future__ import annotations
 from datetime import timedelta
 
 from fastapi.testclient import TestClient
-from media_streamer import accounts
-from media_streamer.db import session_scope
-from media_streamer.models import ApiKey, utcnow
-from media_streamer.web.app import create_app
+from foxcam import accounts
+from foxcam.db import session_scope
+from foxcam.models import ApiKey, utcnow
+from foxcam.web.app import create_app
 
 from .conftest import app_client
 

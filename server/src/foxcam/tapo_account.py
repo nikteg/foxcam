@@ -1,6 +1,6 @@
 """Tapo cloud account for the web UI: sign in (with MFA), list cameras, sign out.
 
-The resulting session is the same file `media-streamer tapo-login` writes, so the ingest
+The resulting session is the same file `foxcam tapo-login` writes, so the ingest
 process picks it up for `tapo_cloud` camera sources. The password is never stored.
 """
 

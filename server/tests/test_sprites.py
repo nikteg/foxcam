@@ -5,10 +5,10 @@ from __future__ import annotations
 import subprocess
 from datetime import timedelta
 
-from media_streamer import sprites
-from media_streamer.db import session_scope
-from media_streamer.models import Archive, Segment, utcnow
-from media_streamer.pipeline import compaction, retention
+from foxcam import sprites
+from foxcam.db import session_scope
+from foxcam.models import Archive, Segment, utcnow
+from foxcam.pipeline import compaction, retention
 
 from .conftest import add_segment, app_client, needs_ffmpeg
 
@@ -84,8 +84,8 @@ def test_older_archives_are_filled_in_one_at_a_time(settings):
 
 @needs_ffmpeg
 def test_preprocessing_makes_the_segments_sprite(settings):
-    from media_streamer.models import SegmentStatus
-    from media_streamer.pipeline import preprocess
+    from foxcam.models import SegmentStatus
+    from foxcam.pipeline import preprocess
 
     seg = add_segment(settings, seconds=4, status=SegmentStatus.NEW)
     preprocess.preprocess_segment(settings, seg)

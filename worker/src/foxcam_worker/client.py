@@ -1,4 +1,4 @@
-"""HTTP client for the media-streamer worker protocol (docs/WORKER_PROTOCOL.md)."""
+"""HTTP client for the foxcam worker protocol (docs/WORKER_PROTOCOL.md)."""
 
 from __future__ import annotations
 

@@ -2,7 +2,7 @@
 """Download freely licensed fox clips from Wikimedia Commons into samples/.
 
 Each clip is converted to H.264 MP4 (max 1280 px wide, no audio) so it works as a fake
-camera (`source: {type: file}`) and with `media-worker detect-file`. Licences and authors
+camera (`source: {type: file}`) and with `foxcam-worker detect-file`. Licences and authors
 are written to samples/CREDITS.md - keep them if you share the clips.
 
     python3 scripts/fetch_samples.py            # default set
@@ -24,7 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SAMPLES = ROOT / "samples"
 API = "https://commons.wikimedia.org/w/api.php"
-USER_AGENT = "media-streamer-dev/0.1 (fox detection test footage)"
+USER_AGENT = "foxcam-dev/0.1 (fox detection test footage)"
 
 # (output name, Commons file title, why it is useful)
 CLIPS = [

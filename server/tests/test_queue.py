@@ -1,9 +1,9 @@
 from datetime import timedelta
 
 import pytest
-from media_streamer.db import session_scope
-from media_streamer.models import Detection, Job, JobState, Segment, SegmentStatus, Worker, utcnow
-from media_streamer.pipeline import queue
+from foxcam.db import session_scope
+from foxcam.models import Detection, Job, JobState, Segment, SegmentStatus, Worker, utcnow
+from foxcam.pipeline import queue
 
 from .conftest import add_job, add_segment
 

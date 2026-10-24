@@ -41,7 +41,7 @@ function installCommand(platform: Platform, detector: DetectorChoice, folder: st
     ...(detector === "speciesnet" ? ["--python 3.12"] : []),
     // PyPI's PyTorch is CPU-only on Windows; auto picks the CUDA build for the driver.
     ...(detector === "dummy" ? [] : ["--torch-backend auto"]),
-    `"media-worker${extra} @ ${folder}"`,
+    `"foxcam-worker${extra} @ ${folder}"`,
   ];
   return lines(platform, "uv tool install", args);
 }
@@ -57,10 +57,10 @@ export function setupSteps(
   const folder = platform === "windows" ? ".\\worker" : "./worker";
   const common: SetupStep[] = [
     { text: "workers.step.install", code: installCommand(platform, detector, folder) },
-    { text: "workers.step.doctor", code: lines(platform, "media-worker doctor", conn) },
+    { text: "workers.step.doctor", code: lines(platform, "foxcam-worker doctor", conn) },
     {
       text: "workers.step.run",
-      code: lines(platform, "media-worker", [...conn, ...detectorArgs(detector)]),
+      code: lines(platform, "foxcam-worker", [...conn, ...detectorArgs(detector)]),
     },
   ];
   switch (platform) {
@@ -99,8 +99,8 @@ export function setupSteps(
         {
           text: "workers.step.dockerEnv",
           code: [
-            `MEDIA_SERVER=${server}`,
-            `MEDIA_WORKER_TOKEN=${token}`,
+            `FOXCAM_SERVER=${server}`,
+            `FOXCAM_WORKER_TOKEN=${token}`,
             `DETECTOR=${detector}`,
             `WORKER_ARGS=${detectorArgs(detector).join(" ")}`,
           ].join("\n"),

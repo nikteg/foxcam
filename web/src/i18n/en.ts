@@ -564,7 +564,7 @@ export const en = {
   "detectors.requiresPlaceholder": "none, e.g. speciesnet",
   "detectors.profileValue": "profile's ({value})",
   "archiving.intro":
-    "Finished recordings are joined into one archive file per camera and {minutes} minutes, re-encoded when the camera's recording profile says so (media-streamer compact). The files are under Recordings → Archives.",
+    "Finished recordings are joined into one archive file per camera and {minutes} minutes, re-encoded when the camera's recording profile says so (foxcam compact). The files are under Recordings → Archives.",
   "archiving.segmentsHint": "{n} {n:segment|segments}",
   "archiving.files": "Archive files",
   "archiving.period": "Period",

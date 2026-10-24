@@ -1,10 +1,10 @@
-# Recorder box: MediaMTX + media-streamer (web/pipeline) + ingest publishers.
+# Recorder box: MediaMTX + foxcam (web/pipeline) + ingest publishers.
 # Workers run elsewhere (GPU machine) and only need HTTP access to port 8000.
 #
 #   docker compose up --build
 #
-# Optional environment (e.g. in .env): MEDIA_CONFIG (config file), MEDIA_DATA_PATH (data
-# folder), *_PORT (host ports), MEDIA_WORKER_TOKEN. With MEDIA_CONFIG=./config.docker.yaml
+# Optional environment (e.g. in .env): FOXCAM_CONFIG (config file), FOXCAM_DATA_PATH (data
+# folder), *_PORT (host ports), FOXCAM_WORKER_TOKEN. With FOXCAM_CONFIG=./config.docker.yaml
 # no config file is needed: PUBLIC_URL and MAX_DISK_GB come from the environment.
 #
 # server and ingest share MediaMTX's network namespace: MediaMTX's API is local only, video
@@ -13,13 +13,13 @@
 # first start prints a setup code for the first account: docker compose logs server
 services:
   mediamtx:
-    # Same image as the server: MediaMTX runs `media-streamer transcode` (masks, recording
+    # Same image as the server: MediaMTX runs `foxcam transcode` (masks, recording
     # profiles, low-data live) with ffmpeg and the GPU drivers in it. Hardware encoding:
     # add docker-compose.vaapi.yml (Intel / AMD) or docker-compose.nvidia.yml.
     build: { context: ., dockerfile: server/Dockerfile }
-    image: media-streamer:local
+    image: foxcam:local
     pull_policy: build # built here, never pulled (Komodo pulls before deploying)
-    # Started through media-streamer: it sets the password the server, ingest and the
+    # Started through foxcam: it sets the password the server, ingest and the
     # transcoders sign in with (see mediamtx.yml). Whichever container starts first creates
     # it in data/mediamtx/. MediaMTX faces the network, so it gets only that folder and the
     # recordings: no config.yaml, database or other secrets.
@@ -27,8 +27,8 @@ services:
     restart: unless-stopped
     volumes:
       - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
-      - ${MEDIA_DATA_PATH:-./data}/mediamtx:/data/mediamtx
-      - ${MEDIA_DATA_PATH:-./data}/recordings:/data/recordings
+      - ${FOXCAM_DATA_PATH:-./data}/mediamtx:/data/mediamtx
+      - ${FOXCAM_DATA_PATH:-./data}/recordings:/data/recordings
     environment:
       TZ: UTC # recording file names in UTC (they include the offset either way)
     ports:
@@ -39,19 +39,19 @@ services:
 
   server:
     build: { context: ., dockerfile: server/Dockerfile }
-    image: media-streamer:local
+    image: foxcam:local
     pull_policy: build # built here, never pulled (Komodo pulls before deploying)
     restart: unless-stopped
     command: ["serve"]
     depends_on: [mediamtx]
     network_mode: service:mediamtx # port 8000 is published by the mediamtx service
     volumes:
-      - ${MEDIA_CONFIG:-./config.yaml}:/app/config.yaml:ro
-      - ${MEDIA_DATA_PATH:-./data}:/data
+      - ${FOXCAM_CONFIG:-./config.yaml}:/app/config.yaml:ro
+      - ${FOXCAM_DATA_PATH:-./data}:/data
       - ./samples:/app/samples:ro
     environment:
-      MEDIA_DATA_DIR: /data
-      MEDIA_WORKER_TOKEN: ${MEDIA_WORKER_TOKEN:-}
+      FOXCAM_DATA_DIR: /data
+      FOXCAM_WORKER_TOKEN: ${FOXCAM_WORKER_TOKEN:-}
       # Used by config.docker.yaml.
       PUBLIC_URL: ${PUBLIC_URL:-}
       MAX_DISK_GB: ${MAX_DISK_GB:-}
@@ -66,29 +66,29 @@ services:
 
   ingest:
     build: { context: ., dockerfile: server/Dockerfile }
-    image: media-streamer:local
+    image: foxcam:local
     pull_policy: build # built here, never pulled (Komodo pulls before deploying)
     restart: unless-stopped
     command: ["ingest"]
     depends_on: [mediamtx]
     network_mode: service:mediamtx
     volumes:
-      - ${MEDIA_CONFIG:-./config.yaml}:/app/config.yaml:ro
-      - ${MEDIA_DATA_PATH:-./data}:/data
+      - ${FOXCAM_CONFIG:-./config.yaml}:/app/config.yaml:ro
+      - ${FOXCAM_DATA_PATH:-./data}:/data
       - ./samples:/app/samples:ro
     environment:
-      MEDIA_DATA_DIR: /data
+      FOXCAM_DATA_DIR: /data
 
   compact:
     # Joins each finished hour into one file per camera, re-encoding it when the camera's
     # recording profile says so (GPU via docker-compose.vaapi.yml / .nvidia.yml).
     build: { context: ., dockerfile: server/Dockerfile }
-    image: media-streamer:local
+    image: foxcam:local
     pull_policy: build # built here, never pulled (Komodo pulls before deploying)
     restart: unless-stopped
     command: ["compact"]
     volumes:
-      - ${MEDIA_CONFIG:-./config.yaml}:/app/config.yaml:ro
-      - ${MEDIA_DATA_PATH:-./data}:/data
+      - ${FOXCAM_CONFIG:-./config.yaml}:/app/config.yaml:ro
+      - ${FOXCAM_DATA_PATH:-./data}:/data
     environment:
-      MEDIA_DATA_DIR: /data
+      FOXCAM_DATA_DIR: /data

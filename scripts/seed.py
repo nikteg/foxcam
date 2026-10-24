@@ -6,7 +6,7 @@ optionally, extra detection profiles.
     uv run python scripts/seed.py --profiles            # + a "vehicles" profile
     uv run python scripts/seed.py --server http://localhost:18000
 
-Signs in as an admin: --email (or MEDIA_EMAIL), password from MEDIA_PASSWORD or asked for.
+Signs in as an admin: --email (or FOXCAM_EMAIL), password from FOXCAM_PASSWORD or asked for.
 Idempotent: cameras/profiles that already exist are skipped.
 """
 
@@ -30,9 +30,9 @@ EXTRA_PROFILES = [
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--server", default=os.environ.get("MEDIA_SERVER", "http://localhost:8000"))
+    p.add_argument("--server", default=os.environ.get("FOXCAM_SERVER", "http://localhost:8000"))
     p.add_argument("--profiles", action="store_true", help="also add example profiles")
-    p.add_argument("--email", default=os.environ.get("MEDIA_EMAIL"), help="admin account")
+    p.add_argument("--email", default=os.environ.get("FOXCAM_EMAIL"), help="admin account")
     args = p.parse_args()
 
     api = httpx.Client(base_url=args.server.rstrip("/"), timeout=30)
@@ -44,7 +44,7 @@ def main() -> None:
         if state["setup_required"]:
             sys.exit("create the first account in the web UI first (setup code in the log)")
         email = args.email or input("Admin e-mail: ")
-        password = os.environ.get("MEDIA_PASSWORD") or getpass.getpass("Password: ")
+        password = os.environ.get("FOXCAM_PASSWORD") or getpass.getpass("Password: ")
         r = api.post("/api/auth/login", json={"email": email, "password": password})
         if r.status_code != 200:
             sys.exit(f"sign-in failed: {r.json().get('detail')}")

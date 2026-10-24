@@ -38,6 +38,7 @@ def init_db(settings: Settings) -> Engine:
     # The server, ingest and compaction containers start together on a new database: one
     # at a time creates and migrates it, the others then find it ready.
     with _init_lock(settings):
+        _adopt_old_database(settings)
         Base.metadata.create_all(engine)
         added = _add_missing_columns(engine)
         _backfill(engine, added)
@@ -48,6 +49,20 @@ def init_db(settings: Settings) -> Engine:
 
     runtime_settings.refresh(settings, force=True)
     return engine
+
+
+def _adopt_old_database(settings: Settings) -> None:
+    """Before the rename to Foxcam the database was media-streamer.db: carry it over
+    (with its WAL files) the first time, instead of starting empty."""
+    new = settings.data_dir / "foxcam.db"
+    old = settings.data_dir / "media-streamer.db"
+    if settings.database_url != f"sqlite:///{new}" or new.exists() or not old.exists():
+        return
+    for suffix in ("", "-wal", "-shm"):
+        src = old.with_name(old.name + suffix)
+        if src.exists():
+            src.rename(new.with_name(new.name + suffix))
+    log.info("database %s renamed to %s", old.name, new.name)
 
 
 @contextmanager

@@ -1,0 +1,25 @@
+# systemd user service for a Linux or WSL worker.
+#
+#   mkdir -p ~/.config/systemd/user ~/.config/foxcam-worker
+#   cp worker/deploy/foxcam-worker.service ~/.config/systemd/user/
+#   printf 'FOXCAM_SERVER=http://192.168.1.10:8000\nFOXCAM_WORKER_TOKEN=msw_...\n' \
+#     > ~/.config/foxcam-worker/env && chmod 600 ~/.config/foxcam-worker/env
+#   systemctl --user daemon-reload && systemctl --user enable --now foxcam-worker
+#   loginctl enable-linger "$USER"      # keep running after logout
+#   journalctl --user -u foxcam-worker -f
+#
+# Assumes `uv tool install` put foxcam-worker in ~/.local/bin (docs/WORKER_SETUP.md).
+
+[Unit]
+Description=foxcam detection worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=%h/.config/foxcam-worker/env
+ExecStart=%h/.local/bin/foxcam-worker --detector speciesnet
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

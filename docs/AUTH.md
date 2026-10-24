@@ -30,7 +30,7 @@ e-mail in `auth.admin_emails` and sign in with an OAuth provider.
       - id: authentik
         type: oidc
         name: Authentik
-        issuer: https://auth.example.org/application/o/media-streamer/
+        issuer: https://auth.example.org/application/o/foxcam/
         client_id: ${OIDC_CLIENT_ID:-}
         client_secret: ${OIDC_CLIENT_SECRET:-}
         allowed_domains: [example.org]   # optional
@@ -87,7 +87,7 @@ itself is shown once; revoke it on the Account page. Workers use their own token
 |---|---|
 | `invite` (default) | only with an invite link |
 | `open` | anyone who reaches the server (they see nothing until something is shared) |
-| `closed` | nobody; admins add accounts (Settings → Users, or `media-streamer user add`) |
+| `closed` | nobody; admins add accounts (Settings → Users, or `foxcam user add`) |
 
 E-mails in `auth.admin_emails` can always sign up through OAuth and are admins once the address is verified (see Signing up).
 
@@ -132,12 +132,12 @@ low-data copy are reachable, never `<camera>/raw` (the picture before burned-in 
 areas).
 
 MediaMTX's API, HLS and WebRTC servers listen on 127.0.0.1, and video (publish, read) and
-the control API both need the `media-streamer` login: the server, ingest and the
+the control API both need the `foxcam` login: the server, ingest and the
 transcoders MediaMTX starts sign in with a password kept in `data/mediamtx/password` (or
 `mediamtx.password` in config.yaml). Being on the same machine is not enough: a camera's
 source URL can point back at MediaMTX (`rtsp://127.0.0.1:8554/<other camera>/raw`), and
 the API can add paths whose `runOnInit` runs a command. Only metrics stay open to local
-processes. Start MediaMTX with `media-streamer mediamtx [mediamtx.yml] [--binary PATH]
+processes. Start MediaMTX with `foxcam mediamtx [mediamtx.yml] [--binary PATH]
 [--password-file FILE]`, which hands it the password (`mise run mediamtx`, `scripts/dev.sh`
 and docker-compose.yml do). In Docker, the server and ingest share MediaMTX's network
 namespace for the API, and the MediaMTX container only gets `data/mediamtx/` (the
@@ -152,7 +152,7 @@ and `read` permission to `mediamtx.yml` (an example is in the file) and publish 
 Self sign-up with a password (`registration: open`, or with an invite link) does not prove
 the e-mail address. Such accounts get no rights from `admin_emails` and are not matched to
 OAuth sign-ins by address; connecting an OAuth account with the same, confirmed, address
-on the account page verifies it. Accounts made by an admin, the setup page, `media-streamer
+on the account page verifies it. Accounts made by an admin, the setup page, `foxcam
 user add` or OAuth count as verified. `admin_emails` therefore never skip the invite for
 password sign-up: those admins sign in with OAuth, or are added on the command line.
 
@@ -198,10 +198,10 @@ for a trusted network.
 ## Command line
 
 ```sh
-media-streamer user add you@example.org --admin [--name "You"] [--no-password]
-media-streamer user password you@example.org
-media-streamer user list
-media-streamer user admin someone@example.org [--off]
-media-streamer user remove someone@example.org
-media-streamer reset users          # all accounts, sessions, shares, invites
+foxcam user add you@example.org --admin [--name "You"] [--no-password]
+foxcam user password you@example.org
+foxcam user list
+foxcam user admin someone@example.org [--off]
+foxcam user remove someone@example.org
+foxcam reset users          # all accounts, sessions, shares, invites
 ```

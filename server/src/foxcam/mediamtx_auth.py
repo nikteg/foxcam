@@ -4,14 +4,14 @@ MediaMTX does not trust local addresses: anything on the box could ask it for an
 including a camera source pointing back at MediaMTX itself
 (``rtsp://127.0.0.1:8554/<other camera>/raw``), or add a path whose ``runOnInit`` runs a
 command through its control API. The server (API, live view, snapshots), ingest and the
-transcoders MediaMTX starts sign in as ``media-streamer`` with a password only they know:
+transcoders MediaMTX starts sign in as ``foxcam`` with a password only they know:
 
-- ``mediamtx.password`` in config.yaml (or ``$MEDIA_MTX_PASSWORD``), else a random one
+- ``mediamtx.password`` in config.yaml (or ``$FOXCAM_MTX_PASSWORD``), else a random one
   kept in ``<data_dir>/mediamtx/password``: a folder of its own, so Docker can share just
   it (and the recordings) with the MediaMTX container;
-- ``media-streamer mediamtx`` starts MediaMTX with it (``MTX_AUTHINTERNALUSERS_0_PASS``,
+- ``foxcam mediamtx`` starts MediaMTX with it (``MTX_AUTHINTERNALUSERS_0_PASS``,
   the first user in mediamtx.yml) and passes it on to the hooks it runs in
-  ``$MEDIA_MTX_PASSWORD``, where ``media-streamer transcode`` picks it up.
+  ``$FOXCAM_MTX_PASSWORD``, where ``foxcam transcode`` picks it up.
 """
 
 from __future__ import annotations
@@ -24,8 +24,8 @@ from urllib.parse import quote, urlsplit, urlunsplit
 
 from .config import Settings
 
-USER = "media-streamer"
-ENV = "MEDIA_MTX_PASSWORD"
+USER = "foxcam"
+ENV = "FOXCAM_MTX_PASSWORD"
 FILE = Path("mediamtx") / "password"
 OLD_FILE = "mediamtx-password"  # before it had a folder of its own
 # The first entry of authInternalUsers in mediamtx/mediamtx.yml.

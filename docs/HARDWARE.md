@@ -4,9 +4,9 @@ Foxcam re-encodes video in three places:
 
 | What | When | Run by |
 |---|---|---|
-| **Low-data live view** (`<camera>/low`, ~480p) | only while someone watches it | MediaMTX (`media-streamer transcode`) |
-| **Burned-in censor areas** | continuously, live | MediaMTX (`media-streamer transcode`) |
-| **Recording profiles** that re-encode (1080p, 720p, 480p, H.265, custom) | once per finished hour | `media-streamer compact` |
+| **Low-data live view** (`<camera>/low`, ~480p) | only while someone watches it | MediaMTX (`foxcam transcode`) |
+| **Burned-in censor areas** | continuously, live | MediaMTX (`foxcam transcode`) |
+| **Recording profiles** that re-encode (1080p, 720p, 480p, H.265, custom) | once per finished hour | `foxcam compact` |
 
 Recording profiles are applied when compaction joins an hour into one file, not live:
 detection and live view keep the camera's original, and a batch encode compresses better
@@ -58,8 +58,8 @@ mediamtx:
 Check what works on a machine:
 
 ```console
-$ media-streamer hwaccel                                # bare metal / dev
-$ docker compose exec mediamtx media-streamer hwaccel   # Docker
+$ foxcam hwaccel                                # bare metal / dev
+$ docker compose exec mediamtx foxcam hwaccel   # Docker
 auto picks, in order: nvenc, qsv, vaapi, software
   no   nvenc         h264_nvenc         Cannot load libcuda.so.1
   ok   qsv           h264_qsv
@@ -87,7 +87,7 @@ the `compact` service (re-encoding finished hours).
 docker compose -f docker-compose.yml -f docker-compose.vaapi.yml up --build -d
 ```
 
-Several GPUs: `MEDIA_HW_DEVICE=/dev/dri/renderD129` and `mediamtx.hw_device` to match.
+Several GPUs: `FOXCAM_HW_DEVICE=/dev/dri/renderD129` and `mediamtx.hw_device` to match.
 `ls -l /dev/dri` on the host lists them. Intel before Broadwell (2014) needs the `i965`
 driver instead (`LIBVA_DRIVER_NAME=i965`, package `i965-va-driver`).
 

@@ -8,10 +8,10 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from media_worker import cli
-from media_worker.detectors.base import Detector
-from media_worker.detectors.dummy import DummyDetector
-from media_worker.detectors.ultralytics_det import UltralyticsDetector
+from foxcam_worker import cli
+from foxcam_worker.detectors.base import Detector
+from foxcam_worker.detectors.dummy import DummyDetector
+from foxcam_worker.detectors.ultralytics_det import UltralyticsDetector
 
 
 def test_detector_tags():
@@ -96,7 +96,7 @@ def test_job_frame_rate_comes_from_the_profile(tmp_path):
 
 
 def test_speciesnet_vocabulary_from_model_files(tmp_path):
-    from media_worker.detectors.speciesnet_det import model_vocabulary
+    from foxcam_worker.detectors.speciesnet_det import model_vocabulary
 
     (tmp_path / "info.json").write_text(
         '{"classifier_labels": "labels.txt", "taxonomy": "taxonomy.txt"}')
@@ -115,7 +115,7 @@ def test_vocabulary_goes_with_the_first_lease_only(monkeypatch):
     import json as _json
 
     import httpx
-    from media_worker import client as client_mod
+    from foxcam_worker import client as client_mod
 
     bodies = []
 

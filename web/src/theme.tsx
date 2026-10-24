@@ -69,7 +69,7 @@ export type ThemeMode = "system" | "light" | "dark";
 type Resolved = "light" | "dark";
 
 export const THEME_MODES: ThemeMode[] = ["system", "light", "dark"];
-const STORAGE_KEY = "media-streamer.theme";
+const STORAGE_KEY = "foxcam.theme";
 /** Browser/OS chrome colour (<meta name="theme-color">). */
 const CHROME_COLOR: Record<Resolved, string> = { light: "#ffffff", dark: "#171b21" };
 

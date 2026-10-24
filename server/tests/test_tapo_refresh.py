@@ -8,8 +8,8 @@ import sys
 import types
 
 import pytest
-from media_streamer import tapo_account
-from media_streamer.ingest import tapo_cloud
+from foxcam import tapo_account
+from foxcam.ingest import tapo_cloud
 
 
 class Unauthorized(Exception):

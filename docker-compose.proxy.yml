@@ -1,5 +1,5 @@
 # Behind a reverse proxy that runs in Docker on the same host (Nginx Proxy Manager, Caddy,
-# Traefik…): joins the proxy's network so it can forward to media-streamer:8000, and tells
+# Traefik…): joins the proxy's network so it can forward to foxcam:8000, and tells
 # MediaMTX which addresses browsers reach WebRTC media (TCP 8189) on.
 #
 #   docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d
@@ -16,7 +16,7 @@ services:
     networks:
       default:
       proxy:
-        aliases: [media-streamer]
+        aliases: [foxcam]
 
 networks:
   proxy:

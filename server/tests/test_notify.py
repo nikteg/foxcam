@@ -11,12 +11,12 @@ from datetime import timedelta
 
 import httpx
 import pytest
-from media_streamer import notify
-from media_streamer.config import ChannelConfig
-from media_streamer.db import session_scope
-from media_streamer.models import Event, Notification, NotificationStatus, SegmentStatus, utcnow
-from media_streamer.pipeline import events
-from media_streamer.web.queries import save_camera_state
+from foxcam import notify
+from foxcam.config import ChannelConfig
+from foxcam.db import session_scope
+from foxcam.models import Event, Notification, NotificationStatus, SegmentStatus, utcnow
+from foxcam.pipeline import events
+from foxcam.web.queries import save_camera_state
 
 from .conftest import add_detection, add_job, add_segment, app_client, needs_ffmpeg
 
@@ -231,7 +231,7 @@ def test_notifications_api(settings, monkeypatch):
 
 
 def test_yaml_channel_triggers(tmp_path):
-    from media_streamer.config import load_settings
+    from foxcam.config import load_settings
 
     cfg = tmp_path / "config.yaml"
     cfg.write_text(f"data_dir: {tmp_path}\nnotifications:\n  channels:\n"

@@ -1,9 +1,9 @@
-# MediaMTX config. Camera paths are NOT defined here: media-streamer pushes them through
+# MediaMTX config. Camera paths are NOT defined here: foxcam pushes them through
 # the control API on startup (source, recording, segment length).
 
 logLevel: info
 
-# The control API, HLS and WebRTC servers only listen locally: media-streamer configures
+# The control API, HLS and WebRTC servers only listen locally: foxcam configures
 # MediaMTX through the API and serves live view to browsers itself (/api/live/..., behind
 # the login). Only the RTSP port and the WebRTC media port (8189) need to be reachable.
 api: yes
@@ -32,17 +32,17 @@ webrtcLocalTCPAddress: :8189
 # webrtcAdditionalHosts: [192.168.1.10]
 
 # Video only for the server (live view proxy, snapshots), ingest and the transcoders
-# MediaMTX starts, signed in as media-streamer. Browsers go through the server, which
+# MediaMTX starts, signed in as foxcam. Browsers go through the server, which
 # checks the login and who may see which camera (docs/AUTH.md). Local addresses alone are
 # not trusted with video: a camera source can point back at this machine.
 authMethod: internal
 authInternalUsers:
-  # Keep this user first. Start MediaMTX with `media-streamer mediamtx`, which sets its
+  # Keep this user first. Start MediaMTX with `foxcam mediamtx`, which sets its
   # password (MTX_AUTHINTERNALUSERS_0_PASS) to the one in data/mediamtx/password or
   # config.yaml (mediamtx.password). The hash below matches no password: started any
   # other way, nobody gets video.
   # The control API too: a path's runOnInit runs a command, so it is never anonymous.
-  - user: media-streamer
+  - user: foxcam
     pass: sha256:Q0WQ2LdOSsIiQl8FqEhUZbnnPWAMoWFfRiYDYgeQ4R8=
     ips: ["127.0.0.1", "::1"]
     permissions:

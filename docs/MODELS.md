@@ -62,18 +62,18 @@ Unrelated words (`dog, cat`) only hurt when they look like the target (see the f
 ## Recommended path
 
 1. **Start** with SpeciesNet (MegaDetector + classifier) on the GPU box:
-   `uv run media-worker --server http://<server>:8000 --detector speciesnet`.
+   `uv run foxcam-worker --server http://<server>:8000 --detector speciesnet`.
 2. **Review** detections in the web UI and mark them ✅/❌. Keep hard cases (night, far away,
    partly hidden) as test clips in `samples/`.
 3. **Measure** each candidate on your clips without the server:
-   `uv run media-worker detect-file samples/fox-night.mp4 --detector … --night --expect fox`.
+   `uv run foxcam-worker detect-file samples/fox-night.mp4 --detector … --night --expect fox`.
 4. **Fine-tune** RF-DETR or YOLO11 on the exported reviews
    (`GET /api/detections/feedback-export`) once you have a few hundred confirmed frames from
    your own cameras. Run it with `--detector ultralytics --model best.pt`.
 
 ## What we measured
 
-`media-worker detect-file` on the sample clips (`scripts/fetch_samples.py`), CPU only (Apple
+`foxcam-worker detect-file` on the sample clips (`scripts/fetch_samples.py`), CPU only (Apple
 M-series, no GPU), October 2026. "Day" is the original clip; "night" adds the simulated IR look
 (`--night`: grayscale, more contrast, noise). Numbers are the share of sampled frames with a fox
 at ≥ 50 % confidence. A fox event only needs one such frame per segment.

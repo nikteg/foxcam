@@ -23,7 +23,7 @@ router = APIRouter(prefix="/api/worker", tags=["worker"], dependencies=[Depends(
 
 @router.get("/whoami")
 def whoami(identity: Identity = Depends(require_worker)) -> dict[str, Any]:
-    """Credential check without side effects (used by `media-worker doctor`)."""
+    """Credential check without side effects (used by `foxcam-worker doctor`)."""
     return {"authenticated": True, "token_name": identity.name, "token_tags": list(identity.tags)}
 
 

@@ -9,8 +9,8 @@ All timestamps are UTC (ISO 8601). Interactive API docs: `http://<server>:8000/d
 ## Authentication
 
 Every worker request must send a token: one per worker, created in the web UI under
-**Jobs → Add worker** or with `media-streamer worker-token <name>`, or the shared
-`worker_token` from `config.yaml` / `MEDIA_WORKER_TOKEN`:
+**Jobs → Add worker** or with `foxcam worker-token <name>`, or the shared
+`worker_token` from `config.yaml` / `FOXCAM_WORKER_TOKEN`:
 
 ```
 Authorization: Bearer <token>
@@ -136,7 +136,7 @@ POST /api/worker/jobs/42/fail
 
 ## Writing a detector for the bundled worker
 
-Implement `media_worker.detectors.base.Detector`:
+Implement `foxcam_worker.detectors.base.Detector`:
 
 ```python
 class MyDetector(Detector):
@@ -153,5 +153,5 @@ class MyDetector(Detector):
 Register it in `detectors/__init__.py` (`create_detector`) and test it offline first:
 
 ```sh
-uv run media-worker detect-file samples/fox-garden.mp4 --detector my-saas --expect fox --out out/test
+uv run foxcam-worker detect-file samples/fox-garden.mp4 --detector my-saas --expect fox --out out/test
 ```

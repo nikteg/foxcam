@@ -150,22 +150,22 @@ class MediaMtxConfig(BaseModel):
     # them directly: live view goes through /api/live/..., which checks the login.
     webrtc_url: str = "http://localhost:8889"
     hls_url: str = "http://localhost:8888"
-    # Password of the `media-streamer` user in mediamtx.yml. None = a random one kept in
-    # <data_dir>/mediamtx/password ($MEDIA_MTX_PASSWORD wins); `media-streamer mediamtx`
+    # Password of the `foxcam` user in mediamtx.yml. None = a random one kept in
+    # <data_dir>/mediamtx/password ($FOXCAM_MTX_PASSWORD wins); `foxcam mediamtx`
     # starts MediaMTX with it. Only needed here when MediaMTX runs elsewhere.
     password: str | None = None
     # Recording directory as seen by the MediaMTX process. Defaults to ``recordings_dir``.
     record_dir: str | None = None
     low_data: LowDataConfig = LowDataConfig()
     # Hardware video encoding/decoding for the low-data, mask and recording-profile
-    # transcodes (run by the MediaMTX process via `media-streamer transcode`):
+    # transcodes (run by the MediaMTX process via `foxcam transcode`):
     # auto (best that works there) | none | videotoolbox | nvenc | qsv | vaapi | amf | mf |
-    # vulkan. `media-streamer hwaccel` shows what works. See docs/HARDWARE.md.
+    # vulkan. `foxcam hwaccel` shows what works. See docs/HARDWARE.md.
     hwaccel: Literal["auto", "none", "videotoolbox", "nvenc", "qsv", "vaapi", "amf", "mf",
                      "vulkan"] = "auto"
     # Linux render node for vaapi / qsv (None = /dev/dri/renderD128).
     hw_device: str | None = None
-    # ffmpeg, and this installation's `media-streamer` command, as seen by MediaMTX.
+    # ffmpeg, and this installation's `foxcam` command, as seen by MediaMTX.
     ffmpeg: str = "ffmpeg"
     transcoder: str | None = None
 
@@ -371,7 +371,7 @@ class S3Config(BaseModel):
     access_key_id: str | None = None
     secret_access_key: str | None = None
     # Key prefix inside the bucket (lets several installations share a bucket).
-    prefix: str = "media-streamer/"
+    prefix: str = "foxcam/"
     # "path" is needed by MinIO and most self-hosted stores; "auto" lets boto3 decide.
     addressing_style: Literal["auto", "path", "virtual"] = "auto"
     # What to upload.
@@ -575,7 +575,7 @@ class Settings(BaseModel):
             self.recordings_dir = self.data_dir / "recordings"
         self.recordings_dir = self.recordings_dir.resolve()
         if self.database_url is None:
-            self.database_url = f"sqlite:///{self.data_dir / 'media-streamer.db'}"
+            self.database_url = f"sqlite:///{self.data_dir / 'foxcam.db'}"
         if self.tapo_session_file is None:
             self.tapo_session_file = self.data_dir / "tapo-session.json"
         if not self.worker_token:
@@ -596,9 +596,9 @@ class Settings(BaseModel):
             self.profiles = [ProfileConfig(
                 id=DEFAULT_PROFILE, name="Fox", targets=self.detection.target_labels,
                 aliases=self.detection.aliases, min_confidence=self.detection.min_confidence, default=True)]
-        # MEDIA_STREAMER_PUBLIC_URL fills in when the config has none (scripts/dev.sh sets it
+        # FOXCAM_PUBLIC_URL fills in when the config has none (scripts/dev.sh sets it
         # from this machine's LAN address).
-        self.public_url = self.public_url or os.environ.get("MEDIA_STREAMER_PUBLIC_URL") or None
+        self.public_url = self.public_url or os.environ.get("FOXCAM_PUBLIC_URL") or None
         self.public_url = self.public_url.rstrip("/") if self.public_url else None
         cids = [c.id for c in self.notifications.channels]
         if len(cids) != len(set(cids)):
@@ -653,7 +653,7 @@ class Settings(BaseModel):
 
 
 def load_settings(path: str | os.PathLike[str] | None = None) -> Settings:
-    path = Path(path or os.environ.get("MEDIA_STREAMER_CONFIG", "config.yaml"))
+    path = Path(path or os.environ.get("FOXCAM_CONFIG", "config.yaml"))
     if not path.exists():
         raise FileNotFoundError(
             f"config file {path} not found (copy config.example.yaml to config.yaml)"

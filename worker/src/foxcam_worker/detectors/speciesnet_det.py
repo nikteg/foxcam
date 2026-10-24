@@ -4,8 +4,8 @@ night/IR camera-trap footage), a classifier names the species ("red fox").
 Runs the official CLI on the frame folder and parses its JSON. That keeps us on the
 documented interface, at the cost of loading the model once per job.
 
-    pip install speciesnet   (or: uv sync --package media-worker --extra speciesnet)
-    media-worker --detector speciesnet
+    pip install speciesnet   (or: uv sync --package foxcam-worker --extra speciesnet)
+    foxcam-worker --detector speciesnet
 
 The output format has changed between SpeciesNet releases; both the older
 ``prediction`` string and the newer ``processed_classification`` object are handled.

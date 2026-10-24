@@ -5,11 +5,11 @@ from __future__ import annotations
 from datetime import timedelta
 
 import pytest
-from media_streamer import profiles
-from media_streamer.config import ProfileConfig
-from media_streamer.db import session_scope
-from media_streamer.models import Detection, Job, JobState, Segment, SegmentStatus
-from media_streamer.pipeline import preprocess, queue
+from foxcam import profiles
+from foxcam.config import ProfileConfig
+from foxcam.db import session_scope
+from foxcam.models import Detection, Job, JobState, Segment, SegmentStatus
+from foxcam.pipeline import preprocess, queue
 from pydantic import ValidationError
 
 from .conftest import add_segment, app_client, make_video, needs_ffmpeg
@@ -168,8 +168,8 @@ def _two_model_results(settings, yolo=(("red fox", 0.6),), sn=(("fox", 0.7),)) -
 
 
 def test_detections_of_both_models_make_one_event(wildlife):
-    from media_streamer.models import Event
-    from media_streamer.pipeline import events
+    from foxcam.models import Event
+    from foxcam.pipeline import events
 
     _two_model_results(wildlife)
     events.assign_events(wildlife)
@@ -185,9 +185,9 @@ def test_detections_of_both_models_make_one_event(wildlife):
 
 
 def test_channels_can_wait_for_models_to_agree(wildlife):
-    from media_streamer.config import ChannelConfig
-    from media_streamer.models import Notification
-    from media_streamer.pipeline import events
+    from foxcam.config import ChannelConfig
+    from foxcam.models import Notification
+    from foxcam.pipeline import events
 
     wildlife.notifications.channels = [
         ChannelConfig(id="any", type="webhook", url="http://x"),
@@ -208,9 +208,9 @@ def test_channels_can_wait_for_models_to_agree(wildlife):
 
 
 def test_reanalysis_recounts_the_models(wildlife):
-    from media_streamer.models import Event
-    from media_streamer.pipeline import events
-    from media_streamer.pipeline.reanalyse import reanalyse_segment
+    from foxcam.models import Event
+    from foxcam.pipeline import events
+    from foxcam.pipeline.reanalyse import reanalyse_segment
 
     first = _two_model_results(wildlife, sn=())  # only YOLO on the first segment
     with session_scope() as s:
@@ -334,9 +334,9 @@ def test_a_dead_first_pass_skips_the_follow_up(settings):
 
 
 def test_confirming_detector_gates_events_and_the_target_flag(settings):
-    from media_streamer.config import ChannelConfig
-    from media_streamer.models import Event, Notification
-    from media_streamer.pipeline import events
+    from foxcam.config import ChannelConfig
+    from foxcam.models import Event, Notification
+    from foxcam.pipeline import events
 
     settings.profiles = [cascade(confirm=True)]
     settings.notifications.channels = [ChannelConfig(id="phone", type="webhook", url="http://x")]
@@ -373,7 +373,7 @@ def test_confirming_detector_gates_events_and_the_target_flag(settings):
 # --- part 4: comparing models ---------------------------------------------------------
 
 def test_model_stats_compare_detectors(wildlife):
-    from media_streamer.web.queries import set_feedback
+    from foxcam.web.queries import set_feedback
 
     seg = _two_model_results(wildlife, yolo=(("fox", 0.6), ("cat", 0.9)), sn=(("fox", 0.8),))
     other = _queued_segment(wildlife, utc_later(wildlife, seg))
@@ -427,8 +427,8 @@ def test_raw_results_are_kept_for_admins(wildlife):
 def test_raw_results_are_not_shown_to_viewers(wildlife):
     seg_id = _queued_segment(wildlife)
     from fastapi.testclient import TestClient
-    from media_streamer import accounts
-    from media_streamer.web.app import create_app
+    from foxcam import accounts
+    from foxcam.web.app import create_app
 
     from .conftest import sign_in
 
@@ -439,7 +439,7 @@ def test_raw_results_are_not_shown_to_viewers(wildlife):
 
 
 def test_jobs_that_gave_up_count_with_the_detectors_model(wildlife):
-    from media_streamer import model_stats
+    from foxcam import model_stats
 
     first = _two_model_results(wildlife)  # yolo ran model "y"
     seg = _queued_segment(wildlife, utc_later(wildlife, first))

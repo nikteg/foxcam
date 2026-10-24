@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from media_streamer.config import Settings
-from media_streamer.mediamtx import desired_paths
-from media_streamer.web import queries
-from media_streamer.web.deps import OPEN_ACCESS
+from foxcam.config import Settings
+from foxcam.mediamtx import desired_paths
+from foxcam.web import queries
+from foxcam.web.deps import OPEN_ACCESS
 
 
 def test_low_data_path_per_camera(settings: Settings) -> None:
@@ -35,7 +35,7 @@ def test_low_data_urls(settings: Settings) -> None:
 
 
 def test_original_profile_records_source_directly(settings: Settings) -> None:
-    from media_streamer.recording import source_path
+    from foxcam.recording import source_path
 
     cam = settings.camera("cam")
     assert source_path(settings, cam) == "cam"
@@ -44,7 +44,7 @@ def test_original_profile_records_source_directly(settings: Settings) -> None:
 
 def test_transcoding_profile_is_not_live(settings: Settings) -> None:
     """Recording profiles re-encode at compaction; live view and recording stay original."""
-    from media_streamer import recording
+    from foxcam import recording
 
     recording.set_camera_recording_profile(settings, "cam", "720p")
     cam = settings.camera("cam")
@@ -53,8 +53,8 @@ def test_transcoding_profile_is_not_live(settings: Settings) -> None:
 
 
 def test_masks_add_processing_stage(settings: Settings) -> None:
-    from media_streamer import recording
-    from media_streamer.web import queries
+    from foxcam import recording
+    from foxcam.web import queries
 
     queries.save_camera_state("cam", [[0.1, 0.2, 0.3, 0.4]], False)
     recording.set_burn_masks("cam", True)
@@ -70,8 +70,8 @@ def test_masks_add_processing_stage(settings: Settings) -> None:
 
 
 def test_burned_in_masks(settings: Settings) -> None:
-    from media_streamer import recording
-    from media_streamer.web import queries
+    from foxcam import recording
+    from foxcam.web import queries
 
     queries.save_camera_state("cam", [[0.1, 0.2, 0.3, 0.4]], False)
     assert recording.processing(settings, settings.camera("cam")) is None  # not burned in
@@ -86,9 +86,9 @@ def test_burned_in_masks(settings: Settings) -> None:
 
 
 def test_rtsp_camera_moves_to_raw(settings: Settings) -> None:
-    from media_streamer import recording
-    from media_streamer.config import CameraConfig
-    from media_streamer.web import queries
+    from foxcam import recording
+    from foxcam.config import CameraConfig
+    from foxcam.web import queries
 
     settings.cameras.append(CameraConfig.model_validate(
         {"id": "door", "recording_profile": "h265",
@@ -105,7 +105,7 @@ def test_rtsp_camera_moves_to_raw(settings: Settings) -> None:
 
 def test_unknown_recording_profile_rejected(settings: Settings) -> None:
     import pytest
-    from media_streamer import recording
+    from foxcam import recording
 
     with pytest.raises(recording.RecordingError):
         recording.set_camera_recording_profile(settings, "cam", "nope")

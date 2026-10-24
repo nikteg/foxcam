@@ -1,5 +1,5 @@
 // Jobs → Archiving: the process that joins finished periods into one archive file per
-// camera (`media-streamer compact`, pipeline/compaction.py). The files themselves are
+// camera (`foxcam compact`, pipeline/compaction.py). The files themselves are
 // under Recordings → Archives.
 import { MessageBar, MessageBarBody, Subtitle2 } from "@fluentui/react-components";
 import {
@@ -132,7 +132,7 @@ export function ArchivingSection() {
       {c.enabled && !c.running && (
         <MessageBar intent="warning" className="block">
           <MessageBarBody>
-            {rich("compaction.notRunning", { command: <code>media-streamer compact</code> })}
+            {rich("compaction.notRunning", { command: <code>foxcam compact</code> })}
           </MessageBarBody>
         </MessageBar>
       )}

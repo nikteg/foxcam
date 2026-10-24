@@ -18,7 +18,7 @@ software   CPU (libx264 / libx265)              always works
 
 ``auto`` tries the platform's backends in order with a tiny real encode, so it only picks
 one whose driver, device and ffmpeg build all work *where ffmpeg runs* (in Docker: inside
-the MediaMTX container). ``media-streamer transcode`` also falls back to software when a
+the MediaMTX container). ``foxcam transcode`` also falls back to software when a
 hardware encoder fails on the real stream.
 
 Decoding uses the same backend (``-hwaccel``); ffmpeg itself falls back to software
@@ -196,7 +196,7 @@ def ffmpeg_args(backend: str, enc: Encode, src: str, dst: str, *, ffmpeg: str = 
 
 def _cache_file(ffmpeg: str, device: str | None) -> Path:
     key = f"{ffmpeg}|{device or ''}".encode().hex()[:40]
-    return Path(tempfile.gettempdir()) / f"media-streamer-hwaccel-{key}.json"
+    return Path(tempfile.gettempdir()) / f"foxcam-hwaccel-{key}.json"
 
 
 def _load_cache(path: Path) -> dict[str, list]:
@@ -307,7 +307,7 @@ def run(enc: Encode, src: str, dst: str, *, preference: str = "auto", ffmpeg: st
 
 def transcode_command(enc: Encode, src: str, dst: str, *, executable: str,
                       preference: str, ffmpeg: str, device: str | None) -> list[str]:
-    """``media-streamer transcode …`` arguments for MediaMTX's run hooks."""
+    """``foxcam transcode …`` arguments for MediaMTX's run hooks."""
     args = [executable, "transcode", "--input", src, "--output", dst,
             "--hwaccel", preference, "--codec", enc.codec, "--audio", enc.audio]
     if ffmpeg != "ffmpeg":
@@ -326,7 +326,7 @@ def transcode_command(enc: Encode, src: str, dst: str, *, executable: str,
 
 
 def default_executable() -> str:
-    """This installation's ``media-streamer`` command (venv-aware)."""
-    here = Path(sys.executable).with_name("media-streamer.exe" if os.name == "nt"
-                                          else "media-streamer")
-    return str(here) if here.exists() else "media-streamer"
+    """This installation's ``foxcam`` command (venv-aware)."""
+    here = Path(sys.executable).with_name("foxcam.exe" if os.name == "nt"
+                                          else "foxcam")
+    return str(here) if here.exists() else "foxcam"

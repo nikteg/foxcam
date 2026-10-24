@@ -38,4 +38,4 @@ ENV HOME=/models YOLO_CONFIG_DIR=/models/ultralytics PYTHONUNBUFFERED=1
 WORKDIR /models
 VOLUME /models
 
-ENTRYPOINT ["media-worker"]
+ENTRYPOINT ["foxcam-worker"]

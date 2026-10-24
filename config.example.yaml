@@ -1,13 +1,13 @@
 # Copy to config.yaml. ${VAR} and ${VAR:-default} are expanded from the environment.
 
-data_dir: ${MEDIA_DATA_DIR:-./data}
+data_dir: ${FOXCAM_DATA_DIR:-./data}
 
 # Length of each recorded file. Can be overridden per camera.
 segment_seconds: 60
 
 # Workers need an access token: create one per worker in the web UI (Worker queue → Add
-# worker) or with `media-streamer worker-token <name>`. Optionally also a shared secret:
-worker_token: ${MEDIA_WORKER_TOKEN:-}
+# worker) or with `foxcam worker-token <name>`. Optionally also a shared secret:
+worker_token: ${FOXCAM_WORKER_TOKEN:-}
 # open_worker_access: true   # any client may act as a worker - trusted test networks only
 
 # Cameras are easiest to add in the web UI (Cameras -> Add camera); they can also be listed
@@ -19,7 +19,7 @@ cameras: []
   #   source: { type: file, path: ./samples/fox.mp4 }
 
   # EXPERIMENTAL: Tapo camera via the TP-Link cloud relay (no LAN access needed).
-  # Run `uv run media-streamer tapo-login` once to create the session, then `ingest`.
+  # Run `uv run foxcam tapo-login` once to create the session, then `ingest`.
   # - id: garden
   #   name: Garden
   #   source: { type: tapo_cloud, device_name: "Garden", resolution: HD }
@@ -38,11 +38,11 @@ mediamtx:
   # through the server (behind the login), never directly.
   webrtc_url: ${MEDIAMTX_WEBRTC_URL:-http://localhost:8889}
   hls_url: ${MEDIAMTX_HLS_URL:-http://localhost:8888}
-  # Password the server, ingest and transcoders use with MediaMTX (user media-streamer in
+  # Password the server, ingest and transcoders use with MediaMTX (user foxcam in
   # mediamtx.yml). Unset = a random one in data/mediamtx/password; start MediaMTX with
-  # `media-streamer mediamtx` to hand it over. Only set it when MediaMTX runs elsewhere
+  # `foxcam mediamtx` to hand it over. Only set it when MediaMTX runs elsewhere
   # (there: MTX_AUTHINTERNALUSERS_0_PASS=<the same>).
-  # password: ${MEDIA_MTX_PASSWORD}
+  # password: ${FOXCAM_MTX_PASSWORD}
   # Where MediaMTX writes recordings, as seen by the MediaMTX process.
   # Leave unset when MediaMTX and the server see the same path.
   record_dir: ${MEDIAMTX_RECORD_DIR:-}
@@ -129,7 +129,7 @@ events:
   merge_gap_seconds: 30
   settle_seconds: 90
 
-# Join finished segments into one file per camera and hour (`media-streamer compact`),
+# Join finished segments into one file per camera and hour (`foxcam compact`),
 # re-encoding per recording profile. Detection still works on the short segments.
 compaction:
   enabled: true
@@ -157,7 +157,7 @@ storage:
     # Leave null to use the standard AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY env vars.
     access_key_id: null
     secret_access_key: null
-    prefix: media-streamer/
+    prefix: foxcam/
     addressing_style: auto    # path for MinIO and most self-hosted stores
     clips: true               # upload fox event clips + thumbnails
     recordings: false         # also archive every finished segment
@@ -201,7 +201,7 @@ auth:
   #  - id: authentik
   #    type: oidc
   #    name: Authentik
-  #    issuer: https://auth.example.org/application/o/media-streamer/
+  #    issuer: https://auth.example.org/application/o/foxcam/
   #    client_id: ${OIDC_CLIENT_ID:-}
   #    client_secret: ${OIDC_CLIENT_SECRET:-}
   #    allowed_domains: [example.org]
@@ -219,7 +219,7 @@ auth:
 #       # min_agreement: 2            # wait until two of the profile's models saw it
 #     - id: home-assistant
 #       type: webhook                # JSON POST, optionally HMAC-signed
-#       url: http://homeassistant.local:8123/api/webhook/media-streamer-events
+#       url: http://homeassistant.local:8123/api/webhook/foxcam-events
 #       secret: ${WEBHOOK_SECRET:-}
 #     - id: telegram
 #       type: apprise               # ~100 services; needs the notify extra

@@ -324,7 +324,7 @@ def signature(secret: str, body: bytes) -> str:
 
 def send_webhook(ch: ChannelConfig, data: dict[str, Any], client: httpx.Client) -> None:
     body = json.dumps(data).encode()
-    headers = {"Content-Type": "application/json", "User-Agent": "media-streamer",
+    headers = {"Content-Type": "application/json", "User-Agent": "foxcam",
                **ch.headers}
     if ch.secret:
         headers["X-Foxcam-Signature"] = signature(ch.secret, body)

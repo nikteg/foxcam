@@ -36,11 +36,11 @@ DEFAULT_WEB_DIST = Path(__file__).resolve().parents[4] / "web" / "dist"
 
 
 def _web_dist() -> Path:
-    return Path(os.environ.get("MEDIA_STREAMER_WEB_DIST", DEFAULT_WEB_DIST))
+    return Path(os.environ.get("FOXCAM_WEB_DIST", DEFAULT_WEB_DIST))
 
 
 async def _settings_loop(settings: Settings, mtx: MediaMtx) -> None:
-    """Tunables changed in the web UI or with `media-streamer settings` (the API applies its
+    """Tunables changed in the web UI or with `foxcam settings` (the API applies its
     own changes right away). Segment length and the low-data live view go to MediaMTX."""
     while True:
         await asyncio.sleep(runtime_settings.REFRESH_SECONDS)
@@ -79,7 +79,7 @@ def create_app(settings: Settings | None = None, background: bool = True) -> Fas
 
     # `authenticate` runs for every route: the API is private unless a route opts out.
     # The API docs (/docs, /redoc, /openapi.json) are outside the login: development only.
-    docs = os.environ.get("MEDIA_STREAMER_API_DOCS") == "1"
+    docs = os.environ.get("FOXCAM_API_DOCS") == "1"
     app = FastAPI(title="Foxcam", version=__version__, lifespan=lifespan,
                   dependencies=[Depends(authenticate)],
                   docs_url="/docs" if docs else None, redoc_url="/redoc" if docs else None,

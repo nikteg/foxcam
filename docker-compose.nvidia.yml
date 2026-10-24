@@ -2,7 +2,7 @@
 # driver and the NVIDIA Container Toolkit on the host:
 #
 #   docker compose -f docker-compose.yml -f docker-compose.nvidia.yml up -d
-#   docker compose exec mediamtx media-streamer hwaccel     # what works
+#   docker compose exec mediamtx foxcam hwaccel     # what works
 services:
   mediamtx:
     environment:

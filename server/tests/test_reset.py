@@ -2,9 +2,9 @@
 
 from datetime import timedelta
 
-from media_streamer import reset
-from media_streamer.db import session_scope
-from media_streamer.models import (
+from foxcam import reset
+from foxcam.db import session_scope
+from foxcam.models import (
     CameraState,
     Detection,
     DetectionProfile,
@@ -18,7 +18,7 @@ from media_streamer.models import (
     WorkerToken,
     utcnow,
 )
-from media_streamer.worker_tokens import create
+from foxcam.worker_tokens import create
 
 from .conftest import add_detection, add_job, add_segment
 
@@ -67,7 +67,7 @@ def test_reset_recordings_keeps_setup(settings):
 
 
 def test_reset_events_rebuilds_from_detections(settings):
-    from media_streamer.pipeline import events
+    from foxcam.pipeline import events
 
     _world(settings)
     reset.events(settings)
@@ -107,7 +107,7 @@ def test_reset_workers_cameras_profiles(settings):
 
 
 def test_remove_test_cameras_and_orphans(settings):
-    from media_streamer.camera_store import add_camera
+    from foxcam.camera_store import add_camera
 
     add_camera(settings, name="Loop", source={"type": "test"})
     add_camera(settings, name="Real", source={"type": "rtsp", "url": "rtsp://cam/stream1"})

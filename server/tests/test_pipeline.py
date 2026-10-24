@@ -5,11 +5,11 @@ import subprocess
 import time
 from datetime import datetime, timedelta
 
-from media_streamer import ffmpeg
-from media_streamer.db import session_scope
-from media_streamer.models import Event, Job, Segment, SegmentStatus, utcnow
-from media_streamer.pipeline import events, preprocess, scanner
-from media_streamer.web.queries import save_camera_state
+from foxcam import ffmpeg
+from foxcam.db import session_scope
+from foxcam.models import Event, Job, Segment, SegmentStatus, utcnow
+from foxcam.pipeline import events, preprocess, scanner
+from foxcam.web.queries import save_camera_state
 
 from .conftest import add_detection, add_job, add_segment, make_video, needs_ffmpeg, recording_path
 
@@ -121,7 +121,7 @@ def test_fox_segments_merge_into_one_event_with_clip(settings):
     assert pinned == [False, True, True, False]
 
     # An event's own detections (Events -> Detections, "Show its detections").
-    from media_streamer.web import queries
+    from foxcam.web import queries
     add_detection(segs[3], segs[3], 100, label="cat")
     with session_scope() as s:
         ev_id = s.query(Event).one().id

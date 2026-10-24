@@ -3,15 +3,15 @@
 Runs the same steps a job goes through (sample frames, black out censor areas, detect)
 on a video or image(s) you supply, e.g. a clip with an actual fox in it::
 
-    media-worker detect-file samples/fox.mp4 --detector ultralytics \\
+    foxcam-worker detect-file samples/fox.mp4 --detector ultralytics \\
         --classes fox --expect fox --out out/fox-test
 
     # Same clip as if it were IR night footage, with a censor rectangle:
-    media-worker detect-file samples/fox.mp4 --detector speciesnet --night \\
+    foxcam-worker detect-file samples/fox.mp4 --detector speciesnet --night \\
         --mask 0,0,0.3,0.2 --expect "red fox"
 
     # Negative control: a clip without foxes must not produce one.
-    media-worker detect-file samples/cat.mp4 --detector speciesnet --expect-none fox
+    foxcam-worker detect-file samples/cat.mp4 --detector speciesnet --expect-none fox
 
 Exit code: 0 = expectations met (or none given), 1 = not met. Usable in CI or scripts.
 """
@@ -32,7 +32,7 @@ from pathlib import Path
 from .detectors import Detection, add_detector_args, create_detector
 from .frames import Frame, extract_frames
 
-log = logging.getLogger("media_worker")
+log = logging.getLogger("foxcam_worker")
 
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 # Rough IR night-vision look: no colour, flatter and a bit darker.
@@ -146,7 +146,7 @@ def check(summary: dict[str, dict], expect: list[str], expect_none: list[str],
 
 
 def main(argv: list[str] | None = None) -> None:
-    p = argparse.ArgumentParser(prog="media-worker detect-file", description=__doc__,
+    p = argparse.ArgumentParser(prog="foxcam-worker detect-file", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("inputs", nargs="+", type=Path, help="video file, image(s) or image folder")
     add_detector_args(p)
@@ -183,7 +183,7 @@ def main(argv: list[str] | None = None) -> None:
     hints = {"target_labels": sorted(targets), "min_confidence": args.min_confidence,
              "country": args.country}
 
-    with tempfile.TemporaryDirectory(prefix="media-worker-local-", ignore_cleanup_errors=True) as tmp:
+    with tempfile.TemporaryDirectory(prefix="foxcam-worker-local-", ignore_cleanup_errors=True) as tmp:
         work = Path(tmp) / "frames"
         t0 = time.monotonic()
         frames = load_frames(args.inputs, work, args)

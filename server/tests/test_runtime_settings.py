@@ -6,11 +6,11 @@ from __future__ import annotations
 from datetime import timedelta
 from types import SimpleNamespace
 
-from media_streamer import mediamtx, runtime_settings
-from media_streamer.config import Settings
-from media_streamer.db import session_scope
-from media_streamer.models import Segment, utcnow
-from media_streamer.pipeline import retention
+from foxcam import mediamtx, runtime_settings
+from foxcam.config import Settings
+from foxcam.db import session_scope
+from foxcam.models import Segment, utcnow
+from foxcam.pipeline import retention
 
 from .conftest import add_segment, app_client, needs_ffmpeg
 
@@ -103,7 +103,7 @@ def test_retention_uses_the_ui_values(settings):
 
 
 def test_cli(settings, capsys):
-    from media_streamer.cli import _settings_command
+    from foxcam.cli import _settings_command
 
     def run(cmd, **kw):
         return _settings_command(settings, SimpleNamespace(settings_cmd=cmd, **kw))
@@ -132,7 +132,7 @@ def test_preprocessing_follows_the_concurrency_setting(settings, monkeypatch):
     import asyncio
     import threading
 
-    from media_streamer.pipeline import preprocess, runner
+    from foxcam.pipeline import preprocess, runner
 
     release = threading.Event()
     running: list[int] = []

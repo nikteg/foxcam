@@ -124,8 +124,8 @@ def _settings_command(settings, args) -> int:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="media-streamer")
-    parser.add_argument("-c", "--config", help="config file (default: $MEDIA_STREAMER_CONFIG "
+    parser = argparse.ArgumentParser(prog="foxcam")
+    parser.add_argument("-c", "--config", help="config file (default: $FOXCAM_CONFIG "
                                                "or ./config.yaml)")
     parser.add_argument("-v", "--verbose", action="store_true")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -236,7 +236,7 @@ def main() -> None:
                             format="%(asctime)s %(levelname)-7s %(name)s: %(message)s")
         raise SystemExit(_hw_command(args))
     if args.config:
-        os.environ["MEDIA_STREAMER_CONFIG"] = args.config
+        os.environ["FOXCAM_CONFIG"] = args.config
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
                         format="%(asctime)s %(levelname)-7s %(name)s: %(message)s")
     logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -250,12 +250,12 @@ def main() -> None:
         import uvicorn
 
         if args.no_background:
-            os.environ["MEDIA_STREAMER_NO_BACKGROUND"] = "1"
+            os.environ["FOXCAM_NO_BACKGROUND"] = "1"
         from pathlib import Path
 
         # Only watch the package: watching the repo would restart on every new recording.
         proxies = settings.trusted_proxies
-        uvicorn.run("media_streamer.web.main:app", host=args.host, port=args.port,
+        uvicorn.run("foxcam.web.main:app", host=args.host, port=args.port,
                     reload=args.reload, reload_dirs=[str(Path(__file__).parent)],
                     log_level="info", proxy_headers=True,
                     forwarded_allow_ips=",".join(proxies) if proxies else None)

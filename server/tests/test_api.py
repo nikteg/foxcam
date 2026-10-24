@@ -1,8 +1,8 @@
 """HTTP API: worker protocol, masks, camera management."""
 
 import pytest
-from media_streamer.db import session_scope
-from media_streamer.models import JobState, Segment, SegmentStatus
+from foxcam.db import session_scope
+from foxcam.models import JobState, Segment, SegmentStatus
 
 from .conftest import add_detection, add_job, add_segment, app_client, make_video, needs_ffmpeg
 
@@ -121,7 +121,7 @@ def test_tapo_status_without_session(client):
 
 
 def test_worker_api_is_locked_by_default(tmp_path):
-    from media_streamer.config import Settings
+    from foxcam.config import Settings
 
     s = Settings.model_validate({"data_dir": str(tmp_path),
                                  "mediamtx": {"api_url": "http://127.0.0.1:1"}})
@@ -134,7 +134,7 @@ def test_worker_api_is_locked_by_default(tmp_path):
 
 
 def test_worker_token_cli_reuses_saved_token(settings, tmp_path):
-    from media_streamer import worker_tokens
+    from foxcam import worker_tokens
 
     path = tmp_path / "dev.token"
     first = worker_tokens.ensure("dev", path)
@@ -181,7 +181,7 @@ def test_worker_tokens_lock_the_api_and_fix_identity(settings, client):
 def test_offline_workers_can_be_removed(client):
     from datetime import timedelta
 
-    from media_streamer.models import Worker, utcnow
+    from foxcam.models import Worker, utcnow
 
     assert client.post("/api/worker/lease", json={"worker_id": "dummy"}).status_code == 204
     assert client.delete("/api/workers/dummy").status_code == 409  # still online
@@ -236,7 +236,7 @@ def test_segment_download_name_has_segment_id(settings, client):
 
 
 def test_recording_profiles_with_several_cameras(settings, client):
-    from media_streamer.config import CameraConfig
+    from foxcam.config import CameraConfig
 
     settings.cameras.append(CameraConfig.model_validate(
         {"id": "door", "recording_profile": "720p", "source": {"type": "test"}}))
@@ -248,8 +248,8 @@ def test_recording_profiles_with_several_cameras(settings, client):
 
 
 def test_default_recording_profile_from_the_ui(settings, client):
-    from media_streamer import recording
-    from media_streamer.config import CameraConfig
+    from foxcam import recording
+    from foxcam.config import CameraConfig
 
     settings.cameras.append(CameraConfig.model_validate(
         {"id": "door", "recording_profile": "720p", "source": {"type": "test"}}))

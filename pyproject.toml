@@ -7,8 +7,8 @@ members = ["server", "worker"]
 # Python <= 3.12 (no numpy<2 wheels for newer Pythons).
 conflicts = [
   [
-    { package = "media-worker", extra = "ultralytics" },
-    { package = "media-worker", extra = "speciesnet" },
+    { package = "foxcam-worker", extra = "ultralytics" },
+    { package = "foxcam-worker", extra = "speciesnet" },
   ],
 ]
 

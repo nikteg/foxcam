@@ -38,7 +38,7 @@ def _record_conf(settings: Settings, cam: CameraConfig) -> dict[str, Any]:
 def _source_conf(cam: CameraConfig) -> dict[str, Any]:
     if cam.source.type == "rtsp":
         return {"source": cam.source.url, "rtspTransport": "tcp", "sourceOnDemand": False}
-    # tapo_cloud / test / file sources are published by `media-streamer ingest`.
+    # tapo_cloud / test / file sources are published by `foxcam ingest`.
     return {"source": "publisher"}
 
 

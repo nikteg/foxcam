@@ -10,11 +10,11 @@ import time
 import httpx
 import pytest
 from fastapi.testclient import TestClient
-from media_streamer import accounts, oauth
-from media_streamer.config import OAuthProviderConfig
-from media_streamer.models import SegmentStatus
-from media_streamer.web import api_auth
-from media_streamer.web.app import create_app
+from foxcam import accounts, oauth
+from foxcam.config import OAuthProviderConfig
+from foxcam.models import SegmentStatus
+from foxcam.web import api_auth
+from foxcam.web.app import create_app
 
 from .conftest import PASSWORD, add_detection, add_job, add_segment, app_client, sign_in
 

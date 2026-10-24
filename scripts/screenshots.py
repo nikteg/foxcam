@@ -95,8 +95,8 @@ class Stack:
     def __init__(self) -> None:
         self.procs: list[subprocess.Popen] = []
         self.names: list[str] = []
-        self.env = {**os.environ, "MEDIA_STREAMER_CONFIG": str(STACK / "config.yaml"),
-                    "MEDIA_STREAMER_WEB_DIST": str(ROOT / "web" / "dist"), "TZ": "UTC"}
+        self.env = {**os.environ, "FOXCAM_CONFIG": str(STACK / "config.yaml"),
+                    "FOXCAM_WEB_DIST": str(ROOT / "web" / "dist"), "TZ": "UTC"}
 
     def start(self, name: str, args: list[str], cwd: Path = ROOT,
               env: dict[str, str] | None = None) -> None:
@@ -156,9 +156,9 @@ def sign_in(stack: Stack) -> None:
     """Create the demo admin and keep its session for the API calls and the browser."""
     email, password = ADMIN
     create = ("import sys\n"
-              "from media_streamer import accounts\n"
-              "from media_streamer.config import get_settings\n"
-              "from media_streamer.db import init_db\n"
+              "from foxcam import accounts\n"
+              "from foxcam.config import get_settings\n"
+              "from foxcam.db import init_db\n"
               "s = get_settings(); init_db(s)\n"
               "accounts.create_user(s, sys.argv[1], sys.argv[2], 'Admin', True)")
     subprocess.run([str(BIN / "python"), "-c", create, email, password], env=stack.env,
@@ -223,19 +223,19 @@ def run_stack(stack: Stack, min_events: int, timeout: float) -> None:
     if not (ROOT / "web" / "dist" / "index.html").exists():
         raise SystemExit("web UI not built: mise run build")
 
-    stack.start("mediamtx", [str(BIN / "media-streamer"), "mediamtx", "--binary", str(mediamtx),
+    stack.start("mediamtx", [str(BIN / "foxcam"), "mediamtx", "--binary", str(mediamtx),
                              str(STACK / "mediamtx.yml")], cwd=STACK)
-    stack.start("server", [str(BIN / "media-streamer"), "serve", "--port", str(PORT)])
+    stack.start("server", [str(BIN / "foxcam"), "serve", "--port", str(PORT)])
     wait_for("the server", server_up, 60, every=1, stack=stack)
     sign_in(stack)
-    stack.start("ingest", [str(BIN / "media-streamer"), "ingest"])
-    token = subprocess.run([str(BIN / "media-streamer"), "worker-token", "gpu-box",
+    stack.start("ingest", [str(BIN / "foxcam"), "ingest"])
+    token = subprocess.run([str(BIN / "foxcam"), "worker-token", "gpu-box",
                             "--tags", "gpu"], env=stack.env, check=True, capture_output=True,
                            text=True).stdout.strip()
     args, kind = worker_args()
     log(f"worker: {kind}")
-    worker_env = {**stack.env, "MEDIA_WORKER_TOKEN": token, "MEDIA_WORKER_HOST": "gpu-box"}
-    stack.start("worker", [str(BIN / "media-worker"), "--server", SERVER, *args],
+    worker_env = {**stack.env, "FOXCAM_WORKER_TOKEN": token, "FOXCAM_WORKER_HOST": "gpu-box"}
+    stack.start("worker", [str(BIN / "foxcam-worker"), "--server", SERVER, *args],
                 cwd=MODEL.parent if MODEL.parent.exists() else ROOT, env=worker_env)
     # A censor area to show in the mask editor.
     put("/api/cameras/street/mask", {"rects": [[0.0, 0.0, 0.34, 0.12]]})
@@ -319,8 +319,8 @@ def capture(tmp: Path) -> list[str]:
             browser = p.chromium.launch(channel="chrome")
         except Exception:  # noqa: BLE001 - no Google Chrome: Playwright's own Chromium
             browser = p.chromium.launch()
-        init = ("localStorage.setItem('media-streamer.lang', 'en');"
-                "localStorage.setItem('media-streamer.theme', 'dark');")
+        init = ("localStorage.setItem('foxcam.lang', 'en');"
+                "localStorage.setItem('foxcam.theme', 'dark');")
         cookie = [{"name": "ms_session", "value": SESSION["token"], "url": SERVER}]
         desk = browser.new_context(color_scheme="dark", **DESKTOP)
         desk.add_cookies(cookie)

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from media_streamer import ffmpeg
-from media_streamer.config import RecordingProfileConfig
-from media_streamer.db import session_scope
-from media_streamer.models import Archive, Segment, SegmentStatus, utcnow
-from media_streamer.pipeline import compaction, retention, uploader
+from foxcam import ffmpeg
+from foxcam.config import RecordingProfileConfig
+from foxcam.db import session_scope
+from foxcam.models import Archive, Segment, SegmentStatus, utcnow
+from foxcam.pipeline import compaction, retention, uploader
 
 from .conftest import add_segment, app_client, needs_ffmpeg
 
@@ -180,7 +180,7 @@ def test_status_for_the_status_page(settings):
 
 @needs_ffmpeg
 def test_joined_files_list_has_a_preview(settings):
-    from media_streamer.web import queries
+    from foxcam.web import queries
 
     ids = _hour_ago(settings, n=2)
     with session_scope() as s:

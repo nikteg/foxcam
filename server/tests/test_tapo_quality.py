@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from media_streamer.ingest.supervisor import _fingerprint
+from foxcam.ingest.supervisor import _fingerprint
 
 from .conftest import app_client
 

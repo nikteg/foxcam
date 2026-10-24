@@ -3,8 +3,8 @@ from __future__ import annotations
 import shutil
 
 import pytest
-from media_streamer import hwaccel
-from media_streamer.hwaccel import Encode, ffmpeg_args
+from foxcam import hwaccel
+from foxcam.hwaccel import Encode, ffmpeg_args
 
 
 def _arg(args: list[str], flag: str) -> str:

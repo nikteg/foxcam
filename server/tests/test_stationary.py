@@ -5,10 +5,10 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 import pytest
-from media_streamer.config import ProfileConfig
-from media_streamer.db import session_scope
-from media_streamer.models import Detection, Event
-from media_streamer.pipeline import events
+from foxcam.config import ProfileConfig
+from foxcam.db import session_scope
+from foxcam.models import Detection, Event
+from foxcam.pipeline import events
 from sqlalchemy import select
 
 from .conftest import add_job, add_segment

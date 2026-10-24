@@ -20,7 +20,7 @@ const MESSAGES: Record<Lang, Record<MessageKey, string>> = { en, sv };
 /** BCP 47 locale used for dates and numbers. */
 const LOCALES: Record<Lang, string> = { en: "en-GB", sv: "sv-SE" };
 export const LANGUAGE_NAMES: Record<Lang, string> = { en: "English", sv: "Svenska" };
-const STORAGE_KEY = "media-streamer.lang";
+const STORAGE_KEY = "foxcam.lang";
 
 type Vars = Record<string, string | number>;
 type RichVars = Record<string, ReactNode>;

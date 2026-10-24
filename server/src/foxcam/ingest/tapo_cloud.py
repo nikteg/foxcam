@@ -12,7 +12,7 @@ one into the same ffmpeg publisher, so the stream stays up.
 
 Log in once interactively (handles MFA) to create the session file::
 
-    uv run media-streamer tapo-login
+    uv run foxcam tapo-login
 
 Token refresh: the stored access token expires; on a 401 we exchange the refresh token for
 a new one (see :func:`call_with_refresh`). The camera threads and the web server all share
@@ -54,7 +54,7 @@ def _import_ontapo():
     except ImportError as e:
         raise RuntimeError(
             "tapo_cloud sources need the optional dependency: "
-            "uv sync --package media-streamer --extra tapo-cloud"
+            "uv sync --package foxcam --extra tapo-cloud"
         ) from e
     return ontapo
 
@@ -63,7 +63,7 @@ def load_session(settings: Settings):
     ontapo = _import_ontapo()
     path = settings.tapo_session_file
     if not path.exists():
-        raise RuntimeError(f"no Tapo session at {path}; run `media-streamer tapo-login` first")
+        raise RuntimeError(f"no Tapo session at {path}; run `foxcam tapo-login` first")
     return ontapo.OnTapo.from_dict(json.loads(path.read_text()))
 
 

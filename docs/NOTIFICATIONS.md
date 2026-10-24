@@ -24,7 +24,7 @@ Delivery goes through an outbox: if a service is down, Foxcam retries with backo
 
 Set `public_url` (how you open the UI, e.g. `http://192.168.1.10:8000`) so notifications
 can link to the event and its clip; `scripts/dev.sh` sets it to this machine's LAN address
-(`MEDIA_STREAMER_PUBLIC_URL`) when the config has none. Those links point at your own server, so they only
+(`FOXCAM_PUBLIC_URL`) when the config has none. Those links point at your own server, so they only
 open where the UI is reachable (home network, VPN).
 
 ```yaml
@@ -44,7 +44,7 @@ notifications:
 
     - id: home-assistant
       type: webhook
-      url: http://homeassistant.local:8123/api/webhook/media-streamer-events
+      url: http://homeassistant.local:8123/api/webhook/foxcam-events
       secret: ${WEBHOOK_SECRET}
 
     - id: telegram
@@ -113,13 +113,13 @@ def valid(body: bytes, header: str, secret: str) -> bool:
 
 ### Home Assistant
 
-Create an automation with a **Webhook** trigger (webhook id `media-streamer-events`,
+Create an automation with a **Webhook** trigger (webhook id `foxcam-events`,
 *local only* if the server is on your LAN) and use the payload, e.g.:
 
 ```yaml
 triggers:
   - trigger: webhook
-    webhook_id: media-streamer-events
+    webhook_id: foxcam-events
     allowed_methods: [POST]
 conditions:
   - condition: template

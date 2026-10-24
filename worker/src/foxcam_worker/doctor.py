@@ -1,7 +1,7 @@
 """Check that this machine can run a worker: ffmpeg, GPU/PyTorch, detector packages, server.
 
-    media-worker doctor
-    media-worker doctor --server http://192.168.1.10:8000 --token msw_...
+    foxcam-worker doctor
+    foxcam-worker doctor --server http://192.168.1.10:8000 --token msw_...
 
 Prints one line per check and exits 1 if something required is missing. Useful after
 setting up a GPU box, WSL or Docker (see docs/WORKER_SETUP.md).
@@ -144,7 +144,7 @@ def check_server(server: str, token: str | None) -> Check:
                      "Create a token under Worker queue → Add worker and pass --token.")
     if r.status_code != 200:
         return Check("server", FAIL, f"{server}: HTTP {r.status_code}",
-                     "Is this the media-streamer server URL?")
+                     "Is this the foxcam server URL?")
     name = r.json().get("token_name")
     return Check("server", OK, f"{server} reachable, "
                                f"{f'token {name!r} accepted' if name else 'access allowed'}")
@@ -162,10 +162,10 @@ def run_checks(server: str | None, token: str | None) -> list[Check]:
 
 
 def main(argv: list[str]) -> None:
-    p = argparse.ArgumentParser(prog="media-worker doctor", description=__doc__,
+    p = argparse.ArgumentParser(prog="foxcam-worker doctor", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--server", default=os.environ.get("MEDIA_SERVER"))
-    p.add_argument("--token", default=os.environ.get("MEDIA_WORKER_TOKEN"))
+    p.add_argument("--server", default=os.environ.get("FOXCAM_SERVER"))
+    p.add_argument("--token", default=os.environ.get("FOXCAM_WORKER_TOKEN"))
     args = p.parse_args(argv)
 
     checks = run_checks(args.server, args.token)

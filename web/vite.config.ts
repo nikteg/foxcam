@@ -3,7 +3,7 @@ import { defineConfig, loadEnv } from "vite";
 
 export default defineConfig(({ mode }) => {
   // Where the Python server runs during `pnpm dev` (override in web/.env.local).
-  const api = loadEnv(mode, ".", "").MEDIA_STREAMER_API ?? "http://localhost:8000";
+  const api = loadEnv(mode, ".", "").FOXCAM_API ?? "http://localhost:8000";
   return {
     plugins: [
       // `compiler: true` runs the Rust port of React Compiler (oxc-transform-react),

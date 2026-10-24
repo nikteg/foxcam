@@ -1,8 +1,8 @@
 from datetime import timedelta
 
-from media_streamer.db import session_scope
-from media_streamer.models import Event, JobState, Segment, SegmentStatus, utcnow
-from media_streamer.pipeline import retention
+from foxcam.db import session_scope
+from foxcam.models import Event, JobState, Segment, SegmentStatus, utcnow
+from foxcam.pipeline import retention
 
 from .conftest import add_job, add_segment, needs_ffmpeg
 
@@ -81,7 +81,7 @@ def test_events_kept_forever_by_default(settings):
 
 @needs_ffmpeg
 def test_recording_profile_keep_days(settings):
-    from media_streamer.config import CameraConfig, RecordingProfileConfig
+    from foxcam.config import CameraConfig, RecordingProfileConfig
 
     settings.retention.segments_days = 7
     settings.recording_profiles = [RecordingProfileConfig(id="long", keep_days=30),

@@ -65,60 +65,60 @@ run = "scripts/dev.sh"
 
 [tasks.server]
 description = "Server only (API + pipeline) on :8000, restarts on code changes"
-run = "uv run media-streamer serve --host 0.0.0.0 --port 8000 --reload"
+run = "uv run foxcam serve --host 0.0.0.0 --port 8000 --reload"
 
 [tasks.ingest]
 description = "Ingest only (publishes file / test / Tapo cloud cameras), restarts when ingest code changes"
-run = "uv run watchfiles --filter python 'media-streamer ingest' server/src/media_streamer/ingest"
+run = "uv run watchfiles --filter python 'foxcam ingest' server/src/foxcam/ingest"
 
 [tasks.compact]
 description = "Compaction only: join finished hours into one file per camera (re-encode per recording profile)"
-run = "uv run media-streamer compact"
+run = "uv run foxcam compact"
 
 [tasks.mediamtx]
 description = "MediaMTX only (recording names in UTC)"
 depends = ["setup:mediamtx"]
-run = "TZ=UTC uv run media-streamer mediamtx --binary .tools/mediamtx mediamtx/mediamtx.yml"
+run = "TZ=UTC uv run foxcam mediamtx --binary .tools/mediamtx mediamtx/mediamtx.yml"
 
 [tasks.web]
 description = "Web dev server with hot reload on :5173"
 run = "pnpm --dir web dev --host"
 
 [tasks.worker]
-description = "Dummy worker against MEDIA_SERVER (default http://localhost:8000)"
-run = "MEDIA_WORKER_TOKEN=${MEDIA_WORKER_TOKEN:-$(uv run media-streamer worker-token dev --save data/dev-worker.token)} uv run media-worker --server ${MEDIA_SERVER:-http://localhost:8000} --detector dummy --dummy-label fox"
+description = "Dummy worker against FOXCAM_SERVER (default http://localhost:8000)"
+run = "FOXCAM_WORKER_TOKEN=${FOXCAM_WORKER_TOKEN:-$(uv run foxcam worker-token dev --save data/dev-worker.token)} uv run foxcam-worker --server ${FOXCAM_SERVER:-http://localhost:8000} --detector dummy --dummy-label fox"
 
 [tasks."worker:yolo"]
 description = "YOLO-World worker, prompted with each job's profile targets (needs setup:yolo)"
-run = "MEDIA_WORKER_TOKEN=${MEDIA_WORKER_TOKEN:-$(uv run media-streamer worker-token dev --save data/dev-worker.token)} uv run media-worker --server ${MEDIA_SERVER:-http://localhost:8000} --detector ultralytics --model yolov8s-worldv2.pt"
+run = "FOXCAM_WORKER_TOKEN=${FOXCAM_WORKER_TOKEN:-$(uv run foxcam worker-token dev --save data/dev-worker.token)} uv run foxcam-worker --server ${FOXCAM_SERVER:-http://localhost:8000} --detector ultralytics --model yolov8s-worldv2.pt"
 
 [tasks."worker:speciesnet"]
 description = "SpeciesNet worker (needs setup:speciesnet)"
-run = "MEDIA_WORKER_TOKEN=${MEDIA_WORKER_TOKEN:-$(uv run media-streamer worker-token dev --save data/dev-worker.token)} out/speciesnet-venv/bin/media-worker --server ${MEDIA_SERVER:-http://localhost:8000} --detector speciesnet"
+run = "FOXCAM_WORKER_TOKEN=${FOXCAM_WORKER_TOKEN:-$(uv run foxcam worker-token dev --save data/dev-worker.token)} out/speciesnet-venv/bin/foxcam-worker --server ${FOXCAM_SERVER:-http://localhost:8000} --detector speciesnet"
 
 [tasks.doctor]
-description = "Check ffmpeg, GPU, detectors and the connection to MEDIA_SERVER"
-run = "MEDIA_WORKER_TOKEN=${MEDIA_WORKER_TOKEN:-$(uv run media-streamer worker-token dev --save data/dev-worker.token)} uv run media-worker doctor --server ${MEDIA_SERVER:-http://localhost:8000}"
+description = "Check ffmpeg, GPU, detectors and the connection to FOXCAM_SERVER"
+run = "FOXCAM_WORKER_TOKEN=${FOXCAM_WORKER_TOKEN:-$(uv run foxcam worker-token dev --save data/dev-worker.token)} uv run foxcam-worker doctor --server ${FOXCAM_SERVER:-http://localhost:8000}"
 
 [tasks."worker:token"]
 description = "Create a worker access token: mise run worker:token -- <name> [--tags gpu]"
-run = "uv run media-streamer worker-token"
+run = "uv run foxcam worker-token"
 
 [tasks."user:add"]
 description = "Create an account: mise run user:add -- <e-mail> [--admin] (asks for the password)"
-run = "uv run media-streamer user add"
+run = "uv run foxcam user add"
 
 [tasks."user:password"]
 description = "Set a password: mise run user:password -- <e-mail>"
-run = "uv run media-streamer user password"
+run = "uv run foxcam user password"
 
 [tasks."user:list"]
 description = "List the accounts"
-run = "uv run media-streamer user list"
+run = "uv run foxcam user list"
 
 [tasks."tapo:login"]
 description = "Sign in to the Tapo cloud (password typed locally, never stored)"
-run = "uv run media-streamer tapo-login"
+run = "uv run foxcam tapo-login"
 
 [tasks.stop]
 description = "Kill anything still listening on the dev ports (8000, 5173, MediaMTX)"
@@ -141,25 +141,25 @@ run = "uv run --with playwright python scripts/screenshots.py"
 [tasks."s3:local"]
 description = "Local S3 (SeaweedFS in Docker on :19000) for testing storage.s3"
 run = """
-docker run -d --rm --name media-streamer-s3 -p 19000:8333 chrislusf/seaweedfs server -s3 -dir=/data >/dev/null
+docker run -d --rm --name foxcam-s3 -p 19000:8333 chrislusf/seaweedfs server -s3 -dir=/data >/dev/null
 echo "S3 on http://localhost:19000 - add to config.yaml and restart the server:"
 cat <<'YAML'
 storage:
   s3:
     enabled: true
-    bucket: media-streamer
+    bucket: foxcam
     endpoint_url: http://localhost:19000
     region: us-east-1
     access_key_id: any
     secret_access_key: any
     addressing_style: path
 YAML
-echo "create the bucket once: uv run python -c \\"import boto3; boto3.client('s3', endpoint_url='http://localhost:19000', aws_access_key_id='any', aws_secret_access_key='any', region_name='us-east-1').create_bucket(Bucket='media-streamer')\\""
+echo "create the bucket once: uv run python -c \\"import boto3; boto3.client('s3', endpoint_url='http://localhost:19000', aws_access_key_id='any', aws_secret_access_key='any', region_name='us-east-1').create_bucket(Bucket='foxcam')\\""
 """
 
 [tasks."s3:stop"]
 description = "Stop the local S3 container (its data is discarded)"
-run = "docker rm -f media-streamer-s3"
+run = "docker rm -f foxcam-s3"
 
 # --- quality -----------------------------------------------------------------------
 
@@ -169,7 +169,7 @@ run = "uv run pytest server/tests worker/tests"
 
 [tasks."test:detectors"]
 description = "Accuracy tests on samples/ with YOLO-World (needs setup:yolo + setup:samples)"
-env = { MEDIA_WORKER_TEST_DETECTOR = "ultralytics", MEDIA_WORKER_TEST_CLASSES = "fox" }
+env = { FOXCAM_WORKER_TEST_DETECTOR = "ultralytics", FOXCAM_WORKER_TEST_CLASSES = "fox" }
 run = "uv run pytest worker/tests"
 
 [tasks.lint]
@@ -205,14 +205,14 @@ run = "docker compose logs -f"
 [tasks."docker:test"]
 description = "Second Docker stack on :18000 with its own data (out/docker-data), next to dev"
 run = """
-MEDIA_DATA_PATH=./out/docker-data HTTP_PORT=18000 WEBRTC_ICE_PORT=18189 \
-docker compose -p media-streamer-test up --build -d
+FOXCAM_DATA_PATH=./out/docker-data HTTP_PORT=18000 WEBRTC_ICE_PORT=18189 \
+docker compose -p foxcam-test up --build -d
 echo "http://localhost:18000  (stop: mise run docker:test-down)"
 """
 
 [tasks."docker:test-down"]
 description = "Stop the second Docker stack"
-run = "docker compose -p media-streamer-test down"
+run = "docker compose -p foxcam-test down"
 
 # --- clean / reset -----------------------------------------------------------------
 
@@ -237,61 +237,61 @@ fi
 description = "Remove test cameras (sample-file loops, test patterns) and data of removed cameras"
 depends = ["server-stopped"]
 confirm = "Delete the test cameras with their recordings and events?"
-run = "uv run media-streamer remove-cameras --test --orphaned --yes"
+run = "uv run foxcam remove-cameras --test --orphaned --yes"
 
 [tasks."reset:recordings"]
 description = "All footage plus segments, jobs, detections and events (keeps cameras, masks, profiles, workers)"
 depends = ["server-stopped"]
 confirm = "Delete recordings?"
-run = "uv run media-streamer reset recordings --yes"
+run = "uv run foxcam reset recordings --yes"
 
 [tasks."reset:events"]
 description = "Events and clips only; rebuilt from the detections on the next start"
 depends = ["server-stopped"]
 confirm = "Delete events?"
-run = "uv run media-streamer reset events --yes"
+run = "uv run foxcam reset events --yes"
 
 [tasks."reset:detections"]
 description = "Detections, events and jobs; recordings on disk are analysed again"
 depends = ["server-stopped"]
 confirm = "Delete detections?"
-run = "uv run media-streamer reset detections --yes"
+run = "uv run foxcam reset detections --yes"
 
 [tasks."reset:queue"]
 description = "Waiting jobs (the backlog); recordings and results kept"
 depends = ["server-stopped"]
 confirm = "Delete queue?"
-run = "uv run media-streamer reset queue --yes"
+run = "uv run foxcam reset queue --yes"
 
 [tasks."reset:workers"]
 description = "Known workers and all access tokens (workers need new tokens)"
 depends = ["server-stopped"]
 confirm = "Delete workers?"
-run = "uv run media-streamer reset workers --yes"
+run = "uv run foxcam reset workers --yes"
 
 [tasks."reset:cameras"]
 description = "Cameras added in the UI and every camera's masks, private flag, profile choice"
 depends = ["server-stopped"]
 confirm = "Delete cameras?"
-run = "uv run media-streamer reset cameras --yes"
+run = "uv run foxcam reset cameras --yes"
 
 [tasks."reset:profiles"]
 description = "Profiles added in the UI and per-camera profile choices"
 depends = ["server-stopped"]
 confirm = "Delete profiles?"
-run = "uv run media-streamer reset profiles --yes"
+run = "uv run foxcam reset profiles --yes"
 
 [tasks."reset:users"]
 description = "All accounts, sessions, shares and invite links (setup code again on next start)"
 depends = ["server-stopped"]
 confirm = "Delete users?"
-run = "uv run media-streamer reset users --yes"
+run = "uv run foxcam reset users --yes"
 
 [tasks."reset:tapo"]
 description = "The saved Tapo cloud session"
 depends = ["server-stopped"]
 confirm = "Delete tapo?"
-run = "uv run media-streamer reset tapo --yes"
+run = "uv run foxcam reset tapo --yes"
 
 [tasks.reset]
 description = "Delete ALL data: recordings, database, Tapo session (reset:<what> for parts)"

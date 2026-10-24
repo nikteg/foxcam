@@ -1,10 +1,10 @@
 from datetime import timedelta
 
 import pytest
-from media_streamer.db import session_scope
-from media_streamer.models import Event, Segment, SegmentStatus, utcnow
-from media_streamer.pipeline import retention, uploader
-from media_streamer.storage import get_storage
+from foxcam.db import session_scope
+from foxcam.models import Event, Segment, SegmentStatus, utcnow
+from foxcam.pipeline import retention, uploader
+from foxcam.storage import get_storage
 
 from .conftest import add_segment, app_client, needs_ffmpeg
 
@@ -56,7 +56,7 @@ def test_clips_upload_and_serve_from_bucket(settings, s3):
     ev_id = _event_with_clip(settings)
 
     assert uploader.upload_pending(settings) == 1
-    assert _keys(s3) == ["media-streamer/clips/cam/ev.jpg", "media-streamer/clips/cam/ev.mp4"]
+    assert _keys(s3) == ["foxcam/clips/cam/ev.jpg", "foxcam/clips/cam/ev.mp4"]
     assert not (settings.data_dir / "clips/cam/ev.mp4").exists()
     assert uploader.upload_pending(settings) == 0  # nothing left
     assert uploader.stats(settings)["clips_uploaded"] == 1
