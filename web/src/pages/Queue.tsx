@@ -1,15 +1,4 @@
-import {
-  Button,
-  Caption1,
-  Subtitle2,
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableHeaderCell,
-  TableRow,
-  Text,
-} from "@fluentui/react-components";
+import { Button, Caption1, Subtitle2 } from "@fluentui/react-components";
 import {
   Add20Regular,
   ArrowClockwise16Regular,
@@ -46,7 +35,7 @@ import {
   useSubPage,
 } from "../components/ui";
 import { decimal, duration } from "../format";
-import { useProfileName, useProfiles } from "../components/ProfileSelect";
+import { useProfileName } from "../components/ProfileSelect";
 import { AddWorkerDialog } from "../components/AddWorkerDialog";
 import { ArchivingSection } from "../components/ArchivingSection";
 import { ModelsSection } from "../components/ModelsSection";
@@ -84,7 +73,6 @@ export function Queue() {
   const stateLabel = useStateLabel();
   const cameraName = useCameraName();
   const profileName = useProfileName();
-  const profiles = useProfiles();
   const jobColumns = makeJobColumns(
     t,
     stateLabel,
@@ -168,47 +156,6 @@ export function Queue() {
                   value={avgMs ? `${decimal(avgMs / 1000, 1)} s` : "–"}
                 />
               </section>
-              {profiles.data && profiles.data.length > 1 && (
-                <>
-                  <Subtitle2 as="h2" className="section">
-                    {t("queue.byProfile")}
-                  </Subtitle2>
-                  <Table className="table responsive" aria-label={t("queue.byProfile")}>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHeaderCell>{t("profiles.profile")}</TableHeaderCell>
-                        <TableHeaderCell>{t("profiles.waiting")}</TableHeaderCell>
-                        <TableHeaderCell>{t("queue.running")}</TableHeaderCell>
-                        <TableHeaderCell>{t("profiles.workers")}</TableHeaderCell>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {profiles.data.map((p) => (
-                        <TableRow key={p.id}>
-                          <TableCell data-label={t("profiles.profile")}>
-                            <Text weight="semibold">{p.display_name}</Text>
-                          </TableCell>
-                          <TableCell data-label={t("profiles.waiting")}>{p.waiting_jobs}</TableCell>
-                          <TableCell data-label={t("queue.running")}>
-                            {q.stats.by_profile[p.id]?.leased ?? 0}
-                          </TableCell>
-                          <TableCell data-label={t("profiles.workers")}>
-                            {p.workers_online.length ? (
-                              p.workers_online.join(", ")
-                            ) : p.waiting_jobs > 0 ? (
-                              <Tag kind="warn" title={t("profiles.stuck")}>
-                                {t("profiles.noWorkers")}
-                              </Tag>
-                            ) : (
-                              "–"
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </>
-              )}
 
               <Subtitle2 as="h2" className="section row">
                 {t("queue.latestJobs")}

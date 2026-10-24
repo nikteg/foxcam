@@ -573,7 +573,6 @@ export const en = {
   "recording.fromDefault": "Currently the default profile; saving here overrides it.",
   "recording.makeDefault": "Make {name} the default",
   "recording.makeDefaultHint": "For every camera without its own choice.",
-  "queue.byProfile": "Per profile",
   "queue.removeWorkerHint":
     "Remove this offline worker from the list. It comes back if it connects again; revoke its token to keep it out.",
   "queue.running": "Running",
