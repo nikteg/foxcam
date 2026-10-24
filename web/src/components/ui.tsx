@@ -482,10 +482,18 @@ export function PageTabs<T extends string>({
   const navigate = useNavigate();
   // Scrolls sideways on narrow screens: keep the open tab in view.
   const list = useRef<HTMLDivElement>(null);
+  // Only the bar scrolls (scrollIntoView would move the page too, also vertically).
   useEffect(() => {
-    list.current
-      ?.querySelector('[aria-selected="true"]')
-      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const bar = list.current;
+    const tab = bar?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!bar || !tab) return;
+    const box = bar.getBoundingClientRect();
+    const r = tab.getBoundingClientRect();
+    const left = r.left - box.left + bar.scrollLeft;
+    const right = r.right - box.left + bar.scrollLeft;
+    if (left < bar.scrollLeft) bar.scrollTo({ left, behavior: "smooth" });
+    else if (right > bar.scrollLeft + bar.clientWidth)
+      bar.scrollTo({ left: right - bar.clientWidth, behavior: "smooth" });
   }, [current]);
   return (
     <TabList
