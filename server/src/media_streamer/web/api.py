@@ -6,6 +6,7 @@ Non-admins only see the cameras shared with them, and everything recorded by the
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from datetime import timedelta
 from pathlib import Path
@@ -15,13 +16,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field, field_validator
 
-from .. import ffmpeg, mediamtx_auth, model_stats, recording, sprites
+from .. import ffmpeg, mediamtx_auth, model_stats, recording, runtime_settings, sprites
 from ..accounts import Principal
 from ..config import Settings
 from ..db import session_scope
 from ..mediamtx import MediaMtx
 from ..models import Archive, CameraRole, Detection, Event, Segment, utcnow
-from ..pipeline import compaction, queue, retention, uploader
+from ..pipeline import compaction, queue, uploader
 from ..pipeline.reanalyse import ReanalyseError, reanalyse_segment
 from ..storage import StorageError, boto3_available, get_storage
 from . import queries
@@ -36,6 +37,7 @@ from .deps import (
     settings_dep,
 )
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["public"])
 
 
@@ -86,6 +88,46 @@ def public_settings(settings: Settings = Depends(settings_dep),
             "events": settings.events.model_dump(), "cameras": []}
 
 
+def _runtime_view(settings: Settings) -> dict[str, Any]:
+    overview = queries.overview(settings)
+    return {
+        "settings": runtime_settings.describe(settings),
+        "disk": {k: overview[k] for k in
+                 ("recordings_bytes", "disk_free_bytes", "disk_total_bytes")},
+    }
+
+
+@router.get("/settings/runtime", dependencies=[Depends(require_admin)])
+def runtime_settings_view(settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
+    """The tunables admins can change here (Settings page): value, config.yaml's, source."""
+    return _runtime_view(settings)
+
+
+class RuntimeChange(BaseModel):
+    # Dotted config.yaml paths, e.g. {"processing.sample_fps": 1}; null where allowed.
+    values: dict[str, Any] = {}
+    # Back to config.yaml's value.
+    reset: list[str] = []
+
+
+@router.put("/settings/runtime", dependencies=[Depends(require_admin)])
+async def update_runtime_settings(body: RuntimeChange,
+                                  settings: Settings = Depends(settings_dep),
+                                  mtx: MediaMtx = Depends(mediamtx_dep)) -> dict[str, Any]:
+    try:
+        changed = await asyncio.to_thread(runtime_settings.update, settings, body.values,
+                                          body.reset)
+    except runtime_settings.SettingError as e:
+        raise HTTPException(422, str(e)) from e
+    if "segment_seconds" in changed:
+        # MediaMTX cuts the files (recordSegmentDuration): new length from the next file.
+        try:
+            await mtx.sync_paths()
+        except Exception as e:  # noqa: BLE001 - saved; applied at the next sync
+            log.warning("could not update MediaMTX: %s", e)
+    return await asyncio.to_thread(_runtime_view, settings)
+
+
 @router.get("/storage", dependencies=[Depends(require_admin)])
 def storage_status(settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
     cfg = settings.storage.s3
@@ -109,36 +151,6 @@ async def storage_test(settings: Settings = Depends(settings_dep)) -> dict[str, 
     if store is None:
         raise HTTPException(409, "S3 storage is not enabled in config.yaml")
     return await asyncio.to_thread(store.check)
-
-
-def _retention_view(settings: Settings) -> dict[str, Any]:
-    ui = retention.ui_overrides()
-    overview = queries.overview(settings)
-    return {
-        "values": retention.effective(settings).model_dump(include=set(retention.EDITABLE)),
-        "config": settings.retention.model_dump(include=set(retention.EDITABLE)),
-        "from_ui": sorted(ui),
-        "recordings_bytes": overview["recordings_bytes"],
-        "disk_free_bytes": overview["disk_free_bytes"],
-        "disk_total_bytes": overview["disk_total_bytes"],
-    }
-
-
-@router.get("/retention", dependencies=[Depends(require_admin)])
-def retention_settings(settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
-    """How long recordings and events are kept and the disk cap (Settings → Retention)."""
-    return _retention_view(settings)
-
-
-@router.put("/retention", dependencies=[Depends(require_admin)])
-def set_retention(changes: dict[str, float | Literal["config"] | None],
-                  settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
-    """Change values (null max_disk_gb = no cap); "config" = back to config.yaml's value."""
-    try:
-        retention.set_overrides(settings, changes)
-    except ValueError as e:
-        raise HTTPException(422, str(e)) from e
-    return _retention_view(settings)
 
 
 @router.get("/cameras")

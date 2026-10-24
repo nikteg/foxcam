@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import { useIsAdmin, useMe } from "../auth";
 import { Notifications } from "../components/Notifications";
-import { RetentionSection } from "../components/RetentionSection";
+import { RuntimeSettingsSection, type SettingsGroup } from "../components/RuntimeSettings";
 import { StorageCard } from "../components/StorageCard";
 import { UsersSection } from "../components/UsersSection";
 import {
@@ -21,7 +21,56 @@ import { Navigate } from "react-router";
 import { useI18n } from "../i18n";
 
 // Language and theme are in the top bar; everything here is for admins.
-type SubPage = "retention" | "users" | "notifications" | "storage" | "configuration";
+type SubPage =
+  | "general"
+  | "detection"
+  | "retention"
+  | "users"
+  | "notifications"
+  | "storage"
+  | "configuration";
+
+// The tunables on each tab (server: runtime_settings.EDITABLE).
+const GENERAL: SettingsGroup[] = [
+  { title: "runtime.group.recording", keys: ["public_url", "segment_seconds"] },
+  {
+    title: "runtime.group.archiving",
+    keys: ["compaction.enabled", "compaction.delay_minutes"],
+  },
+];
+const DETECTION: SettingsGroup[] = [
+  {
+    title: "runtime.group.frames",
+    keys: [
+      "processing.sample_fps",
+      "processing.max_width",
+      "processing.night_saturation_threshold",
+    ],
+  },
+  {
+    title: "runtime.group.events",
+    keys: [
+      "events.pre_roll_seconds",
+      "events.post_roll_seconds",
+      "events.merge_gap_seconds",
+      "events.settle_seconds",
+    ],
+  },
+  {
+    title: "runtime.group.queue",
+    keys: ["queue.lease_seconds", "queue.max_attempts", "queue.retry_backoff_seconds"],
+  },
+];
+const RETENTION: SettingsGroup[] = [
+  {
+    keys: [
+      "retention.segments_days",
+      "retention.events_days",
+      "retention.unprocessed_max_days",
+      "retention.max_disk_gb",
+    ],
+  },
+];
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   v !== null && typeof v === "object" && !Array.isArray(v);
@@ -87,6 +136,8 @@ export function Settings() {
   const { t, rich } = useI18n();
   const cfg = settings.data;
   const ids: SubPage[] = [
+    "general",
+    "detection",
     "retention",
     ...(me?.enabled ? (["users"] as const) : []),
     "notifications",
@@ -95,6 +146,8 @@ export function Settings() {
   ];
   const tab = useSubPage("/settings", ids);
   const label: Record<SubPage, string> = {
+    general: t("settings.general"),
+    detection: t("settings.detection"),
     retention: t("retention.title"),
     users: t("users.title"),
     notifications: t("settings.notifications"),
@@ -114,7 +167,14 @@ export function Settings() {
         />
       )}
 
-      {tab === "retention" && <RetentionSection />}
+      {(tab === "general" || tab === "detection" || tab === "retention") && (
+        <InfoBanner id="runtime-settings">
+          {rich("runtime.intro", { file: <code>config.yaml</code> })}
+        </InfoBanner>
+      )}
+      {tab === "general" && <RuntimeSettingsSection groups={GENERAL} />}
+      {tab === "detection" && <RuntimeSettingsSection groups={DETECTION} />}
+      {tab === "retention" && <RuntimeSettingsSection groups={RETENTION} showDisk />}
       {tab === "users" && <UsersSection />}
       {tab === "notifications" && <Notifications />}
       {tab === "storage" && <StorageCard />}

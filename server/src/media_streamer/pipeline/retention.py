@@ -8,8 +8,7 @@ Rules, in order:
 
 Segment rows are kept (``deleted_at`` set) so detection history remains browsable.
 
-The day counts and the disk cap can be changed in the web UI (Settings → Retention); those
-values are stored in the database and win over config.yaml's ``retention``.
+The day counts and the disk cap can also be changed in the web UI (runtime_settings.py).
 """
 
 from __future__ import annotations
@@ -20,10 +19,9 @@ from datetime import timedelta
 from sqlalchemy import func, select
 
 from .. import notify, sprites
-from ..config import RetentionConfig, Settings
+from ..config import Settings
 from ..db import session_scope
 from ..models import (
-    AppSetting,
     Archive,
     Event,
     Job,
@@ -36,52 +34,6 @@ from ..models import (
 from ..storage import StorageError, get_storage
 
 log = logging.getLogger(__name__)
-
-SETTINGS_KEY = "retention"
-# What the web UI may change; the rest of `retention` stays in config.yaml.
-EDITABLE = ("segments_days", "unprocessed_max_days", "events_days", "max_disk_gb")
-
-
-def ui_overrides() -> dict[str, float | None]:
-    """The values set in the web UI (stored in the database)."""
-    with session_scope() as s:
-        row = s.get(AppSetting, SETTINGS_KEY)
-        return {k: v for k, v in (row.value if row else {}).items() if k in EDITABLE}
-
-
-def effective(settings: Settings) -> RetentionConfig:
-    """config.yaml's `retention` with the web UI's values on top."""
-    return settings.retention.model_copy(update=ui_overrides())
-
-
-def set_overrides(settings: Settings, changes: dict[str, float | None]) -> RetentionConfig:
-    """Set (a value) or reset (``"config"``: back to config.yaml) the editable values."""
-    current = ui_overrides()
-    for key, value in changes.items():
-        if key not in EDITABLE:
-            raise ValueError(f"'{key}' cannot be changed here")
-        if value == "config":
-            current.pop(key, None)
-        else:
-            current[key] = value
-    # Validated like config.yaml (numbers, max_disk_gb may be null = no cap).
-    checked = RetentionConfig.model_validate({**settings.retention.model_dump(), **current})
-    for key in ("segments_days", "unprocessed_max_days", "events_days"):
-        if getattr(checked, key) < 0:
-            raise ValueError(f"{key} cannot be negative")
-    if checked.max_disk_gb is not None and checked.max_disk_gb <= 0:
-        raise ValueError("max_disk_gb must be more than 0 (or empty for no cap)")
-    with session_scope() as s:
-        row = s.get(AppSetting, SETTINGS_KEY)
-        if not current:
-            if row is not None:
-                s.delete(row)
-        elif row is None:
-            s.add(AppSetting(key=SETTINGS_KEY, value=current))
-        else:
-            row.value = current
-    return checked
-
 
 def _remove_files(settings: Settings, seg: Segment) -> None:
     # A compacted segment's footage lives in its archive, which goes once all its
@@ -104,7 +56,7 @@ def _events_days(settings: Settings, profile_id: str | None, default: float) -> 
 
 def _expire_events(settings: Settings) -> int:
     """Events older than their profile's `events_days` (or `retention.events_days`)."""
-    default = effective(settings).events_days
+    default = settings.retention.events_days
     limits = [default,
               *(p.events_days for p in settings.all_profiles(include_disabled=True)
                 if p.events_days is not None)]
@@ -151,7 +103,7 @@ def _days_by_camera(settings: Settings) -> dict[str, float]:
 
 
 def _expire_by_age(settings: Settings) -> int:
-    r = effective(settings)
+    r = settings.retention
     per_camera = _days_by_camera(settings)
     # (days, camera filter); 0 days = keep forever.
     groups = [(r.segments_days, Segment.camera_id.not_in(per_camera) if per_camera else None)]
@@ -184,7 +136,7 @@ def _expire_by_age(settings: Settings) -> int:
 
 
 def _enforce_disk_cap(settings: Settings) -> int:
-    cap = effective(settings).max_disk_gb
+    cap = settings.retention.max_disk_gb
     if not cap:
         return 0
     cap_bytes = cap * 1024**3

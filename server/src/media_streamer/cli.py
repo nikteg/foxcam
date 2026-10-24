@@ -96,6 +96,33 @@ def _exec_mediamtx(args: argparse.Namespace, password: str) -> None:
     raise SystemExit(127)  # only reached if exec did not replace the process
 
 
+def _settings_command(settings, args) -> int:
+    import json
+
+    from . import runtime_settings
+    from .db import init_db
+
+    init_db(settings)
+    try:
+        if args.settings_cmd == "set":
+            try:
+                value = json.loads(args.value)
+            except json.JSONDecodeError:
+                value = args.value  # a URL
+            runtime_settings.update(settings, {args.key: value}, [])
+        elif args.settings_cmd == "reset":
+            runtime_settings.update(settings, {},
+                                    args.keys or list(runtime_settings.stored()))
+    except runtime_settings.SettingError as e:
+        print(f"error: {e}")
+        return 1
+    for s in runtime_settings.describe(settings):
+        print(f"{s['key']:40} {json.dumps(s['value']):>12}  ({s['source']})")
+    if args.settings_cmd != "list":
+        print("The server, ingest and compaction pick the change up within seconds.")
+    return 0
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="media-streamer")
     parser.add_argument("-c", "--config", help="config file (default: $MEDIA_STREAMER_CONFIG "
@@ -150,6 +177,14 @@ def main() -> None:
     u_admin = user_sub.add_parser("admin", help="make an account an admin (--off: undo)")
     u_admin.add_argument("email")
     u_admin.add_argument("--off", action="store_true")
+    st = sub.add_parser("settings", help="tunables changed in the web UI (list, set, reset)")
+    st_sub = st.add_subparsers(dest="settings_cmd", required=True)
+    st_sub.add_parser("list", help="each tunable: value and where it comes from")
+    st_set = st_sub.add_parser("set", help="set a tunable (like the Settings page)")
+    st_set.add_argument("key", help="e.g. processing.sample_fps")
+    st_set.add_argument("value", help="a number, true/false, a URL or null")
+    st_reset = st_sub.add_parser("reset", help="back to config.yaml's value")
+    st_reset.add_argument("keys", nargs="*", metavar="KEY", help="none = all of them")
     reset = sub.add_parser("reset", help="delete one kind of data, keep the rest "
                                          "(stop the server first)")
     reset.add_argument("scopes", nargs="+", metavar="SCOPE",
@@ -290,6 +325,8 @@ def main() -> None:
                 print(worker_tokens.create(args.name, tags=tags)[1])
         except worker_tokens.TokenError as e:
             raise SystemExit(f"error: {e}") from None
+    elif args.cmd == "settings":
+        raise SystemExit(_settings_command(settings, args))
     elif args.cmd == "user":
         from .db import init_db
 

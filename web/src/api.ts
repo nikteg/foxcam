@@ -445,24 +445,25 @@ export type Settings = Record<string, unknown> & {
   events: { pre_roll_seconds: number; post_roll_seconds: number };
 };
 
-/** Settings → Retention: the editable `retention` values (web UI over config.yaml). */
-export interface RetentionValues {
-  segments_days: number;
-  unprocessed_max_days: number;
-  events_days: number;
-  /** null = no cap. */
-  max_disk_gb: number | null;
+/** A tunable admins can change on the Settings page (server: runtime_settings.py). */
+export interface RuntimeSetting {
+  /** Its path in config.yaml, e.g. "processing.sample_fps". */
+  key: string;
+  value: number | boolean | string | null;
+  config_value: number | boolean | string | null;
+  /** default = built in, config = config.yaml, ui = set on the Settings page. */
+  source: "default" | "config" | "ui";
+  /** Where a reset goes back to. */
+  config_source: "default" | "config";
+  nullable: boolean;
+  ge?: number;
+  gt?: number;
+  le?: number;
+  lt?: number;
 }
-export type RetentionKey = keyof RetentionValues;
-export interface RetentionSettings {
-  values: RetentionValues;
-  /** config.yaml's values (used when not set in the web UI). */
-  config: RetentionValues;
-  /** The keys set in the web UI. */
-  from_ui: RetentionKey[];
-  recordings_bytes: number;
-  disk_free_bytes: number;
-  disk_total_bytes: number;
+export interface RuntimeSettings {
+  settings: RuntimeSetting[];
+  disk: { recordings_bytes: number; disk_free_bytes: number; disk_total_bytes: number };
 }
 
 export interface StorageStatus {
@@ -785,10 +786,10 @@ export const api = {
   tapoDevices: () => request<TapoDevice[]>("GET", "/api/integrations/tapo/devices"),
   tapoLogout: () => request<{ status: string }>("POST", "/api/integrations/tapo/logout"),
   storage: () => request<StorageStatus>("GET", "/api/storage"),
-  retention: () => request<RetentionSettings>("GET", "/api/retention"),
-  /** A value, or "config" to go back to config.yaml's. */
-  setRetention: (changes: Partial<Record<RetentionKey, number | null | "config">>) =>
-    request<RetentionSettings>("PUT", "/api/retention", changes),
+  runtimeSettings: () => request<RuntimeSettings>("GET", "/api/settings/runtime"),
+  /** New values and keys to reset (back to config.yaml's value). */
+  setRuntimeSettings: (body: { values?: Record<string, unknown>; reset?: string[] }) =>
+    request<RuntimeSettings>("PUT", "/api/settings/runtime", body),
   testStorage: () => request<ProbeResult>("POST", "/api/storage/test"),
   workerAuth: () => request<WorkerAuth>("GET", "/api/workers/auth"),
   workerTokens: () => request<WorkerToken[]>("GET", "/api/workers/tokens"),

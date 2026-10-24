@@ -309,9 +309,67 @@ export const sv: Record<MessageKey, string> = {
   "theme.system": "System",
   "theme.light": "Ljust",
   "theme.dark": "Mörkt",
+  "settings.general": "Allmänt",
+  "settings.detection": "Detektion",
+  "runtime.intro":
+    "Gäller direkt, ingen omstart behövs. Ett värde som sparas här gäller före {file} och dess miljövariabler tills du återställer det.",
+  "runtime.source.default": "standard",
+  "runtime.source.config": "config.yaml",
+  "runtime.source.ui": "satt här",
+  "runtime.resetToConfig": "Återställ till {value} (config.yaml)",
+  "runtime.resetToDefault": "Återställ till {value} (standard)",
+  "runtime.notSet": "inte satt",
+  "runtime.on": "på",
+  "runtime.off": "av",
+  "runtime.unit.seconds": "s",
+  "runtime.unit.minutes": "min",
+  "runtime.unit.fps": "fps",
+  "runtime.unit.px": "px",
+  "runtime.group.recording": "Inspelning",
+  "runtime.group.archiving": "Timfiler",
+  "runtime.group.frames": "Bilder till workers",
+  "runtime.group.events": "Händelser",
+  "runtime.group.queue": "Jobbkö",
+  "runtime.group.retention": "Hur länge saker sparas",
+  "runtime.publicUrl": "Webbadress",
+  "runtime.publicUrlHint":
+    "Hur man öppnar den här sidan, t.ex. https://cams.example.org. Används för länkar i aviseringar. En https-adress gör också inloggningskakan säker, så inloggning via vanlig http slutar fungera.",
+  "runtime.segmentSeconds": "Segmentlängd",
+  "runtime.segmentSecondsHint":
+    "Längden på varje inspelad fil. Längre ger färre filer och mindre arbete per timme, men detektion och aviseringar väntar tills en fil är klar. Kameror kan ha en egen. Gäller från nästa fil.",
+  "runtime.compactionEnabled": "Slå ihop segment till timfiler",
+  "runtime.compactionEnabledHint":
+    "Färre, större filer som är lättare att bläddra i och ladda ner, omkodade per inspelningsprofil. Kostar CPU (eller GPU) en gång i timmen.",
+  "runtime.compactionDelay": "Vänta innan sammanslagning",
+  "runtime.compactionDelayHint":
+    "Efter att en timme slutat. Längre ger sena segment och förbehandling tid att bli klara; kortare gör att timfilerna kommer snabbare.",
+  "runtime.sampleFps": "Bilder per sekund",
+  "runtime.sampleFpsHint":
+    "Hur många bilder per segment som workers tittar på. Färre är mycket lättare för den här servern och för workers, men ett snabbt djur kan slinka förbi mellan bilderna.",
+  "runtime.maxWidth": "Bildbredd",
+  "runtime.maxWidthHint":
+    "Bilderna skalas ner till högst den här bredden innan de skickas till workers. Mindre är lättare att förbereda och skicka; YOLO-World tittar ändå på 640 px, men små eller avlägsna djur behöver mer.",
+  "runtime.nightThreshold": "Nattgräns",
+  "runtime.nightThresholdHint":
+    "Genomsnittlig färgmättnad under vilken ett segment räknas som natt (IR, svartvitt). Höj den om film från skymningen märks som dag.",
+  "runtime.preRoll": "Klipp före",
+  "runtime.preRollHint": "Film före den första detektionen i en händelses klipp.",
+  "runtime.postRoll": "Klipp efter",
+  "runtime.postRollHint": "Film efter den sista detektionen i en händelses klipp.",
+  "runtime.mergeGap": "Slå ihop detektioner inom",
+  "runtime.mergeGapHint":
+    "Detektioner som ligger närmare varandra än så blir en händelse. Längre ger färre händelser och aviseringar, men separata besök kan hamna i en.",
+  "runtime.settle": "Vänta före klippet",
+  "runtime.settleHint":
+    "En händelses klipp görs när inget nytt har lagts till på så här länge. Kortare ger klipp snabbare; längre undviker att de görs om.",
+  "runtime.leaseSeconds": "Tidsgräns per jobb",
+  "runtime.leaseSecondsHint":
+    "En worker som inte blivit klar med ett jobb inom den här tiden förlorar det och en annan worker kan ta det. Höj den för långsamma workers.",
+  "runtime.maxAttempts": "Försök per jobb",
+  "runtime.maxAttemptsHint": "Hur många gånger ett jobb som misslyckas provas innan det ges upp.",
+  "runtime.retryBackoff": "Vänta mellan försök",
+  "runtime.retryBackoffHint": "Växer för varje försök (detta gånger försöksnumret).",
   "retention.title": "Gallring",
-  "retention.intro":
-    "Hur länge inspelningar och händelser sparas, och hur mycket disk de får använda. Värden som sparas här gäller före {file}; återställ ett för att använda filens igen. Inspelningsprofiler och detektionsprofiler kan spara sina inspelningar eller händelser längre eller kortare.",
   "retention.segmentsDays": "Spara inspelningar",
   "retention.segmentsDaysHint":
     "Film som hör till en händelse sparas med händelsen. 0 = ingen åldersgräns.",
@@ -326,8 +384,6 @@ export const sv: Record<MessageKey, string> = {
   "retention.days": "dagar",
   "retention.gb": "GB",
   "retention.noCap": "ingen gräns",
-  "retention.setHere": "satt här",
-  "retention.useConfig": "Använd config.yaml ({value})",
   "retention.freeOf": "{free} av {total}",
   "settings.configuration": "Konfiguration",
   "settings.storage": "Lagring",

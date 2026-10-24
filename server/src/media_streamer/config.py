@@ -1,7 +1,8 @@
 """Configuration: a YAML file (``config.yaml``) with ``${ENV_VAR}`` expansion.
 
 Camera definitions and tunables live here. Runtime-editable state (privacy masks,
-private toggle) lives in the database and is edited from the web UI.
+private toggle) lives in the database and is edited from the web UI, and so do the
+tunables in ``runtime_settings.EDITABLE`` when an admin changes them (Settings page).
 """
 
 from __future__ import annotations
@@ -10,10 +11,10 @@ import os
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 _ENV_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
 
@@ -171,17 +172,17 @@ class MediaMtxConfig(BaseModel):
 
 class ProcessingConfig(BaseModel):
     # Frames per second kept in the masked derivative handed to workers.
-    sample_fps: float = 2.0
-    max_width: int = 1280
+    sample_fps: float = Field(default=2.0, gt=0, le=30)
+    max_width: int = Field(default=1280, ge=160, le=7680)
     concurrency: int = 2
     # Mean saturation below this => frame considered grayscale (IR night mode).
-    night_saturation_threshold: float = 4.0
+    night_saturation_threshold: float = Field(default=4.0, ge=0, le=255)
 
 
 class QueueConfig(BaseModel):
-    lease_seconds: int = 300
-    max_attempts: int = 3
-    retry_backoff_seconds: int = 60
+    lease_seconds: int = Field(default=300, ge=30, le=86400)
+    max_attempts: int = Field(default=3, ge=1, le=20)
+    retry_backoff_seconds: int = Field(default=60, ge=0, le=86400)
 
 
 class DetectionConfig(BaseModel):
@@ -327,12 +328,12 @@ class ProfileConfig(BaseModel):
 
 
 class EventsConfig(BaseModel):
-    pre_roll_seconds: int = 10
-    post_roll_seconds: int = 10
+    pre_roll_seconds: int = Field(default=10, ge=0, le=600)
+    post_roll_seconds: int = Field(default=10, ge=0, le=600)
     # Positive segments closer than this are merged into one event.
-    merge_gap_seconds: int = 30
+    merge_gap_seconds: int = Field(default=30, ge=0, le=3600)
     # Wait this long after the last change before (re)building the clip.
-    settle_seconds: int = 90
+    settle_seconds: int = Field(default=90, ge=0, le=3600)
 
 
 class CompactionConfig(BaseModel):
@@ -343,18 +344,18 @@ class CompactionConfig(BaseModel):
     enabled: bool = True
     period_minutes: int = Field(default=60, ge=5, le=1440)
     # Wait this long after a period ends before joining it (late segments, preprocessing).
-    delay_minutes: int = Field(default=10, ge=1)
+    delay_minutes: int = Field(default=10, ge=1, le=1440)
 
 
 class RetentionConfig(BaseModel):
     # Delete ordinary segments after this many days. 0 disables age-based deletion.
-    segments_days: float = 7
+    segments_days: float = Field(default=7, ge=0)
     # Segments still waiting for a worker are kept up to this many days.
-    unprocessed_max_days: float = 14
+    unprocessed_max_days: float = Field(default=14, ge=0)
     # Delete fox events (clip + pinned segments) after this many days. 0 = keep forever.
-    events_days: float = 0
+    events_days: float = Field(default=0, ge=0)
     # Hard cap on recordings disk usage; oldest unpinned segments go first.
-    max_disk_gb: float | None = None
+    max_disk_gb: float | None = Field(default=None, gt=0)
     # Remove the masked worker input once the job is finished.
     delete_derived_after_done: bool = True
 
@@ -528,7 +529,7 @@ class Settings(BaseModel):
     data_dir: Path = Path("./data")
     recordings_dir: Path | None = None
     database_url: str | None = None
-    segment_seconds: int = 60
+    segment_seconds: int = Field(default=60, ge=1, le=3600)
     # Optional shared secret for worker endpoints (``Authorization: Bearer ...``).
     worker_token: str | None = None
     # Let any client act as a worker without a token. Only for a trusted test network.
@@ -558,12 +559,15 @@ class Settings(BaseModel):
     # How users reach the web UI, e.g. http://192.168.1.10:8000 or https://cams.example.org.
     # Used for links (and image/clip URLs) in notifications. https:// here also makes the
     # session cookie Secure.
-    public_url: str | None = None
+    public_url: str | None = Field(default=None, pattern=r"^https?://[^\s/]+(/\S*)?$")
     # Reverse proxies whose X-Forwarded-For / -Proto headers are believed (client address
     # for the login limits, https). None = $FORWARDED_ALLOW_IPS, else 127.0.0.1. In Docker,
     # the proxy's address as the container sees it, e.g. 172.18.0.1. Never "*" when the
     # server can be reached without the proxy: anyone could then fake their address.
     trusted_proxies: list[str] | None = None
+    # runtime_settings: config.yaml's values of the web-UI-editable tunables, and when the
+    # database values were last applied.
+    _runtime: dict[str, Any] = PrivateAttr(default_factory=dict)
 
     def model_post_init(self, _ctx: object) -> None:
         self.data_dir = self.data_dir.resolve()

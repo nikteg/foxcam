@@ -1546,10 +1546,14 @@ h3.panel-heading {
 .push-end {
   margin-inline-start: auto;
 }
-/* Settings → Retention: a short form, not page-wide inputs. */
-.retention-form {
-  max-width: 560px;
+/* Settings page tunables (components/RuntimeSettings.tsx): a column, not page-wide inputs. */
+.runtime-form {
+  max-width: 620px;
 }
-.retention-facts {
+.runtime-form .reset-setting {
+  margin-inline-start: var(--spacingHorizontalXS);
+  vertical-align: baseline;
+}
+.runtime-facts {
   margin-bottom: var(--spacingVerticalXL);
 }

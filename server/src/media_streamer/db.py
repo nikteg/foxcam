@@ -43,6 +43,10 @@ def init_db(settings: Settings) -> Engine:
         _backfill(engine, added)
     _engine = engine
     _SessionLocal = sessionmaker(engine, expire_on_commit=False)
+    # Tunables changed in the web UI win over config.yaml from the start.
+    from . import runtime_settings
+
+    runtime_settings.refresh(settings, force=True)
     return engine
 
 

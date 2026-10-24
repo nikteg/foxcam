@@ -161,9 +161,28 @@ Runs every 10 minutes (`pipeline/retention.py`):
 
 Deleted segments keep their database row (`deleted_at`), so detections stay browsable.
 
-The day counts and `max_disk_gb` can be changed in the web UI (Settings → Retention,
-`PUT /api/retention`, admins). Those values are stored in the database and win over
-config.yaml until reset there.
+The day counts and `max_disk_gb` can also be changed in the web UI (see below).
+
+## Settings changed in the web UI
+
+Admins can change these on the Settings page (General, Detection and Retention tabs) without
+a restart: `public_url`, `segment_seconds`, `compaction.enabled` and `delay_minutes`,
+`processing.sample_fps`, `max_width` and `night_saturation_threshold`, the `events` timings,
+the `queue` lease, attempts and backoff, and the `retention` days and disk cap
+(`runtime_settings.EDITABLE`). Each value set there is an `app_setting` row keyed by its
+config.yaml path, like `recording_profile_default`, and wins over config.yaml (and its
+environment variables) until it is reset, which brings config.yaml's value back. They are
+validated with the bounds of the models in `config.py`.
+
+Every process applies them onto its own settings object: the server right after a change
+(and every 5 s for changes from elsewhere), ingest and compaction on each round of their
+loops. A new `segment_seconds` is pushed to MediaMTX (`recordSegmentDuration`) and applies
+from the next file. Left out on purpose: secrets, auth and storage, and what is only read
+at start (`processing.concurrency`, `compaction.period_minutes`, the `mediamtx` encoder
+and low-data live view).
+
+`media-streamer settings list | set KEY VALUE | reset [KEY...]` does the same from a shell,
+e.g. to undo an https `public_url` that broke signing in over plain http.
 
 ## Object storage (S3)
 

@@ -34,7 +34,7 @@ from pathlib import Path
 
 from sqlalchemy import func, select
 
-from .. import ffmpeg, hwaccel, sprites
+from .. import ffmpeg, hwaccel, runtime_settings, sprites
 from ..config import RecordingProfileConfig, Settings
 from ..db import session_scope
 from ..models import Archive, Segment, SegmentStatus, utcnow
@@ -458,9 +458,10 @@ def run_compaction(settings: Settings, interval: float = 60.0) -> None:
     threading.Thread(target=heartbeat, name="compaction-heartbeat", daemon=True).start()
     log.info("compaction: every %d min, %d min after the period ends (%s)",
              settings.compaction.period_minutes, settings.compaction.delay_minutes,
-             "enabled" if settings.compaction.enabled else "disabled in config")
+             "enabled" if settings.compaction.enabled else "disabled")
     while True:
         try:
+            runtime_settings.refresh(settings)  # tunables changed in the web UI
             compact_once(settings)
         except Exception as e:
             log.exception("compaction failed")

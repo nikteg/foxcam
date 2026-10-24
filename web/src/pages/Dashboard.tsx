@@ -78,7 +78,7 @@ export function Dashboard() {
               label={t("dashboard.diskFree")}
               value={fileSize(s.disk_free_bytes)}
               // How long recordings are kept and the disk cap (admins).
-              onClick={isAdmin ? () => void navigate("/settings") : undefined}
+              onClick={isAdmin ? () => void navigate("/settings/retention") : undefined}
             />
           </section>
         </>

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -9,7 +10,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .. import __version__
+from .. import __version__, runtime_settings
 from ..accounts import announce_setup
 from ..config import Settings, get_settings
 from ..db import init_db
@@ -38,6 +39,19 @@ def _web_dist() -> Path:
     return Path(os.environ.get("MEDIA_STREAMER_WEB_DIST", DEFAULT_WEB_DIST))
 
 
+async def _settings_loop(settings: Settings, mtx: MediaMtx) -> None:
+    """Tunables changed in the web UI or with `media-streamer settings` (the API applies its
+    own changes right away). A new segment length goes to MediaMTX, which cuts the files."""
+    while True:
+        await asyncio.sleep(runtime_settings.REFRESH_SECONDS)
+        try:
+            changed = await asyncio.to_thread(runtime_settings.refresh, settings)
+            if "segment_seconds" in changed:
+                await mtx.sync_paths()
+        except Exception:
+            log.exception("applying settings failed")
+
+
 def create_app(settings: Settings | None = None, background: bool = True) -> FastAPI:
     settings = settings or get_settings()
 
@@ -55,6 +69,7 @@ def create_app(settings: Settings | None = None, background: bool = True) -> Fas
             log.warning("could not configure MediaMTX (%s); is it running at %s?", e,
                         settings.mediamtx.api_url)
         tasks = start_background(settings) if background else []
+        tasks.append(asyncio.create_task(_settings_loop(settings, app.state.mediamtx)))
         yield
         for t in tasks:
             t.cancel()

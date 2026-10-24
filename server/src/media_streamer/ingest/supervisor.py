@@ -15,7 +15,7 @@ import subprocess
 import threading
 import time
 
-from .. import mediamtx_auth
+from .. import mediamtx_auth, runtime_settings
 from ..config import CameraConfig, Settings
 from ..recording import source_path
 
@@ -87,6 +87,7 @@ def run_ingest(settings: Settings, poll_seconds: float = 5.0) -> None:
     try:
         while True:
             try:
+                runtime_settings.refresh(settings)  # tunables changed in the web UI
                 wanted = {c.id: c for c in settings.all_cameras() if c.source.type != "rtsp"}
             except Exception:
                 log.exception("could not read camera list")

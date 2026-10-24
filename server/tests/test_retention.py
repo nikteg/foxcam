@@ -101,31 +101,3 @@ def test_recording_profile_keep_days(settings):
     assert _deleted(default_old) and _deleted(long_old) and _deleted(short_old)
     assert not _deleted(long_kept)
 
-
-@needs_ffmpeg
-def test_web_ui_values_win_over_config_yaml(settings):
-    from .conftest import app_client
-
-    settings.retention.segments_days = 30
-    now = utcnow().replace(microsecond=0)
-    old = add_segment(settings, start=now - 8 * DAY)
-    with app_client(settings) as c:
-        r = c.get("/api/retention")
-        assert r.json()["values"]["segments_days"] == 30 and r.json()["from_ui"] == []
-        r = c.put("/api/retention", json={"segments_days": 7, "max_disk_gb": 50})
-        assert r.status_code == 200
-        assert r.json()["values"] == {"segments_days": 7, "unprocessed_max_days": 14,
-                                      "events_days": 0, "max_disk_gb": 50}
-        assert r.json()["from_ui"] == ["max_disk_gb", "segments_days"]
-        assert c.put("/api/retention", json={"segments_days": -1}).status_code == 422
-        assert c.put("/api/retention", json={"keep": 1}).status_code == 422
-    # Retention uses the web UI's 7 days, not config.yaml's 30.
-    assert retention.run_retention(settings)["segments_age"] == 1 and _deleted(old)
-
-    with app_client(settings) as c:
-        r = c.put("/api/retention", json={"segments_days": "config", "max_disk_gb": None})
-        assert r.json()["values"]["segments_days"] == 30
-        assert r.json()["values"]["max_disk_gb"] is None  # no cap, set in the web UI
-        assert r.json()["from_ui"] == ["max_disk_gb"]
-    with app_client(settings, email="viewer@example.org", admin=False) as c:
-        assert c.get("/api/retention").status_code == 403

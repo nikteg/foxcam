@@ -308,9 +308,67 @@ export const en = {
   "theme.system": "System",
   "theme.light": "Light",
   "theme.dark": "Dark",
+  "settings.general": "General",
+  "settings.detection": "Detection",
+  "runtime.intro":
+    "These take effect right away, no restart needed. A value saved here wins over {file} and its environment variables until you reset it.",
+  "runtime.source.default": "default",
+  "runtime.source.config": "config.yaml",
+  "runtime.source.ui": "set here",
+  "runtime.resetToConfig": "Reset to {value} (config.yaml)",
+  "runtime.resetToDefault": "Reset to {value} (default)",
+  "runtime.notSet": "not set",
+  "runtime.on": "on",
+  "runtime.off": "off",
+  "runtime.unit.seconds": "s",
+  "runtime.unit.minutes": "min",
+  "runtime.unit.fps": "fps",
+  "runtime.unit.px": "px",
+  "runtime.group.recording": "Recording",
+  "runtime.group.archiving": "Hourly files",
+  "runtime.group.frames": "Frames for the workers",
+  "runtime.group.events": "Events",
+  "runtime.group.queue": "Job queue",
+  "runtime.group.retention": "How long things are kept",
+  "runtime.publicUrl": "Web address",
+  "runtime.publicUrlHint":
+    "How people open this site, e.g. https://cams.example.org. Used for links in notifications. An https address also makes the sign-in cookie secure, so signing in over plain http stops working.",
+  "runtime.segmentSeconds": "Segment length",
+  "runtime.segmentSecondsHint":
+    "Length of each recorded file. Longer means fewer files and less work per hour, but detection and notifications wait until a file is finished. Cameras can have their own. Applies from the next file.",
+  "runtime.compactionEnabled": "Join segments into hourly files",
+  "runtime.compactionEnabledHint":
+    "Fewer, larger files that are easier to browse and download, re-encoded per recording profile. Costs CPU (or GPU) once an hour.",
+  "runtime.compactionDelay": "Wait before joining",
+  "runtime.compactionDelayHint":
+    "After an hour ends. Longer gives late segments and preprocessing time to finish; shorter makes hourly files appear sooner.",
+  "runtime.sampleFps": "Frames per second",
+  "runtime.sampleFpsHint":
+    "How many frames of each segment the workers look at. Fewer is much lighter on this server and the workers, but a fast animal can slip past between frames.",
+  "runtime.maxWidth": "Frame width",
+  "runtime.maxWidthHint":
+    "Frames are scaled down to at most this width before they go to the workers. Smaller is lighter to prepare and send; YOLO-World looks at 640 px anyway, but small or distant animals need more.",
+  "runtime.nightThreshold": "Night threshold",
+  "runtime.nightThresholdHint":
+    "Average colour saturation below which a segment counts as night (infrared, black and white). Raise it if dusk footage is labelled day.",
+  "runtime.preRoll": "Clip before",
+  "runtime.preRollHint": "Footage before the first detection in an event clip.",
+  "runtime.postRoll": "Clip after",
+  "runtime.postRollHint": "Footage after the last detection in an event clip.",
+  "runtime.mergeGap": "Merge detections within",
+  "runtime.mergeGapHint":
+    "Detections closer together than this become one event. Longer means fewer events and notifications, but separate visits can end up in one.",
+  "runtime.settle": "Wait before the clip",
+  "runtime.settleHint":
+    "An event's clip is made once nothing new has been added for this long. Shorter gives clips sooner; longer avoids rebuilding them.",
+  "runtime.leaseSeconds": "Job time limit",
+  "runtime.leaseSecondsHint":
+    "A worker that has not finished a job in this time loses it and another worker can take it. Raise it for slow workers.",
+  "runtime.maxAttempts": "Attempts per job",
+  "runtime.maxAttemptsHint": "How often a failing job is tried before it is given up.",
+  "runtime.retryBackoff": "Wait between attempts",
+  "runtime.retryBackoffHint": "Grows with each attempt (this times the attempt number).",
   "retention.title": "Retention",
-  "retention.intro":
-    "How long recordings and events are kept, and how much disk they may use. Values saved here win over {file}; reset one to use the file's again. Recording profiles and detection profiles can keep their own recordings or events longer or shorter.",
   "retention.segmentsDays": "Keep recordings",
   "retention.segmentsDaysHint":
     "Footage that is part of an event is kept with the event. 0 = no age limit.",
@@ -325,8 +383,6 @@ export const en = {
   "retention.days": "days",
   "retention.gb": "GB",
   "retention.noCap": "no cap",
-  "retention.setHere": "set here",
-  "retention.useConfig": "Use config.yaml ({value})",
   "retention.freeOf": "{free} of {total}",
   "settings.configuration": "Configuration",
   "settings.storage": "Storage",
