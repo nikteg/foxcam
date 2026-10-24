@@ -872,3 +872,8 @@ details.helper summary {
   flex-direction: column;
   gap: var(--spacingVerticalS);
 }
+
+/* Room between a card's title row and the tags below it. */
+.fui-CardHeader__description {
+  margin-top: var(--spacingVerticalS);
+}
