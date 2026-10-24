@@ -72,7 +72,7 @@ description = "Ingest only (publishes file / test / Tapo cloud cameras)"
 run = "uv run media-streamer ingest"
 
 [tasks.mediamtx]
-description = "MediaMTX only (in UTC: recording names are parsed as UTC)"
+description = "MediaMTX only (recording names in UTC)"
 depends = ["setup:mediamtx"]
 run = "TZ=UTC .tools/mediamtx mediamtx/mediamtx.yml"
 
