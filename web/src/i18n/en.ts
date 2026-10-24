@@ -147,6 +147,7 @@ export const en = {
     "Original frame with the detected box. Workers only ever saw the censored copy.",
   "detections.target": "Target",
   "detections.box": "Box",
+  "detections.topGuesses": "Top guesses",
   "detections.openRecording": "Open recording",
 
   // Recordings
@@ -162,6 +163,10 @@ export const en = {
   "recordings.maskVersion": "version {version}",
   "recordings.noMask": "none",
   "recordings.noDetections": "None in this recording.",
+  "recordings.runs": "Detection runs",
+  "recordings.noRuns": "None (private camera, or not analysed yet).",
+  "recordings.runNothing": "0 detections",
+  "recordings.runFound": "{n} {n:detection|detections} ({targets} {targets:target|targets})",
 
   // Worker queue
   "queue.oldestWaiting": "Oldest waiting",

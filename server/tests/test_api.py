@@ -3,10 +3,10 @@
 import pytest
 from fastapi.testclient import TestClient
 from media_streamer.db import session_scope
-from media_streamer.models import Segment, SegmentStatus
+from media_streamer.models import JobState, Segment, SegmentStatus
 from media_streamer.web.app import create_app
 
-from .conftest import add_job, add_segment, make_video, needs_ffmpeg
+from .conftest import add_detection, add_job, add_segment, make_video, needs_ffmpeg
 
 
 @pytest.fixture
@@ -204,3 +204,24 @@ def test_whoami_checks_credentials_without_side_effects(settings, client):
     ok = client.get("/api/worker/whoami", headers={"Authorization": f"Bearer {token}"})
     assert ok.json()["token_name"] == "wsl-pc"
     assert client.get("/api/queue").json()["stats"]["counts"].get("leased", 0) == 0
+
+
+def test_segment_jobs_tell_empty_runs_from_missing_ones(settings, client):
+    seg_id = add_segment(settings, with_file=False)
+    found = add_job(seg_id, state=JobState.DONE, model="speciesnet:4.0.1", processing_ms=14_000,
+                    leased_by="gpu")
+    add_detection(seg_id, found, 1000, "fox", 0.9, target=True)
+    add_detection(seg_id, found, 2000, "dog", 0.3, target=False)
+    empty = add_job(seg_id, state=JobState.DONE, profile_id="people", model="yolo",
+                    processing_ms=900)
+    add_job(seg_id, state=JobState.DEAD, profile_id="cars", error="CUDA out of memory")
+
+    jobs = client.get(f"/api/segments/{seg_id}/jobs").json()
+
+    assert [j["id"] for j in jobs][:2] == [found, empty]
+    assert jobs[0].items() >= {"model": "speciesnet:4.0.1", "state": "done", "detections": 2,
+                               "targets": 1, "processing_ms": 14_000,
+                               "worker_id": "gpu"}.items()
+    assert (jobs[1]["detections"], jobs[1]["targets"]) == (0, 0)  # ran, found nothing
+    assert jobs[2]["state"] == "dead" and jobs[2]["error"] == "CUDA out of memory"
+    assert client.get("/api/segments/999999/jobs").status_code == 404

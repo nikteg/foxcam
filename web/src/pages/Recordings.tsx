@@ -3,7 +3,7 @@ import { ArrowDownload20Regular, Pin16Filled } from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
 
-import { api, type Segment } from "../api";
+import { api, type Segment, type SegmentJob } from "../api";
 import { CameraSelect, useCameraName } from "../components/CameraSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
@@ -170,6 +170,10 @@ function RecordingDetail({ segment: s }: { segment: Segment }) {
     queryKey: ["detections", { segment: s.id }],
     queryFn: () => api.detections({ segment: s.id, limit: 500 }),
   });
+  const jobs = useQuery({
+    queryKey: ["segment-jobs", s.id],
+    queryFn: () => api.segmentJobs(s.id),
+  });
   const seek = (ms: number) => {
     if (!video.current) return;
     video.current.currentTime = ms / 1000;
@@ -236,6 +240,14 @@ function RecordingDetail({ segment: s }: { segment: Segment }) {
         </dd>
       </dl>
 
+      <Text weight="semibold">{t("recordings.runs")}</Text>
+      {jobs.data?.length === 0 && <Caption1 className="muted">{t("recordings.noRuns")}</Caption1>}
+      <ul className="run-list">
+        {jobs.data?.map((j) => (
+          <RunSummary key={j.id} job={j} />
+        ))}
+      </ul>
+
       <Text weight="semibold">{t("nav.detections")}</Text>
       {detections.data?.length === 0 && (
         <Caption1 className="muted">{t("recordings.noDetections")}</Caption1>
@@ -254,5 +266,33 @@ function RecordingDetail({ segment: s }: { segment: Segment }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+/** "Fox – speciesnet:4.0.1 – done – 0 detections – 14s", plus the error of a failed run. */
+function RunSummary({ job: j }: { job: SegmentJob }) {
+  const { t } = useI18n();
+  const stateLabel = useStateLabel();
+  const ran = j.state === "done";
+  const parts = [
+    ...(j.model ? [j.model] : []),
+    ...(ran
+      ? [
+          j.detections === 0
+            ? t("recordings.runNothing")
+            : t("recordings.runFound", { n: j.detections, targets: j.targets }),
+        ]
+      : []),
+    ...(j.processing_ms !== null ? [duration(j.processing_ms / 1000)] : []),
+  ];
+  return (
+    <li>
+      <span className="row wrap">
+        <Text weight="semibold">{j.profile_name ?? j.profile_id ?? "–"}</Text>
+        <Tag kind={j.state}>{stateLabel(j.state)}</Tag>
+        {parts.length > 0 && <Caption1 className="muted">{parts.join(" – ")}</Caption1>}
+      </span>
+      {j.error && <Caption1 className="run-error">{j.error}</Caption1>}
+    </li>
   );
 }

@@ -157,6 +157,30 @@ export interface Segment {
   download_url: string | null;
 }
 
+/** One detection run (job) of a segment: a profile, and what it found. */
+export interface SegmentJob {
+  id: number;
+  profile_id: string | null;
+  profile_name: string | null;
+  state: "pending" | "leased" | "done" | "failed" | "dead";
+  model: string | null;
+  worker_id: string | null;
+  attempts: number;
+  error: string | null;
+  processing_ms: number | null;
+  finished_at: string | null;
+  detections: number;
+  targets: number;
+}
+
+export interface DetectionExtra {
+  detector_label?: string;
+  detector_conf?: number;
+  raw_label?: string;
+  classifications?: { label: string; score: number }[];
+  [key: string]: unknown;
+}
+
 export interface Detection {
   id: number;
   segment_id: number;
@@ -173,6 +197,9 @@ export interface Detection {
   worker_id: string | null;
   feedback: boolean | null;
   is_night: boolean | null;
+  /** Detector specifics. SpeciesNet: `detector_label`/`detector_conf` (the box) and
+   *  `classifications`, the classifier's top guesses. */
+  extra: DetectionExtra;
 }
 
 export interface DetectionEvent {
@@ -392,6 +419,7 @@ export const api = {
   segments: (q: { camera?: string; day?: string; only_targets?: boolean; limit?: number }) =>
     request<Segment[]>("GET", withQuery("/api/segments", q)),
   segment: (id: number) => request<Segment>("GET", `/api/segments/${id}`),
+  segmentJobs: (id: number) => request<SegmentJob[]>("GET", `/api/segments/${id}/jobs`),
   detections: (q: {
     segment?: number;
     camera?: string;

@@ -148,6 +148,7 @@ export const sv: Record<MessageKey, string> = {
     "Originalbildrutan med den upptäckta rutan. Arbetarna såg bara den maskerade kopian.",
   "detections.target": "Mål",
   "detections.box": "Ruta",
+  "detections.topGuesses": "Bästa gissningar",
   "detections.openRecording": "Öppna inspelningen",
 
   // Inspelningar
@@ -163,6 +164,10 @@ export const sv: Record<MessageKey, string> = {
   "recordings.maskVersion": "version {version}",
   "recordings.noMask": "ingen",
   "recordings.noDetections": "Inga i den här inspelningen.",
+  "recordings.runs": "Detekteringskörningar",
+  "recordings.noRuns": "Inga (privat kamera, eller inte analyserad än).",
+  "recordings.runNothing": "0 detekteringar",
+  "recordings.runFound": "{n} {n:detektering|detekteringar} ({targets} {targets:träff|träffar})",
 
   // Arbetskö
   "queue.oldestWaiting": "Äldsta väntande",

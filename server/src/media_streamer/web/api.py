@@ -181,6 +181,14 @@ def segment(segment_id: int) -> dict[str, Any]:
     return queries.segment_dict(_segment(segment_id))
 
 
+@router.get("/segments/{segment_id}/jobs")
+def segment_jobs(segment_id: int,
+                 settings: Settings = Depends(settings_dep)) -> list[dict[str, Any]]:
+    """Detection runs of a segment (one per profile) with their detection counts."""
+    _segment(segment_id)
+    return queries.segment_jobs(settings, segment_id)
+
+
 @router.get("/segments/{segment_id}/download")
 def segment_download(segment_id: int, settings: Settings = Depends(settings_dep)) -> Response:
     seg = _segment(segment_id)

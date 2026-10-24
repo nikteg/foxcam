@@ -30,6 +30,28 @@ def _common_name(cls: str) -> str:
     return cls.split(";")[-1].strip() if ";" in cls else cls.strip()
 
 
+TOP_CLASSES = 5
+
+
+def _top_classes(obj: dict[str, Any]) -> list[dict[str, Any]]:
+    """The classifier's top guesses, ``classifications: {classes: [...], scores: [...]}``
+    (per image, or per box in newer versions), as common names with scores. Kept for
+    debugging: why a fox became "canine family" or a dog."""
+    raw = obj.get("classifications")
+    if not isinstance(raw, dict):
+        return []
+    out = []
+    for cls, score in zip(raw.get("classes") or [], raw.get("scores") or [], strict=False):
+        # Roll-ups such as "uuid;mammalia;carnivora;canidae;;;" have no common name:
+        # use the most specific taxonomy level instead.
+        name = _common_name(cls) or next(
+            (p.strip() for p in reversed(cls.split(";")[1:]) if p.strip()), cls)
+        out.append({"label": name, "score": round(float(score), 4)})
+        if len(out) == TOP_CLASSES:
+            break
+    return out
+
+
 def _uninformative(name: str) -> bool:
     """Roll-up results that say nothing beyond "animal" (keep the detector label then)."""
     return name.lower() in {"animal", "blank", "no cv result", "mammal", ""}
@@ -76,6 +98,7 @@ class SpeciesNetDetector(Detector):
                 continue
             model_version = pred.get("model_version", model_version)
             species, score, taxonomy = _classification(pred)
+            guesses = _top_classes(pred)
             dets = sorted(pred.get("detections") or [], key=lambda d: -d.get("conf", 0))
             dets = [d for d in dets if d.get("conf", 0) >= self.min_detection_conf]
             for i, d in enumerate(dets):
@@ -87,6 +110,9 @@ class SpeciesNetDetector(Detector):
                 box_species, box_score, box_taxonomy = _classification(d)
                 if box_species is None and i == 0:
                     box_species, box_score, box_taxonomy = species, score, taxonomy
+                box_guesses = _top_classes(d) or (guesses if i == 0 else [])
+                if box_guesses:
+                    extra["classifications"] = box_guesses
                 if label == "animal" and box_species and box_score is not None \
                         and not _uninformative(box_species):
                     extra["taxonomy"] = box_taxonomy

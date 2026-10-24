@@ -208,6 +208,14 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
         <dd className="mono">{d.bbox ? d.bbox.map((v) => decimal(v, 3)).join("; ") : "–"}</dd>
         <dt>{t("col.model")}</dt>
         <dd>{d.model ?? "–"}</dd>
+        {d.extra.classifications && d.extra.classifications.length > 0 && (
+          <>
+            <dt>{t("detections.topGuesses")}</dt>
+            <dd>
+              {d.extra.classifications.map((g) => `${g.label} ${decimal(g.score, 2)}`).join(" – ")}
+            </dd>
+          </>
+        )}
         <dt>{t("col.worker")}</dt>
         <dd>{d.worker_id ?? "–"}</dd>
       </dl>
