@@ -34,8 +34,9 @@ start() { # name, command...  (output prefixed with [name])
   "$@" 2>&1 | sed -u "s/^/[$name] /" &
 }
 
-# Recording file names include the UTC offset; TZ=UTC just keeps them in UTC.
-start mediamtx env TZ=UTC "$MEDIAMTX" mediamtx/mediamtx.yml
+# Recording file names include the UTC offset; TZ=UTC just keeps them in UTC. Started
+# through media-streamer, which gives it the login the server and ingest use.
+start mediamtx env TZ=UTC uv run media-streamer mediamtx --binary "$MEDIAMTX" mediamtx/mediamtx.yml
 sleep 1
 # This machine's LAN address, so other devices can use the UI (and notifications link to it).
 lan_ip() {
@@ -51,6 +52,9 @@ LAN_IP="$(lan_ip)"
 if [ -n "$LAN_IP" ]; then
   export MEDIA_STREAMER_PUBLIC_URL="${MEDIA_STREAMER_PUBLIC_URL:-http://$LAN_IP:5173}"
 fi
+
+# API docs (/docs) are off unless asked for: they are outside the login.
+export MEDIA_STREAMER_API_DOCS="${MEDIA_STREAMER_API_DOCS:-1}"
 
 RELOAD="${RELOAD:-1}"
 # Restart a command when Python files under the given directory change.

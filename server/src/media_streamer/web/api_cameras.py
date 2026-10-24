@@ -120,9 +120,10 @@ async def add_camera(body: CameraIn, settings: Settings = Depends(settings_dep),
     try:
         cam = await asyncio.to_thread(
             camera_store.add_camera, settings, name=body.name, camera_id=body.id,
-            source=body.source.model_dump(), segment_seconds=body.segment_seconds)
+            source=body.source.model_dump(), segment_seconds=body.segment_seconds,
+            admin=p.is_admin)
     except camera_store.CameraError as e:
-        raise HTTPException(400, str(e)) from e
+        raise HTTPException(e.status, str(e)) from e
     accounts.forget_camera(cam.id)  # shares left over from an older camera with this id
     if p.user_id is not None:
         accounts.grant(cam.id, p.user_id, CameraRole.OWNER)
@@ -164,7 +165,7 @@ async def delete_camera(camera_id: str, mtx: MediaMtx = Depends(mediamtx_dep),
     return {"status": "ok"}
 
 
-@router.get("/cameras-sample-files", dependencies=[Depends(may_add_cameras)])
+@router.get("/cameras-sample-files", dependencies=[Depends(require_admin)])
 def sample_files(settings: Settings = Depends(settings_dep)) -> list[str]:
     return camera_store.sample_files(settings)
 
@@ -177,7 +178,9 @@ def _ffprobe(url_or_path: str, rtsp: bool) -> dict[str, Any]:
     args = ["ffprobe", "-v", "error", "-print_format", "json", "-show_streams",
             "-select_streams", "v:0"]
     if rtsp:
-        args += ["-rtsp_transport", "tcp", "-timeout", "8000000"]
+        # Only RTSP itself: no http://, file:, concat: or other inputs smuggled in.
+        args += ["-protocol_whitelist", "rtsp,rtsps,tcp,tls,udp,rtp",
+                 "-rtsp_transport", "tcp", "-timeout", "8000000"]
     try:
         proc = subprocess.run([*args, url_or_path], capture_output=True, text=True, timeout=15, check=False)
     except subprocess.TimeoutExpired:
@@ -200,6 +203,13 @@ async def probe(body: ProbeIn, settings: Settings = Depends(settings_dep),
     src = body.source
     if src.type == "tapo_cloud" and not p.is_admin:
         raise HTTPException(403, "only admins can use the server's Tapo account")
+    if src.type in ("rtsp", "test"):  # file: reported as a result below
+        try:
+            await asyncio.to_thread(camera_store.check_source, settings, src, p.is_admin)
+        except camera_store.CameraError as e:
+            raise HTTPException(e.status, str(e)) from e
+    if src.type == "file" and not p.is_admin:
+        raise HTTPException(403, "only admins can add test cameras and sample files")
     if src.type == "rtsp":
         result = await asyncio.to_thread(_ffprobe, src.url, True)
         # ffmpeg errors echo the URL; never send the camera password back.

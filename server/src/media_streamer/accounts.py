@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 
 from .config import Settings
 from .db import session_scope
@@ -114,7 +114,7 @@ def _iso(dt: datetime | None) -> str | None:
 def user_info(u: User, providers: list[str] | None = None) -> dict[str, Any]:
     return {"id": u.id, "email": u.email, "name": u.name, "display_name": u.name or u.email,
             "is_admin": u.is_admin, "disabled": u.disabled,
-            "has_password": u.password_hash is not None,
+            "email_verified": bool(u.email_verified), "has_password": u.password_hash is not None,
             "providers": providers if providers is not None else [],
             "created_at": _iso(u.created_at), "last_login_at": _iso(u.last_login_at)}
 
@@ -125,18 +125,22 @@ def user_count() -> int:
 
 
 def _admin_by_config(settings: Settings, email: str) -> bool:
+    """Only for verified addresses (User.email_verified): anyone can type one in."""
     return email in settings.auth.admin_emails
 
 
 def create_user(settings: Settings, email: str, password: str | None = None,
-                name: str | None = None, is_admin: bool = False) -> dict[str, Any]:
+                name: str | None = None, is_admin: bool = False,
+                email_verified: bool = True) -> dict[str, Any]:
+    """``email_verified``: False for self sign-up (nobody vouches for the address)."""
     email = normalize_email(email)
     pw_hash = hash_password(password) if password is not None else None
     with session_scope() as s:
         if s.scalar(select(User).where(User.email == email)) is not None:
             raise AccountError("an account with this e-mail already exists", 409)
         u = User(email=email, name=(name or "").strip() or None, password_hash=pw_hash,
-                 is_admin=is_admin or _admin_by_config(settings, email))
+                 email_verified=email_verified,
+                 is_admin=is_admin or (email_verified and _admin_by_config(settings, email)))
         s.add(u)
         s.flush()
         return user_info(u)
@@ -161,7 +165,7 @@ def authenticate(settings: Settings, email: str, password: str) -> int:
 
 def _logged_in(settings: Settings, u: User) -> None:
     u.last_login_at = utcnow()
-    if _admin_by_config(settings, u.email):
+    if u.email_verified and _admin_by_config(settings, u.email):
         u.is_admin = True
 
 
@@ -397,9 +401,18 @@ def camera_access(camera_id: str) -> list[dict[str, Any]]:
 
 
 def forget_camera(camera_id: str) -> None:
-    """A removed camera's shares go too (a new camera could get the same id)."""
+    """A removed camera's shares and unused invites go too (a new camera could get the
+    same id). Invites left with nothing to give are deleted."""
     with session_scope() as s:
         s.execute(delete(CameraAccess).where(CameraAccess.camera_id == camera_id))
+        for inv in s.scalars(select(Invite).where(Invite.used_at.is_(None))):
+            cams = [c for c in inv.cameras or [] if c["camera_id"] != camera_id]
+            if len(cams) == len(inv.cameras or []):
+                continue
+            if cams or inv.is_admin:
+                inv.cameras = cams
+            else:
+                s.delete(inv)
 
 
 def directory(principal: Principal) -> list[dict[str, Any]]:
@@ -481,6 +494,11 @@ def accept_invite(token: str, user_id: int) -> list[str]:
         u = s.get(User, user_id)
         if u is None:
             raise AccountError("unknown user", 404)
+        # Claim it first, atomically: two requests at once can't both use it.
+        claimed = s.execute(update(Invite).where(Invite.id == inv.id, Invite.used_at.is_(None))
+                            .values(used_at=utcnow(), used_by=user_id)).rowcount
+        if claimed != 1:
+            raise AccountError("this invite link has already been used", 410)
         for c in inv.cameras or []:
             row = s.get(CameraAccess, (c["camera_id"], user_id))
             if row is None:
@@ -490,7 +508,6 @@ def accept_invite(token: str, user_id: int) -> list[str]:
                 row.role = c["role"]
         if inv.is_admin:
             u.is_admin = True
-        inv.used_at, inv.used_by = utcnow(), user_id
         return [c["camera_id"] for c in inv.cameras or []]
 
 
@@ -522,9 +539,11 @@ def register(settings: Settings, email: str, password: str, name: str | None,
     if invite:
         with session_scope() as s:
             _open_invite(s, invite)  # fail before creating the account
-    elif settings.auth.registration != "open" and not _admin_by_config(settings, email):
+    elif settings.auth.registration != "open":
+        # admin_emails don't skip the invite here: nothing proves the address is theirs
+        # (they sign up through OAuth, or with `media-streamer user add`).
         raise AccountError("you need an invite link to create an account", 403)
-    uid = create_user(settings, email, password, name)["id"]
+    uid = create_user(settings, email, password, name, email_verified=False)["id"]
     if invite:
         accept_invite(invite, uid)
     return uid
@@ -541,6 +560,12 @@ def oauth_user(settings: Settings, provider: str, subject: str, email: str | Non
         u = s.get(User, ident.user_id) if ident else None
         if u is None and email and email_verified:
             u = s.scalar(select(User).where(User.email == email))
+            if u is not None and not u.email_verified:
+                # Anyone could have signed up with this address and a password: never
+                # hand that account to (or take it from) the address' owner by itself.
+                raise AccountError("an account with this e-mail exists, but its address is "
+                                   "not confirmed: sign in with its password and connect "
+                                   f"{provider} on the account page, or ask an admin", 409)
             if u is not None:
                 s.add(OAuthIdentity(user_id=u.id, provider=provider, subject=subject,
                                     email=email))
@@ -553,7 +578,7 @@ def oauth_user(settings: Settings, provider: str, subject: str, email: str | Non
                       or _admin_by_config(settings, email)):
                 raise AccountError("there is no account for this e-mail; ask for an invite "
                                    "link", 403)
-            u = User(email=email, name=(name or "").strip() or None,
+            u = User(email=email, name=(name or "").strip() or None, email_verified=True,
                      is_admin=_admin_by_config(settings, email))
             s.add(u)
             s.flush()
@@ -567,9 +592,14 @@ def oauth_user(settings: Settings, provider: str, subject: str, email: str | Non
     return uid
 
 
-def link_identity(user_id: int, provider: str, subject: str, email: str | None) -> None:
-    """Connect an external account to the signed-in user (from the account page)."""
+def link_identity(user_id: int, provider: str, subject: str, email: str | None,
+                  email_verified: bool = False) -> None:
+    """Connect an external account to the signed-in user (from the account page). A
+    provider confirming the account's own address verifies it."""
     with session_scope() as s:
+        u = s.get(User, user_id)
+        if u is not None and email and email_verified and normalize_email(email) == u.email:
+            u.email_verified = True
         ident = s.scalar(select(OAuthIdentity).where(OAuthIdentity.provider == provider,
                                                      OAuthIdentity.subject == subject))
         if ident is not None and ident.user_id != user_id:

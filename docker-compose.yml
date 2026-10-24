@@ -6,8 +6,9 @@
 # Optional environment (e.g. in .env): MEDIA_CONFIG (config file), MEDIA_DATA_PATH (data
 # folder), *_PORT (host ports), MEDIA_WORKER_TOKEN.
 #
-# server and ingest share MediaMTX's network namespace: MediaMTX trusts only local
-# processes, and browsers reach live view through the server (behind the login). The
+# server and ingest share MediaMTX's network namespace: MediaMTX's API is local only, video
+# needs the internal login (mediamtx/mediamtx.yml), and browsers reach live view through
+# the server (behind the login). The
 # first start prints a setup code for the first account: docker compose logs server
 services:
   mediamtx:
@@ -16,13 +17,16 @@ services:
     # add docker-compose.vaapi.yml (Intel / AMD) or docker-compose.nvidia.yml.
     build: { context: ., dockerfile: server/Dockerfile }
     image: media-streamer:local
-    entrypoint: ["mediamtx"]
-    command: ["/mediamtx.yml"]
+    # Started through media-streamer: it sets the password the server, ingest and the
+    # transcoders sign in with (data/mediamtx-password, see mediamtx.yml).
+    command: ["mediamtx", "/mediamtx.yml"]
     restart: unless-stopped
     volumes:
       - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
-      - ${MEDIA_DATA_PATH:-./data}/recordings:/data/recordings
+      - ${MEDIA_CONFIG:-./config.yaml}:/app/config.yaml:ro
+      - ${MEDIA_DATA_PATH:-./data}:/data
     environment:
+      MEDIA_DATA_DIR: /data
       TZ: UTC # recording file names in UTC (they include the offset either way)
     ports:
       - "${HTTP_PORT:-8000}:8000" # web UI, API and live view (the server, see below)
@@ -44,6 +48,8 @@ services:
     environment:
       MEDIA_DATA_DIR: /data
       MEDIA_WORKER_TOKEN: ${MEDIA_WORKER_TOKEN:-}
+      # Behind a reverse proxy: its address as this container sees it (docs/AUTH.md).
+      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-127.0.0.1}
       # S3 credentials, if not in config.yaml (storage.s3).
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}

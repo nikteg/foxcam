@@ -63,8 +63,12 @@ def create_app(settings: Settings | None = None, background: bool = True) -> Fas
             await client.aclose()
 
     # `authenticate` runs for every route: the API is private unless a route opts out.
+    # The API docs (/docs, /redoc, /openapi.json) are outside the login: development only.
+    docs = os.environ.get("MEDIA_STREAMER_API_DOCS") == "1"
     app = FastAPI(title="Media Streamer", version=__version__, lifespan=lifespan,
-                  dependencies=[Depends(authenticate)])
+                  dependencies=[Depends(authenticate)],
+                  docs_url="/docs" if docs else None, redoc_url="/redoc" if docs else None,
+                  openapi_url="/openapi.json" if docs else None)
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
@@ -72,6 +76,9 @@ def create_app(settings: Settings | None = None, background: bool = True) -> Fas
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         # Invite links carry their token in the URL: never leak it to other sites.
         response.headers.setdefault("Referrer-Policy", "same-origin")
+        # No framing by other sites (clickjacking); the UI frames its own live players.
+        response.headers.setdefault("Content-Security-Policy", "frame-ancestors 'self'")
+        response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
         return response
 
     app.include_router(api_auth.router)

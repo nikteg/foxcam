@@ -22,6 +22,7 @@ from .conftest import PASSWORD, add_detection, add_job, add_segment, app_client,
 @pytest.fixture(autouse=True)
 def _fresh_limiter():
     api_auth.limiter.failures.clear()
+    api_auth.email_limiter.failures.clear()
 
 
 def _route_url(path: str) -> str:
@@ -103,7 +104,8 @@ def _two_users(settings):
     owner = TestClient(create_app(settings, background=False))
     owner.__enter__()
     sign_in(owner, settings, "bob@example.org")
-    r = owner.post("/api/cameras", json={"name": "Bob's garden", "source": {"type": "test"}})
+    r = owner.post("/api/cameras", json={"name": "Bob's garden", "source": {
+        "type": "rtsp", "url": "rtsp://user:pw@192.168.1.50:554/stream1"}})
     assert r.status_code == 201, r.text
     other = TestClient(create_app(settings, background=False))
     other.__enter__()

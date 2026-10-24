@@ -15,6 +15,7 @@ import subprocess
 import threading
 import time
 
+from .. import mediamtx_auth
 from ..config import CameraConfig, Settings
 from ..recording import source_path
 
@@ -26,8 +27,8 @@ H264_OUT = ["-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency", "-
 
 def publish_url(settings: Settings, cam: CameraConfig) -> str:
     """Where to publish: ``<camera>``, or ``<camera>/raw`` when it is processed (masks /
-    re-encoding, see ``recording``)."""
-    return f"{settings.mediamtx.rtsp_url.rstrip('/')}/{source_path(settings, cam)}"
+    re-encoding, see ``recording``). Signed in: MediaMTX trusts no address."""
+    return mediamtx_auth.url(settings, source_path(settings, cam))
 
 
 def ffmpeg_publisher_args(settings: Settings, cam: CameraConfig) -> list[str]:
@@ -56,7 +57,8 @@ def _run_ffmpeg_camera(settings: Settings, cam: CameraConfig, stop: threading.Ev
             proc.terminate()
             break
         err = (proc.stderr.read() if proc.stderr else "").strip().splitlines()[-3:]
-        log.warning("[%s] publisher exited %s: %s", cam.id, proc.returncode, " | ".join(err))
+        log.warning("[%s] publisher exited %s: %s", cam.id, proc.returncode,
+                    " | ".join(err).replace(mediamtx_auth.password(settings), "***"))
         backoff = 2.0 if time.monotonic() - started > 60 else min(backoff * 2, 60)
         stop.wait(backoff)
 

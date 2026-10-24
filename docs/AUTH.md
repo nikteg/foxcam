@@ -64,7 +64,7 @@ with a foreign `Origin` header are refused (CSRF).
 | `open` | anyone who reaches the server (they see nothing until something is shared) |
 | `closed` | nobody; admins add accounts (Settings → Users, or `media-streamer user add`) |
 
-E-mails in `auth.admin_emails` can always sign up (through OAuth) and are always admins.
+E-mails in `auth.admin_emails` can always sign up through OAuth and are admins once the address is verified (see Signing up).
 
 ## Roles
 
@@ -106,14 +106,27 @@ user's access to that camera before forwarding. Only the camera's own stream and
 low-data copy are reachable, never `<camera>/raw` (the picture before burned-in censor
 areas).
 
-MediaMTX (`mediamtx/mediamtx.yml`) only accepts local processes: the server, ingest and the
-transcoders it starts itself. Its API, HLS and WebRTC servers listen on 127.0.0.1; RTSP
-answers other machines with 401. In Docker, the server and ingest share MediaMTX's network
-namespace for this. WebRTC media flows directly between the browser and MediaMTX's port
+MediaMTX's API, HLS and WebRTC servers listen on 127.0.0.1, and video (publish, read)
+needs the `media-streamer` login: the server, ingest and the transcoders MediaMTX starts
+sign in with a password kept in `data/mediamtx-password` (or `mediamtx.password` in
+config.yaml). Being on the same machine is not enough, because a camera's source URL can
+point back at MediaMTX (`rtsp://127.0.0.1:8554/<other camera>/raw`). Start MediaMTX with
+`media-streamer mediamtx [mediamtx.yml] [--binary PATH]`, which hands it the password (`mise
+run mediamtx`, `scripts/dev.sh` and docker-compose.yml do). In Docker, the server and
+ingest share MediaMTX's network namespace for the API. WebRTC media flows directly between the browser and MediaMTX's port
 8189, only for sessions set up through the server.
 
 To watch over RTSP from another device (VLC, Home Assistant), add a user with a password
 and `read` permission to `mediamtx.yml` (an example is in the file) and publish port 8554.
+
+## Signing up
+
+Self sign-up with a password (`registration: open`, or with an invite link) does not prove
+the e-mail address. Such accounts get no rights from `admin_emails` and are not matched to
+OAuth sign-ins by address; connecting an OAuth account with the same, confirmed, address
+on the account page verifies it. Accounts made by an admin, the setup page, `media-streamer
+user add` or OAuth count as verified. `admin_emails` therefore never skip the invite for
+password sign-up: those admins sign in with OAuth, or are added on the command line.
 
 ## Exposing it to the internet
 
@@ -125,10 +138,16 @@ cams.example.org {
 }
 ```
 
-Run the server with uvicorn's proxy headers trusted (the default for a proxy on the same
-machine) so cookies get the `Secure` flag, set `public_url: https://cams.example.org`, and
-open TCP 8189 for WebRTC media. Never proxy MediaMTX's own ports: they trust local
-connections.
+Set `public_url: https://cams.example.org` (OAuth redirect URLs, links, and the `Secure`
+flag on the session cookie) and open TCP 8189 for WebRTC media. Never proxy MediaMTX's own
+ports.
+
+The server believes `X-Forwarded-For` / `-Proto` only from `trusted_proxies` (config.yaml,
+or `$FORWARDED_ALLOW_IPS`; default 127.0.0.1, a proxy on the same machine). In Docker the
+proxy connects from another address, e.g. the bridge gateway `172.18.0.1` (`docker network
+inspect`): set it there, or every visitor looks like the proxy, and the login limits (10
+failed attempts per address in 15 minutes) hit everyone at once. Never `*` while the server
+can also be reached without the proxy: anyone could then claim any address.
 
 ## Turning it off
 

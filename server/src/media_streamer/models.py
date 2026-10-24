@@ -373,6 +373,10 @@ class User(Base):
     password_hash: Mapped[str | None] = mapped_column(String)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     disabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    # The address is known to be this person's: confirmed by an OAuth provider, or the
+    # account was made by an admin (or setup). Self sign-up with a password is not. Only
+    # verified accounts get admin_emails' rights or are matched to OAuth sign-ins.
+    email_verified: Mapped[bool | None] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime)
 

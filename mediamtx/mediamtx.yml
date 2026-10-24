@@ -31,18 +31,28 @@ webrtcLocalTCPAddress: :8189
 # When running in Docker, add the host's LAN IP (or Tailscale IP) so browsers can connect:
 # webrtcAdditionalHosts: [192.168.1.10]
 
-# Only processes on this machine may publish, read or use the API: the server (live view
-# proxy, snapshots), ingest and the transcoders MediaMTX starts. Browsers go through the
-# server, which checks the login and who may see which camera (docs/AUTH.md).
+# Video only for the server (live view proxy, snapshots), ingest and the transcoders
+# MediaMTX starts, signed in as media-streamer. Browsers go through the server, which
+# checks the login and who may see which camera (docs/AUTH.md). Local addresses alone are
+# not trusted with video: a camera source can point back at this machine.
 authMethod: internal
 authInternalUsers:
-  - user: any
-    pass:
+  # Keep this user first. Start MediaMTX with `media-streamer mediamtx`, which sets its
+  # password (MTX_AUTHINTERNALUSERS_0_PASS) to the one in data/mediamtx-password or
+  # config.yaml (mediamtx.password). The hash below matches no password: started any
+  # other way, nobody gets video.
+  - user: media-streamer
+    pass: sha256:Q0WQ2LdOSsIiQl8FqEhUZbnnPWAMoWFfRiYDYgeQ4R8=
     ips: ["127.0.0.1", "::1"]
     permissions:
       - action: publish
       - action: read
       - action: playback
+  # The control API (the server configures paths): local processes only.
+  - user: any
+    pass:
+    ips: ["127.0.0.1", "::1"]
+    permissions:
       - action: api
       - action: metrics
   # To watch over RTSP from another device (VLC, Home Assistant), add a user with a

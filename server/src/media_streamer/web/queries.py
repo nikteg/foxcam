@@ -363,10 +363,15 @@ def latest_segment_id(camera_id: str) -> int | None:
 
 
 def _redact_url(url: str) -> str:
-    if "@" in url and "://" in url:
-        scheme, rest = url.split("://", 1)
-        return f"{scheme}://***@{rest.split('@', 1)[1]}"
-    return url
+    """Without the login. The host follows the last @ before the path (a password may
+    contain @ too)."""
+    if "://" not in url:
+        return url
+    scheme, rest = url.split("://", 1)
+    netloc, slash, path = rest.partition("/")
+    if "@" not in netloc:
+        return url
+    return f"{scheme}://***@{netloc.rsplit('@', 1)[1]}{slash}{path}"
 
 
 def _public_source(source: dict[str, Any]) -> dict[str, Any]:
@@ -379,9 +384,14 @@ def public_settings(settings: Settings) -> dict[str, Any]:
     """Config as shown in the UI, with secrets removed."""
     cfg = settings.model_dump(mode="json")
     cfg["worker_token"] = "***" if settings.worker_token else None
+    cfg["mediamtx"]["password"] = "***" if settings.mediamtx.password else None
     for ch in cfg["notifications"]["channels"]:
         for secret in ("token", "password", "secret"):
             ch[secret] = "***" if ch.get(secret) else None
+        if ch.get("headers"):  # e.g. Authorization
+            ch["headers"] = {k: "***" for k in ch["headers"]}
+        if ch.get("url"):
+            ch["url"] = _redact_url(ch["url"])
         if ch.get("type") == "apprise" and ch.get("url"):
             ch["url"] = ch["url"].split("://", 1)[0] + "://…"
     s3 = cfg["storage"]["s3"]

@@ -67,6 +67,7 @@ class _Limiter:
 
 
 limiter = _Limiter()
+email_limiter = _Limiter(limit=100)
 
 
 def _client(request: Request) -> str:
@@ -76,7 +77,10 @@ def _client(request: Request) -> str:
 # --- cookies --------------------------------------------------------------------------
 
 def _secure(request: Request) -> bool:
-    return request.url.scheme == "https"
+    """Also behind a proxy whose headers aren't trusted: public_url says https."""
+    settings: Settings = request.app.state.settings
+    base = settings.auth.base_url or settings.public_url or ""
+    return request.url.scheme == "https" or base.startswith("https://")
 
 
 def _start_session(request: Request, response: Response, settings: Settings,
@@ -179,15 +183,20 @@ async def login(body: LoginIn, request: Request, response: Response,
                 settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
     if not settings.auth.password_login:
         raise HTTPException(403, "sign-in with a password is turned off")
-    email_key = f"email:{body.email.strip().lower()}"
-    limiter.check(_client(request), email_key)
+    email = body.email.strip().lower()
+    # Per address and account, so others can't lock someone out from elsewhere; per
+    # account a much higher limit, against guessing from many addresses.
+    keys = (_client(request), f"{_client(request)}|email:{email}")
+    limiter.check(*keys)
+    email_limiter.check(f"email:{email}")
     try:
         uid = await asyncio.to_thread(accounts.authenticate, settings, body.email,
                                       body.password)
     except AccountError as e:
-        limiter.fail(_client(request), email_key)
+        limiter.fail(*keys)
+        email_limiter.fail(f"email:{email}")
         raise _error(e) from e
-    limiter.reset(email_key)
+    limiter.reset(keys[1])
     _start_session(request, response, settings, uid)
     return auth_state(settings, accounts.principal_for(uid))
 
@@ -375,7 +384,7 @@ async def oauth_callback(provider_id: str, request: Request, code: str | None = 
             return _back_to_login("Sign in first.", flow)
         try:
             await asyncio.to_thread(accounts.link_identity, p.user_id, prov.id, ext.subject,
-                                    ext.email)
+                                    ext.email, ext.email_verified)
         except AccountError as e:
             return _back_to_login(str(e), flow)
         resp = RedirectResponse("/account", status_code=303)

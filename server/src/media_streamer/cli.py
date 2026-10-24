@@ -28,7 +28,13 @@ def _hw_command(args: argparse.Namespace) -> int:
     enc = hwaccel.Encode(codec=args.codec, max_height=args.max_height, fps=args.fps,
                          bitrate_kbit=args.bitrate, masks=masks, audio=args.audio,
                          live=not args.archive)
-    return hwaccel.run(enc, args.input, args.output, preference=args.hwaccel,
+    # Run by MediaMTX, which hands on its login (mediamtx_auth.py) in the environment.
+    from . import mediamtx_auth
+
+    pw = os.environ.get(mediamtx_auth.ENV)
+    src, dst = (mediamtx_auth.with_login(u, pw) if mediamtx_auth.is_local(u) else u
+                for u in (args.input, args.output))
+    return hwaccel.run(enc, src, dst, preference=args.hwaccel,
                        ffmpeg=args.ffmpeg, device=args.device)
 
 
@@ -96,6 +102,10 @@ def main() -> None:
     serve.add_argument("--reload", action="store_true",
                        help="restart when the server's Python code changes (development)")
 
+    mtx = sub.add_parser("mediamtx", help="start MediaMTX with this installation's login "
+                                          "(the password the server and ingest use)")
+    mtx.add_argument("mediamtx_config", nargs="?", default="mediamtx/mediamtx.yml")
+    mtx.add_argument("--binary", default="mediamtx", help="the MediaMTX executable")
     sub.add_parser("ingest", help="publish non-RTSP sources (tapo_cloud, test, file) to MediaMTX")
     comp = sub.add_parser("compact", help="join finished segments into hourly files (and "
                                           "re-encode them per recording profile)")
@@ -190,9 +200,16 @@ def main() -> None:
         from pathlib import Path
 
         # Only watch the package: watching the repo would restart on every new recording.
+        proxies = settings.trusted_proxies
         uvicorn.run("media_streamer.web.main:app", host=args.host, port=args.port,
                     reload=args.reload, reload_dirs=[str(Path(__file__).parent)],
-                    log_level="info")
+                    log_level="info", proxy_headers=True,
+                    forwarded_allow_ips=",".join(proxies) if proxies else None)
+    elif args.cmd == "mediamtx":
+        from . import mediamtx_auth
+
+        env = {**os.environ, **mediamtx_auth.process_env(settings)}
+        os.execvpe(args.binary, [args.binary, args.mediamtx_config], env)
     elif args.cmd == "ingest":
         import signal
 

@@ -223,7 +223,8 @@ def run_stack(stack: Stack, min_events: int, timeout: float) -> None:
     if not (ROOT / "web" / "dist" / "index.html").exists():
         raise SystemExit("web UI not built: mise run build")
 
-    stack.start("mediamtx", [str(mediamtx), str(STACK / "mediamtx.yml")], cwd=STACK)
+    stack.start("mediamtx", [str(BIN / "media-streamer"), "mediamtx", "--binary", str(mediamtx),
+                             str(STACK / "mediamtx.yml")], cwd=STACK)
     stack.start("server", [str(BIN / "media-streamer"), "serve", "--port", str(PORT)])
     wait_for("the server", server_up, 60, every=1, stack=stack)
     sign_in(stack)

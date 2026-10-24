@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field, field_validator
 
-from .. import ffmpeg, recording
+from .. import ffmpeg, mediamtx_auth, recording
 from ..accounts import Principal
 from ..config import Settings
 from ..db import session_scope
@@ -131,7 +131,7 @@ async def snapshot(camera_id: str, fresh: bool = False, source: bool = False,
     name = camera_id if path == cam.id else f"{camera_id}.source"
     dst = settings.thumbs_dir / "snapshots" / f"{name}.jpg"
     if fresh or not dst.exists() or time.time() - dst.stat().st_mtime > 10:
-        url = f"{settings.mediamtx.rtsp_url.rstrip('/')}/{path}"
+        url = mediamtx_auth.url(settings, path)
         try:
             await asyncio.to_thread(ffmpeg.snapshot_from_url, url, dst)
         except Exception:  # noqa: BLE001 - camera offline: use the newest recording instead

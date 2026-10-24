@@ -19,7 +19,7 @@
 
 | Process | Command | Role |
 |---|---|---|
-| MediaMTX | `mediamtx mediamtx/mediamtx.yml` | Pulls RTSP cameras, accepts published streams, records segments, serves live view. Configured by the server through its API, including an on-demand `<camera>/low` path per camera (`media-streamer transcode` to ~480p while someone watches it in low-data mode). |
+| MediaMTX | `media-streamer mediamtx mediamtx/mediamtx.yml` (starts `mediamtx` with the internal login, see docs/AUTH.md) | Pulls RTSP cameras, accepts published streams, records segments, serves live view. Configured by the server through its API, including an on-demand `<camera>/low` path per camera (`media-streamer transcode` to ~480p while someone watches it in low-data mode). |
 | server | `media-streamer serve` | API, web UI and the background pipeline (single process, single SQLite writer). |
 | ingest | `media-streamer ingest` | Publishes non-RTSP sources (Tapo cloud, file, test) into MediaMTX. Re-reads the camera list every 5 s. |
 | worker | `media-worker` | Runs anywhere with HTTP access to the server. Leases jobs, runs a detector, posts results. |

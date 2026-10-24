@@ -61,8 +61,9 @@ class TestSource(BaseModel):
     """Synthetic ffmpeg test pattern. For development without cameras."""
 
     type: Literal["test"]
-    size: str = "1280x720"
-    fps: int = 15
+    # Pasted into an ffmpeg filter, so strictly WIDTHxHEIGHT.
+    size: str = Field(default="1280x720", pattern=r"^\d{2,5}x\d{2,5}$")
+    fps: int = Field(default=15, ge=1, le=60)
 
 
 class FileSource(BaseModel):
@@ -148,6 +149,10 @@ class MediaMtxConfig(BaseModel):
     # them directly: live view goes through /api/live/..., which checks the login.
     webrtc_url: str = "http://localhost:8889"
     hls_url: str = "http://localhost:8888"
+    # Password of the `media-streamer` user in mediamtx.yml. None = a random one kept in
+    # <data_dir>/mediamtx-password ($MEDIA_MTX_PASSWORD wins); `media-streamer mediamtx`
+    # starts MediaMTX with it. Only needed here when MediaMTX runs elsewhere.
+    password: str | None = None
     # Recording directory as seen by the MediaMTX process. Defaults to ``recordings_dir``.
     record_dir: str | None = None
     low_data: LowDataConfig = LowDataConfig()
@@ -457,8 +462,14 @@ class Settings(BaseModel):
     notifications: NotificationsConfig = NotificationsConfig()
     auth: AuthConfig = AuthConfig()
     # How users reach the web UI, e.g. http://192.168.1.10:8000 or https://cams.example.org.
-    # Used for links (and image/clip URLs) in notifications.
+    # Used for links (and image/clip URLs) in notifications. https:// here also makes the
+    # session cookie Secure.
     public_url: str | None = None
+    # Reverse proxies whose X-Forwarded-For / -Proto headers are believed (client address
+    # for the login limits, https). None = $FORWARDED_ALLOW_IPS, else 127.0.0.1. In Docker,
+    # the proxy's address as the container sees it, e.g. 172.18.0.1. Never "*" when the
+    # server can be reached without the proxy: anyone could then fake their address.
+    trusted_proxies: list[str] | None = None
 
     def model_post_init(self, _ctx: object) -> None:
         self.data_dir = self.data_dir.resolve()

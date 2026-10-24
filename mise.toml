@@ -78,7 +78,7 @@ run = "uv run media-streamer compact"
 [tasks.mediamtx]
 description = "MediaMTX only (recording names in UTC)"
 depends = ["setup:mediamtx"]
-run = "TZ=UTC .tools/mediamtx mediamtx/mediamtx.yml"
+run = "TZ=UTC uv run media-streamer mediamtx --binary .tools/mediamtx mediamtx/mediamtx.yml"
 
 [tasks.web]
 description = "Web dev server with hot reload on :5173"

@@ -87,7 +87,8 @@ export function AddCameraDialog({ open, onClose }: { open: boolean; onClose: () 
 
 function ChooseKind({ onChoose }: { onChoose: (k: Kind) => void }) {
   const { t } = useI18n();
-  // The Tapo account belongs to the server: only admins add cameras from it.
+  // The Tapo account belongs to the server, and test patterns and sample files run on it:
+  // only admins add those.
   const isAdmin = useIsAdmin();
   const option = (kind: Kind, icon: ReactElement, secondary: MessageKey) => (
     <CompoundButton
@@ -103,8 +104,8 @@ function ChooseKind({ onChoose }: { onChoose: (k: Kind) => void }) {
     <div className="kind-grid">
       {isAdmin && option("tapo", <Cloud24Regular />, "addCamera.kind.tapoHelp")}
       {option("rtsp", <Globe24Regular />, "addCamera.kind.rtspHelp")}
-      {option("file", <Document24Regular />, "addCamera.kind.fileHelp")}
-      {option("test", <Video24Regular />, "addCamera.kind.testHelp")}
+      {isAdmin && option("file", <Document24Regular />, "addCamera.kind.fileHelp")}
+      {isAdmin && option("test", <Video24Regular />, "addCamera.kind.testHelp")}
     </div>
   );
 }

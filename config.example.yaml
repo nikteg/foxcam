@@ -38,6 +38,11 @@ mediamtx:
   # through the server (behind the login), never directly.
   webrtc_url: ${MEDIAMTX_WEBRTC_URL:-http://localhost:8889}
   hls_url: ${MEDIAMTX_HLS_URL:-http://localhost:8888}
+  # Password the server, ingest and transcoders use with MediaMTX (user media-streamer in
+  # mediamtx.yml). Unset = a random one in data/mediamtx-password; start MediaMTX with
+  # `media-streamer mediamtx` to hand it over. Only set it when MediaMTX runs elsewhere
+  # (there: MTX_AUTHINTERNALUSERS_0_PASS=<the same>).
+  # password: ${MEDIA_MTX_PASSWORD}
   # Where MediaMTX writes recordings, as seen by the MediaMTX process.
   # Leave unset when MediaMTX and the server see the same path.
   record_dir: ${MEDIAMTX_RECORD_DIR:-}
@@ -151,8 +156,13 @@ storage:
     recordings_days: 0        # delete archived recordings from the bucket after N days; 0 = never
     presign_seconds: 3600
 
-# Link target for notifications: how you open the web UI.
+# Link target for notifications: how you open the web UI. https:// also makes the session
+# cookie Secure.
 # public_url: http://192.168.1.10:8000
+# Behind a reverse proxy that isn't on this machine (e.g. Docker): its address, so the
+# login limits see real client addresses (docs/AUTH.md). Default $FORWARDED_ALLOW_IPS or
+# 127.0.0.1.
+# trusted_proxies: [172.18.0.1]
 
 # Accounts (docs/AUTH.md). Everything except the worker API needs a login; the first start
 # prints a setup code for creating the first admin in the web UI.
