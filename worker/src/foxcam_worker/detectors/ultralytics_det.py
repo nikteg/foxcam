@@ -30,6 +30,8 @@ from .base import Detection, Detector
 
 
 class UltralyticsDetector(Detector):
+    in_memory = True  # numpy frames go straight into predict()
+
     def __init__(self, model: str = "yolov8s-worldv2.pt", classes: list[str] | None = None,
                  conf: float = 0.15, batch: int = 16, device: str | None = None):
         from ultralytics import YOLO
@@ -110,7 +112,8 @@ class UltralyticsDetector(Detector):
         out: list[Detection] = []
         for i in range(0, len(frames), self.batch):
             chunk = frames[i:i + self.batch]
-            results = self.predictor.predict([str(f.path) for f in chunk], conf=self.conf,
+            images = [f.image if f.image is not None else str(f.path) for f in chunk]
+            results = self.predictor.predict(images, conf=self.conf,
                                              device=self.device, verbose=False)
             for frame, res in zip(chunk, results, strict=True):
                 names = res.names

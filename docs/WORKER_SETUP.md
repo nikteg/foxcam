@@ -158,13 +158,18 @@ selects the PyTorch CUDA build; use `cu126` for older drivers.
 ## Intel GPU, next to the server
 
 `docker-compose.worker.yml` adds a YOLO-World worker to the server's stack that runs on the
-Intel GPU through OpenVINO (`--device intel:gpu`; N100: ~100 ms per frame, 3x its CPU).
+Intel GPU through OpenVINO (`--device intel:gpu`; N100: ~100 ms per frame, 6x its CPU).
 Create a token under **Jobs → Add worker**, then:
 
 ```sh
 LOCAL_WORKER_TOKEN=msw_... docker compose -f docker-compose.yml -f docker-compose.vaapi.yml \
   -f docker-compose.worker.yml up --build -d
 ```
+
+The GPU detects, but decoding and preparing frames still take CPU: the worker gets one
+core (`WORKER_CPUS=1`) so the box stays quiet. Raise it when jobs pile up. To check that
+detection really runs on the GPU, look for `on GPU.0` in the worker's log, or watch
+`sudo intel_gpu_top` on the host while a job runs.
 
 Each new prompt (a profile's targets) is exported to OpenVINO once, which takes a few
 seconds; the first job also downloads the weights. In LXC containers, pass

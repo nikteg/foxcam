@@ -22,7 +22,7 @@ from . import __version__
 from .client import Client, LeaseLost
 from .detectors import add_detector_args, create_detector
 from .doctor import environment, gpu_summary
-from .frames import extract_frames
+from .frames import extract_frames, frame_batches
 
 log = logging.getLogger("foxcam_worker")
 
@@ -70,8 +70,15 @@ def process(client: Client, detector, job: dict, args: argparse.Namespace) -> No
             client.download_input(job, video)
             # The profile's frame rate (older servers: everything in the input).
             fps = min(args.fps or job.get("sample_fps") or job["input_fps"], job["input_fps"])
-            frames = extract_frames(video, tmp_path / "frames", fps)
-            detections = detector.detect(frames, job.get("hints", {}))
+            hints = job.get("hints", {})
+            if detector.in_memory:
+                detections, frames = [], 0
+                for batch in frame_batches(video, fps, 16):
+                    detections += detector.detect(batch, hints)
+                    frames += len(batch)
+            else:
+                files = extract_frames(video, tmp_path / "frames", fps)
+                detections, frames = detector.detect(files, hints), len(files)
         except LeaseLost:
             log.warning("job %s: lease lost, dropping", job["job_id"])
             return
@@ -85,7 +92,7 @@ def process(client: Client, detector, job: dict, args: argparse.Namespace) -> No
     ms = int((time.monotonic() - started) * 1000)
     client.result(job, [d.to_json() for d in detections], detector.name, ms)
     labels = sorted({d.label for d in detections})
-    log.info("job %s: %d frames, %d detections %s in %.1fs", job["job_id"], len(frames),
+    log.info("job %s: %d frames, %d detections %s in %.1fs", job["job_id"], frames,
              len(detections), labels, ms / 1000)
 
 

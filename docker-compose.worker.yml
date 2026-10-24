@@ -24,10 +24,10 @@ services:
       FOXCAM_SERVER: http://mediamtx:8000 # the server shares MediaMTX's network
       FOXCAM_WORKER_TOKEN: ${LOCAL_WORKER_TOKEN:?create a worker token in the web UI (Jobs → Add worker)}
       FOXCAM_WORKER_ID: ${LOCAL_WORKER_ID:-local-intel}
-      OMP_NUM_THREADS: 2 # pre/post-processing threads; the GPU does the detection
-    # Recording and live view come first: the worker gets at most 2 cores, and less when
-    # the rest of the box is busy.
-    cpus: ${WORKER_CPUS:-2}
+      OMP_NUM_THREADS: ${WORKER_CPUS:-1} # pre/post-processing threads; the GPU detects
+    # Recording and live view come first, and the box should stay quiet: the worker gets at
+    # most 1 core (WORKER_CPUS), and less when the rest of the box is busy.
+    cpus: ${WORKER_CPUS:-1}
     cpu_shares: 256
     devices:
       - ${FOXCAM_HW_DEVICE:-/dev/dri/renderD128}:${FOXCAM_HW_DEVICE:-/dev/dri/renderD128}

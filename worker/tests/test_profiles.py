@@ -137,3 +137,32 @@ def test_vocabulary_goes_with_the_first_lease_only(monkeypatch):
 def test_open_vocabulary_has_no_vocabulary():
     det = _ultralytics()
     assert det.labels() is None and det.vocabulary() is None
+
+
+class InMemoryDetector(Detector):
+    name = "memory"
+    in_memory = True
+
+    def __init__(self):
+        self.batches = []
+
+    def detect(self, frames, hints):
+        self.batches.append([(f.path, f.offset_ms, f.image.shape) for f in frames])
+        return []
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg not installed")
+def test_in_memory_detectors_get_decoded_frames_in_batches(tmp_path):
+    pytest.importorskip("numpy")
+    clip = tmp_path / "in.mp4"
+    subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "testsrc2=size=160x90:rate=4",
+                    "-t", "10", "-pix_fmt", "yuv420p", str(clip)], check=True)
+    job = {"job_id": 1, "attempt": 1, "input_fps": 4, "sample_fps": 4,
+           "profile": {"id": "p"}, "lease_token": "t",
+           "segment": {"camera_id": "cam", "start_at": "x"}, "hints": {}}
+    det = InMemoryDetector()
+    cli.process(FakeClient(clip), det, job, argparse.Namespace(fps=None, heartbeat=30))
+    frames = [f for b in det.batches for f in b]
+    assert len(det.batches[0]) == 16 and 38 <= len(frames) <= 41
+    assert all(path is None and shape == (90, 160, 3) for path, _, shape in frames)
+    assert [ms for _, ms, _ in frames[:3]] == [0, 250, 500]

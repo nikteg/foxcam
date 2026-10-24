@@ -31,6 +31,10 @@ class Detection:
 class Detector(ABC):
     #: Reported to the server and stored on each detection (include the model version).
     name: str = "detector"
+    #: True: ``detect`` takes frames decoded into memory (``Frame.image``, BGR numpy arrays,
+    #: ``path`` None), a batch at a time, which saves writing a JPEG per frame. False: every
+    #: frame of the segment as a JPEG file in one call.
+    in_memory: bool = False
 
     def info(self) -> dict[str, Any]:
         return {"detector": self.name}
