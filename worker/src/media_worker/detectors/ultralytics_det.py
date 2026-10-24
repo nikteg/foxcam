@@ -14,6 +14,7 @@ Note: Ultralytics is AGPL-3.0.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from ..frames import Frame
@@ -35,7 +36,8 @@ class UltralyticsDetector(Detector):
         self.conf = conf
         self.batch = batch
         self.device = device
-        self.name = f"ultralytics:{model}"
+        # The weights file, not its path (which may be long and personal).
+        self.name = f"ultralytics:{Path(model).name}"
 
     def info(self) -> dict[str, Any]:
         classes = "from profile" if self.open_vocabulary else "model default"

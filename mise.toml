@@ -117,6 +117,11 @@ if [ -n "$pids" ]; then kill $pids && echo "stopped: $(echo $pids | tr '\\n' ' '
 description = "Running server: add a fake camera per sample clip (+ --profiles for examples)"
 run = "uv run python scripts/seed.py"
 
+[tasks.screenshots]
+description = "Regenerate docs/screenshots from a throwaway demo stack (sample clips, YOLO-World if installed)"
+depends = ["build", "setup:mediamtx", "setup:samples"]
+run = "uv run --with playwright python scripts/screenshots.py"
+
 [tasks."s3:local"]
 description = "Local S3 (SeaweedFS in Docker on :19000) for testing storage.s3"
 run = """

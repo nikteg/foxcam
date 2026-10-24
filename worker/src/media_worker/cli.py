@@ -147,7 +147,9 @@ def main() -> None:
         sys.exit("ffmpeg not found on PATH (run `media-worker doctor` for install hints)")
     graceful_signals()
     detector = create_detector(args)
-    info = {**detector.info(), "version": __version__, "host": platform.node(),
+    # MEDIA_WORKER_HOST: what the queue page shows as host (e.g. for demos and screenshots).
+    host = os.environ.get("MEDIA_WORKER_HOST") or platform.node()
+    info = {**detector.info(), "version": __version__, "host": host,
             "python": platform.python_version(), "platform": environment()}
     if gpu := gpu_summary():
         info["gpu"] = gpu

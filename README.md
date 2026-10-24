@@ -246,6 +246,7 @@ detection profiles, censor areas and worker tokens can also be managed in the UI
 | `check` | ruff, oxlint, typecheck, oxfmt and all tests |
 | `doctor` | check ffmpeg, GPU, detectors and the connection to the server |
 | `s3:local` | a local S3 server to try `storage.s3` |
+| `screenshots` | regenerate `docs/screenshots` from a throwaway demo stack (sample clips, YOLO-World if installed) |
 | `docker:up`, `docker:test` | Docker stacks (the test stack runs next to dev on :18000) |
 | `reset:events`, `reset:detections`, `reset:queue`, … | delete one kind of data, keep the rest |
 | `reset`, `clean:all` | wipe all data – back to a fresh checkout |
