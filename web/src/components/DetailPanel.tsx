@@ -4,6 +4,7 @@ import {
   DrawerHeader,
   DrawerHeaderTitle,
   OverlayDrawer,
+  Portal,
 } from "@fluentui/react-components";
 import { Dismiss24Regular } from "@fluentui/react-icons";
 import { useEffect, useRef, type ReactNode } from "react";
@@ -51,33 +52,43 @@ export function DetailPanel({
     return () => document.removeEventListener("pointerdown", outside);
   }, [open]);
   return (
-    <OverlayDrawer
-      ref={panel}
-      open={open}
-      position="end"
-      size={phone ? "full" : "medium"}
-      modalType="non-modal"
-      // Phones: the drawer covers the screen, so it just appears (no slide).
-      surfaceMotion={phone ? null : undefined}
-      backdropMotion={phone ? null : undefined}
-      onOpenChange={(_, d) => !d.open && onClose()}
-      className="app-drawer"
-    >
-      <DrawerHeader>
-        <DrawerHeaderTitle
-          action={
-            <Button
-              appearance="subtle"
-              aria-label={t("common.close")}
-              icon={<Dismiss24Regular />}
-              onClick={onClose}
-            />
-          }
-        >
-          {title}
-        </DrawerHeaderTitle>
-      </DrawerHeader>
-      <DrawerBody className="detail-body">{children}</DrawerBody>
-    </OverlayDrawer>
+    <>
+      {/* The same dimmed page as behind the modal drawers, but clicks go through it:
+          rows stay clickable (they pick another item). */}
+      {open && (
+        // Fluent's Portal: inside the theme (its colours), like the drawers.
+        <Portal>
+          <div className="detail-backdrop" aria-hidden="true" />
+        </Portal>
+      )}
+      <OverlayDrawer
+        ref={panel}
+        open={open}
+        position="end"
+        size={phone ? "full" : "medium"}
+        modalType="non-modal"
+        // Phones: the drawer covers the screen, so it just appears (no slide).
+        surfaceMotion={phone ? null : undefined}
+        backdropMotion={phone ? null : undefined}
+        onOpenChange={(_, d) => !d.open && onClose()}
+        className="app-drawer"
+      >
+        <DrawerHeader>
+          <DrawerHeaderTitle
+            action={
+              <Button
+                appearance="subtle"
+                aria-label={t("common.close")}
+                icon={<Dismiss24Regular />}
+                onClick={onClose}
+              />
+            }
+          >
+            {title}
+          </DrawerHeaderTitle>
+        </DrawerHeader>
+        <DrawerBody className="detail-body">{children}</DrawerBody>
+      </OverlayDrawer>
+    </>
   );
 }

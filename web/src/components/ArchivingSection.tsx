@@ -1,18 +1,7 @@
 // Jobs → Archiving: the process that joins finished periods into one archive file per
 // camera (`media-streamer compact`, pipeline/compaction.py). The files themselves are
 // under Recordings → Archives.
-import {
-  Caption1,
-  MessageBar,
-  MessageBarBody,
-  Subtitle2,
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableHeaderCell,
-  TableRow,
-} from "@fluentui/react-components";
+import { MessageBar, MessageBarBody, Subtitle2 } from "@fluentui/react-components";
 import {
   Archive20Regular,
   ArrowSync20Regular,
@@ -20,16 +9,81 @@ import {
   Hourglass20Regular,
 } from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router";
 
 import { api } from "../api";
 import { duration, fileSize, localTime } from "../format";
-import { useI18n } from "../i18n";
+import { useI18n, type I18n } from "../i18n";
+import { byNumber, byString, DataTable, type Column } from "./DataTable";
 import { useCameraName } from "./CameraSelect";
-import { Empty, InfoBanner, QueryState, RouterLink, Stat, Time } from "./ui";
+import { Empty, InfoBanner, QueryState, Stat, Tag, Time } from "./ui";
+
+interface PeriodRow {
+  key: string;
+  camera: string;
+  start: string;
+  segments: number;
+  state: "archiving" | "waiting" | "archived";
+  archiveId?: number;
+  duration?: number;
+  size?: number;
+}
+
+const STATE_ORDER = { archiving: 0, waiting: 1, archived: 2 };
+const STATE_TAG = { archiving: "leased", waiting: "pending", archived: "done" };
+
+const periodColumns = (t: I18n["t"], cameraName: (id: string) => string): Column<PeriodRow>[] => [
+  {
+    id: "status",
+    header: t("col.status"),
+    width: 120,
+    cell: (r) => <Tag kind={STATE_TAG[r.state]}>{t(`archiving.state.${r.state}`)}</Tag>,
+    // Now, then waiting (oldest first, the order they are done in), then the newest files.
+    compare: (a, b) =>
+      STATE_ORDER[a.state] - STATE_ORDER[b.state] ||
+      (a.state === "archived" ? b.start.localeCompare(a.start) : a.start.localeCompare(b.start)),
+  },
+  {
+    id: "camera",
+    header: t("common.camera"),
+    width: 150,
+    cell: (r) => cameraName(r.camera),
+    compare: byString((r) => cameraName(r.camera)),
+  },
+  {
+    id: "start",
+    header: t("archiving.period"),
+    width: 200,
+    cell: (r) => <Time iso={r.start} />,
+    compare: byString((r) => r.start),
+  },
+  {
+    id: "segments",
+    header: t("hourly.segments"),
+    width: 90,
+    cell: (r) => r.segments,
+    compare: byNumber((r) => r.segments),
+  },
+  {
+    id: "length",
+    header: t("col.length"),
+    width: 90,
+    cell: (r) => (r.duration ? duration(r.duration) : "–"),
+    compare: byNumber((r) => r.duration),
+  },
+  {
+    id: "size",
+    header: t("col.size"),
+    width: 100,
+    cell: (r) => (r.size ? fileSize(r.size) : "–"),
+    compare: byNumber((r) => r.size),
+  },
+];
 
 export function ArchivingSection() {
   const { t, rich } = useI18n();
   const cameraName = useCameraName();
+  const navigate = useNavigate();
   const status = useQuery({
     queryKey: ["archiving"],
     queryFn: api.archiving,
@@ -37,13 +91,38 @@ export function ArchivingSection() {
   });
   const recent = useQuery({
     queryKey: ["archives", "recent"],
-    queryFn: () => api.archives({ limit: 10 }),
+    queryFn: () => api.archives({ limit: 20 }),
     refetchInterval: 30_000,
   });
   const c = status.data;
   if (!c) return <QueryState error={status.error} loading={status.isPending} />;
-  const run = (r: { camera_id: string; start_at: string }) =>
-    `${cameraName(r.camera_id)} ${localTime(r.start_at)}`;
+  // One row per period: being archived now, waiting, or archived (the latest files).
+  const rows: PeriodRow[] = [
+    ...c.waiting_list.map((w): PeriodRow => {
+      const now =
+        c.current?.camera_id === w.camera_id &&
+        new Date(c.current.start_at).getTime() >= new Date(w.start_at).getTime() &&
+        new Date(c.current.start_at).getTime() <
+          new Date(w.start_at).getTime() + c.period_minutes * 60_000;
+      return {
+        key: `w/${w.camera_id}/${w.start_at}`,
+        camera: w.camera_id,
+        start: w.start_at,
+        segments: w.segments,
+        state: now ? "archiving" : "waiting",
+      };
+    }),
+    ...(recent.data ?? []).map((a): PeriodRow => ({
+      key: `a/${a.id}`,
+      camera: a.camera_id,
+      start: a.start_at,
+      segments: a.segments,
+      state: "archived",
+      archiveId: a.id,
+      duration: a.duration_s,
+      size: a.size_bytes,
+    })),
+  ];
   const last = c.last_built;
   const errorIsNewer = c.last_error && (!last || (c.last_error_at ?? "") > last.at);
 
@@ -109,60 +188,19 @@ export function ArchivingSection() {
       </section>
 
       <Subtitle2 as="h2" className="section">
-        {t("archiving.waitingTitle")}
+        {t("archiving.periodsTitle")}
       </Subtitle2>
-      {c.waiting_list.length ? (
-        <Table className="table responsive" aria-label={t("archiving.waitingTitle")}>
-          <TableHeader>
-            <TableRow>
-              <TableHeaderCell>{t("common.camera")}</TableHeaderCell>
-              <TableHeaderCell>{t("archiving.period")}</TableHeaderCell>
-              <TableHeaderCell>{t("hourly.segments")}</TableHeaderCell>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {c.waiting_list.map((w) => (
-              <TableRow key={`${w.camera_id}/${w.start_at}`}>
-                <TableCell data-label={t("common.camera")}>{cameraName(w.camera_id)}</TableCell>
-                <TableCell data-label={t("archiving.period")}>
-                  <Time iso={w.start_at} />
-                </TableCell>
-                <TableCell data-label={t("hourly.segments")}>{w.segments}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      {rows.length ? (
+        <DataTable
+          ariaLabel={t("archiving.periodsTitle")}
+          items={rows}
+          columns={periodColumns(t, cameraName)}
+          getRowId={(r) => r.key}
+          defaultSort={{ column: "status", direction: "ascending" }}
+          onRowClick={(r) => r.archiveId && navigate(`/recordings/archives?file=${r.archiveId}`)}
+        />
       ) : (
-        <Empty>{t("archiving.nothingWaiting")}</Empty>
-      )}
-
-      <Subtitle2 as="h2" className="section">
-        {t("archiving.recentTitle")}
-      </Subtitle2>
-      {last && (
-        <Caption1 as="p" className="muted">
-          {t("compaction.last")}: {run(last)} – {fileSize(last.bytes_before)} →{" "}
-          {fileSize(last.bytes_after)} (
-          {last.encoder === "copy" ? t("compaction.copied") : last.encoder},{" "}
-          {duration(last.seconds)})
-        </Caption1>
-      )}
-      {recent.data && recent.data.length > 0 ? (
-        <ul className="plain-list">
-          {recent.data.map((a) => (
-            <li key={a.id}>
-              <RouterLink to={`/recordings/archives?file=${a.id}`}>
-                {cameraName(a.camera_id)} {localTime(a.start_at)}
-              </RouterLink>{" "}
-              <Caption1 className="muted">
-                {duration(a.duration_s)} – {fileSize(a.size_bytes)} –{" "}
-                {a.encoder === "copy" || !a.encoder ? t("compaction.copied") : a.encoder}
-              </Caption1>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        recent.data && <Empty>{t("hourly.none")}</Empty>
+        <Empty>{t("hourly.none")}</Empty>
       )}
     </>
   );

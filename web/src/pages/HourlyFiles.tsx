@@ -11,20 +11,19 @@ import { duration, fileSize, localTime } from "../format";
 import { useI18n, type I18n } from "../i18n";
 import { VideoPlayer } from "../components/VideoPlayer";
 
-/** How an hourly file was made: "joined" (stream copy) or the encoder and profile. */
+/** Re-encoded when joined (a camera's recording profile) or kept as the camera sent it. */
 function useHowMade(): (a: ArchiveFile) => string {
   const { t } = useI18n();
   return (a) =>
     a.encoder === "copy" || !a.encoder
-      ? t("hourly.joined")
-      : `${a.encoder}${a.profile_id && a.profile_id !== "original" ? ` (${a.profile_id})` : ""}`;
+      ? t("hourly.notReencoded")
+      : t("hourly.reencodedWith", {
+          encoder: a.encoder,
+          profile: a.profile_id && a.profile_id !== "original" ? ` (${a.profile_id})` : "",
+        });
 }
 
-const columns = (
-  t: I18n["t"],
-  cameraName: (id: string) => string,
-  howMade: (a: ArchiveFile) => string,
-): Column<ArchiveFile>[] => [
+const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<ArchiveFile>[] => [
   {
     id: "thumb",
     header: t("col.preview"),
@@ -58,7 +57,9 @@ const columns = (
     id: "size",
     header: t("col.size"),
     width: 90,
-    cell: (r) => fileSize(r.size_bytes),
+    // Retention removed the file: say so instead of its old size.
+    cell: (r) =>
+      r.deleted ? <Tag kind="warn">{t("hourly.deleted")}</Tag> : fileSize(r.size_bytes),
     compare: byNumber((r) => r.size_bytes),
   },
   {
@@ -70,13 +71,6 @@ const columns = (
         ? t("hourly.segmentsWithMatch", { n: r.segments, matches: r.segments_with_match })
         : r.segments,
     compare: byNumber((r) => r.segments),
-  },
-  {
-    id: "how",
-    header: t("hourly.how"),
-    width: 200,
-    cell: (r) => (r.deleted ? <Tag kind="warn">{t("hourly.deleted")}</Tag> : howMade(r)),
-    compare: byString((r) => howMade(r)),
   },
 ];
 
@@ -117,7 +111,7 @@ export function HourlyFiles({
             <DataTable
               ariaLabel={t("hourly.title")}
               items={archives.data}
-              columns={columns(t, cameraName, howMade)}
+              columns={columns(t, cameraName)}
               getRowId={(r) => r.id}
               defaultSort={{ column: "start", direction: "descending" }}
               rowClassName={(r) => (r.segments_with_match > 0 ? "target" : undefined)}
@@ -178,7 +172,7 @@ export function HourlyFiles({
                       })
                     : selected.segments}
                 </Fact>
-                <Fact label={t("hourly.how")}>{howMade(selected)}</Fact>
+                <Fact label={t("hourly.reencoded")}>{howMade(selected)}</Fact>
               </Facts>
             </div>
           )}

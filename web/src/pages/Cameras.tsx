@@ -140,7 +140,6 @@ export function Cameras() {
         <LiveDrawer
           cameras={cameras.data ?? []}
           cameraId={liveFor}
-          onCamera={setLiveFor}
           onClose={() => setLiveFor(null)}
         />
       )}

@@ -1,12 +1,13 @@
-// Live view of one camera in a wide drawer (opened from a camera card's picture), with a
-// camera picker to flip through the others and the low-data switch.
-import { Button, Caption1, Select, Switch } from "@fluentui/react-components";
+// Live view of one camera in a wide drawer (opened from a camera card's picture), with the
+// low-data switch and the HLS fallback in the title row.
+import { Button, Switch } from "@fluentui/react-components";
 import { Open20Regular } from "@fluentui/react-icons";
 import { useState } from "react";
 
 import type { Camera } from "../api";
 import { useI18n } from "../i18n";
 import { Dialog, DialogBody, DialogContent, DialogSurface, DialogTitle } from "./Drawer";
+import { Tag } from "./ui";
 
 const LOW_DATA_KEY = "media-streamer.live.lowData";
 
@@ -26,12 +27,10 @@ function useLowData(): [boolean, (on: boolean) => void] {
 export function LiveDrawer({
   cameras,
   cameraId,
-  onCamera,
   onClose,
 }: {
   cameras: Camera[];
   cameraId: string;
-  onCamera: (id: string) => void;
   onClose: () => void;
 }) {
   const { t } = useI18n();
@@ -47,7 +46,7 @@ export function LiveDrawer({
       <DialogSurface>
         <DialogBody>
           <DialogTitle>
-            <span className="row">
+            <span className="live-title">
               {c.name}
               {c.online ? (
                 <output className="live-badge">
@@ -57,44 +56,31 @@ export function LiveDrawer({
               ) : (
                 <output className="live-badge offline">{t("live.badgeOffline")}</output>
               )}
+              <span className="live-title-controls">
+                {c.webrtc_low_url !== null && (
+                  <Switch
+                    label={t("live.lowData")}
+                    title={t("live.lowDataHint")}
+                    checked={lowData}
+                    onChange={(_, d) => setLowData(d.checked)}
+                  />
+                )}
+                <Tag>{low ? t("live.lowDataTag") : "WebRTC"}</Tag>
+                <Button
+                  as="a"
+                  size="small"
+                  icon={<Open20Regular />}
+                  href={hls}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={t("live.hlsFallbackHint")}
+                >
+                  {t("live.hlsFallback")}
+                </Button>
+              </span>
             </span>
           </DialogTitle>
           <DialogContent className="form-stack">
-            <div className="filters">
-              {cameras.length > 1 && (
-                <Select
-                  value={c.id}
-                  aria-label={t("common.camera")}
-                  onChange={(_, d) => onCamera(d.value)}
-                >
-                  {cameras.map((x) => (
-                    <option key={x.id} value={x.id}>
-                      {x.name}
-                    </option>
-                  ))}
-                </Select>
-              )}
-              {c.webrtc_low_url !== null && (
-                <Switch
-                  label={t("live.lowData")}
-                  title={t("live.lowDataHint")}
-                  checked={lowData}
-                  onChange={(_, d) => setLowData(d.checked)}
-                />
-              )}
-              <Caption1 className="muted">{low ? t("live.lowDataTag") : "WebRTC"}</Caption1>
-              <Button
-                as="a"
-                size="small"
-                icon={<Open20Regular />}
-                href={hls}
-                target="_blank"
-                rel="noreferrer"
-                title={t("live.hlsFallbackHint")}
-              >
-                {t("live.hlsFallback")}
-              </Button>
-            </div>
             {c.online ? (
               // MediaMTX's built-in WebRTC player, served through the server's
               // login-checking proxy (/api/live/...) on this origin.

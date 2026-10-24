@@ -104,12 +104,7 @@ export function Dashboard() {
       <EventsGrid events={events.data ?? []} />
 
       {liveFor && s && (
-        <LiveDrawer
-          cameras={s.cameras}
-          cameraId={liveFor}
-          onCamera={setLiveFor}
-          onClose={() => setLiveFor(null)}
-        />
+        <LiveDrawer cameras={s.cameras} cameraId={liveFor} onClose={() => setLiveFor(null)} />
       )}
       {settingsCamera && (
         <CameraSettingsDialog
