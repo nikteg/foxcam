@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fcntl
 import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -26,17 +27,34 @@ def init_db(settings: Settings) -> Engine:
     @event.listens_for(engine, "connect")
     def _sqlite_pragmas(dbapi_conn, _record):
         cur = dbapi_conn.cursor()
-        cur.execute("PRAGMA journal_mode=WAL")
+        # WAL is stored in the file: switch once. Switching needs the database to itself,
+        # which fails ("database is locked") while another process is using it.
+        if cur.execute("PRAGMA journal_mode").fetchone()[0].lower() != "wal":
+            cur.execute("PRAGMA journal_mode=WAL")
         cur.execute("PRAGMA synchronous=NORMAL")
         cur.execute("PRAGMA foreign_keys=ON")
         cur.close()
 
-    Base.metadata.create_all(engine)
-    added = _add_missing_columns(engine)
-    _backfill(engine, added)
+    # The server, ingest and compaction containers start together on a new database: one
+    # at a time creates and migrates it, the others then find it ready.
+    with _init_lock(settings):
+        Base.metadata.create_all(engine)
+        added = _add_missing_columns(engine)
+        _backfill(engine, added)
     _engine = engine
     _SessionLocal = sessionmaker(engine, expire_on_commit=False)
     return engine
+
+
+@contextmanager
+def _init_lock(settings: Settings) -> Iterator[None]:
+    """An exclusive lock (a file in the data folder) across processes and containers."""
+    with open(settings.data_dir / ".db-init.lock", "w") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
 
 
 def _add_missing_columns(engine: Engine) -> set[str]:
