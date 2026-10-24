@@ -34,6 +34,7 @@ export const en = {
   "common.loading": "Loading…",
   "common.no": "no",
   "common.yes": "yes",
+  "table.showMore": "Show more ({n} left)",
   "common.offline": "offline",
   "common.online": "online",
   "common.play": "Play",

@@ -6,6 +6,7 @@ import {
   DismissCircle20Regular,
 } from "@fluentui/react-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ReactElement } from "react";
 
 import { api, type Detection } from "../api";
 import { hasRole, useCameraRole } from "../auth";
@@ -32,44 +33,44 @@ export function Feedback({
   // Labelling is for editors of the camera; viewers see the choice but cannot change it.
   const role = useCameraRole(detection.camera_id);
   const readOnly = !hasRole(role ? { role } : undefined, "editor");
+  const button = (want: boolean, label: string, on: ReactElement, off: ReactElement) => {
+    const toggleButton = (
+      <ToggleButton
+        size={size}
+        appearance={withLabels ? "outline" : "subtle"}
+        checked={value === want}
+        icon={value === want ? on : off}
+        disabled={readOnly}
+        onClick={() => toggle(want)}
+        // In table rows a native tooltip: hundreds of Fluent Tooltips make lists slow.
+        aria-label={withLabels ? undefined : label}
+        title={withLabels ? undefined : label}
+      >
+        {withLabels && label}
+      </ToggleButton>
+    );
+    return withLabels ? (
+      <Tooltip content={label} relationship="description">
+        {toggleButton}
+      </Tooltip>
+    ) : (
+      toggleButton
+    );
+  };
   return (
     <span className="row">
-      <Tooltip content={t("feedback.correct")} relationship="label">
-        <ToggleButton
-          size={size}
-          appearance={withLabels ? "outline" : "subtle"}
-          checked={value === true}
-          icon={
-            value === true ? (
-              <CheckmarkCircle20Filled className="ok-icon" />
-            ) : (
-              <CheckmarkCircle20Regular />
-            )
-          }
-          disabled={readOnly}
-          onClick={() => toggle(true)}
-        >
-          {withLabels && t("feedback.correct")}
-        </ToggleButton>
-      </Tooltip>
-      <Tooltip content={t("feedback.wrong")} relationship="label">
-        <ToggleButton
-          size={size}
-          appearance={withLabels ? "outline" : "subtle"}
-          checked={value === false}
-          icon={
-            value === false ? (
-              <DismissCircle20Filled className="bad-icon" />
-            ) : (
-              <DismissCircle20Regular />
-            )
-          }
-          disabled={readOnly}
-          onClick={() => toggle(false)}
-        >
-          {withLabels && t("feedback.wrong")}
-        </ToggleButton>
-      </Tooltip>
+      {button(
+        true,
+        t("feedback.correct"),
+        <CheckmarkCircle20Filled className="ok-icon" />,
+        <CheckmarkCircle20Regular />,
+      )}
+      {button(
+        false,
+        t("feedback.wrong"),
+        <DismissCircle20Filled className="bad-icon" />,
+        <DismissCircle20Regular />,
+      )}
     </span>
   );
 }

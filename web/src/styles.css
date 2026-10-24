@@ -1145,3 +1145,9 @@ Fluent's text styles would otherwise reset the margins. */
   flex-wrap: wrap;
   gap: var(--spacingHorizontalS);
 }
+
+.data-table-more {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}

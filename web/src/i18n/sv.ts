@@ -35,6 +35,7 @@ export const sv: Record<MessageKey, string> = {
   "common.loading": "Läser in…",
   "common.no": "nej",
   "common.yes": "ja",
+  "table.showMore": "Visa fler ({n} kvar)",
   "common.offline": "frånkopplad",
   "common.online": "ansluten",
   "common.play": "Spela upp",
