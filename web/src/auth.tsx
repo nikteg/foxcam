@@ -20,11 +20,13 @@ export function useIsAdmin(): boolean {
   return useMe()?.is_admin ?? false;
 }
 
-/** After signing in or out: everything cached belonged to someone else. */
+/** After signing in or out: everything cached belonged to someone else. The auth entry
+ * itself is updated in place, not removed: the screens watching it (sign-in, setup) must
+ * see the new state, and `clear()` would detach them from the cache. */
 export function useAuthChanged() {
   const client = useQueryClient();
   return (state?: AuthState) => {
-    client.clear();
+    client.removeQueries({ predicate: (q) => q.queryKey[0] !== AUTH_KEY[0] });
     if (state) client.setQueryData(AUTH_KEY, state);
     else void client.invalidateQueries({ queryKey: AUTH_KEY });
   };
