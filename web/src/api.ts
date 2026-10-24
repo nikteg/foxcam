@@ -43,13 +43,32 @@ export interface Camera {
 }
 
 /** What to look for, and which workers may do it (see docs/ARCHITECTURE.md). */
+/** One model looking for a profile's targets (one job per segment and detector). */
+export interface DetectorInput {
+  id: string;
+  name: string | null;
+  /** Worker tags this detector needs, on top of the profile's `requires`. */
+  requires: string[];
+  /** Overrides of the profile's values; null = the profile's. */
+  min_confidence: number | null;
+  fps: number | null;
+}
+
+export interface Detector extends DetectorInput {
+  display_name: string;
+  workers_online: string[];
+}
+
 export interface ProfileInput {
   id: string;
   name: string | null;
   targets: string[];
   aliases: Record<string, string>;
   min_confidence: number;
+  /** Tags every detector needs. */
   requires: string[];
+  /** Empty = one detector, `default`. */
+  detectors: DetectorInput[];
   fps: number | null;
   default: boolean;
   events_days: number | null;
@@ -57,6 +76,7 @@ export interface ProfileInput {
 }
 
 export interface Profile extends ProfileInput {
+  detectors: Detector[];
   managed: "config" | "ui";
   display_name: string;
   cameras: string[];
@@ -203,6 +223,8 @@ export interface SegmentJob {
   id: number;
   profile_id: string | null;
   profile_name: string | null;
+  detector_id: string | null;
+  detector_name: string | null;
   state: "pending" | "leased" | "done" | "failed" | "dead";
   model: string | null;
   worker_id: string | null;
@@ -274,6 +296,7 @@ export interface Detection {
   segment_id: number;
   camera_id: string;
   profile_id: string | null;
+  detector_id: string | null;
   event_id: number | null;
   ts: string;
   offset_ms: number;
@@ -325,6 +348,7 @@ export interface Job {
   segment_id: number;
   camera_id: string;
   profile_id: string | null;
+  detector_id: string | null;
   segment_start: string;
   state: JobState;
   attempts: number;

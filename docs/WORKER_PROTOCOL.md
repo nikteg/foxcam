@@ -59,9 +59,10 @@ those stored as their vocabulary. Open-vocabulary workers send neither: they can
 anything (tag `open-vocabulary`).
 
 `info` is free-form and shown in the web UI's worker queue tab. `tags` are capabilities:
-you only get jobs of [detection profiles](ARCHITECTURE.md#detection-profiles) whose
-`requires` tags you all have (tags on the access token are added by the server). Each
-segment has one job per profile, so the same segment may come back for another profile.
+you only get jobs of [detection profile](ARCHITECTURE.md#detection-profiles) detectors
+whose tags (the profile's `requires` plus the detector's own) you all have (tags on the
+access token are added by the server). Each segment has one job per profile and detector,
+so the same segment may come back for another profile or detector.
 
 ```json
 {
@@ -74,15 +75,19 @@ segment has one job per profile, so the same segment may come back for another p
   "sample_fps": 2.0,
   "profile": {"id": "default", "name": "Fox", "targets": ["fox"],
               "min_confidence": 0.5},
+  "detector": {"id": "default", "name": "default"},
   "segment": {"id": 17, "camera_id": "garden", "start_at": "2026-10-24T10:00:00",
               "duration_s": 60.0, "width": 1920, "height": 1080, "is_night": true},
   "hints": {"target_labels": ["fox"], "min_confidence": 0.5,
-            "profile": "default", "country": "SWE", "latitude": null, "longitude": null}
+            "profile": "default", "detector": "default", "country": "SWE",
+            "latitude": null, "longitude": null}
 }
 ```
 
-`sample_fps` is the frame rate the profile wants analysed (≤ `input_fps`; the input is shared
-by all profiles of the camera, so subsample to it). `hints.target_labels` are what the profile
+`sample_fps` is the frame rate the profile (or its detector) wants analysed (≤ `input_fps`;
+the input is shared by all profiles of the camera, so subsample to it). `detector` says which
+of the profile's detectors this job is for; `profile.min_confidence` is the detector's own
+threshold when it has one. `hints.target_labels` are what the profile
 looks for: open-vocabulary detectors should prompt with them. Report every label you see; the
 server applies the profile's aliases and threshold to decide what is a target.
 

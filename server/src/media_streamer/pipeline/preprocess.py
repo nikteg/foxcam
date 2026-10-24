@@ -84,9 +84,11 @@ def preprocess_segment(settings: Settings, segment_id: int) -> None:
         elif not profiles:
             updates["status"] = SegmentStatus.DONE  # nothing to look for on this camera
         else:
-            # One derivative for all profiles, at the highest frame rate any of them needs.
-            fps = max(min(p.fps or settings.processing.sample_fps,
-                          settings.processing.sample_fps) for p in profiles)
+            # One derivative for all profiles and detectors, at the highest frame rate any
+            # of them needs.
+            fps = max(min(p.fps_for(d.id) or settings.processing.sample_fps,
+                          settings.processing.sample_fps)
+                      for p in profiles for d in p.detectors)
             derived = settings.derived_dir / rel
             ffmpeg.make_masked_derivative(src, derived, mask.rects if mask else [], fps,
                                           settings.processing.max_width)
@@ -105,4 +107,5 @@ def preprocess_segment(settings: Settings, segment_id: int) -> None:
             setattr(seg, k, v)
         if seg.status == SegmentStatus.QUEUED:
             for p in profiles:
-                s.add(Job(segment_id=seg.id, profile_id=p.id))
+                for d in p.detectors:
+                    s.add(Job(segment_id=seg.id, profile_id=p.id, detector_id=d.id))

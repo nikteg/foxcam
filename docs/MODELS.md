@@ -26,6 +26,12 @@ different things: e.g. a `wildlife` profile requiring `speciesnet` on the garden
 a `vehicles` profile requiring `open-vocabulary` (YOLO-World, prompted with the profile's
 targets) on the driveway. Use `aliases` (`red fox: fox`) so both models report the same name.
 
+One profile can also have **several detectors** (`detectors:`, see
+[ARCHITECTURE.md](ARCHITECTURE.md#detection-profiles)): every recording then gets a job per
+model, e.g. YOLO-World and SpeciesNet both looking for foxes, each with its own threshold.
+Their detections merge into the same events instead of duplicating them, which makes it easy
+to compare models on the same footage.
+
 **Give YOLO-World one word per thing.** Distinct targets are fine together, but synonyms of the
 same thing compete for the same object and pull every score down, often below the threshold.
 Prompt `person`, not `person, man, woman`; prompt `fox`, and map other models' names to it with

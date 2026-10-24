@@ -265,6 +265,13 @@ function makeJobColumns(
       compare: byString((j) => j.profile_id),
     },
     {
+      id: "detector",
+      header: t("col.detector"),
+      width: 110,
+      cell: (j) => j.detector_id ?? "–",
+      compare: byString((j) => j.detector_id),
+    },
+    {
       id: "segment",
       header: t("col.segmentStart"),
       width: 205,

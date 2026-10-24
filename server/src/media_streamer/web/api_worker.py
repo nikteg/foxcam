@@ -57,7 +57,13 @@ class ProfileOut(BaseModel):
     id: str
     name: str
     targets: list[str]
+    # The detector's own threshold if it has one, else the profile's.
     min_confidence: float
+
+
+class DetectorOut(BaseModel):
+    id: str
+    name: str
 
 
 class JobOut(BaseModel):
@@ -70,6 +76,8 @@ class JobOut(BaseModel):
     # Frames per second this profile wants analysed (≤ input_fps; subsample to it).
     sample_fps: float
     profile: ProfileOut
+    # Which of the profile's detectors (models) this job is for.
+    detector: DetectorOut
     segment: SegmentOut
     hints: dict[str, Any]
 
@@ -116,20 +124,24 @@ def lease(body: LeaseRequest, settings: Settings = Depends(settings_dep),
     profile = settings.profile(job.profile_id)
     input_fps = seg.derived_fps or settings.processing.sample_fps
     targets = profile.targets if profile else []
-    min_conf = profile.min_confidence if profile else 0.5
+    min_conf = profile.min_confidence_for(job.detector_id) if profile else 0.5
+    det = profile.detector(job.detector_id) if profile else None
+    fps = profile.fps_for(job.detector_id) if profile else None
     return JobOut(
         job_id=job.id, lease_token=job.lease_token, lease_expires_at=job.lease_expires_at,
         attempt=job.attempts, input_url=f"/api/worker/jobs/{job.id}/input",
         input_fps=input_fps,
-        sample_fps=min((profile.fps if profile else None) or input_fps, input_fps),
+        sample_fps=min(fps or input_fps, input_fps),
         profile=ProfileOut(id=job.profile_id or "default",
                            name=profile.display_name if profile else job.profile_id or "",
                            targets=targets, min_confidence=min_conf),
+        detector=DetectorOut(id=job.detector_id or "default",
+                             name=det.display_name if det else job.detector_id or ""),
         segment=SegmentOut(id=seg.id, camera_id=seg.camera_id, start_at=seg.start_at,
                            duration_s=seg.duration_s, width=seg.width, height=seg.height,
                            is_night=seg.is_night),
         hints={"target_labels": targets, "min_confidence": min_conf,
-               "profile": job.profile_id,
+               "profile": job.profile_id, "detector": job.detector_id,
                "country": loc.country, "latitude": loc.latitude, "longitude": loc.longitude},
     )
 

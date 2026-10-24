@@ -217,8 +217,10 @@ class Job(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     segment_id: Mapped[int] = mapped_column(ForeignKey("segment.id", ondelete="CASCADE"),
                                             index=True)
-    # Detection profile this job runs (one job per segment and profile).
+    # Detection profile and detector (model) this job runs: one job per segment, profile
+    # and detector (config.DetectorSpec).
     profile_id: Mapped[str | None] = mapped_column(String, index=True)
+    detector_id: Mapped[str | None] = mapped_column(String, default="default")
     state: Mapped[str] = mapped_column(String, default=JobState.PENDING, index=True)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     priority: Mapped[int] = mapped_column(Integer, default=0)
@@ -263,6 +265,8 @@ class Detection(Base):
                                             index=True)
     job_id: Mapped[int] = mapped_column(ForeignKey("job.id", ondelete="CASCADE"))
     profile_id: Mapped[str | None] = mapped_column(String, index=True)
+    # The profile's detector that reported it (its job's), next to the worker's `model`.
+    detector_id: Mapped[str | None] = mapped_column(String, index=True)
     # Set once a target detection has been merged into an event. Not a foreign key on
     # purpose: it keeps pointing at expired (deleted) events so they are not re-created.
     event_id: Mapped[int | None] = mapped_column(Integer, index=True)

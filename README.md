@@ -97,7 +97,7 @@ flowchart LR
   mtx -->|segments| pre
   subgraph server ["Server – FastAPI + SQLite"]
     direction TB
-    pre["Preprocess<br/>censor, day/night"] --> q["Job queue<br/>one job per profile"]
+    pre["Preprocess<br/>censor, day/night"] --> q["Job queue<br/>one job per profile and model"]
     q --> ev["Events & clips"] --> ret["Retention – S3"]
   end
   q <-->|"HTTP lease / result<br/>censored video only"| workers["🖥️ Workers<br/>SpeciesNet, YOLO-World, your model"]
@@ -109,7 +109,7 @@ flowchart LR
    Cameras with burned-in censor areas pass through a transcode stage first (on the GPU
    when there is one), as does the low-data live view.
 2. The **server** registers each segment, tags day/night, burns in the censor areas and
-   creates one job per detection profile of the camera.
+   creates one job per detection profile (and model) of the camera.
 3. **Workers** lease jobs, run their detector on the censored, down-sampled video and post
    the detections back.
 4. Target detections become **events**. Their clips are cut from the original footage and
@@ -224,7 +224,7 @@ detection profiles, censor areas and worker tokens can also be managed in the UI
 | Section | What it controls |
 |---|---|
 | `cameras` | sources, per-camera segment length, which profiles run, recording profile |
-| `profiles` | targets, aliases, confidence, required worker tags, frame rate, event retention |
+| `profiles` | targets, aliases, confidence, required worker tags, detectors (several models per profile), frame rate, event retention |
 | `recording_profiles` | extra recording qualities (resolution, fps, bitrate, H.264/H.265, `keep_days`) next to the built-in original, 1080p, 720p, 480p and 1080p H.265 |
 | `mediamtx` | addresses, low-data live view, hardware encoding (`hwaccel`, [guide](docs/HARDWARE.md)) |
 | `processing` | frames per second sent to workers, resolution, night detection threshold |

@@ -4,8 +4,9 @@ Workers pull: ``lease`` atomically claims the next available job and returns a l
 token. The token must accompany heartbeats, input downloads and the final result.
 Expired leases are reclaimed by ``reap``; a job is retried up to ``max_attempts``.
 
-Each segment has one job per detection profile; a worker only leases jobs of profiles
-whose ``requires`` tags it has. The segment is finished when all its jobs are.
+Each segment has one job per detection profile and detector (model); a worker only
+leases jobs of detectors whose tags (the profile's ``requires`` plus the detector's) it
+has. The segment is finished when all its jobs are.
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.orm import object_session
 
 from ..config import Settings
@@ -71,8 +72,8 @@ def lease(settings: Settings, worker_id: str, info: dict[str, Any] | None = None
     tags = tags or []
     touch_worker(worker_id, info, tags=tags,
                  vocabulary=vocabulary if vocabulary is not None else labels)
-    profiles = eligible_profiles(settings, tags, labels)
-    if not profiles:
+    pairs = eligible_profiles(settings, tags, labels)
+    if not pairs:
         touch_worker(worker_id, current_job_id=None)
         return None
     with session_scope() as s:
@@ -82,7 +83,8 @@ def lease(settings: Settings, worker_id: str, info: dict[str, Any] | None = None
         next_id = (
             select(Job.id)
             .where(Job.state.in_([JobState.PENDING, JobState.FAILED]), Job.available_at <= now,
-                   Job.profile_id.in_(profiles))
+                   or_(*(and_(Job.profile_id == pid, Job.detector_id == did)
+                         for pid, did in pairs)))
             .order_by(Job.priority.desc(), Job.created_at.desc(), Job.id.desc())
             .limit(1)
             .scalar_subquery()
@@ -144,11 +146,12 @@ def complete(settings: Settings, job_id: int, token: str, detections: list[Detec
             bbox = d.bbox or [None] * 4
             s.add(Detection(
                 segment_id=seg.id, job_id=job.id, profile_id=job.profile_id,
-                camera_id=seg.camera_id,
+                detector_id=job.detector_id, camera_id=seg.camera_id,
                 ts=seg.start_at + timedelta(milliseconds=d.offset_ms), offset_ms=d.offset_ms,
                 label=label, confidence=d.confidence,
                 bbox_x=bbox[0], bbox_y=bbox[1], bbox_w=bbox[2], bbox_h=bbox[3],
-                is_target=bool(profile and profile.is_target(d.label, d.confidence)),
+                is_target=bool(profile and profile.is_target(d.label, d.confidence,
+                                                             job.detector_id)),
                 model=model, worker_id=job.leased_by, extra=extra,
             ))
         job.state = JobState.DONE
@@ -166,7 +169,8 @@ def complete(settings: Settings, job_id: int, token: str, detections: list[Detec
 
 
 def settle_segment(settings: Settings, seg: Segment) -> None:
-    """Update a segment from its jobs: finished once every profile's job is done or dead."""
+    """Update a segment from its jobs: finished once every job (profile and detector) is
+    done or dead."""
     s = object_session(seg)
     s.flush()
     states = list(s.scalars(select(Job.state).where(Job.segment_id == seg.id)))

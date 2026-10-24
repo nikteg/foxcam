@@ -107,6 +107,10 @@ detection:
 #     min_confidence: 0.5
 #     requires: [speciesnet]
 #     default: true            # cameras without their own selection run it
+#     # Several models instead (one job each; their detections merge into one event):
+#     # detectors:
+#     #   - { id: yolo, requires: [open-vocabulary], min_confidence: 0.3, fps: 1 }
+#     #   - { id: speciesnet, requires: [speciesnet] }
 #   - id: vehicles
 #     targets: [car, person]
 #     requires: [open-vocabulary]

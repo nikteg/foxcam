@@ -162,10 +162,13 @@ def segment_jobs(settings: Settings, segment_id: int) -> list[dict[str, Any]]:
         out = []
         for j in s.scalars(select(Job).where(Job.segment_id == segment_id).order_by(Job.id)):
             profile = settings.profile(j.profile_id)
+            det = profile.detector(j.detector_id) if profile else None
             total, targets = counts.get(j.id, (0, 0))
             out.append({
                 "id": j.id, "profile_id": j.profile_id,
                 "profile_name": profile.display_name if profile else j.profile_id,
+                "detector_id": j.detector_id,
+                "detector_name": det.display_name if det else j.detector_id,
                 "state": j.state, "model": j.model, "worker_id": j.leased_by,
                 "attempts": j.attempts, "error": j.error, "processing_ms": j.processing_ms,
                 "finished_at": iso(j.finished_at), "detections": total,
@@ -256,7 +259,7 @@ def archives(camera_id: str | None = None, day: str | None = None, limit: int = 
 def detection_dict(d: Detection) -> dict[str, Any]:
     return {
         "id": d.id, "segment_id": d.segment_id, "camera_id": d.camera_id, "ts": iso(d.ts),
-        "profile_id": d.profile_id, "event_id": d.event_id,
+        "profile_id": d.profile_id, "detector_id": d.detector_id, "event_id": d.event_id,
         "offset_ms": d.offset_ms, "label": d.label, "confidence": round(d.confidence, 3),
         "bbox": d.bbox, "is_target": d.is_target, "model": d.model, "worker_id": d.worker_id,
         "feedback": d.feedback, "is_night": d.segment.is_night if d.segment else None,
@@ -337,7 +340,7 @@ def queue_view(limit: int = 100, state: str | None = None) -> dict[str, Any]:
         } for w in s.scalars(select(Worker).order_by(Worker.last_seen.desc()))]
         jobs = [{
             "id": j.id, "segment_id": j.segment_id, "camera_id": j.segment.camera_id,
-            "profile_id": j.profile_id,
+            "profile_id": j.profile_id, "detector_id": j.detector_id,
             "segment_start": iso(j.segment.start_at), "state": j.state, "attempts": j.attempts,
             "leased_by": j.leased_by, "lease_expires_at": iso(j.lease_expires_at),
             "created_at": iso(j.created_at), "finished_at": iso(j.finished_at),

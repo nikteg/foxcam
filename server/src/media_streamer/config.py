@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 _ENV_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
 
@@ -195,14 +195,34 @@ class DetectionConfig(BaseModel):
 
 
 DEFAULT_PROFILE = "default"
+DEFAULT_DETECTOR = "default"
+
+
+class DetectorSpec(BaseModel):
+    """One model looking for a profile's targets. Each segment gets one job per profile
+    and detector; a worker leases it when it has all of the profile's and the detector's
+    `requires` tags."""
+
+    id: str = Field(pattern=PROFILE_ID, max_length=40)
+    name: str | None = None
+    requires: list[Annotated[str, Field(pattern=TAG)]] = []
+    # Overrides of the profile's values for this detector's detections / frames.
+    min_confidence: float | None = Field(default=None, ge=0, le=1)
+    fps: float | None = Field(default=None, gt=0)
+
+    @property
+    def display_name(self) -> str:
+        return self.name or self.id
 
 
 class ProfileConfig(BaseModel):
-    """What to look for, and which workers can look for it.
+    """What to look for, and which models look for it.
 
-    Every segment of a camera gets one job per profile. Only workers that have all
-    `requires` tags lease a profile's jobs. Detections whose (aliased) label is in
-    `targets` with at least `min_confidence` become events.
+    Every segment of a camera gets one job per profile and detector. Only workers that
+    have all of a detector's tags (the profile's `requires` plus the detector's own) lease
+    its jobs. Detections whose (aliased) label is in `targets` with at least
+    `min_confidence` become events; detections of several detectors merge into one event.
+    Without `detectors` a profile has one, `default`, needing just `requires`.
     """
 
     id: str = Field(pattern=PROFILE_ID, max_length=40)
@@ -211,7 +231,10 @@ class ProfileConfig(BaseModel):
     # Map model labels to one name, e.g. {"red fox": "fox", "vulpes vulpes": "fox"}.
     aliases: dict[str, str] = {}
     min_confidence: float = Field(default=0.5, ge=0, le=1)
+    # Tags every detector of the profile needs (with no `detectors`: the one detector's).
     requires: list[Annotated[str, Field(pattern=TAG)]] = []
+    # The models that look; empty = one detector `default` (see the class docstring).
+    detectors: list[DetectorSpec] = []
     # Frames per second the worker analyses (≤ processing.sample_fps). None = all.
     fps: float | None = Field(default=None, gt=0)
     # Run on cameras that have no explicit profile selection.
@@ -221,16 +244,42 @@ class ProfileConfig(BaseModel):
     enabled: bool = True
     managed: Literal["config", "ui"] = "config"
 
+    @model_validator(mode="after")
+    def _detectors(self) -> ProfileConfig:
+        if not self.detectors:
+            self.detectors = [DetectorSpec(id=DEFAULT_DETECTOR)]
+        ids = [d.id for d in self.detectors]
+        if len(ids) != len(set(ids)):
+            raise ValueError("detector ids must be unique within a profile")
+        return self
+
     @property
     def display_name(self) -> str:
         return self.name or self.id
+
+    def detector(self, detector_id: str | None) -> DetectorSpec | None:
+        """``None`` (jobs from before detectors existed) is the first detector."""
+        if detector_id is None:
+            return self.detectors[0]
+        return next((d for d in self.detectors if d.id == detector_id), None)
+
+    def detector_requires(self, d: DetectorSpec) -> set[str]:
+        return set(self.requires) | set(d.requires)
+
+    def min_confidence_for(self, detector_id: str | None) -> float:
+        d = self.detector(detector_id)
+        return d.min_confidence if d and d.min_confidence is not None else self.min_confidence
+
+    def fps_for(self, detector_id: str | None) -> float | None:
+        d = self.detector(detector_id)
+        return d.fps if d and d.fps is not None else self.fps
 
     def canonical(self, label: str) -> str:
         aliases = {k.lower(): v for k, v in self.aliases.items()}
         return aliases.get(label.lower(), label)
 
-    def is_target(self, label: str, confidence: float) -> bool:
-        return (confidence >= self.min_confidence
+    def is_target(self, label: str, confidence: float, detector_id: str | None = None) -> bool:
+        return (confidence >= self.min_confidence_for(detector_id)
                 and self.canonical(label).lower() in {t.lower() for t in self.targets})
 
 

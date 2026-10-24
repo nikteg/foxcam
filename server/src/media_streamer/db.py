@@ -70,6 +70,10 @@ def _backfill(engine: Engine, added: set[str]) -> None:
         for table in ("job", "detection", "event"):
             conn.execute(text(f"UPDATE {table} SET profile_id = 'default' "
                               "WHERE profile_id IS NULL"))
+        # ... and to its single detector, from before profiles had several.
+        for table in ("job", "detection"):
+            conn.execute(text(f"UPDATE {table} SET detector_id = 'default' "
+                              "WHERE detector_id IS NULL"))
         if "user_account.email_verified" in added:
             # Accounts from before: admins, and those an OAuth provider confirmed.
             conn.execute(text(

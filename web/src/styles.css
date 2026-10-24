@@ -1223,3 +1223,39 @@ Fluent's text styles would otherwise reset the margins. */
   justify-content: center;
   padding: 8px 0;
 }
+
+/* Detectors of a detection profile (editor rows, list on the profile card). */
+.detector-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalS);
+}
+.detector-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalS);
+  margin: 0;
+  padding: var(--spacingVerticalS) var(--spacingHorizontalM) var(--spacingVerticalM);
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: var(--borderRadiusLarge);
+  min-width: 0;
+}
+.detector-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--spacingHorizontalS);
+}
+.detector-numbers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacingHorizontalS);
+}
+.detector-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalXS);
+}

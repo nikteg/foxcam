@@ -2,8 +2,9 @@
 
 Profiles come from ``config.yaml`` (read-only in the UI) or are added in the web UI
 (stored in SQLite). Each camera runs its UI selection, else its config ``profiles``,
-else every profile marked ``default``. Each recorded segment gets one job per profile;
-a worker may lease a job when it has all the profile's ``requires`` tags.
+else every profile marked ``default``. Each recorded segment gets one job per profile and
+detector (model); a worker may lease a job when it has all the profile's ``requires``
+tags and the detector's own.
 """
 
 from __future__ import annotations
@@ -56,7 +57,9 @@ def _validate(data: dict[str, Any]) -> ProfileConfig:
 
 
 def save_profile(settings: Settings, data: dict[str, Any], *, create: bool) -> ProfileConfig:
-    data = {**data, "requires": normalize_tags(data.get("requires"))}
+    data = {**data, "requires": normalize_tags(data.get("requires")),
+            "detectors": [{**d, "requires": normalize_tags(d.get("requires"))}
+                          for d in data.get("detectors") or []]}
     profile = _validate(data)
     existing = settings.profile(profile.id)
     if create and existing:
@@ -72,6 +75,7 @@ def save_profile(settings: Settings, data: dict[str, Any], *, create: bool) -> P
             s.add(DetectionProfile(id=profile.id, config=stored))
         else:
             row.config = stored
+    cancel_jobs_without_profile(settings)  # e.g. a removed detector's waiting jobs
     return profile
 
 
@@ -86,19 +90,25 @@ def delete_profile(settings: Settings, profile_id: str) -> int:
 
 
 def cancel_jobs_without_profile(settings: Settings) -> int:
-    """Waiting jobs whose profile was removed or disabled can never run: give up on them."""
+    """Waiting jobs whose profile (or detector) was removed or disabled can never run:
+    give up on them."""
     from .pipeline.queue import settle_segment  # deferred: queue imports this module
 
-    active = {p.id for p in settings.all_profiles()}
+    active = {p.id: p for p in settings.all_profiles()}
     with session_scope() as s:
-        jobs = s.scalars(select(Job).where(
-            Job.state.in_([JobState.PENDING, JobState.FAILED]),
-            Job.profile_id.not_in(active) if active else Job.id.is_not(None))).all()
-        for job in jobs:
+        waiting = s.scalars(select(Job).where(
+            Job.state.in_([JobState.PENDING, JobState.FAILED]))).all()
+        gone = 0
+        for job in waiting:
+            p = active.get(job.profile_id)
+            if p is not None and p.detector(job.detector_id) is not None:
+                continue
             job.state = JobState.DEAD
-            job.error = f"profile '{job.profile_id}' was removed or disabled"
+            job.error = (f"profile '{job.profile_id}' was removed or disabled" if p is None
+                         else f"detector '{job.detector_id}' was removed from the profile")
             settle_segment(settings, job.segment)
-        return len(jobs)
+            gone += 1
+        return gone
 
 
 def camera_profiles(settings: Settings, camera_id: str,
@@ -133,8 +143,8 @@ def set_camera_profiles(settings: Settings, camera_id: str,
 
 
 def eligible_profiles(settings: Settings, tags: list[str],
-                      labels: list[str] | None = None) -> list[str]:
-    """Profiles whose jobs a worker with these tags may lease.
+                      labels: list[str] | None = None) -> list[tuple[str, str]]:
+    """(profile id, detector id) pairs whose jobs a worker with these tags may lease.
 
     ``labels``: what the worker can detect (e.g. the classes of a fine-tuned or COCO
     YOLO model). None = anything (open vocabulary, broad models). A profile is only
@@ -143,11 +153,9 @@ def eligible_profiles(settings: Settings, tags: list[str],
     have = set(tags)
     out = []
     for p in settings.all_profiles():
-        if not set(p.requires) <= have:
-            continue
         if labels is not None:
             can = {x.lower() for x in labels} | {p.canonical(x).lower() for x in labels}
             if not can & {t.lower() for t in p.targets}:
                 continue
-        out.append(p.id)
+        out += [(p.id, d.id) for d in p.detectors if p.detector_requires(d) <= have]
     return out

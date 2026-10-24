@@ -19,6 +19,14 @@ from .queries import WORKER_ONLINE_SECONDS
 router = APIRouter(prefix="/api", tags=["profiles"])
 
 
+class DetectorIn(BaseModel):
+    id: str = Field(pattern=PROFILE_ID, max_length=40)
+    name: str | None = Field(default=None, max_length=80)
+    requires: list[str] = Field(default=[], max_length=20)
+    min_confidence: float | None = Field(default=None, ge=0, le=1)
+    fps: float | None = Field(default=None, gt=0, le=30)
+
+
 class ProfileIn(BaseModel):
     id: str = Field(pattern=PROFILE_ID, max_length=40)
     name: str | None = Field(default=None, max_length=80)
@@ -26,6 +34,8 @@ class ProfileIn(BaseModel):
     aliases: dict[str, str] = {}
     min_confidence: float = Field(default=0.5, ge=0, le=1)
     requires: list[str] = Field(default=[], max_length=20)
+    # Empty = one detector, `default` (needing only `requires`).
+    detectors: list[DetectorIn] = Field(default=[], max_length=10)
     fps: float | None = Field(default=None, gt=0, le=30)
     default: bool = False
     events_days: float | None = Field(default=None, ge=0)
@@ -54,11 +64,16 @@ def profile_list(settings: Settings, viewer: Principal) -> list[dict[str, Any]]:
     by_camera = {c.id: {p.id for p in profiles.camera_profiles(settings, c.id)} for c in cams}
     out = []
     for p in settings.all_profiles(include_disabled=True):
-        need = set(p.requires)
+        data = p.model_dump()
+        for d, spec in zip(data["detectors"], p.detectors, strict=True):
+            need = p.detector_requires(spec)
+            d["display_name"] = spec.display_name
+            d["workers_online"] = [w for w, tags in workers if need <= tags]
         out.append({
-            **p.model_dump(), "display_name": p.display_name,
+            **data, "display_name": p.display_name,
             "cameras": [c for c, ids in by_camera.items() if p.id in ids],
-            "workers_online": [w for w, tags in workers if need <= tags],
+            # Workers that can run at least one of its detectors.
+            "workers_online": sorted({w for d in data["detectors"] for w in d["workers_online"]}),
             "waiting_jobs": waiting.get(p.id, 0),
         })
     return out
@@ -133,4 +148,6 @@ def known_tags(settings: Settings = Depends(settings_dep)) -> list[str]:
             tags.update(row or [])
     for p in settings.all_profiles(include_disabled=True):
         tags.update(p.requires)
+        for d in p.detectors:
+            tags.update(d.requires)
     return sorted(tags)

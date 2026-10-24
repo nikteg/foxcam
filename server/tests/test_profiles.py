@@ -229,7 +229,8 @@ def test_fixed_class_workers_only_get_matching_profiles(two_profiles):
     from media_streamer.profiles import eligible_profiles
 
     two_profiles.profiles[1].requires = []  # vehicles: any worker
-    assert eligible_profiles(two_profiles, [], None) == ["default", "vehicles"]
-    assert eligible_profiles(two_profiles, [], ["fox"]) == ["default"]
-    assert eligible_profiles(two_profiles, [], ["automobile"]) == ["vehicles"]  # alias
+    both = [("default", "default"), ("vehicles", "default")]
+    assert eligible_profiles(two_profiles, [], None) == both
+    assert eligible_profiles(two_profiles, [], ["fox"]) == [("default", "default")]
+    assert eligible_profiles(two_profiles, [], ["automobile"]) == [("vehicles", "default")]
     assert eligible_profiles(two_profiles, [], ["cat"]) == []

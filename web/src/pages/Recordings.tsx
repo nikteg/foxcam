@@ -421,7 +421,9 @@ function RunSummary({ job: j }: { job: SegmentJob }) {
   return (
     <li>
       <span className="row wrap">
-        <Text weight="semibold">{j.profile_name ?? j.profile_id ?? "–"}</Text>
+        <Text weight="semibold">
+          {j.profile_name ?? j.profile_id ?? "–"} – {j.detector_name ?? j.detector_id ?? "–"}
+        </Text>
         <Tag kind={j.state}>{stateLabel(j.state)}</Tag>
         {parts.length > 0 && <Caption1 className="muted">{parts.join(" – ")}</Caption1>}
       </span>

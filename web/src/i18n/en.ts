@@ -431,6 +431,16 @@ export const en = {
     "Read-only view of {file}. Edit the file and restart to change it. Secrets are hidden.",
 
   // Detection profiles
+  "detectors.title": "Detectors (models)",
+  "detectors.hint":
+    "Each detector looks for the targets in every recording, on workers with all its tags (and the profile's). Their detections merge into one event per thing seen.",
+  "detectors.id": "Id",
+  "detectors.requires": "Worker tags for this detector",
+  "detectors.profiles": "the profile's",
+  "detectors.workers": "Can run it: {workers}.",
+  "detectors.add": "Add detector",
+  "detectors.noWorkers": "no worker online",
+  "col.detector": "Detector",
   "profiles.title": "Detection profiles",
   "profiles.profile": "Profile",
   "profiles.all": "All profiles",
@@ -468,7 +478,7 @@ export const en = {
     "Map a label a model reports to yours, e.g. red fox → fox, so different models agree on names.",
   "profiles.minConfidencePercent": "Minimum confidence (%)",
   "profiles.requiresHint":
-    "Only workers with all these tags get this profile's jobs (e.g. speciesnet, or a machine's own tag to pin it). Empty = any worker.",
+    "Tags every detector of this profile needs (e.g. gpu, or a machine's own tag to pin it); each detector can add its own. Empty = none.",
   "profiles.requiresAny": "Any worker can run it: {workers}.",
   "profiles.requiresMatching": "Workers with these tags: {workers}.",
   "profiles.requiresNoMatch": "No known worker has all these tags yet.",

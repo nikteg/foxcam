@@ -36,7 +36,14 @@ import {
   useSuggestionList,
 } from "../components/LabelPicker";
 import { useProfiles } from "../components/ProfileSelect";
-import { profileWarnings } from "../labelWarnings";
+import {
+  DetectorsEditor,
+  fromRows,
+  rowsValid,
+  toRows,
+  type DetectorRow,
+} from "../components/DetectorsEditor";
+import { profileWarnings, type ProfileWarning } from "../labelWarnings";
 
 import { Empty, QueryState, Tag } from "../components/ui";
 import { percent } from "../format";
@@ -154,6 +161,30 @@ function ProfileCard({
             <span className="muted">{t("profiles.anyWorker")}</span>
           )}
         </dd>
+        <dt>{t("detectors.title")}</dt>
+        <dd>
+          <ul className="detector-list">
+            {p.detectors.map((d) => (
+              <li key={d.id}>
+                <Text weight="semibold">{d.display_name}</Text>{" "}
+                {d.requires.map((x) => (
+                  <Tag key={x}>{x}</Tag>
+                ))}{" "}
+                <Caption1 className="muted">
+                  {[
+                    d.min_confidence !== null && `≥ ${percent(d.min_confidence)}`,
+                    d.fps !== null && `${d.fps} fps`,
+                    d.workers_online.length
+                      ? d.workers_online.join(", ")
+                      : t("detectors.noWorkers"),
+                  ]
+                    .filter(Boolean)
+                    .join(" – ")}
+                </Caption1>
+              </li>
+            ))}
+          </ul>
+        </dd>
         <dt>{t("profiles.fps")}</dt>
         <dd>{p.fps ? `${p.fps} fps` : <span className="muted">{t("profiles.allFrames")}</span>}</dd>
         {p.events_days !== null && (
@@ -230,6 +261,7 @@ export function ProfileDialog({
     String(Math.round((profile?.min_confidence ?? 0.5) * 100)),
   );
   const [requires, setRequires] = useState<string[]>(profile?.requires ?? []);
+  const [detectors, setDetectors] = useState<DetectorRow[]>(() => toRows(profile?.detectors));
   const [fps, setFps] = useState(profile?.fps?.toString() ?? "");
   const [eventsDays, setEventsDays] = useState(profile?.events_days?.toString() ?? "");
   const [isDefault, setDefault] = useState(profile?.default ?? false);
@@ -242,6 +274,7 @@ export function ProfileDialog({
     aliases: aliasMap(aliases),
     min_confidence: Math.min(Math.max(Number(minConf) / 100, 0), 1),
     requires,
+    detectors: fromRows(detectors),
     fps: fps ? Number(fps) : null,
     default: isDefault,
     events_days: eventsDays === "" ? null : Number(eventsDays),
@@ -259,7 +292,16 @@ export function ProfileDialog({
   const matching = (labels.data?.workers ?? []).filter((w) =>
     requires.every((tag) => w.tags.includes(tag)),
   );
-  const warnings = profileWarnings(targets, aliasMap(aliases), requires, labels.data);
+  // Per detector (each runs on its own workers), the same warning once.
+  const warnings = [
+    ...new Map(
+      detectors
+        .flatMap((d) =>
+          profileWarnings(targets, aliasMap(aliases), [...requires, ...d.requires], labels.data),
+        )
+        .map((w): [string, ProfileWarning] => [`${w.kind}:${w.labels.join()}`, w]),
+    ).values(),
+  ];
   const setAlias = (i: number, row: Partial<AliasRow>) =>
     setAliases((rows) => rows.map((r, j) => (j === i ? { ...r, ...row } : r)));
 
@@ -382,8 +424,17 @@ export function ProfileDialog({
                 <TagsPicker
                   value={requires}
                   onChange={setRequires}
-                  placeholder="speciesnet"
+                  placeholder="gpu"
                   ariaLabel={t("profiles.requires")}
+                />
+              </Field>
+              <Field label={t("detectors.title")} hint={t("detectors.hint")}>
+                <DetectorsEditor
+                  rows={detectors}
+                  onChange={setDetectors}
+                  common={requires}
+                  workers={labels.data?.workers ?? []}
+                  profileMinConf={minConf}
                 />
               </Field>
               <Field label={t("profiles.fps")} hint={t("profiles.fpsHint")}>
@@ -427,7 +478,7 @@ export function ProfileDialog({
               <Button
                 type="submit"
                 appearance="primary"
-                disabled={!id.trim() || !targets.length || save.isPending}
+                disabled={!id.trim() || !targets.length || !rowsValid(detectors) || save.isPending}
               >
                 {t("common.save")}
               </Button>

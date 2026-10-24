@@ -35,9 +35,10 @@
    - a thumbnail;
    - private camera, or no [detection profile](#detection-profiles) → stop (no job);
    - otherwise a **censored derivative**: censor rectangles burned in, sampled to the highest
-     frame rate any of the camera's profiles needs (≤ `sample_fps`), downscaled to
-     `max_width`, no audio. This is the only thing a worker can download.
-   - one `job` row per profile. The segment is `done` once all its jobs are done (or dead).
+     frame rate any of the camera's profiles (and their detectors) need (≤ `sample_fps`),
+     downscaled to `max_width`, no audio. This is the only thing a worker can download.
+   - one `job` row per profile and detector. The segment is `done` once all its jobs are
+     done (or dead).
 3. **Queue**: workers lease jobs (see [WORKER_PROTOCOL.md](WORKER_PROTOCOL.md)). Expired leases are
    reclaimed every 15 s; failures retry with backoff up to `max_attempts`, then the job is `dead`.
 4. **Events** (every 10 s): segments with a target detection (`detection.target_labels` ≥
@@ -52,17 +53,34 @@
 
 ## Detection profiles
 
-A profile (`profiles.py`) says **what** to look for and **who** can look for it:
+A profile (`profiles.py`) says **what** to look for and **which models** look for it:
 
 | Field | Meaning |
 |---|---|
 | `targets` | labels that create events (`fox`, or `car, person`) |
 | `aliases` | map model labels to yours (`red fox: fox`), so different models agree |
 | `min_confidence` | threshold for a target |
-| `requires` | worker tags needed to lease the profile's jobs |
+| `requires` | worker tags every detector of the profile needs |
+| `detectors` | the models that look (below); none = one detector `default` needing just `requires` |
 | `fps` | frames per second to analyse (cheaper profiles for slow-moving things) |
 | `default` | runs on cameras without their own selection |
 | `events_days` | per-profile event retention |
+
+Each **detector** has an `id` (unique in the profile), an optional `name`, its own
+`requires` tags (on top of the profile's), and optional `min_confidence` and `fps` that
+override the profile's. Every segment gets one job per profile and detector, so e.g. YOLO-World
+and SpeciesNet both look at each recording of a `wildlife` profile; their detections merge
+into the same events (per camera, profile and label).
+
+```yaml
+profiles:
+  - id: wildlife
+    targets: [fox, badger]
+    aliases: { red fox: fox }
+    detectors:
+      - { id: yolo, name: YOLO-World, requires: [open-vocabulary], min_confidence: 0.3 }
+      - { id: speciesnet, requires: [speciesnet] }
+```
 
 Profiles come from `config.yaml` or the web UI (Cameras → Detection profiles). A camera
 runs its UI selection, else its `profiles:` in config, else all `default` profiles; an empty
@@ -72,10 +90,10 @@ selection means "record only". Without any configured profiles there is one buil
 **Routing by tags, not by machine.** Workers send tags with each lease: the detector adds
 its own (`speciesnet`, `ultralytics`, `open-vocabulary`, `dummy`), `--tags` adds more, and
 the access token can carry tags set in the UI. A job is only handed to a worker that has all
-of its profile's `requires` tags, so a profile can be pinned to one machine by requiring a
-tag only that machine has, while several equal machines share the load. Profiles that no
-online worker can run are flagged in the UI. Removing or disabling a profile cancels its
-waiting jobs.
+of its detector's tags (the profile's `requires` plus the detector's own), so a detector
+can be pinned to one machine by requiring a tag only that machine has, while several equal
+machines share the load. Profiles that no online worker can run are flagged in the UI.
+Removing or disabling a profile, or removing a detector, cancels its waiting jobs.
 
 **Detecting anything.** Open-vocabulary workers (YOLO-World / YOLOE) prompt the
 model with each job's profile targets, so a new profile (`badger`, `deer`, `car`) needs no
@@ -90,8 +108,8 @@ events with two clips.
 | Table | Holds |
 |---|---|
 | `segment` | One recording file: camera, start (UTC), duration, status, light tags, mask version used, fox flag, pinned, `deleted_at`. |
-| `job` | Work item per segment and profile: state (`pending/leased/done/failed/dead`), lease token and expiry, attempts, model, timing. |
-| `detection` | Worker result: profile, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, event. |
+| `job` | Work item per segment, profile and detector: state (`pending/leased/done/failed/dead`), lease token and expiry, attempts, model, timing. |
+| `detection` | Worker result: profile, detector, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, event. |
 | `event` | Merged sighting of one label for one profile: time range, best detection, clip and thumbnail paths. |
 | `worker` | Last-seen info and tags per worker id (shown in the queue tab). |
 | `detection_profile` | Detection profiles added in the web UI. |
