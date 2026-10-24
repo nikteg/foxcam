@@ -15,7 +15,7 @@ import {
   type BadgeProps,
 } from "@fluentui/react-components";
 import { WeatherMoon20Regular, WeatherSunny20Regular } from "@fluentui/react-icons";
-import type { MouseEvent, ReactNode } from "react";
+import { useEffect, type MouseEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 
 import { localTime, percent, relativeTime } from "../format";
@@ -54,15 +54,25 @@ function followLink(e: MouseEvent, go: () => void) {
   go();
 }
 
+const APP_NAME = "Media Streamer";
+
+/** Sets the browser tab title, so history and bookmarks name the page. */
+export function usePageTitle(title: string | undefined) {
+  useEffect(() => {
+    document.title = title ? `${title} · ${APP_NAME}` : APP_NAME;
+  }, [title]);
+}
+
 export function PageHeader({
   title,
   children,
   actions,
 }: {
-  title: ReactNode;
+  title: string;
   children?: ReactNode;
   actions?: ReactNode;
 }) {
+  usePageTitle(title);
   return (
     <div className="page-header">
       <div className="page-title">

@@ -12,7 +12,7 @@ import {
 import type { ReactElement } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 
-import { RouterLink } from "./components/ui";
+import { RouterLink, usePageTitle } from "./components/ui";
 import { LanguageMenu, useI18n, type MessageKey } from "./i18n";
 
 interface NavItem {
@@ -125,6 +125,7 @@ export function Layout() {
 
 export function NotFound() {
   const { t } = useI18n();
+  usePageTitle(t("notFound.title"));
   return (
     <>
       <Title2 as="h1">{t("notFound.title")}</Title2>
