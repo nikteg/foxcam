@@ -175,6 +175,27 @@ def _logged_in(settings: Settings, u: User) -> None:
         u.is_admin = True
 
 
+def device_key(email: str) -> tuple[int, str] | None:
+    """(user id, password generation) for the known-device cookie (web/api_auth.py): the
+    generation changes with the password, so a reset makes old device cookies worthless.
+    None for unknown or disabled accounts."""
+    try:
+        email = normalize_email(email)
+    except AccountError:
+        return None
+    with session_scope() as s:
+        u = s.scalar(select(User).where(User.email == email))
+        if u is None or u.disabled:
+            return None
+        return u.id, _sha256(u.password_hash or "")[:16]
+
+
+def device_key_for(user_id: int) -> str | None:
+    with session_scope() as s:
+        u = s.get(User, user_id)
+        return None if u is None or u.disabled else _sha256(u.password_hash or "")[:16]
+
+
 def get_user(user_id: int) -> dict[str, Any]:
     with session_scope() as s:
         u = s.get(User, user_id)

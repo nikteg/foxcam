@@ -152,6 +152,19 @@ inspect`): set it there, or every visitor looks like the proxy, and the login li
 failed attempts per address in 15 minutes) hit everyone at once. Never `*` while the server
 can also be reached without the proxy: anyone could then claim any address.
 
+## Login limits
+
+Failed password sign-ins are limited per address (10 in 15 minutes), per address and
+account (10), and per account from anywhere (100, against guessing from many addresses).
+So that a stranger can't use the per-account limit to lock the owner out, every sign-in
+(password, OAuth, setup, sign-up) also sets a **known-device cookie** (`ms_device`, one
+year, HttpOnly, SameSite=Lax, Secure like the session cookie, sent only to `/api/auth/`).
+It is signed with `data/secret.key` and names the account and its password generation,
+and grants no access by itself: it only makes a browser that has signed in to the account
+before skip the per-account limit, and its failed attempts don't count towards it. A cookie
+for another account, a tampered one, or one from before the last password change is
+ignored, so changing the password also retires the devices.
+
 ## Turning it off
 
 `auth.enabled: false` removes all logins: everyone who reaches the server is an admin. Only

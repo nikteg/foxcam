@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import base64
 import subprocess
+import time
 from pathlib import Path
 
 import httpx
@@ -436,6 +437,85 @@ def test_failed_logins_from_one_address_dont_lock_out_others(settings):
         assert attacker.post("/api/auth/login", json=bad).status_code == 429
         r = owner.post("/api/auth/login", json={**bad, "password": PASSWORD})
         assert r.status_code == 200
+
+
+# --- 4 (round 2). known devices and the per-account login limit -----------------------
+
+def _lock_account(email: str) -> None:
+    """As if 100 sign-ins had failed from many addresses."""
+    for _ in range(api_auth.email_limiter.limit):
+        api_auth.email_limiter.fail(f"email:{email}")
+
+
+def test_a_known_device_is_not_locked_out(settings):
+    accounts.create_user(settings, "admin@example.org", PASSWORD, is_admin=True)
+    app = create_app(settings, background=False)
+    good = {"email": "admin@example.org", "password": PASSWORD}
+    with TestClient(app, client=("198.51.100.2", 1)) as owner, \
+            TestClient(app, client=("203.0.113.9", 1)) as stranger:
+        r = owner.post("/api/auth/login", json=good)
+        cookie = r.headers.get_list("set-cookie")
+        device = next(c for c in cookie if c.startswith("ms_device="))
+        assert "httponly" in device.lower() and "path=/api/auth/" in device.lower()
+        assert "samesite=lax" in device.lower()
+
+        _lock_account("admin@example.org")
+        assert stranger.post("/api/auth/login", json=good).status_code == 429
+        assert owner.post("/api/auth/login", json=good).status_code == 200
+        # The owner's own typos don't count towards the account's limit either.
+        before = len(api_auth.email_limiter.failures["email:admin@example.org"])
+        for _ in range(3):
+            assert owner.post("/api/auth/login",
+                              json={**good, "password": "typo"}).status_code == 401
+        assert len(api_auth.email_limiter.failures["email:admin@example.org"]) == before
+
+
+def test_device_cookies_that_dont_count(settings):
+    accounts.create_user(settings, "admin@example.org", PASSWORD, is_admin=True)
+    bob = accounts.create_user(settings, "bob@example.org", PASSWORD)["id"]
+    app = create_app(settings, background=False)
+    good = {"email": "admin@example.org", "password": PASSWORD}
+    with TestClient(app, client=("198.51.100.3", 1)) as c:
+        assert c.post("/api/auth/login",
+                      json={"email": "bob@example.org", "password": PASSWORD}).status_code == 200
+        bobs = c.cookies.get("ms_device")
+        _lock_account("admin@example.org")
+        # Bob's device is not a known device of the admin's account.
+        assert c.post("/api/auth/login", json=good).status_code == 429
+        body, mac = bobs.rsplit(".", 1)
+        for forged in (f"{body}.{'0' * len(mac)}", "garbage", bobs[:-2] + "ab",
+                       api_auth._sign(settings, {"u": bob, "g": "x"})):
+            c.cookies.set("ms_device", forged, path="/api/auth/")
+            assert c.post("/api/auth/login", json=good).status_code == 429, forged
+        # Right user and password generation, but no kind (e.g. another signed cookie)
+        # or too old.
+        uid, gen = accounts.device_key("admin@example.org")
+        for data in ({"u": uid, "g": gen, "t": int(time.time())},
+                     {"k": "device", "u": uid, "g": gen, "t": int(time.time()) - 400 * 86400}):
+            c.cookies.set("ms_device", api_auth._sign(settings, data), path="/api/auth/")
+            assert c.post("/api/auth/login", json=good).status_code == 429
+
+
+def test_a_password_change_retires_old_devices(settings):
+    uid = accounts.create_user(settings, "admin@example.org", PASSWORD, is_admin=True)["id"]
+    app = create_app(settings, background=False)
+    with TestClient(app, client=("198.51.100.4", 1)) as c:
+        assert c.post("/api/auth/login", json={"email": "admin@example.org",
+                                               "password": PASSWORD}).status_code == 200
+        accounts.set_password(uid, "a whole new passphrase")
+        _lock_account("admin@example.org")
+        r = c.post("/api/auth/login", json={"email": "admin@example.org",
+                                            "password": "a whole new passphrase"})
+        assert r.status_code == 429
+
+
+def test_device_cookie_is_secure_with_https(settings):
+    settings.public_url = "https://cams.example.org"
+    accounts.create_user(settings, "kim@example.org", PASSWORD)
+    with TestClient(create_app(settings, background=False)) as c:
+        r = c.post("/api/auth/login", json={"email": "kim@example.org", "password": PASSWORD})
+        device = next(h for h in r.headers.get_list("set-cookie") if h.startswith("ms_device"))
+        assert "secure" in device.lower()
 
 
 # --- low ------------------------------------------------------------------------------

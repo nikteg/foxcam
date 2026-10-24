@@ -30,6 +30,10 @@ from .deps import SESSION_COOKIE, current_principal, principal, settings_dep
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 FLOW_COOKIE = "ms_oauth"
+# Known device: set at every sign-in, it exempts this browser from the per-account login
+# limit (someone failing from elsewhere can't lock the owner out). Grants no access.
+DEVICE_COOKIE = "ms_device"
+DEVICE_DAYS = 365
 FLOW_SECONDS = 600
 
 
@@ -67,6 +71,7 @@ class _Limiter:
 
 
 limiter = _Limiter()
+# Per account, from anywhere (guessing from many addresses); known devices are exempt.
 email_limiter = _Limiter(limit=100)
 
 
@@ -88,6 +93,23 @@ def _start_session(request: Request, response: Response, settings: Settings,
     token = accounts.create_session(settings, user_id, request.headers.get("user-agent"))
     response.set_cookie(SESSION_COOKIE, token, max_age=int(settings.auth.session_days * 86400),
                         httponly=True, samesite="lax", secure=_secure(request), path="/")
+    if generation := accounts.device_key_for(user_id):
+        device = _sign(settings, {"k": "device", "u": user_id, "g": generation,
+                                  "t": int(time.time()), "n": secrets.token_urlsafe(8)})
+        response.set_cookie(DEVICE_COOKIE, device, max_age=DEVICE_DAYS * 86400,
+                            httponly=True, samesite="lax", secure=_secure(request),
+                            path="/api/auth/")
+
+
+def _known_device(request: Request, settings: Settings, email: str) -> bool:
+    """This browser signed in to this account before, since its last password change."""
+    data = _unsign(settings, request.cookies.get(DEVICE_COOKIE))
+    # Same key as the OAuth flow cookie: the kind keeps one from passing for the other.
+    if not isinstance(data, dict) or data.get("k") != "device" \
+            or time.time() - data.get("t", 0) > DEVICE_DAYS * 86400:
+        return False
+    key = accounts.device_key(email)
+    return key is not None and data.get("u") == key[0] and data.get("g") == key[1]
 
 
 def _secret(settings: Settings) -> bytes:
@@ -188,13 +210,17 @@ async def login(body: LoginIn, request: Request, response: Response,
     # account a much higher limit, against guessing from many addresses.
     keys = (_client(request), f"{_client(request)}|email:{email}")
     limiter.check(*keys)
-    email_limiter.check(f"email:{email}")
+    # A known device is neither held back by nor counted towards the per-account limit.
+    known = await asyncio.to_thread(_known_device, request, settings, email)
+    if not known:
+        email_limiter.check(f"email:{email}")
     try:
         uid = await asyncio.to_thread(accounts.authenticate, settings, body.email,
                                       body.password)
     except AccountError as e:
         limiter.fail(*keys)
-        email_limiter.fail(f"email:{email}")
+        if not known:
+            email_limiter.fail(f"email:{email}")
         raise _error(e) from e
     limiter.reset(keys[1])
     _start_session(request, response, settings, uid)
