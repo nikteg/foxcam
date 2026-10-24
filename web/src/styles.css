@@ -67,6 +67,10 @@ kbd {
 .contents {
   display: contents;
 }
+/* A second, muted line under a radio / switch label. */
+.option-hint {
+  display: block;
+}
 .empty {
   display: block;
   padding: var(--spacingVerticalL) 0;

@@ -168,3 +168,20 @@ worker/src/media_worker/
   detectors/         dummy, ultralytics (YOLO-World / YOLO), speciesnet
 web/src/             React + Fluent UI app (pages/, components/, i18n/)
 ```
+
+## Processing stage (recording profiles, burned-in masks)
+
+By default MediaMTX records `<camera>` exactly as the camera sends it. When a camera's
+recording profile re-encodes (`transcode: true`) or its censor areas are burned in, the
+server reconfigures MediaMTX:
+
+- the camera's own stream goes to `<camera>/raw` (the RTSP source moves there; ingest
+  publishers switch their publish URL, see `recording.source_path`);
+- `<camera>` becomes a publisher path whose `runOnInit` ffmpeg reads `<camera>/raw`, draws
+  the masks, scales / limits fps, re-encodes (`mediamtx.encoder`) and publishes `<camera>`.
+
+Recording, live view, the low-data path, snapshots and worker jobs all keep reading
+`<camera>`, so nothing downstream changes. The mask editor snapshots `<camera>/raw`
+(`?source=true`) so you can see what is under existing masks. Recording profiles may set
+`keep_days`, which replaces `retention.segments_days` for their cameras.
+

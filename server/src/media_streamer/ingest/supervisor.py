@@ -16,6 +16,7 @@ import threading
 import time
 
 from ..config import CameraConfig, Settings
+from ..recording import source_path
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +25,9 @@ H264_OUT = ["-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency", "-
 
 
 def publish_url(settings: Settings, cam: CameraConfig) -> str:
-    return f"{settings.mediamtx.rtsp_url.rstrip('/')}/{cam.id}"
+    """Where to publish: ``<camera>``, or ``<camera>/raw`` when it is processed (masks /
+    re-encoding, see ``recording``)."""
+    return f"{settings.mediamtx.rtsp_url.rstrip('/')}/{source_path(settings, cam)}"
 
 
 def ffmpeg_publisher_args(settings: Settings, cam: CameraConfig) -> list[str]:
@@ -58,8 +61,9 @@ def _run_ffmpeg_camera(settings: Settings, cam: CameraConfig, stop: threading.Ev
         stop.wait(backoff)
 
 
-def _fingerprint(cam: CameraConfig) -> str:
-    return json.dumps(cam.source.model_dump(), sort_keys=True)
+def _fingerprint(settings: Settings, cam: CameraConfig) -> str:
+    # The publish path is part of it: switching processing on/off restarts the publisher.
+    return json.dumps([cam.source.model_dump(), source_path(settings, cam)], sort_keys=True)
 
 
 def run_ingest(settings: Settings, poll_seconds: float = 5.0) -> None:
@@ -88,7 +92,7 @@ def run_ingest(settings: Settings, poll_seconds: float = 5.0) -> None:
             if wanted is not None:
                 for cam_id in list(running):
                     cam = wanted.get(cam_id)
-                    if cam is None or _fingerprint(cam) != running[cam_id][0]:
+                    if cam is None or _fingerprint(settings, cam) != running[cam_id][0]:
                         log.info("[%s] stopping publisher (camera removed or changed)", cam_id)
                         stop(cam_id)
                 for cam_id, cam in wanted.items():
@@ -104,7 +108,7 @@ def run_ingest(settings: Settings, poll_seconds: float = 5.0) -> None:
                     thread = threading.Thread(target=target, args=(settings, cam, event),
                                               name=f"ingest-{cam_id}", daemon=True)
                     thread.start()
-                    running[cam_id] = (_fingerprint(cam), event, thread)
+                    running[cam_id] = (_fingerprint(settings, cam), event, thread)
                 if not running and not wanted:
                     log.debug("no cameras need an ingest publisher (all RTSP or none)")
             time.sleep(poll_seconds)

@@ -8,6 +8,7 @@ from typing import Any
 
 from sqlalchemy import func, select
 
+from .. import recording
 from ..config import Settings
 from ..db import session_scope
 from ..mediamtx import low_path
@@ -37,7 +38,8 @@ def camera_state(camera_id: str) -> dict[str, Any]:
         st = s.get(CameraState, camera_id)
         mask = s.get(MaskVersion, st.mask_version_id) if st and st.mask_version_id else None
         return {"private": bool(st and st.private), "rects": mask.rects if mask else [],
-                "mask_version_id": mask.id if mask else None}
+                "mask_version_id": mask.id if mask else None,
+                "burn_masks": bool(st and st.burn_masks)}
 
 
 def save_camera_state(camera_id: str, rects: list[list[float]], private: bool) -> int | None:
@@ -82,9 +84,16 @@ def cameras(settings: Settings, live: dict[str, dict[str, Any]]) -> list[dict[st
                 "last_is_night": last.is_night if last else None,
                 "profiles": [p.id for p in camera_profiles(settings, cam.id)],
                 "profiles_source": _profiles_source(cam),
+                **_recording(settings, cam),
                 **camera_state(cam.id),
             })
     return out
+
+
+def _recording(settings: Settings, cam) -> dict[str, Any]:
+    profile, source = recording.camera_recording_profile(settings, cam)
+    return {"recording_profile": profile.id, "recording_profile_source": source,
+            "processed": recording.processing(settings, cam) is not None}
 
 
 def _low_urls(settings: Settings, camera_id: str) -> dict[str, str | None]:

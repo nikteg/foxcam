@@ -28,3 +28,67 @@ def test_low_data_urls(settings: Settings) -> None:
     cam = queries.cameras(settings, {})[0]
     assert cam["webrtc_low_url"] == "http://localhost:8889/cam/low/"
     assert cam["hls_low_url"] == "http://localhost:8888/cam/low/"
+
+
+def test_original_profile_records_source_directly(settings: Settings) -> None:
+    from media_streamer.recording import source_path
+
+    cam = settings.camera("cam")
+    assert source_path(settings, cam) == "cam"
+    assert "runOnInit" not in desired_paths(settings)["cam"]
+
+
+def test_transcoding_profile_adds_processing_stage(settings: Settings) -> None:
+    from media_streamer import recording
+
+    recording.set_camera_recording_profile(settings, "cam", "720p")
+    cam = settings.camera("cam")
+    assert recording.source_path(settings, cam) == "cam/raw"
+    paths = desired_paths(settings)
+    assert paths["cam/raw"] == {"source": "publisher", "record": False}
+    main = paths["cam"]
+    assert main["record"] is True and main["source"] == "publisher"
+    cmd = main["runOnInit"]
+    assert "rtsp://localhost:$RTSP_PORT/cam/raw" in cmd
+    assert "'fps" not in cmd and r"'scale=-2:min(720\,ih),format=yuv420p'" in cmd
+    assert "-b:v 1200k" in cmd
+    # The low-data view reads the processed stream.
+    assert "$RTSP_PORT/cam " in paths["cam/low"]["runOnDemand"]
+
+
+def test_burned_in_masks(settings: Settings) -> None:
+    from media_streamer import recording
+    from media_streamer.web import queries
+
+    queries.save_camera_state("cam", [[0.1, 0.2, 0.3, 0.4]], False)
+    assert recording.processing(settings, settings.camera("cam")) is None  # not burned in
+    recording.set_burn_masks("cam", True)
+    proc = recording.processing(settings, settings.camera("cam"))
+    assert proc is not None and not proc.transcode
+    cmd = desired_paths(settings)["cam"]["runOnInit"]
+    assert "drawbox=x=iw*0.10000:y=ih*0.20000:w=iw*0.30000:h=ih*0.40000" in cmd
+    assert "scale" not in cmd and "-crf 23" in cmd
+    cam = queries.cameras(settings, {})[0]
+    assert cam["processed"] is True and cam["recording_profile"] == "original"
+
+
+def test_rtsp_camera_moves_to_raw(settings: Settings) -> None:
+    from media_streamer import recording
+    from media_streamer.config import CameraConfig
+
+    settings.cameras.append(CameraConfig.model_validate(
+        {"id": "door", "recording_profile": "h265",
+         "source": {"type": "rtsp", "url": "rtsp://10.0.0.2/stream1"}}))
+    paths = desired_paths(settings)
+    assert paths["door/raw"]["source"] == "rtsp://10.0.0.2/stream1"
+    assert "-c:v libx265" in paths["door"]["runOnInit"]
+    profile, source = recording.camera_recording_profile(settings, settings.camera("door"))
+    assert (profile.id, source) == ("h265", "config")
+
+
+def test_unknown_recording_profile_rejected(settings: Settings) -> None:
+    import pytest
+    from media_streamer import recording
+
+    with pytest.raises(recording.RecordingError):
+        recording.set_camera_recording_profile(settings, "cam", "nope")

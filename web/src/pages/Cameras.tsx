@@ -16,6 +16,8 @@ import {
   Input,
   MessageBar,
   MessageBarBody,
+  Radio,
+  RadioGroup,
   Subtitle2,
   Switch,
   Text,
@@ -28,12 +30,13 @@ import {
   ScanObject20Regular,
   EyeOff20Regular,
   Video20Regular,
+  VideoClip20Regular,
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router";
 
-import { api, type Camera, type CameraSource } from "../api";
+import { api, type Camera, type CameraSource, type RecordingProfile } from "../api";
 import { AddCameraDialog } from "../components/AddCameraDialog";
 import { ProfilesSection } from "./Profiles";
 import { useProfileName, useProfiles } from "../components/ProfileSelect";
@@ -73,6 +76,7 @@ export function Cameras() {
   const [editing, setEditing] = useState<Camera | null>(null);
   const [removing, setRemoving] = useState<Camera | null>(null);
   const [choosing, setChoosing] = useState<Camera | null>(null);
+  const [recordingFor, setRecordingFor] = useState<Camera | null>(null);
   const { hash } = useLocation();
   const loaded = !cameras.isPending;
   useEffect(() => {
@@ -112,6 +116,7 @@ export function Cameras() {
             onEdit={() => setEditing(c)}
             onRemove={() => setRemoving(c)}
             onProfiles={() => setChoosing(c)}
+            onRecording={() => setRecordingFor(c)}
           />
         ))}
       </div>
@@ -122,6 +127,9 @@ export function Cameras() {
       {editing && <EditCameraDialog camera={editing} onClose={() => setEditing(null)} />}
       {removing && <RemoveCameraDialog camera={removing} onClose={() => setRemoving(null)} />}
       {choosing && <CameraProfilesDialog camera={choosing} onClose={() => setChoosing(null)} />}
+      {recordingFor && (
+        <RecordingProfileDialog camera={recordingFor} onClose={() => setRecordingFor(null)} />
+      )}
     </>
   );
 }
@@ -131,14 +139,17 @@ function CameraCard({
   onEdit,
   onRemove,
   onProfiles,
+  onRecording,
 }: {
   camera: Camera;
   onEdit: () => void;
   onRemove: () => void;
   onProfiles: () => void;
+  onRecording: () => void;
 }) {
   const { t } = useI18n();
   const profileName = useProfileName();
+  const recordingName = useRecordingProfileName();
   const sourceLabel = useSourceLabel();
   const client = useQueryClient();
   const routerHref = useRouterHref();
@@ -176,6 +187,13 @@ function CameraCard({
           {c.segment_seconds_override === null && (
             <span className="muted"> ({t("camera.default")})</span>
           )}
+        </dd>
+        <dt>{t("recording.title")}</dt>
+        <dd>
+          <span className="row wrap tags">
+            {recordingName(c.recording_profile)}
+            {c.burn_masks && c.rects.length > 0 && <Tag>{t("recording.masksBurnedIn")}</Tag>}
+          </span>
         </dd>
         <dt>{t("camera.censorAreas")}</dt>
         <dd>{c.rects.length}</dd>
@@ -222,6 +240,9 @@ function CameraCard({
         </Button>
         <Button size="small" icon={<ScanObject20Regular />} onClick={onProfiles}>
           {t("cameras.detect")}
+        </Button>
+        <Button size="small" icon={<VideoClip20Regular />} onClick={onRecording}>
+          {t("recording.title")}
         </Button>
         {editable && (
           <>
@@ -294,6 +315,114 @@ function EditCameraDialog({ camera, onClose }: { camera: Camera; onClose: () => 
             </DialogActions>
           </DialogBody>
         </form>
+      </DialogSurface>
+    </Dialog>
+  );
+}
+
+function useRecordingProfiles() {
+  return useQuery({ queryKey: ["recording-profiles"], queryFn: api.recordingProfiles });
+}
+
+function useRecordingProfileName(): (id: string) => string {
+  const { data = [] } = useRecordingProfiles();
+  return (id) => data.find((p) => p.id === id)?.display_name ?? id;
+}
+
+/** "≤ 720p, 1200 kbit/s, 15 fps, H.264, kept 30 days" */
+function useRecordingSummary(): (p: RecordingProfile) => string {
+  const { t } = useI18n();
+  return (p) => {
+    const parts = p.transcode
+      ? [
+          p.max_height ? `≤ ${p.max_height}p` : t("recording.sameResolution"),
+          p.bitrate_kbit ? `${p.bitrate_kbit} kbit/s` : t("recording.constantQuality"),
+          ...(p.fps ? [`${p.fps} fps`] : []),
+          p.codec === "h265" ? "H.265" : "H.264",
+        ]
+      : [t("recording.asSent")];
+    if (p.keep_days !== null) parts.push(t("recording.keptDays", { n: p.keep_days }));
+    return parts.join(", ");
+  };
+}
+
+function RecordingProfileDialog({ camera, onClose }: { camera: Camera; onClose: () => void }) {
+  const { t } = useI18n();
+  const client = useQueryClient();
+  const { data: profiles = [] } = useRecordingProfiles();
+  const summary = useRecordingSummary();
+  const [selected, setSelected] = useState(camera.recording_profile);
+  const save = useMutation({
+    mutationFn: (id: string | null) => api.setRecordingProfile(camera.id, id),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["cameras"] });
+      void client.invalidateQueries({ queryKey: ["recording-profiles"] });
+      onClose();
+    },
+  });
+  const chosen = profiles.find((p) => p.id === selected);
+
+  return (
+    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
+      <DialogSurface>
+        <DialogBody>
+          <DialogTitle>{t("recording.dialogTitle", { name: camera.name })}</DialogTitle>
+          <DialogContent className="form-stack">
+            <Body1 className="muted">{t("recording.help")}</Body1>
+            <RadioGroup value={selected} onChange={(_, d) => setSelected(d.value)}>
+              {profiles.map((p) => (
+                <Radio
+                  key={p.id}
+                  value={p.id}
+                  label={
+                    <span>
+                      {p.display_name}
+                      {p.default && <Caption1 className="muted"> ({t("camera.default")})</Caption1>}
+                      <Caption1 as="span" className="muted option-hint">
+                        {summary(p)}
+                      </Caption1>
+                    </span>
+                  }
+                />
+              ))}
+            </RadioGroup>
+            {chosen?.transcode && (
+              <MessageBar>
+                <MessageBarBody>
+                  {t("recording.transcodeNote")}
+                  {chosen.codec === "h265" && <> {t("recording.h265Note")}</>}
+                </MessageBarBody>
+              </MessageBar>
+            )}
+            <Caption1 className="muted">
+              {camera.recording_profile_source === "ui"
+                ? t("cameras.profilesFromUi")
+                : camera.recording_profile_source === "config"
+                  ? t("cameras.profilesFromConfig")
+                  : t("recording.fromDefault")}
+            </Caption1>
+            {save.error && (
+              <MessageBar intent="error">
+                <MessageBarBody>{save.error.message}</MessageBarBody>
+              </MessageBar>
+            )}
+          </DialogContent>
+          <DialogActions>
+            {camera.recording_profile_source === "ui" && (
+              <Button disabled={save.isPending} onClick={() => save.mutate(null)}>
+                {t("cameras.profilesReset")}
+              </Button>
+            )}
+            <Button onClick={onClose}>{t("common.cancel")}</Button>
+            <Button
+              appearance="primary"
+              disabled={save.isPending}
+              onClick={() => save.mutate(selected)}
+            >
+              {t("common.save")}
+            </Button>
+          </DialogActions>
+        </DialogBody>
       </DialogSurface>
     </Dialog>
   );

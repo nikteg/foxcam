@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from .. import camera_store, tapo_account
+from .. import camera_store, recording, tapo_account
 from ..config import Settings, Source
 from ..mediamtx import MediaMtx
 from .deps import mediamtx_dep, settings_dep
@@ -21,12 +21,48 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["cameras"])
 
 
-async def _resync(mtx: MediaMtx) -> None:
+async def resync(mtx: MediaMtx) -> None:
     """Push the new camera list to MediaMTX. Ingest picks up changes on its own."""
     try:
         await mtx.sync_paths()
     except Exception as e:  # noqa: BLE001 - camera is saved; MediaMTX catches up on restart
         log.warning("could not update MediaMTX: %s", e)
+
+
+class RecordingProfileIn(BaseModel):
+    # None = back to the camera's config.yaml / the default profile.
+    profile: str | None
+
+
+@router.get("/recording-profiles")
+def list_recording_profiles(settings: Settings = Depends(settings_dep)) -> list[dict[str, Any]]:
+    by_profile: dict[str, list[str]] = {}
+    for cam in settings.all_cameras(include_disabled=True):
+        p, _ = recording.camera_recording_profile(settings, cam)
+        by_profile.setdefault(p.id, []).append(cam.id)
+    return [{**p.model_dump(), "display_name": p.display_name,
+             "default": p.id == settings.recording_profile_default,
+             "cameras": by_profile.get(p.id, [])}
+            for p in recording.all_recording_profiles(settings)]
+
+
+@router.put("/cameras/{camera_id}/recording-profile")
+async def set_recording_profile(camera_id: str, body: RecordingProfileIn,
+                                settings: Settings = Depends(settings_dep),
+                                mtx: MediaMtx = Depends(mediamtx_dep)) -> dict[str, Any]:
+    """Takes effect within seconds: MediaMTX starts / stops the re-encode, and the
+    current recording segment ends."""
+    if settings.camera(camera_id) is None:
+        raise HTTPException(404, "unknown camera")
+    try:
+        await asyncio.to_thread(recording.set_camera_recording_profile, settings, camera_id,
+                                body.profile)
+    except recording.RecordingError as e:
+        raise HTTPException(400, str(e)) from e
+    await resync(mtx)
+    cam = settings.camera(camera_id)
+    p, source = recording.camera_recording_profile(settings, cam)
+    return {"recording_profile": p.id, "recording_profile_source": source}
 
 
 class CameraIn(BaseModel):
@@ -52,7 +88,7 @@ async def add_camera(body: CameraIn, settings: Settings = Depends(settings_dep),
             source=body.source.model_dump(), segment_seconds=body.segment_seconds)
     except camera_store.CameraError as e:
         raise HTTPException(400, str(e)) from e
-    await _resync(mtx)
+    await resync(mtx)
     return {"id": cam.id}
 
 
@@ -69,7 +105,7 @@ async def update_camera(camera_id: str, body: CameraPatch,
                                       segment_seconds=seg, enabled=body.enabled)
     except camera_store.CameraError as e:
         raise HTTPException(400, str(e)) from e
-    await _resync(mtx)
+    await resync(mtx)
     return {"id": cam.id}
 
 
@@ -79,7 +115,7 @@ async def delete_camera(camera_id: str, mtx: MediaMtx = Depends(mediamtx_dep)) -
         await asyncio.to_thread(camera_store.delete_camera, camera_id)
     except camera_store.CameraError as e:
         raise HTTPException(400, str(e)) from e
-    await _resync(mtx)
+    await resync(mtx)
     return {"status": "ok"}
 
 

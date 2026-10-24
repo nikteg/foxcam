@@ -77,6 +77,10 @@ Source = Annotated[
 ]
 
 
+PROFILE_ID = r"^[a-z0-9][a-z0-9_-]*$"
+TAG = r"^[a-z0-9][a-z0-9_.-]*$"
+
+
 class CameraConfig(BaseModel):
     id: str = Field(pattern=r"^[a-z0-9][a-z0-9_-]*$")
     name: str | None = None
@@ -86,8 +90,37 @@ class CameraConfig(BaseModel):
     # Detection profiles to run on this camera. None = every profile marked `default`.
     # The web UI can override this per camera.
     profiles: list[str] | None = None
+    # Recording profile (quality / retention). None = recording_profile_default.
+    # The web UI can override this per camera.
+    recording_profile: str | None = None
     # "config" = defined in config.yaml (read-only in the UI), "ui" = added in the web UI.
     managed: Literal["config", "ui"] = "config"
+
+    @property
+    def display_name(self) -> str:
+        return self.name or self.id
+
+
+class RecordingProfileConfig(BaseModel):
+    """How a camera is recorded: as the camera sends it, or re-encoded smaller.
+
+    Re-encoding (``transcode``) costs CPU (or a hardware encoder, see
+    ``mediamtx.encoder``) but can cut storage several times over.
+    """
+
+    id: str = Field(pattern=PROFILE_ID, max_length=40)
+    name: str | None = None
+    # False = store the camera's own stream untouched (no quality loss, no CPU).
+    transcode: bool = False
+    codec: Literal["h264", "h265"] = "h264"
+    # Scale down to at most this many lines (never up). None = keep the resolution.
+    max_height: int | None = Field(default=None, ge=144, le=4320)
+    fps: int | None = Field(default=None, ge=1, le=60)
+    # Target video bitrate. None = constant quality (CRF 23 / encoder default).
+    bitrate_kbit: int | None = Field(default=None, ge=100, le=50000)
+    # Delete this camera's ordinary recordings after N days (None = retention.segments_days).
+    keep_days: float | None = Field(default=None, ge=0)
+    managed: Literal["builtin", "config"] = "config"
 
     @property
     def display_name(self) -> str:
@@ -105,10 +138,6 @@ class LowDataConfig(BaseModel):
     height: int = Field(default=480, ge=144, le=1080)
     bitrate_kbit: int = Field(default=500, ge=100, le=8000)
     fps: int = Field(default=15, ge=1, le=30)
-    # e.g. h264_videotoolbox (macOS), h264_nvenc, h264_vaapi. libx264 works everywhere.
-    encoder: str = "libx264"
-    # ffmpeg as seen by the MediaMTX process (the Docker setup uses the -ffmpeg image).
-    ffmpeg: str = "ffmpeg"
 
 
 class MediaMtxConfig(BaseModel):
@@ -121,6 +150,13 @@ class MediaMtxConfig(BaseModel):
     # Recording directory as seen by the MediaMTX process. Defaults to ``recordings_dir``.
     record_dir: str | None = None
     low_data: LowDataConfig = LowDataConfig()
+    # ffmpeg as seen by the MediaMTX process, which runs the low-data, mask and recording
+    # profile transcodes (the Docker setup uses the mediamtx -ffmpeg image).
+    ffmpeg: str = "ffmpeg"
+    # Video encoders. libx264/libx265 work everywhere; hardware: h264_videotoolbox /
+    # hevc_videotoolbox (macOS), h264_nvenc / hevc_nvenc (NVIDIA), h264_vaapi (Intel/AMD).
+    encoder: str = "libx264"
+    encoder_h265: str = "libx265"
 
 
 class ProcessingConfig(BaseModel):
@@ -145,8 +181,6 @@ class DetectionConfig(BaseModel):
     min_confidence: float = 0.5
 
 
-PROFILE_ID = r"^[a-z0-9][a-z0-9_-]*$"
-TAG = r"^[a-z0-9][a-z0-9_.-]*$"
 DEFAULT_PROFILE = "default"
 
 
@@ -328,6 +362,10 @@ class Settings(BaseModel):
     cameras: list[CameraConfig] = []
     # Detection profiles. Empty = one built-in `default` profile from `detection`.
     profiles: list[ProfileConfig] = []
+    # Recording profiles in addition to the built-in ones (same id replaces a built-in).
+    recording_profiles: list[RecordingProfileConfig] = []
+    # Recording profile of cameras without one of their own.
+    recording_profile_default: str = "original"
     mediamtx: MediaMtxConfig = MediaMtxConfig()
     processing: ProcessingConfig = ProcessingConfig()
     queue: QueueConfig = QueueConfig()

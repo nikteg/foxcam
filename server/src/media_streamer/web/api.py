@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field, field_validator
 
-from .. import ffmpeg
+from .. import ffmpeg, recording
 from ..config import Settings
 from ..db import session_scope
 from ..mediamtx import MediaMtx
@@ -19,6 +19,7 @@ from ..models import Detection, Event, Segment
 from ..pipeline import queue, uploader
 from ..storage import StorageError, boto3_available, get_storage
 from . import queries
+from .api_cameras import resync
 from .deps import mediamtx_dep, safe_path, settings_dep
 
 router = APIRouter(prefix="/api", tags=["public"])
@@ -92,13 +93,18 @@ def _camera(settings: Settings, camera_id: str):
 
 
 @router.get("/cameras/{camera_id}/snapshot.jpg")
-async def snapshot(camera_id: str, fresh: bool = False,
+async def snapshot(camera_id: str, fresh: bool = False, source: bool = False,
                    settings: Settings = Depends(settings_dep)) -> FileResponse:
-    """Current frame (from the live stream, falling back to the latest recording)."""
-    _camera(settings, camera_id)
-    dst = settings.thumbs_dir / "snapshots" / f"{camera_id}.jpg"
+    """Current frame (from the live stream, falling back to the latest recording).
+
+    ``source``: the camera's own picture, before burned-in masks (for the mask editor).
+    """
+    cam = _camera(settings, camera_id)
+    path = await asyncio.to_thread(recording.source_path, settings, cam) if source else cam.id
+    name = camera_id if path == cam.id else f"{camera_id}.source"
+    dst = settings.thumbs_dir / "snapshots" / f"{name}.jpg"
     if fresh or not dst.exists() or time.time() - dst.stat().st_mtime > 10:
-        url = f"{settings.mediamtx.rtsp_url.rstrip('/')}/{camera_id}"
+        url = f"{settings.mediamtx.rtsp_url.rstrip('/')}/{path}"
         try:
             await asyncio.to_thread(ffmpeg.snapshot_from_url, url, dst)
         except Exception:  # noqa: BLE001 - camera offline: use the newest recording instead
@@ -113,6 +119,9 @@ async def snapshot(camera_id: str, fresh: bool = False,
 class MaskBody(BaseModel):
     rects: list[list[float]] = Field(default_factory=list)
     private: bool = False
+    # Also black the rectangles out in recordings and live view (re-encodes the camera).
+    # None = leave as is.
+    burn_in: bool | None = None
 
     @field_validator("rects")
     @classmethod
@@ -135,12 +144,21 @@ def get_mask(camera_id: str, settings: Settings = Depends(settings_dep)) -> dict
 
 
 @router.put("/cameras/{camera_id}/mask")
-def put_mask(camera_id: str, body: MaskBody,
-             settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
-    """Applies to segments preprocessed from now on (already queued jobs keep their mask)."""
+async def put_mask(camera_id: str, body: MaskBody, settings: Settings = Depends(settings_dep),
+                   mtx: MediaMtx = Depends(mediamtx_dep)) -> dict[str, Any]:
+    """Applies to segments preprocessed from now on (already queued jobs keep their mask).
+
+    With burned-in masks, recording and live view switch to the new mask within seconds.
+    """
     _camera(settings, camera_id)
-    queries.save_camera_state(camera_id, body.rects, body.private)
-    return queries.camera_state(camera_id)
+    before = await asyncio.to_thread(queries.camera_state, camera_id)
+    await asyncio.to_thread(queries.save_camera_state, camera_id, body.rects, body.private)
+    if body.burn_in is not None:
+        await asyncio.to_thread(recording.set_burn_masks, camera_id, body.burn_in)
+    after = await asyncio.to_thread(queries.camera_state, camera_id)
+    if after["burn_masks"] or before["burn_masks"]:
+        await resync(mtx)
+    return after
 
 
 @router.get("/segments")

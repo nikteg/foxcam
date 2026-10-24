@@ -77,3 +77,26 @@ def test_expired_events_unpin_their_segments(settings):
 def test_events_kept_forever_by_default(settings):
     assert settings.retention.events_days == 0
     assert retention.run_retention(settings)["events"] == 0
+
+
+@needs_ffmpeg
+def test_recording_profile_keep_days(settings):
+    from media_streamer.config import CameraConfig, RecordingProfileConfig
+
+    settings.retention.segments_days = 7
+    settings.recording_profiles = [RecordingProfileConfig(id="long", keep_days=30),
+                                   RecordingProfileConfig(id="short", keep_days=1)]
+    settings.cameras += [
+        CameraConfig.model_validate({"id": c, "recording_profile": p,
+                                     "source": {"type": "test"}})
+        for c, p in (("long-cam", "long"), ("short-cam", "short"))]
+    now = utcnow().replace(microsecond=0)
+    default_old = add_segment(settings, start=now - 8 * DAY)
+    long_kept = add_segment(settings, camera="long-cam", start=now - 8 * DAY)
+    long_old = add_segment(settings, camera="long-cam", start=now - 31 * DAY)
+    short_old = add_segment(settings, camera="short-cam", start=now - 2 * DAY)
+
+    retention.run_retention(settings)
+
+    assert _deleted(default_old) and _deleted(long_old) and _deleted(short_old)
+    assert not _deleted(long_kept)

@@ -39,6 +39,10 @@ class CameraState(Base):
     mask_version_id: Mapped[int | None] = mapped_column(ForeignKey("mask_version.id"))
     # Detection profiles chosen in the UI; None = the camera's config / default profiles.
     profiles: Mapped[list[Any] | None] = mapped_column(JSON)
+    # Recording profile chosen in the UI; None = the camera's config / the default.
+    recording_profile: Mapped[str | None] = mapped_column(String)
+    # Burn the censor rectangles into the recording and live view too (re-encodes).
+    burn_masks: Mapped[bool | None] = mapped_column(Boolean, default=False)
 
 
 class ManagedCamera(Base):

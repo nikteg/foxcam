@@ -46,7 +46,26 @@ mediamtx:
     height: 480
     bitrate_kbit: 500
     fps: 15
-    encoder: libx264      # h264_videotoolbox (macOS), h264_nvenc, h264_vaapi, …
+  # ffmpeg as seen by MediaMTX (it runs the low-data, mask and recording-profile encodes).
+  ffmpeg: ffmpeg
+  # Video encoders: libx264 / libx265 work everywhere. Hardware: h264_videotoolbox /
+  # hevc_videotoolbox (macOS), h264_nvenc / hevc_nvenc (NVIDIA), h264_vaapi (Intel/AMD).
+  encoder: libx264
+  encoder_h265: libx265
+
+# Recording profiles (quality and retention per camera, chosen on the Cameras page).
+# Built in: original (as the camera sends it), 1080p, 720p, 480p, h265. Add your own or
+# replace a built-in one by id:
+recording_profile_default: original
+recording_profiles: []
+#  - id: archive
+#    name: Long-term, small
+#    transcode: true
+#    codec: h265
+#    max_height: 720
+#    fps: 10
+#    bitrate_kbit: 500
+#    keep_days: 60          # instead of retention.segments_days
 
 processing:
   sample_fps: 2          # frames/s in the censored copy sent to workers

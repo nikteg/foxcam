@@ -1,5 +1,6 @@
 import {
   Button,
+  Caption1,
   Card,
   Spinner,
   Switch,
@@ -80,18 +81,21 @@ function Editor({ cameraId, saved }: { cameraId: string; saved: MaskState }) {
   const drag = useRef<Drag | null>(null);
   const [boxes, setBoxes] = useState<Box[]>(() => saved.rects.map(toBox));
   const [isPrivate, setPrivate] = useState(saved.private);
+  const [burnIn, setBurnIn] = useState(saved.burn_masks);
   const [selected, setSelected] = useState(-1);
   const [preview, setPreview] = useState(false);
-  const [snapshot, setSnapshot] = useState(() => snapshotUrl(cameraId));
+  const [snapshot, setSnapshot] = useState(() => snapshotUrl(cameraId, false, true));
   const [snapshotLoaded, setSnapshotLoaded] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
 
   const dirty =
     JSON.stringify(boxes.map(toRect)) !== JSON.stringify(saved.rects) ||
-    isPrivate !== saved.private;
+    isPrivate !== saved.private ||
+    burnIn !== saved.burn_masks;
 
   const save = useMutation({
-    mutationFn: () => api.saveMask(cameraId, { rects: boxes.map(toRect), private: isPrivate }),
+    mutationFn: () =>
+      api.saveMask(cameraId, { rects: boxes.map(toRect), private: isPrivate, burn_in: burnIn }),
     onSuccess: (state) => {
       client.setQueryData(["mask", cameraId], state);
       void client.invalidateQueries({ queryKey: ["cameras"] });
@@ -220,6 +224,7 @@ function Editor({ cameraId, saved }: { cameraId: string; saved: MaskState }) {
             onClick={() => {
               setBoxes(saved.rects.map(toBox));
               setPrivate(saved.private);
+              setBurnIn(saved.burn_masks);
               setSelected(-1);
             }}
           >
@@ -240,7 +245,7 @@ function Editor({ cameraId, saved }: { cameraId: string; saved: MaskState }) {
             icon={<Camera20Regular />}
             onClick={() => {
               setSnapshotLoaded(false);
-              setSnapshot(snapshotUrl(cameraId, true));
+              setSnapshot(snapshotUrl(cameraId, true, true));
             }}
           >
             {t("mask.newSnapshot")}
@@ -318,6 +323,18 @@ function Editor({ cameraId, saved }: { cameraId: string; saved: MaskState }) {
           checked={isPrivate}
           onChange={(_, d) => setPrivate(d.checked)}
           label={t("mask.private")}
+        />
+        <Switch
+          checked={burnIn}
+          onChange={(_, d) => setBurnIn(d.checked)}
+          label={
+            <>
+              {t("mask.burnIn")}
+              <Caption1 as="span" className="muted option-hint">
+                {t("mask.burnInHint")}
+              </Caption1>
+            </>
+          }
         />
       </div>
     </>

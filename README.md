@@ -9,8 +9,8 @@ anything else, and keep the clips.
 ![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-SQLite-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React_19-Fluent_UI-61DAFB?logo=react&logoColor=black)
-![MediaMTX](https://img.shields.io/badge/MediaMTX-RTSP%20%C2%B7%20WebRTC%20%C2%B7%20HLS-555)
-![Detectors](https://img.shields.io/badge/detectors-SpeciesNet%20%C2%B7%20YOLO--World-orange)
+![MediaMTX](https://img.shields.io/badge/MediaMTX-RTSP%20%E2%80%93%20WebRTC%20%E2%80%93%20HLS-555)
+![Detectors](https://img.shields.io/badge/detectors-SpeciesNet%20%E2%80%93%20YOLO--World-orange)
 
 ![Status page with four cameras](docs/screenshots/dashboard.jpg)
 
@@ -28,7 +28,10 @@ anything else, and keep the clips.
   and person; …) and *which* workers may do it. Open-vocabulary models (YOLO-World) are
   prompted with the profile's targets; SpeciesNet knows ~2000 species.
 - **Privacy built in.** Draw censor rectangles per camera; they are burned into the pixels
-  before a worker sees a frame. Private cameras are never sent anywhere.
+  before a worker sees a frame, and optionally into recordings and live view as well.
+  Private cameras are never sent anywhere.
+- **Recording profiles.** Keep the camera's original stream, or re-encode it smaller
+  (1080p, 720p, 480p, H.265 or your own) with its own retention, per camera.
 - **Events with clips.** Sightings close in time become one event with a clip cut from the
   original footage (with pre/post roll), a thumbnail with the box drawn, a day/night tag and
   ✅/❌ feedback for building a training set.

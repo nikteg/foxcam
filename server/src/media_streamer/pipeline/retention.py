@@ -77,26 +77,49 @@ def _expire_events(settings: Settings) -> int:
         return len(events)
 
 
+def _days_by_camera(settings: Settings) -> dict[str, float]:
+    """Cameras whose recording profile keeps recordings longer or shorter than the default."""
+    from ..recording import camera_recording_profile
+
+    out = {}
+    for cam in settings.all_cameras(include_disabled=True):
+        profile, _ = camera_recording_profile(settings, cam)
+        if profile.keep_days is not None:
+            out[cam.id] = profile.keep_days
+    return out
+
+
 def _expire_by_age(settings: Settings) -> int:
     r = settings.retention
-    if not r.segments_days:
-        return 0
+    per_camera = _days_by_camera(settings)
+    # (days, camera filter); 0 days = keep forever.
+    groups = [(r.segments_days, Segment.camera_id.not_in(per_camera) if per_camera else None)]
+    for days in sorted(set(per_camera.values())):
+        cams = [c for c, d in per_camera.items() if d == days]
+        groups.append((days, Segment.camera_id.in_(cams)))
     now = utcnow()
-    cutoff = now - timedelta(days=r.segments_days)
-    hard_cutoff = now - timedelta(days=max(r.unprocessed_max_days, r.segments_days))
     waiting = select(Job.segment_id).where(
-        Job.state.in_([JobState.PENDING, JobState.LEASED, JobState.FAILED]))
+        Job.state.in_([JobState.PENDING, JobState.FAILED, JobState.LEASED]))
+    removed = 0
     with session_scope() as s:
-        segs = s.scalars(select(Segment).where(
-            Segment.deleted_at.is_(None), Segment.pinned.is_(False), Segment.start_at < cutoff,
-            # Unprocessed footage gets extra time, so a GPU box that is offline for a few
-            # days does not lose data.
-            (Segment.start_at < hard_cutoff)
-            | (Segment.id.not_in(waiting) & (Segment.status != SegmentStatus.NEW)),
-        )).all()
-        for seg in segs:
-            _remove_files(settings, seg)
-        return len(segs)
+        for days, cameras in groups:
+            if not days:
+                continue
+            cutoff = now - timedelta(days=days)
+            hard_cutoff = now - timedelta(days=max(r.unprocessed_max_days, days))
+            query = select(Segment).where(
+                Segment.deleted_at.is_(None), Segment.pinned.is_(False),
+                Segment.start_at < cutoff,
+                # Unprocessed footage gets extra time, so a GPU box that is offline for a
+                # few days does not lose data.
+                (Segment.start_at < hard_cutoff)
+                | (Segment.id.not_in(waiting) & (Segment.status != SegmentStatus.NEW)))
+            if cameras is not None:
+                query = query.where(cameras)
+            for seg in s.scalars(query).all():
+                _remove_files(settings, seg)
+                removed += 1
+    return removed
 
 
 def _enforce_disk_cap(settings: Settings) -> int:

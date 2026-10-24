@@ -121,7 +121,7 @@ export const sv: Record<MessageKey, string> = {
   "live.lowData": "Låg datamängd",
   "live.lowDataHint":
     "Visa en ström i ~480p som använder ungefär en tiondel av bandbredden. Den kodas om på servern bara medan du tittar.",
-  "live.lowDataTag": "WebRTC · 480p",
+  "live.lowDataTag": "WebRTC 480p",
 
   // Händelser
   "events.none": "Inga händelser än.",
@@ -260,6 +260,8 @@ export const sv: Record<MessageKey, string> = {
   "mask.loadingSnapshot": "Läser in ögonblicksbild…",
   "mask.preview": "Förhandsvisa som arbetaren ser det",
   "mask.private": "Privat kamera (skickas aldrig till arbetare)",
+  "mask.burnIn": "Svärta även i inspelningar och livebild",
+  "mask.burnInHint": "Kodar om kameran på servern, så att områdena aldrig sparas eller strömmas.",
 
   // Inställningar
   "settings.language": "Språk",
@@ -513,6 +515,20 @@ export const sv: Record<MessageKey, string> = {
     "Kommer just nu från config.yaml; sparar du här gäller det i stället.",
   "cameras.profilesFromDefault": "Just nu standardprofilerna; sparar du här gäller det i stället.",
   "cameras.profilesReset": "Använd standard",
+  "recording.title": "Inspelning",
+  "recording.dialogTitle": "Inspelning – {name}",
+  "recording.help":
+    "Kvaliteten på det som sparas för den här kameran. Mindre profiler kodar om strömmen på servern och sparar mycket diskutrymme.",
+  "recording.masksBurnedIn": "masker inbrända",
+  "recording.sameResolution": "samma upplösning",
+  "recording.constantQuality": "konstant kvalitet",
+  "recording.asSent": "som kameran skickar, ingen omkodning",
+  "recording.keptDays": "sparas {n} {n:dag|dagar}",
+  "recording.transcodeNote":
+    "Omkodning använder serverns CPU (eller en hårdvarukodare, se mediamtx.encoder). Livebilden visar också den omkodade strömmen, och den pågående inspelningsfilen avslutas när du sparar.",
+  "recording.h265Note":
+    "H.265 halverar storleken igen men alla webbläsare spelar inte upp det (Safari och nyare Chrome/Edge gör det).",
+  "recording.fromDefault": "Just nu standardprofilen; att spara här ersätter den.",
   "queue.byProfile": "Per profil",
   "queue.removeWorkerHint":
     "Ta bort den här offline-arbetaren från listan. Den kommer tillbaka om den ansluter igen; återkalla dess token för att stänga ute den.",

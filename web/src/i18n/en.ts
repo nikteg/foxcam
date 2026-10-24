@@ -120,7 +120,7 @@ export const en = {
   "live.lowData": "Low data",
   "live.lowDataHint":
     "Watch a ~480p stream that uses about a tenth of the bandwidth. It is transcoded on the server only while you watch.",
-  "live.lowDataTag": "WebRTC · 480p",
+  "live.lowDataTag": "WebRTC 480p",
 
   // Events
   "events.none": "No events yet.",
@@ -258,6 +258,9 @@ export const en = {
   "mask.loadingSnapshot": "Loading snapshot…",
   "mask.preview": "Preview as the worker sees it",
   "mask.private": "Private camera (never send to workers)",
+  "mask.burnIn": "Black out in recordings and live view too",
+  "mask.burnInHint":
+    "Re-encodes this camera on the server, so the areas are never stored or streamed.",
 
   // Settings
   "settings.language": "Language",
@@ -428,6 +431,20 @@ export const en = {
   "cameras.profilesFromConfig": "Currently from config.yaml; saving here overrides it.",
   "cameras.profilesFromDefault": "Currently the default profiles; saving here overrides them.",
   "cameras.profilesReset": "Use defaults",
+  "recording.title": "Recording",
+  "recording.dialogTitle": "Recording – {name}",
+  "recording.help":
+    "Quality of what is stored for this camera. Smaller profiles re-encode the stream on the server and save a lot of disk space.",
+  "recording.masksBurnedIn": "masks burned in",
+  "recording.sameResolution": "same resolution",
+  "recording.constantQuality": "constant quality",
+  "recording.asSent": "as sent by the camera, no re-encoding",
+  "recording.keptDays": "kept {n} {n:day|days}",
+  "recording.transcodeNote":
+    "Re-encoding uses CPU on the server (or a hardware encoder, see mediamtx.encoder). Live view shows the re-encoded stream too, and the current recording file ends when you save.",
+  "recording.h265Note":
+    "H.265 halves the size again but not every browser plays it (Safari and recent Chrome/Edge do).",
+  "recording.fromDefault": "Currently the default profile; saving here overrides it.",
   "queue.byProfile": "Per profile",
   "queue.removeWorkerHint":
     "Remove this offline worker from the list. It comes back if it connects again; revoke its token to keep it out.",

@@ -30,6 +30,11 @@ export interface Camera {
   profiles: string[];
   /** ui = chosen in the web UI, config = config.yaml, default = profiles marked default. */
   profiles_source: "ui" | "config" | "default";
+  recording_profile: string;
+  recording_profile_source: "ui" | "config" | "default";
+  /** Re-encoded by the server (recording profile and/or burned-in masks). */
+  processed: boolean;
+  burn_masks: boolean;
 }
 
 /** What to look for, and which workers may do it (see docs/ARCHITECTURE.md). */
@@ -227,6 +232,24 @@ export interface MaskState {
   private: boolean;
   rects: Rect[];
   mask_version_id: number | null;
+  /** Masks are also burned into recordings and live view. */
+  burn_masks: boolean;
+}
+
+export interface RecordingProfile {
+  id: string;
+  name: string | null;
+  display_name: string;
+  transcode: boolean;
+  codec: "h264" | "h265";
+  max_height: number | null;
+  fps: number | null;
+  bitrate_kbit: number | null;
+  keep_days: number | null;
+  managed: "builtin" | "config";
+  /** The profile cameras without their own choice use. */
+  default: boolean;
+  cameras: string[];
 }
 
 export type Settings = Record<string, unknown> & {
@@ -364,7 +387,7 @@ export const api = {
   cameras: () => request<Camera[]>("GET", "/api/cameras"),
   mask: (cameraId: string) =>
     request<MaskState>("GET", `/api/cameras/${encodeURIComponent(cameraId)}/mask`),
-  saveMask: (cameraId: string, body: { rects: Rect[]; private: boolean }) =>
+  saveMask: (cameraId: string, body: { rects: Rect[]; private: boolean; burn_in?: boolean }) =>
     request<MaskState>("PUT", `/api/cameras/${encodeURIComponent(cameraId)}/mask`, body),
   segments: (q: { camera?: string; day?: string; only_targets?: boolean; limit?: number }) =>
     request<Segment[]>("GET", withQuery("/api/segments", q)),
@@ -424,6 +447,13 @@ export const api = {
   revokeWorkerToken: (id: number) =>
     request<{ status: string }>("DELETE", `/api/workers/tokens/${id}`),
   profiles: () => request<Profile[]>("GET", "/api/profiles"),
+  recordingProfiles: () => request<RecordingProfile[]>("GET", "/api/recording-profiles"),
+  setRecordingProfile: (cameraId: string, profile: string | null) =>
+    request<{ recording_profile: string }>(
+      "PUT",
+      `/api/cameras/${encodeURIComponent(cameraId)}/recording-profile`,
+      { profile },
+    ),
   createProfile: (body: ProfileInput) => request<{ id: string }>("POST", "/api/profiles", body),
   updateProfile: (body: ProfileInput) =>
     request<{ id: string }>("PUT", `/api/profiles/${encodeURIComponent(body.id)}`, body),
@@ -477,8 +507,17 @@ export function browserUrl(url: string): string {
   }
 }
 
-export const snapshotUrl = (cameraId: string, fresh = false) =>
-  `/api/cameras/${encodeURIComponent(cameraId)}/snapshot.jpg${fresh ? `?fresh=true&t=${Date.now()}` : ""}`;
+/** ``source``: the camera's own picture, before burned-in masks (mask editor). */
+export const snapshotUrl = (cameraId: string, fresh = false, source = false) => {
+  const query = new URLSearchParams();
+  if (fresh) {
+    query.set("fresh", "true");
+    query.set("t", String(Date.now()));
+  }
+  if (source) query.set("source", "true");
+  const qs = query.toString();
+  return `/api/cameras/${encodeURIComponent(cameraId)}/snapshot.jpg${qs ? `?${qs}` : ""}`;
+};
 
 export const segmentPlayUrl = (segmentId: number, offsetMs = 0) =>
   `/api/segments/${segmentId}/play${offsetMs ? `#t=${(offsetMs / 1000).toFixed(1)}` : ""}`;

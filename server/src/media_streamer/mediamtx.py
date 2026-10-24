@@ -7,10 +7,13 @@ configuration to MediaMTX on startup so ``mediamtx.yml`` stays generic.
 from __future__ import annotations
 
 import logging
+import re
+import shlex
 from typing import Any
 
 import httpx
 
+from . import recording
 from .config import CameraConfig, Settings
 
 log = logging.getLogger(__name__)
@@ -20,8 +23,8 @@ log = logging.getLogger(__name__)
 RECORD_NAME = "%Y-%m-%d_%H-%M-%S-%f%z"
 
 
-def _path_conf(settings: Settings, cam: CameraConfig) -> dict[str, Any]:
-    conf: dict[str, Any] = {
+def _record_conf(settings: Settings, cam: CameraConfig) -> dict[str, Any]:
+    return {
         "record": True,
         "recordFormat": "fmp4",
         "recordPath": f"{settings.mediamtx.record_dir}/%path/{RECORD_NAME}",
@@ -29,11 +32,31 @@ def _path_conf(settings: Settings, cam: CameraConfig) -> dict[str, Any]:
         # Retention is handled by this server, never by MediaMTX.
         "recordDeleteAfter": "0s",
     }
+
+
+def _source_conf(cam: CameraConfig) -> dict[str, Any]:
     if cam.source.type == "rtsp":
-        conf.update(source=cam.source.url, rtspTransport="tcp", sourceOnDemand=False)
+        return {"source": cam.source.url, "rtspTransport": "tcp", "sourceOnDemand": False}
+    # tapo_cloud / test / file sources are published by `media-streamer ingest`.
+    return {"source": "publisher"}
+
+
+def command(args: list[str]) -> str:
+    """A command line for MediaMTX's run* hooks (split shell-style by MediaMTX, which
+    replaces $RTSP_PORT / $MTX_PATH first)."""
+    return " ".join(a if re.fullmatch(r"[\w$:/.,=?@%+-]+", a) else shlex.quote(a)
+                    for a in args)
+
+
+def _path_conf(settings: Settings, cam: CameraConfig,
+               proc: recording.Processing | None) -> dict[str, Any]:
+    conf = _record_conf(settings, cam)
+    if proc is None:
+        conf.update(_source_conf(cam))
     else:
-        # tapo_cloud / test / file sources are published by `media-streamer ingest`.
-        conf["source"] = "publisher"
+        conf.update(source="publisher",
+                    runOnInit=command(recording.processor_args(settings, cam, proc)),
+                    runOnInitRestart=True)
     return conf
 
 
@@ -44,29 +67,18 @@ def low_path(camera_id: str) -> str:
     return f"{camera_id}{LOW_SUFFIX}"
 
 
-def encoder_args(encoder: str, bitrate_kbit: int, fps: int) -> list[str]:
-    """Live-friendly encoder settings (no B-frames, a keyframe every 2 s)."""
-    rate = ["-b:v", f"{bitrate_kbit}k", "-maxrate", f"{bitrate_kbit}k",
-            "-bufsize", f"{bitrate_kbit * 2}k", "-g", str(fps * 2), "-bf", "0"]
-    if encoder == "libx264":
-        return ["-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency", *rate]
-    if encoder.endswith("_videotoolbox"):
-        return ["-c:v", encoder, "-realtime", "1", "-allow_sw", "1", *rate]
-    return ["-c:v", encoder, *rate]
-
-
 def _low_conf(settings: Settings, cam: CameraConfig) -> dict[str, Any]:
     """`<camera>/low`: transcoded from the camera's path only while someone watches it."""
-    low = settings.mediamtx.low_data
-    # MediaMTX runs this itself (no shell); $RTSP_PORT and $MTX_PATH are filled in by it.
-    cmd = [low.ffmpeg, "-v", "error", "-rtsp_transport", "tcp",
-           "-i", f"rtsp://localhost:$RTSP_PORT/{cam.id}", "-map", "0:v:0", "-map", "0:a:0?",
-           "-vf", f"fps={low.fps},scale=-2:{low.height},format=yuv420p",
-           *encoder_args(low.encoder, low.bitrate_kbit, low.fps),
-           # Opus is what browsers play over WebRTC.
-           "-c:a", "libopus", "-b:a", "24k", "-ac", "1", "-ar", "48000",
-           "-f", "rtsp", "-rtsp_transport", "tcp", "rtsp://localhost:$RTSP_PORT/$MTX_PATH"]
-    return {"source": "publisher", "record": False, "runOnDemand": " ".join(cmd),
+    m, low = settings.mediamtx, settings.mediamtx.low_data
+    args = [m.ffmpeg, "-v", "error", "-rtsp_transport", "tcp",
+            "-i", f"rtsp://localhost:$RTSP_PORT/{cam.id}", "-map", "0:v:0", "-map", "0:a:0?",
+            "-vf", f"fps={low.fps},scale=-2:{low.height},format=yuv420p",
+            *recording.video_encoder_args(m.encoder, bitrate_kbit=low.bitrate_kbit,
+                                          fps=low.fps, live=True),
+            # Opus is what browsers play over WebRTC.
+            "-c:a", "libopus", "-b:a", "24k", "-ac", "1", "-ar", "48000",
+            "-f", "rtsp", "-rtsp_transport", "tcp", "rtsp://localhost:$RTSP_PORT/$MTX_PATH"]
+    return {"source": "publisher", "record": False, "runOnDemand": command(args),
             "runOnDemandRestart": True, "runOnDemandStartTimeout": "20s",
             "runOnDemandCloseAfter": "15s"}
 
@@ -75,7 +87,10 @@ def desired_paths(settings: Settings) -> dict[str, dict[str, Any]]:
     """Every MediaMTX path this server manages, by name."""
     out: dict[str, dict[str, Any]] = {}
     for cam in settings.all_cameras():
-        out[cam.id] = _path_conf(settings, cam)
+        proc = recording.processing(settings, cam)
+        out[cam.id] = _path_conf(settings, cam, proc)
+        if proc is not None:
+            out[recording.raw_path(cam.id)] = {**_source_conf(cam), "record": False}
         if settings.mediamtx.low_data.enabled:
             out[low_path(cam.id)] = _low_conf(settings, cam)
     return out
@@ -97,7 +112,11 @@ class MediaMtx:
             for item in listed.json().get("items", []):
                 name = item.get("name")
                 if name and name != "all_others" and name not in wanted:
-                    await self.client.post(f"/v3/config/paths/delete/{name}")
+                    r = await self.client.delete(f"/v3/config/paths/delete/{name}")
+                    if r.status_code >= 400:
+                        log.error("mediamtx: removing path %s failed: %s %s", name,
+                                  r.status_code, r.text)
+                        continue
                     log.info("mediamtx: path %s removed", name)
         for name, conf in wanted.items():
             existing = await self.client.get(f"/v3/config/paths/get/{name}")
