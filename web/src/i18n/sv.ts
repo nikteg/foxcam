@@ -174,6 +174,8 @@ export const sv: Record<MessageKey, string> = {
   "hourly.segments": "Segment",
   "hourly.segmentsWithMatch": "{n} ({matches} med träff)",
   "hourly.deleted": "borttagen av gallringen",
+  "player.speed": "Uppspelningshastighet",
+  "player.speedNext": "Uppspelningshastighet (tryck för {rate})",
   "hourly.showSegments": "Visa dess segment",
   "compaction.title": "Arkivering",
   "compaction.off": "av",

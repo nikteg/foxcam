@@ -1484,3 +1484,12 @@ h3.panel-heading {
 .video-player .vds-chapter-title {
   display: none;
 }
+/* The speed button (VideoPlayer SpeedButton): text instead of an icon. */
+.video-player .speed-button {
+  width: auto;
+  min-width: 52px;
+  padding: 0 var(--spacingHorizontalS);
+  font-size: 15px;
+  font-weight: var(--fontWeightSemibold);
+  font-variant-numeric: tabular-nums;
+}

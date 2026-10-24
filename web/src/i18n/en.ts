@@ -173,6 +173,8 @@ export const en = {
   "hourly.segments": "Segments",
   "hourly.segmentsWithMatch": "{n} ({matches} with a match)",
   "hourly.deleted": "deleted by retention",
+  "player.speed": "Playback speed",
+  "player.speedNext": "Playback speed (press for {rate})",
   "hourly.showSegments": "Show its segments",
   "compaction.title": "Archiving",
   "compaction.off": "off",

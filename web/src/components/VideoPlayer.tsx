@@ -1,12 +1,42 @@
-// Recordings player (Vidstack): hover previews on the timeline from the server's thumbnail
-// sprites (WebVTT), keyboard shortcuts and the same look on every browser.
-import { MediaPlayer, MediaProvider, Poster, type MediaPlayerInstance } from "@vidstack/react";
+// The app's video player (Vidstack): hover previews on the timeline from the server's
+// thumbnail sprites (WebVTT), keyboard shortcuts and the same look on every browser.
+import {
+  MediaPlayer,
+  MediaProvider,
+  Poster,
+  useMediaRemote,
+  useMediaState,
+  type MediaPlayerInstance,
+} from "@vidstack/react";
 import { DefaultVideoLayout, defaultLayoutIcons } from "@vidstack/react/player/layouts/default";
 import "@vidstack/react/player/styles/default/theme.css";
 import "@vidstack/react/player/styles/default/layouts/video.css";
 import { useRef, type RefObject } from "react";
 
+import { useI18n } from "../i18n";
+
 export type PlayerHandle = MediaPlayerInstance;
+
+const RATES = [0.5, 1, 1.5, 2, 4, 8];
+
+/** The playback speed, always in the control bar: each press steps to the next speed. */
+function SpeedButton() {
+  const { t } = useI18n();
+  const rate = useMediaState("playbackRate");
+  const remote = useMediaRemote();
+  const next = RATES.find((r) => r > rate) ?? 0.5;
+  return (
+    <button
+      type="button"
+      className="vds-button speed-button"
+      aria-label={t("player.speed")}
+      title={t("player.speedNext", { rate: `${next}×` })}
+      onClick={(e) => remote.changePlaybackRate(next, e.nativeEvent)}
+    >
+      {rate}×
+    </button>
+  );
+}
 
 export function VideoPlayer({
   src,
@@ -53,6 +83,8 @@ export function VideoPlayer({
         // The compact layout hides the timeline until playback starts; the drawers are
         // wide enough for the full one, so scrubbing (with previews) works right away.
         smallLayoutWhen={({ width }) => width < 400}
+        // Speed is the only setting that matters here: show it instead of the menu.
+        slots={{ settingsMenu: <SpeedButton />, pipButton: null }}
       />
     </MediaPlayer>
   );

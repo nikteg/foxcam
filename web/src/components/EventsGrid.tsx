@@ -21,6 +21,7 @@ import {
   useSeveralDetectors,
 } from "./ProfileSelect";
 import { Empty, Light, Tag, Time } from "./ui";
+import { VideoPlayer } from "./VideoPlayer";
 import {
   Dialog,
   DialogActions,
@@ -152,14 +153,16 @@ export function EventsGrid({ events }: { events: DetectionEvent[] }) {
                 <span className="nowrap">{localTime(playing.first_ts)}</span>
               </DialogTitle>
               <DialogContent>
-                <video
-                  className="detail-media"
-                  src={playing.clip_url ?? undefined}
-                  poster={playing.thumb_url ?? undefined}
-                  controls
-                  autoPlay
-                  playsInline
-                />
+                {playing.clip_url && (
+                  <div className="detail-media">
+                    <VideoPlayer
+                      title={`${playing.label} – ${cameraName(playing.camera_id)}`}
+                      src={playing.clip_url}
+                      poster={playing.thumb_url}
+                      autoPlay
+                    />
+                  </div>
+                )}
               </DialogContent>
               <DialogActions>
                 <Button
