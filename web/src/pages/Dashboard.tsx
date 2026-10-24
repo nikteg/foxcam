@@ -22,7 +22,6 @@ import { useNavigate } from "react-router";
 
 import { api, type QueueStats } from "../api";
 import { useIsAdmin } from "../auth";
-import { JobsChart } from "../components/JobsChart";
 
 import { CameraCard } from "../components/CameraCard";
 import { EventsGrid } from "../components/EventsGrid";
@@ -54,28 +53,6 @@ export function Dashboard() {
         </MessageBar>
       )}
 
-      <Subtitle2 as="h2" className="section">
-        {t("nav.cameras")}
-        <SectionLink to="/cameras" label={t("dashboard.manage")} />
-      </Subtitle2>
-      <div className="cards">
-        {s?.cameras.map((c) => (
-          <CameraCard
-            key={c.id}
-            camera={c}
-            refreshKey={Math.floor(status.dataUpdatedAt / 10_000)}
-            onSettings={() => setSettingsFor(c.id)}
-          />
-        ))}
-      </div>
-      {s && s.cameras.length === 0 && (
-        <Empty>
-          {rich("dashboard.noCameras", {
-            link: <RouterLink to="/cameras">{t("dashboard.addCameraLink")}</RouterLink>,
-          })}
-        </Empty>
-      )}
-
       {s && (
         <>
           <Subtitle2 as="h2" className="section">
@@ -100,6 +77,28 @@ export function Dashboard() {
             />
           </section>
         </>
+      )}
+
+      <Subtitle2 as="h2" className="section">
+        {t("nav.cameras")}
+        <SectionLink to="/cameras" label={t("dashboard.manage")} />
+      </Subtitle2>
+      <div className="cards">
+        {s?.cameras.map((c) => (
+          <CameraCard
+            key={c.id}
+            camera={c}
+            refreshKey={Math.floor(status.dataUpdatedAt / 10_000)}
+            onSettings={() => setSettingsFor(c.id)}
+          />
+        ))}
+      </div>
+      {s && s.cameras.length === 0 && (
+        <Empty>
+          {rich("dashboard.noCameras", {
+            link: <RouterLink to="/cameras">{t("dashboard.addCameraLink")}</RouterLink>,
+          })}
+        </Empty>
       )}
 
       <Subtitle2 as="h2" className="section">
@@ -172,7 +171,6 @@ function JobsSummary({ stats: q }: { stats: QueueStats }) {
         />
       </section>
       <Card className="jobs-summary">
-        <JobsChart hours={q.per_hour} />
         <div className="jobs-workers">
           <Caption1 className="muted">{t("dashboard.workersOnline")}</Caption1>
           {online.length ? (

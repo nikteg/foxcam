@@ -151,8 +151,6 @@ export interface QueueStats {
   avg_processing_ms_last_hour: number | null;
   /** Unfinished jobs per profile and state. */
   by_profile: Record<string, Partial<Record<JobState, number>>>;
-  /** Jobs finished per hour over the last 24 hours, oldest first. */
-  per_hour: { hour: string; done: number; failed: number }[];
 }
 
 export interface Status {

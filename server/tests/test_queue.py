@@ -127,13 +127,3 @@ def test_stats(settings, two_jobs):
     assert st["counts"]["pending"] == 1 and st["counts"]["leased"] == 1
     assert st["oldest_pending_age_s"] is not None
 
-
-def test_stats_count_finished_jobs_per_hour(settings, two_jobs):
-    a = queue.lease(settings, "w1")
-    queue.complete(settings, a.id, a.lease_token, [], "m", 5)
-    b = queue.lease(settings, "w1")
-    queue.fail(settings, b.id, b.lease_token, "broken", retryable=False)
-    hours = queue.stats()["per_hour"]
-    assert len(hours) == 24 and hours[-1]["hour"].endswith(":00:00Z")
-    assert (hours[-1]["done"], hours[-1]["failed"]) == (1, 1)
-    assert sum(h["done"] + h["failed"] for h in hours[:-1]) == 0
