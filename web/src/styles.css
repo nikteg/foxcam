@@ -919,3 +919,28 @@ details.helper summary {
   margin-top: var(--spacingVerticalL);
   margin-bottom: var(--spacingVerticalXS);
 }
+
+.status-dot {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.status-dot.ok {
+  background: var(--colorPaletteGreenBackground3);
+}
+.status-dot.bad {
+  background: var(--colorPaletteRedBackground3);
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

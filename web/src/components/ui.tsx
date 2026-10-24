@@ -99,15 +99,15 @@ export function Time({
   );
 }
 
+/** Online/offline dot. A plain element with fixed geometry, so switching state never moves
+ * the text next to it. */
 export function Dot({ ok }: { ok: boolean }) {
   const { t } = useI18n();
+  const label = ok ? t("common.online") : t("common.offline");
   return (
-    <Badge
-      size="extra-small"
-      shape="circular"
-      color={ok ? "success" : "danger"}
-      aria-label={ok ? t("common.online") : t("common.offline")}
-    />
+    <span className={`status-dot ${ok ? "ok" : "bad"}`} title={label}>
+      <span className="visually-hidden">{label}</span>
+    </span>
   );
 }
 
