@@ -309,6 +309,26 @@ export const sv: Record<MessageKey, string> = {
   "theme.system": "System",
   "theme.light": "Ljust",
   "theme.dark": "Mörkt",
+  "retention.title": "Gallring",
+  "retention.intro":
+    "Hur länge inspelningar och händelser sparas, och hur mycket disk de får använda. Värden som sparas här gäller före {file}; återställ ett för att använda filens igen. Inspelningsprofiler och detektionsprofiler kan spara sina inspelningar eller händelser längre eller kortare.",
+  "retention.segmentsDays": "Spara inspelningar",
+  "retention.segmentsDaysHint":
+    "Film som hör till en händelse sparas med händelsen. 0 = ingen åldersgräns.",
+  "retention.eventsDays": "Spara händelser",
+  "retention.eventsDaysHint": "Med klipp och film. 0 = för alltid.",
+  "retention.unprocessedDays": "Spara film som väntar på en worker",
+  "retention.unprocessedDaysHint":
+    "Film som inte analyserats än får så här länge, så att en worker som är offline ett tag inte missar något.",
+  "retention.maxDisk": "Max diskanvändning",
+  "retention.maxDiskHint":
+    "Inspelningarna använder högst så här mycket; äldst film utanför händelser tas bort först. Tomt = ingen gräns.",
+  "retention.days": "dagar",
+  "retention.gb": "GB",
+  "retention.noCap": "ingen gräns",
+  "retention.setHere": "satt här",
+  "retention.useConfig": "Använd config.yaml ({value})",
+  "retention.freeOf": "{free} av {total}",
   "settings.configuration": "Konfiguration",
   "settings.storage": "Lagring",
   "settings.notifications": "Aviseringar",

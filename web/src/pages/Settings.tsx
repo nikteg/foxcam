@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import { useIsAdmin, useMe } from "../auth";
 import { Notifications } from "../components/Notifications";
+import { RetentionSection } from "../components/RetentionSection";
 import { StorageCard } from "../components/StorageCard";
 import { UsersSection } from "../components/UsersSection";
 import {
@@ -20,7 +21,7 @@ import { Navigate } from "react-router";
 import { useI18n } from "../i18n";
 
 // Language and theme are in the top bar; everything here is for admins.
-type SubPage = "users" | "notifications" | "storage" | "configuration";
+type SubPage = "retention" | "users" | "notifications" | "storage" | "configuration";
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   v !== null && typeof v === "object" && !Array.isArray(v);
@@ -86,6 +87,7 @@ export function Settings() {
   const { t, rich } = useI18n();
   const cfg = settings.data;
   const ids: SubPage[] = [
+    "retention",
     ...(me?.enabled ? (["users"] as const) : []),
     "notifications",
     "storage",
@@ -93,6 +95,7 @@ export function Settings() {
   ];
   const tab = useSubPage("/settings", ids);
   const label: Record<SubPage, string> = {
+    retention: t("retention.title"),
     users: t("users.title"),
     notifications: t("settings.notifications"),
     storage: t("settings.storage"),
@@ -111,6 +114,7 @@ export function Settings() {
         />
       )}
 
+      {tab === "retention" && <RetentionSection />}
       {tab === "users" && <UsersSection />}
       {tab === "notifications" && <Notifications />}
       {tab === "storage" && <StorageCard />}

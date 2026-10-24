@@ -136,6 +136,7 @@ compaction:
   delay_minutes: 10         # after the hour ends (late segments, preprocessing)
 
 retention:
+  # Settings → Retention in the web UI can change the first four (and wins over these).
   segments_days: 7          # ordinary footage
   unprocessed_max_days: 14  # footage still waiting for a worker
   events_days: 0            # fox events (clip + footage); 0 = keep forever

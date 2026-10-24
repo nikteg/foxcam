@@ -1546,3 +1546,10 @@ h3.panel-heading {
 .push-end {
   margin-inline-start: auto;
 }
+/* Settings → Retention: a short form, not page-wide inputs. */
+.retention-form {
+  max-width: 560px;
+}
+.retention-facts {
+  margin-bottom: var(--spacingVerticalXL);
+}

@@ -308,6 +308,26 @@ export const en = {
   "theme.system": "System",
   "theme.light": "Light",
   "theme.dark": "Dark",
+  "retention.title": "Retention",
+  "retention.intro":
+    "How long recordings and events are kept, and how much disk they may use. Values saved here win over {file}; reset one to use the file's again. Recording profiles and detection profiles can keep their own recordings or events longer or shorter.",
+  "retention.segmentsDays": "Keep recordings",
+  "retention.segmentsDaysHint":
+    "Footage that is part of an event is kept with the event. 0 = no age limit.",
+  "retention.eventsDays": "Keep events",
+  "retention.eventsDaysHint": "With their clips and footage. 0 = forever.",
+  "retention.unprocessedDays": "Keep footage waiting for a worker",
+  "retention.unprocessedDaysHint":
+    "Not yet analysed footage gets this long, so a worker that is offline for a while does not miss anything.",
+  "retention.maxDisk": "Max disk use",
+  "retention.maxDiskHint":
+    "Recordings use at most this much; the oldest footage outside events goes first. Empty = no cap.",
+  "retention.days": "days",
+  "retention.gb": "GB",
+  "retention.noCap": "no cap",
+  "retention.setHere": "set here",
+  "retention.useConfig": "Use config.yaml ({value})",
+  "retention.freeOf": "{free} of {total}",
   "settings.configuration": "Configuration",
   "settings.storage": "Storage",
   "settings.notifications": "Notifications",

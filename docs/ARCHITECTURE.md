@@ -161,6 +161,10 @@ Runs every 10 minutes (`pipeline/retention.py`):
 
 Deleted segments keep their database row (`deleted_at`), so detections stay browsable.
 
+The day counts and `max_disk_gb` can be changed in the web UI (Settings → Retention,
+`PUT /api/retention`, admins). Those values are stored in the database and win over
+config.yaml until reset there.
+
 ## Object storage (S3)
 
 Optional copy in any S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2, MinIO, Garage,

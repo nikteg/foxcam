@@ -37,6 +37,7 @@ export function Dashboard() {
   const [liveFor, setLiveFor] = useState<string | null>(null);
   const settingsCamera = s?.cameras.find((c) => c.id === settingsFor);
   const { t, rich } = useI18n();
+  const navigate = useNavigate();
 
   return (
     <>
@@ -58,17 +59,26 @@ export function Dashboard() {
               icon={<Video20Regular />}
               label={t("dashboard.camerasOnline")}
               value={`${s.cameras.filter((c) => c.online).length} / ${s.cameras.length}`}
+              onClick={() => void navigate("/cameras")}
             />
-            <Stat icon={<Alert20Regular />} label={t("dashboard.events24h")} value={s.events_24h} />
+            <Stat
+              icon={<Alert20Regular />}
+              label={t("dashboard.events24h")}
+              value={s.events_24h}
+              onClick={() => void navigate("/events")}
+            />
             <Stat
               icon={<Database20Regular />}
               label={t("dashboard.recordingsStored")}
               value={fileSize(s.recordings_bytes)}
+              onClick={() => void navigate("/recordings")}
             />
             <Stat
               icon={<HardDrive20Regular />}
               label={t("dashboard.diskFree")}
               value={fileSize(s.disk_free_bytes)}
+              // How long recordings are kept and the disk cap (admins).
+              onClick={isAdmin ? () => void navigate("/settings") : undefined}
             />
           </section>
         </>

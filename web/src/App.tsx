@@ -21,7 +21,6 @@ import {
   DataBarVertical24Regular,
   Folder24Regular,
   Server24Regular,
-  Settings20Regular,
   Settings24Regular,
   Target24Regular,
 } from "@fluentui/react-icons";
@@ -66,32 +65,30 @@ const TABS: NavItem[] = [
 // Shown after the main tabs; the bottom bar (tablets/phones) includes them too.
 const EXTRA_TABS: NavItem[] = [
   { to: "/cameras", label: "nav.cameras", short: "nav.cameras", icon: <Camera24Regular /> },
+  {
+    to: "/settings",
+    label: "nav.settings",
+    short: "nav.settings",
+    icon: <Settings24Regular />,
+    admin: true,
+  },
 ];
 
 function currentTab(pathname: string): string {
   if (pathname === "/") return "/";
   if (pathname.startsWith("/cameras")) return "/cameras";
+  if (pathname.startsWith("/settings")) return "/settings";
   return TABS.find((t) => t.to !== "/" && pathname.startsWith(t.to))?.to ?? "";
 }
 
-/** Signed-in user: account page, settings (admins) and sign out. */
-function UserMenu({ isAdmin }: { isAdmin: boolean }) {
+/** Signed-in user: account page and sign out. */
+function UserMenu() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { data: auth } = useAuth();
   const changed = useAuthChanged();
-  if (!auth?.user) {
-    // Accounts turned off (auth.enabled: false): everyone is an admin, nobody signs in.
-    return isAdmin ? (
-      <Button
-        appearance="subtle"
-        icon={<Settings24Regular />}
-        aria-label={t("nav.settings")}
-        title={t("nav.settings")}
-        onClick={() => void navigate("/settings")}
-      />
-    ) : null;
-  }
+  // Accounts turned off (auth.enabled: false): nobody signs in.
+  if (!auth?.user) return null;
   return (
     <Menu>
       <MenuTrigger disableButtonEnhancement>
@@ -107,11 +104,6 @@ function UserMenu({ isAdmin }: { isAdmin: boolean }) {
           <MenuItem icon={<Person20Regular />} onClick={() => void navigate("/account")}>
             {auth.user.display_name}
           </MenuItem>
-          {isAdmin && (
-            <MenuItem icon={<Settings20Regular />} onClick={() => void navigate("/settings")}>
-              {t("nav.settings")}
-            </MenuItem>
-          )}
           <MenuDivider />
           <MenuItem
             icon={<SignOut20Regular />}
@@ -143,6 +135,7 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
   const selected = currentTab(pathname);
   const { t } = useI18n();
   const tabs = TABS.filter((tab) => isAdmin || !tab.admin);
+  const extraTabs = EXTRA_TABS.filter((tab) => isAdmin || !tab.admin);
 
   return (
     <>
@@ -163,17 +156,17 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
               {t(tab.label)}
             </Tab>
           ))}
-          {EXTRA_TABS.map((tab) => (
+          {extraTabs.map((tab) => (
             <Tab key={tab.to} value={tab.to} icon={tab.icon}>
               {t(tab.label)}
             </Tab>
           ))}
         </TabList>
-        {/* Right-aligned header actions; Settings is in the user menu. */}
+        {/* Right-aligned header actions. */}
         <div className="topbar-actions">
           <ThemeMenu />
           <LanguageMenu className="language-menu" />
-          <UserMenu isAdmin={isAdmin} />
+          <UserMenu />
         </div>
       </header>
 
@@ -182,7 +175,7 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
       </main>
 
       <nav className="bottom-tabs" aria-label={t("nav.main")}>
-        {[...tabs, ...EXTRA_TABS].map((tab) => (
+        {[...tabs, ...extraTabs].map((tab) => (
           <button
             key={tab.to}
             type="button"

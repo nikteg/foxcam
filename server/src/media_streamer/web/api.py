@@ -21,7 +21,7 @@ from ..config import Settings
 from ..db import session_scope
 from ..mediamtx import MediaMtx
 from ..models import Archive, CameraRole, Detection, Event, Segment, utcnow
-from ..pipeline import compaction, queue, uploader
+from ..pipeline import compaction, queue, retention, uploader
 from ..pipeline.reanalyse import ReanalyseError, reanalyse_segment
 from ..storage import StorageError, boto3_available, get_storage
 from . import queries
@@ -109,6 +109,36 @@ async def storage_test(settings: Settings = Depends(settings_dep)) -> dict[str, 
     if store is None:
         raise HTTPException(409, "S3 storage is not enabled in config.yaml")
     return await asyncio.to_thread(store.check)
+
+
+def _retention_view(settings: Settings) -> dict[str, Any]:
+    ui = retention.ui_overrides()
+    overview = queries.overview(settings)
+    return {
+        "values": retention.effective(settings).model_dump(include=set(retention.EDITABLE)),
+        "config": settings.retention.model_dump(include=set(retention.EDITABLE)),
+        "from_ui": sorted(ui),
+        "recordings_bytes": overview["recordings_bytes"],
+        "disk_free_bytes": overview["disk_free_bytes"],
+        "disk_total_bytes": overview["disk_total_bytes"],
+    }
+
+
+@router.get("/retention", dependencies=[Depends(require_admin)])
+def retention_settings(settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
+    """How long recordings and events are kept and the disk cap (Settings → Retention)."""
+    return _retention_view(settings)
+
+
+@router.put("/retention", dependencies=[Depends(require_admin)])
+def set_retention(changes: dict[str, float | Literal["config"] | None],
+                  settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
+    """Change values (null max_disk_gb = no cap); "config" = back to config.yaml's value."""
+    try:
+        retention.set_overrides(settings, changes)
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from e
+    return _retention_view(settings)
 
 
 @router.get("/cameras")
