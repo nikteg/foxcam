@@ -28,8 +28,11 @@ BUILTIN: list[RecordingProfileConfig] = [
     RecordingProfileConfig(id="480p", name="480p",
                            transcode=True, max_height=480, fps=15, bitrate_kbit=600,
                            managed="builtin"),
-    RecordingProfileConfig(id="h265", name="H.265", transcode=True,
-                           codec="h265", managed="builtin"),
+    # Always with a bitrate: in constant-quality mode H.265 came out *bigger* than a 3K
+    # camera's own 7 Mbit/s stream, and on hardware encoders it gains little over H.264
+    # at the same bitrate. Size comes from resolution and bitrate; H.265 adds a bit.
+    RecordingProfileConfig(id="h265", name="1080p H.265", transcode=True, codec="h265",
+                           max_height=1080, bitrate_kbit=1500, managed="builtin"),
 ]
 
 

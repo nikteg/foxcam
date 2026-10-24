@@ -221,7 +221,7 @@ detection profiles, censor areas and worker tokens can also be managed in the UI
 |---|---|
 | `cameras` | sources, per-camera segment length, which profiles run, recording profile |
 | `profiles` | targets, aliases, confidence, required worker tags, frame rate, event retention |
-| `recording_profiles` | extra recording qualities (resolution, fps, bitrate, H.264/H.265, `keep_days`) next to the built-in original, 1080p, 720p, 480p and H.265 |
+| `recording_profiles` | extra recording qualities (resolution, fps, bitrate, H.264/H.265, `keep_days`) next to the built-in original, 1080p, 720p, 480p and 1080p H.265 |
 | `mediamtx` | addresses, low-data live view, hardware encoding (`hwaccel`, [guide](docs/HARDWARE.md)) |
 | `processing` | frames per second sent to workers, resolution, night detection threshold |
 | `queue` | lease time, retries |

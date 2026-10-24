@@ -112,3 +112,27 @@ natively there for hardware encoding, or accept CPU encoding.
 Hardware encoders need a little more bitrate than x264 for the same picture. The built-in
 recording profiles set explicit bitrates, so they look the same on every backend. Profiles
 without a bitrate use constant quality (CRF 23 on the CPU, the equivalent QP elsewhere).
+
+### Measured: a 3K camera (Tapo C530WS, 2880×1620, H.264 at about 7 Mbit/s)
+
+30 s of footage, re-encoded on an Apple Silicon Mac (VideoToolbox). SSIM compares each
+result with the camera's original (1.0 = identical):
+
+| Encoding | Size | SSIM | Time for 30 s |
+|---|---|---|---|
+| camera original, 3K H.264 | 100% | 1.000 | – |
+| H.265, 3K, constant quality | **125%** | – | 5.3 s |
+| H.265, 3K, 3 Mbit/s | 52% | 0.954 | 5.4 s |
+| H.264, 3K, 3 Mbit/s | 45% | 0.953 | 5.1 s |
+| H.264, 1080p, 2.5 Mbit/s (built-in `1080p`) | 37% | 0.958 | 2.5 s |
+| H.265, 1080p, 1.5 Mbit/s (built-in `h265`) | 32% | 0.945 | 2.6 s |
+
+- Constant quality can make files *bigger* than what the camera sends: set a bitrate.
+- On hardware encoders H.265 saves little over H.264 at the same bitrate; resolution and
+  bitrate are what shrink recordings. (x265 on the CPU does better, at a much higher cost.)
+- The cheapest saving is often in the camera itself: a lower resolution or quality in its
+  app means less to store and nothing to re-encode.
+- Re-encoding runs on the server, never on a worker: workers only get the censored,
+  low-frame-rate copy, and shipping full-quality video to them and back would cost the
+  camera's bitrate twice per camera.
+

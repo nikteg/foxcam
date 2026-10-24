@@ -54,7 +54,7 @@ mediamtx:
   # hw_device: /dev/dri/renderD128   # Linux render node for vaapi / qsv
 
 # Recording profiles (quality and retention per camera, chosen on the Cameras page).
-# Built in: original (as the camera sends it), 1080p, 720p, 480p, h265. Add your own or
+# Built in: original (as the camera sends it), 1080p, 720p, 480p, h265 (1080p H.265). Add your own or
 # replace a built-in one by id:
 recording_profile_default: original
 recording_profiles: []
