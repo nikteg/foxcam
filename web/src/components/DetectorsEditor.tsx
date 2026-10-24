@@ -1,6 +1,7 @@
 // The models (detectors) of a detection profile: each gets its own job per recording, run
 // by workers with all its tags; their detections merge into the profile's events.
-import { Button, Caption1, Checkbox, Field, Input, Select } from "@fluentui/react-components";
+import { Button, Caption1, Field, Input, Select } from "@fluentui/react-components";
+import { Checkbox } from "./ui";
 import { Add20Regular, Dismiss20Regular } from "@fluentui/react-icons";
 
 import type { DetectorInput, LabelSuggestions } from "../api";

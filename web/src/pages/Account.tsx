@@ -4,7 +4,6 @@ import {
   Caption1,
   Card,
   CardHeader,
-  Checkbox,
   Dialog,
   DialogActions,
   DialogBody,
@@ -33,7 +32,7 @@ import { useSearchParams } from "react-router";
 import { api, type ApiKeyScope } from "../api";
 import { AUTH_KEY, useMe } from "../auth";
 import { CopyBlock } from "../components/AddWorkerDialog";
-import { Empty, PageHeader, Tag, Time } from "../components/ui";
+import { Checkbox, Empty, PageHeader, Tag, Time } from "../components/ui";
 import { useRoleName } from "../components/ShareDialog";
 import { useI18n } from "../i18n";
 

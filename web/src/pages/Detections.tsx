@@ -1,4 +1,4 @@
-import { Button, Caption1, Checkbox, Input, Select, Text } from "@fluentui/react-components";
+import { Button, Caption1, Input, Select, Text } from "@fluentui/react-components";
 import {
   ArrowDownload20Regular,
   Dismiss16Regular,
@@ -15,6 +15,7 @@ import { byNumber, byString, DataTable, type Column } from "../components/DataTa
 import { DetailPanel } from "../components/DetailPanel";
 import { Feedback } from "../components/Feedback";
 import {
+  Checkbox,
   ConfidenceBar,
   Empty,
   Fact,

@@ -3,7 +3,6 @@ import {
   Subtitle2,
   Button,
   Caption1,
-  Checkbox,
   Field,
   Input,
   MessageBar,
@@ -30,6 +29,7 @@ import { ProfileDialog, ProfilesSection } from "./Profiles";
 import { useProfiles } from "../components/ProfileSelect";
 import { TapoAccountCard } from "../components/TapoAccount";
 import {
+  Checkbox,
   Empty,
   InfoBanner,
   PageTabs,

@@ -4,7 +4,6 @@ import {
   Card,
   CardFooter,
   CardHeader,
-  Checkbox,
   Field,
   Input,
   MessageBar,
@@ -45,6 +44,7 @@ import { LabelPicker, useLabelSuggestions, useSuggestionList } from "./LabelPick
 import { useCameraName } from "./CameraSelect";
 import { useProfileName, useProfiles } from "./ProfileSelect";
 import {
+  Checkbox,
   ConfigTag,
   DateTimeInput,
   Empty,

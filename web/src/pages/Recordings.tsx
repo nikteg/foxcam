@@ -1,7 +1,6 @@
 import {
   Button,
   Caption1,
-  Checkbox,
   Link,
   MessageBar,
   MessageBarBody,
@@ -25,6 +24,7 @@ import { byNumber, byString, DataTable, type Column } from "../components/DataTa
 import { DetailPanel } from "../components/DetailPanel";
 import { Feedback } from "../components/Feedback";
 import {
+  Checkbox,
   DateTimeInput,
   Empty,
   Fact,

@@ -3,6 +3,7 @@ import {
   Body1,
   Caption1,
   Card,
+  Checkbox as FluentCheckbox,
   Input,
   Link,
   MessageBar,
@@ -16,6 +17,7 @@ import {
   Tooltip,
   Tab,
   TabList,
+  type CheckboxProps,
 } from "@fluentui/react-components";
 import {
   ArrowRight20Regular,
@@ -30,6 +32,7 @@ import {
 } from "@fluentui/react-icons";
 import {
   useEffect,
+  useId,
   useRef,
   useState,
   type HTMLAttributes,
@@ -41,6 +44,14 @@ import { useLocation, useNavigate } from "react-router";
 
 import { localTime, percent, relativeTime } from "../format";
 import { useI18n } from "../i18n";
+
+/** Fluent Checkbox with an id of its own. Inside a <Field> it takes the field's id, so with
+ * several in one Field (a group of options) every label pointed at the first box and
+ * pressing a label did not toggle its own checkbox. */
+export function Checkbox(props: CheckboxProps) {
+  const id = useId();
+  return <FluentCheckbox id={id} {...props} />;
+}
 
 /** Date or time input with a hint while empty. iOS Safari shows an empty date/time input
  * as a blank box and ignores placeholder, so the hint is drawn over it there (styles.css). */

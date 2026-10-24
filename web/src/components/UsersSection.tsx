@@ -4,7 +4,6 @@ import {
   Card,
   CardFooter,
   CardHeader,
-  Checkbox,
   Field,
   Input,
   MessageBar,
@@ -26,7 +25,7 @@ import { useMe } from "../auth";
 import { ConfirmPopover } from "./ConfirmPopover";
 import { useI18n } from "../i18n";
 import { InviteLink, useRoleName } from "./ShareDialog";
-import { Empty, Fact, Facts, InfoBanner, QueryState, Tag, Time, Toolbar } from "./ui";
+import { Checkbox, Empty, Fact, Facts, InfoBanner, QueryState, Tag, Time, Toolbar } from "./ui";
 import {
   Dialog,
   DialogActions,
