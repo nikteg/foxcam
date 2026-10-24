@@ -4,12 +4,6 @@ import {
   Caption1,
   Card,
   CardHeader,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
   Field,
   Input,
   MessageBar,
@@ -38,6 +32,15 @@ import { useSearchParams } from "react-router";
 import { api, type ApiKeyScope } from "../api";
 import { AUTH_KEY, useMe } from "../auth";
 import { CopyBlock } from "../components/AddWorkerDialog";
+import { ConfirmPopover } from "../components/ConfirmPopover";
+import {
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+} from "../components/Drawer";
 import { Checkbox, Empty, PageHeader, Tag, Time } from "../components/ui";
 import { useRoleName } from "../components/ShareDialog";
 import { useI18n } from "../i18n";
@@ -348,18 +351,15 @@ function ApiKeys() {
                   )}
                 </TableCell>
                 <TableCell className="full">
-                  <Button
-                    size="small"
-                    icon={<Delete20Regular />}
-                    disabled={revoke.isPending}
-                    onClick={() => {
-                      if (window.confirm(t("apiKeys.revokeConfirm", { name: k.name }))) {
-                        revoke.mutate(k.id);
-                      }
-                    }}
+                  <ConfirmPopover
+                    title={t("apiKeys.revokeConfirm", { name: k.name })}
+                    confirmLabel={t("apiKeys.revoke")}
+                    onConfirm={() => revoke.mutateAsync(k.id)}
                   >
-                    {t("apiKeys.revoke")}
-                  </Button>
+                    <Button size="small" icon={<Delete20Regular />}>
+                      {t("apiKeys.revoke")}
+                    </Button>
+                  </ConfirmPopover>
                 </TableCell>
               </TableRow>
             ))}
