@@ -171,6 +171,10 @@ h2.section {
   gap: var(--spacingHorizontalM);
   margin: 28px 0 12px;
 }
+/* The first heading of a page: the page's own padding is enough space above it. */
+h2.section.first {
+  margin-top: 0;
+}
 /* A section heading's arrow to its full page (components/ui.tsx SectionLink). */
 h2.section > .section-link {
   margin-inline-start: calc(-1 * var(--spacingHorizontalXS));

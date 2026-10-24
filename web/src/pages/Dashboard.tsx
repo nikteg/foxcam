@@ -55,7 +55,7 @@ export function Dashboard() {
 
       {s && (
         <>
-          <Subtitle2 as="h2" className="section">
+          <Subtitle2 as="h2" className="section first">
             {t("dashboard.overview")}
           </Subtitle2>
           <section className="stats">
