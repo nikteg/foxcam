@@ -3,9 +3,10 @@
 import {
   MediaPlayer,
   MediaProvider,
+  Menu,
   Poster,
-  useMediaRemote,
   useMediaState,
+  usePlaybackRateOptions,
   type MediaPlayerInstance,
 } from "@vidstack/react";
 import { DefaultVideoLayout, defaultLayoutIcons } from "@vidstack/react/player/layouts/default";
@@ -19,22 +20,29 @@ export type PlayerHandle = MediaPlayerInstance;
 
 const RATES = [0.5, 1, 1.5, 2, 4, 8];
 
-/** The playback speed, always in the control bar: each press steps to the next speed. */
-function SpeedButton() {
+/** The playback speed, always in the control bar (instead of inside a settings menu). */
+function SpeedMenu() {
   const { t } = useI18n();
   const rate = useMediaState("playbackRate");
-  const remote = useMediaRemote();
-  const next = RATES.find((r) => r > rate) ?? 0.5;
+  const options = usePlaybackRateOptions({ rates: RATES, normalLabel: null });
   return (
-    <button
-      type="button"
-      className="vds-button speed-button"
-      aria-label={t("player.speed")}
-      title={t("player.speedNext", { rate: `${next}×` })}
-      onClick={(e) => remote.changePlaybackRate(next, e.nativeEvent)}
-    >
-      {rate}×
-    </button>
+    <Menu.Root className="vds-menu speed-menu">
+      <Menu.Button
+        className="vds-menu-button vds-button speed-button"
+        aria-label={t("player.speed")}
+      >
+        {rate}×
+      </Menu.Button>
+      <Menu.Items className="vds-menu-items speed-items" placement="top" offset={10}>
+        <Menu.RadioGroup className="speed-options" value={options.selectedValue}>
+          {options.toReversed().map((o) => (
+            <Menu.Radio className="speed-option" value={o.value} onSelect={o.select} key={o.value}>
+              {o.rate}×
+            </Menu.Radio>
+          ))}
+        </Menu.RadioGroup>
+      </Menu.Items>
+    </Menu.Root>
   );
 }
 
@@ -84,7 +92,7 @@ export function VideoPlayer({
         // wide enough for the full one, so scrubbing (with previews) works right away.
         smallLayoutWhen={({ width }) => width < 400}
         // Speed is the only setting that matters here: show it instead of the menu.
-        slots={{ settingsMenu: <SpeedButton />, pipButton: null }}
+        slots={{ settingsMenu: <SpeedMenu />, pipButton: null }}
       />
     </MediaPlayer>
   );

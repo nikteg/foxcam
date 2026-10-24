@@ -1484,7 +1484,7 @@ h3.panel-heading {
 .video-player .vds-chapter-title {
   display: none;
 }
-/* The speed button (VideoPlayer SpeedButton): text instead of an icon. */
+/* The speed menu (VideoPlayer SpeedMenu): the rate as the button, a small list above it. */
 .video-player .speed-button {
   width: auto;
   min-width: 52px;
@@ -1492,4 +1492,42 @@ h3.panel-heading {
   font-size: 15px;
   font-weight: var(--fontWeightSemibold);
   font-variant-numeric: tabular-nums;
+}
+/* Above the timeline's controls group (z-index 11). */
+.video-player .vds-controls .vds-controls-group:has(.speed-menu) {
+  z-index: 12;
+}
+.video-player .speed-items.vds-menu-items {
+  min-width: 0;
+  max-height: none;
+  padding: 4px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: var(--borderRadiusLarge);
+  background: rgb(20 20 20 / 0.92);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
+}
+.video-player .speed-options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.video-player .speed-option {
+  min-width: 64px;
+  padding: 6px 14px;
+  border-radius: var(--borderRadiusMedium);
+  color: rgb(255 255 255 / 0.85);
+  font-size: 14px;
+  font-weight: var(--fontWeightSemibold);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  cursor: pointer;
+}
+.video-player .speed-option:hover,
+.video-player .speed-option[data-focus] {
+  background: rgb(255 255 255 / 0.1);
+}
+.video-player .speed-option[aria-checked="true"] {
+  background: var(--colorBrandBackground);
+  color: white;
 }
