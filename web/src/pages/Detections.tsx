@@ -1,6 +1,7 @@
 import { Button, Caption1, Checkbox, Input, Select, Text } from "@fluentui/react-components";
 import {
   ArrowDownload20Regular,
+  Dismiss16Regular,
   Folder20Regular,
   ScanObject20Regular,
 } from "@fluentui/react-icons";
@@ -12,8 +13,6 @@ import { CameraSelect, useCameraName } from "../components/CameraSelect";
 import { ProfileSelect, useDetectorNames, useSeveralDetectors } from "../components/ProfileSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
-import { ModelsSection } from "../components/ModelsSection";
-import { useIsAdmin } from "../auth";
 import { Feedback } from "../components/Feedback";
 import {
   ConfidenceBar,
@@ -22,13 +21,10 @@ import {
   Facts,
   InfoBanner,
   Light,
-  PageTabs,
-  PageTitle,
   QueryState,
   Time,
   Toolbar,
   useRouterHref,
-  useSubPage,
 } from "../components/ui";
 import { decimal, percent } from "../format";
 import { useI18n, type I18n } from "../i18n";
@@ -96,33 +92,8 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detec
   },
 ];
 
-export function Detections() {
-  const { t } = useI18n();
-  const isAdmin = useIsAdmin();
-  // Models: how each profile's detectors did (admins; GET /api/models/stats).
-  const tab = useSubPage(
-    "/detections",
-    isAdmin ? (["detections", "models"] as const) : ["detections"],
-  );
-  return (
-    <>
-      <PageTitle title={t("nav.detections")} />
-      {isAdmin && (
-        <PageTabs
-          base="/detections"
-          current={tab}
-          tabs={[
-            { id: "detections", label: t("nav.detections") },
-            { id: "models", label: t("models.tab") },
-          ]}
-        />
-      )}
-      {tab === "models" ? <ModelsSection /> : <DetectionList />}
-    </>
-  );
-}
-
-function DetectionList() {
+/** Events → Detections: every single hit, the evidence behind the events. */
+export function DetectionList() {
   const [f, setFilter] = useFilters([
     "camera",
     "profile",
@@ -130,12 +101,14 @@ function DetectionList() {
     "only_targets",
     "min_confidence",
     "detector",
+    "event",
     "selected",
   ] as const);
   const query = {
     camera: f.camera,
     profile: f.profile,
     detector: f.detector || undefined,
+    event: Number(f.event) || undefined,
     label: f.label,
     only_targets: f.only_targets === "true",
     min_confidence: Number(f.min_confidence) || 0,
@@ -201,6 +174,16 @@ function DetectionList() {
           value={f.min_confidence || "0"}
           onChange={(_, d) => setFilter("min_confidence", d.value === "0" ? "" : d.value)}
         />
+        {f.event && (
+          <Button
+            icon={<Dismiss16Regular />}
+            iconPosition="after"
+            title={t("detections.eventClear")}
+            onClick={() => setFilter("event", "")}
+          >
+            {t("detections.eventFilter", { id: f.event })}
+          </Button>
+        )}
         <Checkbox
           label={t("detections.onlyTargets")}
           checked={f.only_targets === "true"}

@@ -7,7 +7,6 @@ export const en = {
   "nav.events": "Events",
   "nav.eventsShort": "Events",
   "nav.detections": "Detections",
-  "nav.detectionsShort": "Detect",
   "nav.recordings": "Recordings",
   "nav.recordingsShort": "Files",
   "nav.queue": "Jobs",
@@ -121,6 +120,8 @@ export const en = {
   "live.lowDataTag": "WebRTC 480p",
 
   // Events
+  "events.showDetections": "Detections",
+  "events.showDetectionsHint": "The detections this event was made from",
   "events.none": "No events yet.",
   "events.intro":
     "Sightings of {labels} (from the detection profiles) close in time are merged into one clip, with {before} s before and {after} s after. Clips are cut from the original, uncensored footage.",
@@ -132,6 +133,8 @@ export const en = {
   "events.detectionCount": "{count} {count:detection|detections}",
 
   // Detections
+  "detections.eventFilter": "Event {id}",
+  "detections.eventClear": "Show all detections",
   "detections.intro":
     "Every object the workers reported. Select one to see the frame and video; mark it correct or wrong to build a training set (Export training set).",
   "detections.exportJson": "Export training set",

@@ -8,7 +8,6 @@ export const sv: Record<MessageKey, string> = {
   "nav.events": "Händelser",
   "nav.eventsShort": "Händelser",
   "nav.detections": "Detektioner",
-  "nav.detectionsShort": "Detekt.",
   "nav.recordings": "Inspelningar",
   "nav.recordingsShort": "Filer",
   "nav.queue": "Jobb",
@@ -122,6 +121,8 @@ export const sv: Record<MessageKey, string> = {
   "live.lowDataTag": "WebRTC 480p",
 
   // Händelser
+  "events.showDetections": "Detektioner",
+  "events.showDetectionsHint": "Detektionerna som händelsen gjordes av",
   "events.none": "Inga händelser än.",
   "events.intro":
     "Observationer av {labels} (från detekteringsprofilerna) nära i tid slås ihop till ett klipp, med {before} s före och {after} s efter. Klippen tas från originalfilmen, utan maskering.",
@@ -133,6 +134,8 @@ export const sv: Record<MessageKey, string> = {
   "events.detectionCount": "{count} {count:detektion|detektioner}",
 
   // Detektioner
+  "detections.eventFilter": "Händelse {id}",
+  "detections.eventClear": "Visa alla detektioner",
   "detections.intro":
     "Alla objekt som arbetarna har rapporterat. Välj en för att se bildrutan och videon; markera den som rätt eller fel för att bygga en träningsmängd (Exportera träningsmängd).",
   "detections.exportJson": "Exportera träningsmängd",

@@ -10,7 +10,6 @@ import { InvitePage, LoginPage } from "./pages/Login";
 import { I18nProvider } from "./i18n";
 import { Cameras } from "./pages/Cameras";
 import { Dashboard } from "./pages/Dashboard";
-import { Detections } from "./pages/Detections";
 import { Events } from "./pages/Events";
 import { Queue } from "./pages/Queue";
 import { Recordings } from "./pages/Recordings";
@@ -31,8 +30,8 @@ const router = createBrowserRouter([
     children: [
       { index: true, Component: Dashboard },
       { path: "events", Component: Events },
-      { path: "detections", Component: Detections },
-      { path: "detections/models", Component: Detections },
+      { path: "events/detections", Component: Events },
+      { path: "events/models", Component: Events },
       { path: "recordings", Component: Recordings },
       { path: "recordings/archives", Component: Recordings },
       { path: "jobs", Component: Queue },

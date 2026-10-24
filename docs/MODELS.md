@@ -35,8 +35,8 @@ something (`run: on_hit`, `after: yolo`), so an expensive model confirms a cheap
 (`confirm: true`: no notification until it agrees); see
 [cascades](ARCHITECTURE.md#detection-profiles).
 
-**Comparing them.** Detections → Models (`GET /api/models/stats?days=7`, admins) lists per profile,
-detector and model: detections and targets, your feedback from the Detections page (✓ / ✗,
+**Comparing them.** Events → Models (`GET /api/models/stats?days=7`, admins) lists per profile,
+detector and model: detections and targets, your feedback from Events → Detections (✓ / ✗,
 as precision), average processing time, jobs done, given up and skipped, and the agreement
 rate: of the recordings where a detector found a target and another detector of the profile
 also looked, how often that one found one too. Admins also see each run's raw worker

@@ -86,6 +86,14 @@ export function localTime(iso: string | null | undefined): string {
   ).format(d);
 }
 
+/** "Friday 24 October" (local time): headings for lists grouped by day. */
+export function localDay(iso: string): string {
+  return cached(
+    "day",
+    () => new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" }),
+  ).format(new Date(iso));
+}
+
 export function relativeTime(iso: string | null | undefined, now = Date.now()): string {
   if (!iso) return "–";
   const rtf = cached("rel", () => new Intl.RelativeTimeFormat(locale, { numeric: "auto" }));

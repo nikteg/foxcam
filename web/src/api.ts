@@ -723,6 +723,8 @@ export const api = {
     min_confidence?: number;
     profile?: string;
     detector?: string;
+    /** An event's own detections. */
+    event?: number;
     limit?: number;
   }) => request<Detection[]>("GET", withQuery("/api/detections", q)),
   feedback: (id: number, correct: boolean | null) =>

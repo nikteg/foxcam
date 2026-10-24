@@ -20,7 +20,6 @@ import {
   SignOut20Regular,
   DataBarVertical24Regular,
   Folder24Regular,
-  Search24Regular,
   Server24Regular,
   Settings20Regular,
   Settings24Regular,
@@ -49,12 +48,6 @@ interface NavItem {
 const TABS: NavItem[] = [
   { to: "/", label: "nav.status", short: "nav.status", icon: <DataBarVertical24Regular /> },
   { to: "/events", label: "nav.events", short: "nav.eventsShort", icon: <Target24Regular /> },
-  {
-    to: "/detections",
-    label: "nav.detections",
-    short: "nav.detectionsShort",
-    icon: <Search24Regular />,
-  },
   {
     to: "/recordings",
     label: "nav.recordings",

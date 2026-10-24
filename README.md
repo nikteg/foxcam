@@ -30,7 +30,7 @@ anything else, and keep the clips.
   restart; SpeciesNet knows ~2000 species.
 - **Several models per profile.** Let YOLO-World and SpeciesNet both look (one event, with
   which models saw it), or chain them so an expensive model only confirms a cheap one's
-  finds; notify only when models agree, and compare them under Detections → Models.
+  finds; notify only when models agree, and compare them under Events → Models.
 - **Privacy built in.** Draw censor rectangles per camera; they are burned into the pixels
   before a worker sees a frame, and optionally into recordings and live view as well.
   Private cameras are never sent anywhere.

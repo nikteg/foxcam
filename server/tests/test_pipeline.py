@@ -120,6 +120,14 @@ def test_fox_segments_merge_into_one_event_with_clip(settings):
     assert clip.exists() and 2.0 < ffmpeg.probe(clip).duration_s < 4.5
     assert pinned == [False, True, True, False]
 
+    # An event's own detections (Events -> Detections, "Show its detections").
+    from media_streamer.web import queries
+    add_detection(segs[3], segs[3], 100, label="cat")
+    with session_scope() as s:
+        ev_id = s.query(Event).one().id
+    assert len(queries.detections(event_id=ev_id)) == 2
+    assert len(queries.detections()) == 3
+
 
 @needs_ffmpeg
 def test_pre_roll_reaches_into_previous_segment(settings):

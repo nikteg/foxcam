@@ -276,7 +276,8 @@ def detections(camera_id: str | None = None, label: str | None = None,
                limit: int = 200, segment_id: int | None = None,
                profile_id: str | None = None,
                camera_ids: set[str] | None = None,
-               detector_id: str | None = None) -> list[dict[str, Any]]:
+               detector_id: str | None = None,
+               event_id: int | None = None) -> list[dict[str, Any]]:
     q = _only(select(Detection), Detection.camera_id, camera_ids) \
         .where(Detection.confidence >= min_confidence) \
         .order_by(Detection.ts.desc()).limit(limit)
@@ -290,6 +291,8 @@ def detections(camera_id: str | None = None, label: str | None = None,
         q = q.where(Detection.profile_id == profile_id)
     if detector_id:
         q = q.where(Detection.detector_id == detector_id)
+    if event_id is not None:
+        q = q.where(Detection.event_id == event_id)
     if only_targets:
         q = q.where(Detection.is_target.is_(True))
     with session_scope() as s:

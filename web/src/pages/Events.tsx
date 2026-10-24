@@ -5,12 +5,47 @@ import { CameraSelect } from "../components/CameraSelect";
 import { EventsGrid } from "../components/EventsGrid";
 import { Select } from "@fluentui/react-components";
 
+import { ModelsSection } from "../components/ModelsSection";
 import { ProfileSelect, useProfiles, useSeveralDetectors } from "../components/ProfileSelect";
-import { InfoBanner, PageTitle, QueryState } from "../components/ui";
+import { InfoBanner, PageTabs, PageTitle, QueryState, useSubPage } from "../components/ui";
+import { useIsAdmin } from "../auth";
 import { useI18n } from "../i18n";
 import { useFilters } from "../useFilters";
+import { DetectionList } from "./Detections";
 
+/** Events (what happened, as clips), the detections behind them and, for admins, how the
+ * models did. */
 export function Events() {
+  const { t } = useI18n();
+  const isAdmin = useIsAdmin();
+  const tab = useSubPage(
+    "/events",
+    isAdmin ? (["events", "detections", "models"] as const) : (["events", "detections"] as const),
+  );
+  return (
+    <>
+      <PageTitle title={t("nav.events")} />
+      <PageTabs
+        base="/events"
+        current={tab}
+        tabs={[
+          { id: "events", label: t("nav.events") },
+          { id: "detections", label: t("nav.detections") },
+          ...(isAdmin ? [{ id: "models" as const, label: t("models.tab") }] : []),
+        ]}
+      />
+      {tab === "models" ? (
+        <ModelsSection />
+      ) : tab === "detections" ? (
+        <DetectionList />
+      ) : (
+        <EventList />
+      )}
+    </>
+  );
+}
+
+function EventList() {
   const [{ camera, profile, agreement }, setFilter] = useFilters([
     "camera",
     "profile",
@@ -39,7 +74,6 @@ export function Events() {
 
   return (
     <>
-      <PageTitle title={t("nav.events")} />
       {cfg && (
         <InfoBanner id="events">
           {rich("events.intro", {
@@ -68,7 +102,7 @@ export function Events() {
         )}
       </div>
       <QueryState error={events.error} loading={events.isPending} />
-      {events.data && <EventsGrid events={events.data} />}
+      {events.data && <EventsGrid events={events.data} byDay />}
     </>
   );
 }

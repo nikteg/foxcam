@@ -1532,3 +1532,17 @@ h3.panel-heading {
   background: var(--colorBrandBackground);
   color: white;
 }
+/* Events grid: a heading per day across the whole row. */
+.cards-day {
+  grid-column: 1 / -1;
+  margin: var(--spacingVerticalM) 0 calc(-1 * var(--spacingVerticalXS));
+  font-size: var(--fontSizeBase400);
+  font-weight: var(--fontWeightSemibold);
+}
+.cards-day:first-child {
+  margin-top: 0;
+}
+/* Last item of a row pushed to its far end (an event card's Detections link). */
+.push-end {
+  margin-inline-start: auto;
+}
