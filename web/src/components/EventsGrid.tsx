@@ -16,15 +16,15 @@ import {
 import { ArrowDownload20Regular, Dismiss24Regular, Play20Filled } from "@fluentui/react-icons";
 import { useState } from "react";
 
-import type { FoxEvent } from "../api";
+import type { DetectionEvent } from "../api";
 import { duration, localTime, percent } from "../format";
 import { useI18n } from "../i18n";
 import { useProfileName, useProfiles } from "./ProfileSelect";
 import { Empty, Light, Tag, Time } from "./ui";
 
-export function EventsGrid({ events }: { events: FoxEvent[] }) {
+export function EventsGrid({ events }: { events: DetectionEvent[] }) {
   const { t } = useI18n();
-  const [playing, setPlaying] = useState<FoxEvent | null>(null);
+  const [playing, setPlaying] = useState<DetectionEvent | null>(null);
   const profileName = useProfileName();
   const manyProfiles = (useProfiles().data?.length ?? 0) > 1;
   if (events.length === 0) return <Empty>{t("events.none")}</Empty>;

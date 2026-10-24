@@ -5,8 +5,8 @@ export const sv: Record<MessageKey, string> = {
   // Navigering
   "nav.status": "Status",
   "nav.live": "Live",
-  "nav.events": "Rävhändelser",
-  "nav.eventsShort": "Rävar",
+  "nav.events": "Händelser",
+  "nav.eventsShort": "Händelser",
   "nav.detections": "Detektioner",
   "nav.detectionsShort": "Detekt.",
   "nav.recordings": "Inspelningar",
@@ -74,7 +74,7 @@ export const sv: Record<MessageKey, string> = {
   "col.length": "Längd",
   "col.size": "Storlek",
   "col.status": "Status",
-  "col.fox": "Räv",
+  "col.match": "Träff",
   "col.job": "Jobb",
   "col.segmentStart": "Segmentstart",
   "col.state": "Status",
@@ -98,7 +98,7 @@ export const sv: Record<MessageKey, string> = {
   "dashboard.mediamtxDown":
     "MediaMTX går inte att nå, så livestatus och inspelning är inte tillgängliga.",
   "dashboard.camerasOnline": "Kameror anslutna",
-  "dashboard.events24h": "Rävhändelser (24 h)",
+  "dashboard.events24h": "Händelser (24 h)",
   "dashboard.queueWaiting": "Väntar i kö",
   "dashboard.processedLastHour": "Klara senaste timmen",
   "dashboard.recordingsStored": "Lagrade inspelningar",
@@ -106,7 +106,7 @@ export const sv: Record<MessageKey, string> = {
   "dashboard.manage": "hantera →",
   "dashboard.noCameras": "Inga kameror än. {link} för att börja spela in.",
   "dashboard.addCameraLink": "Lägg till en kamera",
-  "dashboard.latestEvents": "Senaste rävhändelser",
+  "dashboard.latestEvents": "Senaste händelser",
   "dashboard.all": "alla →",
   "dashboard.segments": "Segment",
   "dashboard.snapshotAlt": "Ögonblicksbild från {name}",
@@ -117,8 +117,8 @@ export const sv: Record<MessageKey, string> = {
   "live.frameTitle": "{name} live",
   "live.offline": "Kameran är frånkopplad",
 
-  // Rävhändelser
-  "events.none": "Inga rävhändelser än.",
+  // Händelser
+  "events.none": "Inga händelser än.",
   "events.intro":
     "Observationer av {labels} (från detekteringsprofilerna) nära i tid slås ihop till ett klipp, med {before} s före och {after} s efter. Klippen tas från originalfilmen, utan maskering.",
   "events.playClip": "Spela upp klipp med {label}",
@@ -146,11 +146,11 @@ export const sv: Record<MessageKey, string> = {
 
   // Inspelningar
   "recordings.dayUtc": "Dag (UTC)",
-  "recordings.onlyWithFox": "Endast med räv",
+  "recordings.onlyWithMatch": "Endast med träff",
   "recordings.none": "Inga inspelningar än.",
-  "recordings.pinnedTooltip": "Sparas: ingår i en rävhändelse",
+  "recordings.pinnedTooltip": "Sparas: ingår i en händelse",
   "recordings.deleted": "Videon har raderats enligt lagringsreglerna; detektionerna finns kvar.",
-  "recordings.keptForEvent": "sparas för rävhändelse",
+  "recordings.keptForEvent": "sparas för händelse",
   "recordings.saturation": "färgmättnad {value}",
   "recordings.sunElevation": "Solhöjd",
   "recordings.censorMask": "Maskering",
@@ -183,7 +183,7 @@ export const sv: Record<MessageKey, string> = {
   "workers.nameHint": "Visas i kön, t.ex. gpu-box. Bokstäver, siffror, '.', '_' eller '-'.",
   "workers.detector": "Detektor",
   "workers.detectorHint": "Ändrar bara det föreslagna kommandot; arbetaren bestämmer vad den kör.",
-  "workers.detector.speciesnet": "SpeciesNet: träffsäkrast för rävar (rekommenderas)",
+  "workers.detector.speciesnet": "SpeciesNet: vilt, ~2000 arter (rekommenderas för djur)",
   "workers.detector.ultralytics": "YOLO-World: snabb, behöver CUDA-GPU för realtid",
   "workers.detector.dummy": "Dummy: låtsasdetektioner för att testa flödet",
   "workers.createToken": "Skapa token",
@@ -269,7 +269,7 @@ export const sv: Record<MessageKey, string> = {
     "S3-biblioteket är inte installerat. Kör {cmd} (Docker-avbildningen har det redan).",
   "storage.bucket": "Bucket",
   "storage.endpoint": "Endpoint",
-  "storage.clips": "Rävklipp",
+  "storage.clips": "Händelseklipp",
   "storage.recordings": "Inspelningar",
   "storage.progress": "{done} uppladdade, {pending} väntar",
   "storage.off": "Laddas inte upp",
@@ -298,7 +298,7 @@ export const sv: Record<MessageKey, string> = {
   "cameras.changeSourceHint": "För att byta själva källan: ta bort kameran och lägg till den igen.",
   "cameras.removeTitle": "Ta bort {name}?",
   "cameras.removeBody":
-    "Inspelningen stoppas. Befintliga inspelningar, detektioner och rävhändelser sparas tills lagringsreglerna raderar dem.",
+    "Inspelningen stoppas. Befintliga inspelningar, detektioner och händelser sparas tills lagringsreglerna raderar dem.",
 
   // Lägg till kamera
   "addCamera.title": "Lägg till kamera",

@@ -165,7 +165,7 @@ export interface Detection {
   is_night: boolean | null;
 }
 
-export interface FoxEvent {
+export interface DetectionEvent {
   id: number;
   camera_id: string;
   profile_id: string | null;
@@ -317,7 +317,7 @@ export const api = {
   feedback: (id: number, correct: boolean | null) =>
     request<{ status: string }>("POST", `/api/detections/${id}/feedback`, { correct }),
   events: (q: { camera?: string; profile?: string; limit?: number }) =>
-    request<FoxEvent[]>("GET", withQuery("/api/events", q)),
+    request<DetectionEvent[]>("GET", withQuery("/api/events", q)),
   queue: (q: { state?: string; limit?: number }) =>
     request<QueueView>("GET", withQuery("/api/queue", q)),
   addCamera: (body: {

@@ -1,12 +1,12 @@
 import { Button, Caption1, Tab, TabList, Text, Title2 } from "@fluentui/react-components";
 import {
-  AnimalCat24Regular,
   Camera24Regular,
   DataBarVertical24Regular,
   Folder24Regular,
   Search24Regular,
   Server24Regular,
   Settings24Regular,
+  Target24Regular,
   Video24Regular,
 } from "@fluentui/react-icons";
 import type { ReactElement } from "react";
@@ -26,7 +26,7 @@ interface NavItem {
 const TABS: NavItem[] = [
   { to: "/", label: "nav.status", short: "nav.status", icon: <DataBarVertical24Regular /> },
   { to: "/live", label: "nav.live", short: "nav.live", icon: <Video24Regular /> },
-  { to: "/events", label: "nav.events", short: "nav.eventsShort", icon: <AnimalCat24Regular /> },
+  { to: "/events", label: "nav.events", short: "nav.eventsShort", icon: <Target24Regular /> },
   {
     to: "/detections",
     label: "nav.detections",

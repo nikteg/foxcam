@@ -4,8 +4,8 @@ export const en = {
   // Navigation
   "nav.status": "Status",
   "nav.live": "Live",
-  "nav.events": "Fox events",
-  "nav.eventsShort": "Foxes",
+  "nav.events": "Events",
+  "nav.eventsShort": "Events",
   "nav.detections": "Detections",
   "nav.detectionsShort": "Detect",
   "nav.recordings": "Recordings",
@@ -73,7 +73,7 @@ export const en = {
   "col.length": "Length",
   "col.size": "Size",
   "col.status": "Status",
-  "col.fox": "Fox",
+  "col.match": "Match",
   "col.job": "Job",
   "col.segmentStart": "Segment start",
   "col.state": "State",
@@ -97,7 +97,7 @@ export const en = {
   "dashboard.mediamtxDown":
     "MediaMTX is not reachable, so live status and recording are unavailable.",
   "dashboard.camerasOnline": "Cameras online",
-  "dashboard.events24h": "Fox events (24h)",
+  "dashboard.events24h": "Events (24h)",
   "dashboard.queueWaiting": "Queue waiting",
   "dashboard.processedLastHour": "Processed last hour",
   "dashboard.recordingsStored": "Recordings stored",
@@ -105,7 +105,7 @@ export const en = {
   "dashboard.manage": "manage →",
   "dashboard.noCameras": "No cameras yet. {link} to start recording.",
   "dashboard.addCameraLink": "Add a camera",
-  "dashboard.latestEvents": "Latest fox events",
+  "dashboard.latestEvents": "Latest events",
   "dashboard.all": "all →",
   "dashboard.segments": "Segments",
   "dashboard.snapshotAlt": "Snapshot from {name}",
@@ -116,8 +116,8 @@ export const en = {
   "live.frameTitle": "{name} live",
   "live.offline": "Camera offline",
 
-  // Fox events
-  "events.none": "No fox events yet.",
+  // Events
+  "events.none": "No events yet.",
   "events.intro":
     "Sightings of {labels} (from the detection profiles) close in time are merged into one clip, with {before} s before and {after} s after. Clips are cut from the original, uncensored footage.",
   "events.playClip": "Play {label} clip",
@@ -145,11 +145,11 @@ export const en = {
 
   // Recordings
   "recordings.dayUtc": "Day (UTC)",
-  "recordings.onlyWithFox": "Only with fox",
+  "recordings.onlyWithMatch": "Only with a match",
   "recordings.none": "No recordings yet.",
-  "recordings.pinnedTooltip": "Kept: part of a fox event",
+  "recordings.pinnedTooltip": "Kept: part of an event",
   "recordings.deleted": "The video was deleted by retention; detections are kept.",
-  "recordings.keptForEvent": "kept for fox event",
+  "recordings.keptForEvent": "kept for event",
   "recordings.saturation": "saturation {value}",
   "recordings.sunElevation": "Sun elevation",
   "recordings.censorMask": "Censor mask",
@@ -181,7 +181,7 @@ export const en = {
   "workers.nameHint": "Shown in the queue, e.g. gpu-box. Letters, digits, '.', '_' or '-'.",
   "workers.detector": "Detector",
   "workers.detectorHint": "Only changes the suggested command; the worker decides what it runs.",
-  "workers.detector.speciesnet": "SpeciesNet: most accurate for foxes (recommended)",
+  "workers.detector.speciesnet": "SpeciesNet: wildlife, ~2000 species (recommended for animals)",
   "workers.detector.ultralytics": "YOLO-World: fast, needs a CUDA GPU for real-time",
   "workers.detector.dummy": "Dummy: fake detections for testing the pipeline",
   "workers.createToken": "Create token",
@@ -267,7 +267,7 @@ export const en = {
   "storage.noBoto3": "The S3 library is not installed. Run {cmd} (the Docker image includes it).",
   "storage.bucket": "Bucket",
   "storage.endpoint": "Endpoint",
-  "storage.clips": "Fox clips",
+  "storage.clips": "Event clips",
   "storage.recordings": "Recordings",
   "storage.progress": "{done} uploaded, {pending} waiting",
   "storage.off": "Not uploaded",
@@ -366,7 +366,7 @@ export const en = {
   "cameras.changeSourceHint": "To change the source itself, remove the camera and add it again.",
   "cameras.removeTitle": "Remove {name}?",
   "cameras.removeBody":
-    "Recording stops. Existing recordings, detections and fox events are kept until retention deletes them.",
+    "Recording stops. Existing recordings, detections and events are kept until retention deletes them.",
 
   // Add camera wizard
   "addCamera.title": "Add camera",

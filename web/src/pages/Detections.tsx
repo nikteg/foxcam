@@ -184,7 +184,7 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
           <ConfidenceBar value={d.confidence} />
         </dd>
         <dt>{t("detections.target")}</dt>
-        <dd>{d.is_target ? `${t("common.yes")} 🦊` : t("common.no")}</dd>
+        <dd>{d.is_target ? t("common.yes") : t("common.no")}</dd>
         <dt>{t("col.light")}</dt>
         <dd>
           <Light night={d.is_night} long />

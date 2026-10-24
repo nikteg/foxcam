@@ -76,11 +76,10 @@ const columns = (t: I18n["t"], stateLabel: (s: string) => string): Column<Segmen
     ),
   },
   {
-    id: "fox",
-    header: t("col.fox"),
+    id: "match",
+    header: t("col.match"),
     width: 80,
-    cell: (r) =>
-      r.has_target && r.max_confidence !== null ? `🦊 ${percent(r.max_confidence)}` : "",
+    cell: (r) => (r.has_target && r.max_confidence !== null ? percent(r.max_confidence) : ""),
     compare: byNumber((r) => r.max_confidence),
   },
 ];
@@ -122,7 +121,7 @@ export function Recordings() {
           onChange={(_, d) => setFilter("day", d.value)}
         />
         <Checkbox
-          label={t("recordings.onlyWithFox")}
+          label={t("recordings.onlyWithMatch")}
           checked={f.only_targets === "true"}
           onChange={(_, d) => setFilter("only_targets", d.checked === true)}
         />
