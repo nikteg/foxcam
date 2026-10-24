@@ -236,6 +236,8 @@ export interface ArchiveFile {
   segments: number;
   first_segment_id: number | null;
   segments_with_match: number;
+  /** Thumbnail of its first segment that has one. */
+  thumb_url: string | null;
   deleted: boolean;
   remote: boolean;
   play_url: string | null;

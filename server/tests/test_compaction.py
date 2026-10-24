@@ -170,3 +170,16 @@ def test_status_for_the_status_page(settings):
     last = st["last_built"]
     assert last["camera_id"] == "cam" and last["segments"] == len(ids)
     assert last["encoder"] == "copy" and last["bytes_after"] > 0
+
+
+@needs_ffmpeg
+def test_joined_files_list_has_a_preview(settings):
+    from media_streamer.web import queries
+
+    ids = _hour_ago(settings, n=2)
+    with session_scope() as s:
+        s.get(Segment, ids[1]).thumb_path = "thumbs/cam/x.jpg"
+    compaction.compact_once(settings)
+    [row] = queries.archives()
+    assert row["segments"] == 2 and row["thumb_url"] == f"/api/segments/{ids[1]}/thumb"
+    assert row["play_url"] == f"/api/archives/{row['id']}/play"

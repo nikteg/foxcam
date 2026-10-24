@@ -230,6 +230,10 @@ def archives(camera_id: str | None = None, day: str | None = None, limit: int = 
         first = dict(s.execute(
             select(Segment.archive_id, func.min(Segment.id)).where(
                 Segment.archive_id.in_([a.id for a in rows])).group_by(Segment.archive_id)).all())
+        thumbs = dict(s.execute(
+            select(Segment.archive_id, func.min(Segment.id)).where(
+                Segment.archive_id.in_([a.id for a in rows]), Segment.thumb_path.is_not(None))
+            .group_by(Segment.archive_id)).all())
         targets = dict(s.execute(
             select(Segment.archive_id, func.count()).where(
                 Segment.archive_id.in_([a.id for a in rows]), Segment.has_target.is_(True))
@@ -240,6 +244,7 @@ def archives(camera_id: str | None = None, day: str | None = None, limit: int = 
             "profile_id": a.profile_id, "encoder": a.encoder,
             "segments": counts.get(a.id, 0), "first_segment_id": first.get(a.id),
             "segments_with_match": targets.get(a.id, 0),
+            "thumb_url": f"/api/segments/{thumbs[a.id]}/thumb" if a.id in thumbs else None,
             "deleted": a.deleted_at is not None, "remote": a.remote_key is not None,
             "play_url": None if a.deleted_at and not a.remote_key
             else f"/api/archives/{a.id}/play",

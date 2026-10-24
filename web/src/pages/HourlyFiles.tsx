@@ -1,4 +1,4 @@
-import { Button, Caption1 } from "@fluentui/react-components";
+import { Button } from "@fluentui/react-components";
 import { ArrowDownload20Regular, Folder20Regular } from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 
@@ -24,6 +24,13 @@ const columns = (
   cameraName: (id: string) => string,
   howMade: (a: ArchiveFile) => string,
 ): Column<ArchiveFile>[] => [
+  {
+    id: "thumb",
+    header: t("col.preview"),
+    width: 120,
+    phone: "thumb",
+    cell: (r) => r.thumb_url && <img className="mini" loading="lazy" src={r.thumb_url} alt="" />,
+  },
   {
     id: "start",
     header: t("col.start"),
@@ -99,9 +106,7 @@ export function HourlyFiles({
 
   return (
     <>
-      <Caption1 as="p" className="muted block">
-        {t("hourly.intro")}
-      </Caption1>
+      <p className="muted">{t("hourly.intro")}</p>
       <QueryState error={archives.error} loading={archives.isPending} />
       <div className="master-detail">
         <div className="master">
@@ -133,6 +138,7 @@ export function HourlyFiles({
                   key={selected.id}
                   className="detail-media"
                   src={selected.play_url}
+                  poster={selected.thumb_url ?? undefined}
                   controls
                   playsInline
                   preload="metadata"
