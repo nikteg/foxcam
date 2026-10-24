@@ -571,6 +571,11 @@ export const sv: Record<MessageKey, string> = {
     "Kommer just nu från config.yaml; sparar du här gäller det i stället.",
   "cameras.profilesFromDefault": "Just nu standardprofilerna; sparar du här gäller det i stället.",
   "cameras.profilesReset": "Använd standard",
+  "cameras.settings": "Inställningar",
+  "cameras.settingsTitle": "{name}",
+  "cameras.tabGeneral": "Allmänt",
+  "cameras.editCensorAreas": "Redigera maskering",
+  "cameras.removeCamera": "Ta bort kameran",
   "recording.title": "Inspelning",
   "recording.dialogTitle": "Inspelning – {name}",
   "recording.help":

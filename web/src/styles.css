@@ -1100,8 +1100,9 @@ Fluent's text styles would otherwise reset the margins. */
 }
 
 /* Sharing */
-.fui-DialogSurface.share-dialog {
-  max-width: min(640px, 95vw);
+/* Camera settings (General, Detection, Recording, Sharing): one width for every tab. */
+.fui-DialogSurface.camera-settings-dialog {
+  max-width: min(680px, 95vw);
   width: 100%;
 }
 .share-add {

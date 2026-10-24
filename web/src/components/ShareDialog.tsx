@@ -2,12 +2,8 @@ import {
   Body1,
   Button,
   Caption1,
-  Dialog,
   DialogActions,
-  DialogBody,
   DialogContent,
-  DialogSurface,
-  DialogTitle,
   Field,
   Input,
   MessageBar,
@@ -23,7 +19,7 @@ import {
   PersonAdd20Regular,
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { ApiError, api, type Camera, type CameraRole } from "../api";
 import { useMe } from "../auth";
@@ -86,7 +82,16 @@ export function InviteLink({ path }: { path: string }) {
 }
 
 /** Who can see a camera: people with access, invites, and adding more (owners). */
-export function ShareDialog({ camera, onClose }: { camera: Camera; onClose: () => void }) {
+/** Who can see this camera (camera Settings → Sharing). */
+export function SharePanel({
+  camera,
+  tabs,
+  onClose,
+}: {
+  camera: Camera;
+  tabs: ReactNode;
+  onClose: () => void;
+}) {
   const { t } = useI18n();
   const me = useMe();
   const client = useQueryClient();
@@ -129,140 +134,134 @@ export function ShareDialog({ camera, onClose }: { camera: Camera; onClose: () =
   const error = (noAccount ? null : share.error) ?? setMemberRole.error ?? remove.error;
 
   return (
-    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface className="share-dialog">
-        <DialogBody>
-          <DialogTitle>{t("share.title", { name: camera.name })}</DialogTitle>
-          <DialogContent className="form-stack">
-            <Body1 className="muted">{t("share.intro")}</Body1>
+    <>
+      <DialogContent className="form-stack">
+        {tabs}
+        <Body1 className="muted">{t("share.intro")}</Body1>
 
-            <form
-              className="share-add"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setLink(null);
-                share.mutate();
-              }}
-            >
-              <Field label={t("share.email")} className="grow">
-                <Input
-                  type="email"
-                  list="share-directory"
-                  value={email}
-                  onChange={(_, d) => setEmail(d.value)}
-                />
-              </Field>
-              <datalist id="share-directory">
-                {directory.data?.map((u) => (
-                  <option key={u.id} value={u.email}>
-                    {u.display_name}
-                  </option>
-                ))}
-              </datalist>
-              <Field label={t("share.roleLabel")}>
-                <RoleSelect value={role} onChange={setRole} label={t("share.roleLabel")} />
-              </Field>
+        <form
+          className="share-add"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setLink(null);
+            share.mutate();
+          }}
+        >
+          <Field label={t("share.email")} className="grow">
+            <Input
+              type="email"
+              list="share-directory"
+              value={email}
+              onChange={(_, d) => setEmail(d.value)}
+            />
+          </Field>
+          <datalist id="share-directory">
+            {directory.data?.map((u) => (
+              <option key={u.id} value={u.email}>
+                {u.display_name}
+              </option>
+            ))}
+          </datalist>
+          <Field label={t("share.roleLabel")}>
+            <RoleSelect value={role} onChange={setRole} label={t("share.roleLabel")} />
+          </Field>
+          <Button
+            type="submit"
+            appearance="primary"
+            icon={<PersonAdd20Regular />}
+            disabled={!email.includes("@") || share.isPending}
+          >
+            {t("share.add")}
+          </Button>
+        </form>
+        <Caption1 className="muted">{t(`share.roleHelp.${role}`)}</Caption1>
+        {noAccount && (
+          <MessageBar>
+            <MessageBarBody>{t("share.noAccount", { email })}</MessageBarBody>
+          </MessageBar>
+        )}
+        {error && (
+          <MessageBar intent="error">
+            <MessageBarBody>{error.message}</MessageBarBody>
+          </MessageBar>
+        )}
+
+        <div className="row wrap">
+          <Button
+            icon={<Link20Regular />}
+            disabled={invite.isPending}
+            onClick={() => invite.mutate()}
+          >
+            {t("share.createLink", { role: roleName(role) })}
+          </Button>
+        </div>
+        {invite.error && (
+          <MessageBar intent="error">
+            <MessageBarBody>{invite.error.message}</MessageBarBody>
+          </MessageBar>
+        )}
+        {link && <InviteLink path={link} />}
+
+        <Subtitle2 as="h3">{t("share.people")}</Subtitle2>
+        {access.data?.members.length === 0 && (
+          <Caption1 className="muted">{t("share.nobody")}</Caption1>
+        )}
+        <ul className="share-list">
+          {access.data?.members.map((m) => (
+            <li key={m.user_id}>
+              <span className="grow">
+                <Text weight="semibold">{m.display_name}</Text>
+                {m.name && <Caption1 className="muted"> {m.email}</Caption1>}
+                {m.user_id === me?.user?.id && (
+                  <Caption1 className="muted"> ({t("share.you")})</Caption1>
+                )}
+              </span>
+              <RoleSelect
+                value={m.role}
+                label={t("share.roleFor", { name: m.display_name })}
+                disabled={setMemberRole.isPending}
+                onChange={(r) => setMemberRole.mutate({ userId: m.user_id, r })}
+              />
               <Button
-                type="submit"
-                appearance="primary"
-                icon={<PersonAdd20Regular />}
-                disabled={!email.includes("@") || share.isPending}
-              >
-                {t("share.add")}
-              </Button>
-            </form>
-            <Caption1 className="muted">{t(`share.roleHelp.${role}`)}</Caption1>
-            {noAccount && (
-              <MessageBar>
-                <MessageBarBody>{t("share.noAccount", { email })}</MessageBarBody>
-              </MessageBar>
-            )}
-            {error && (
-              <MessageBar intent="error">
-                <MessageBarBody>{error.message}</MessageBarBody>
-              </MessageBar>
-            )}
+                appearance="subtle"
+                icon={<Delete20Regular />}
+                aria-label={t("share.removeFor", { name: m.display_name })}
+                disabled={remove.isPending}
+                onClick={() => remove.mutate(m.user_id)}
+              />
+            </li>
+          ))}
+        </ul>
+        {me?.is_admin && <Caption1 className="muted">{t("share.adminsSeeAll")}</Caption1>}
 
-            <div className="row wrap">
-              <Button
-                icon={<Link20Regular />}
-                disabled={invite.isPending}
-                onClick={() => invite.mutate()}
-              >
-                {t("share.createLink", { role: roleName(role) })}
-              </Button>
-            </div>
-            {invite.error && (
-              <MessageBar intent="error">
-                <MessageBarBody>{invite.error.message}</MessageBarBody>
-              </MessageBar>
-            )}
-            {link && <InviteLink path={link} />}
-
-            <Subtitle2 as="h3">{t("share.people")}</Subtitle2>
-            {access.data?.members.length === 0 && (
-              <Caption1 className="muted">{t("share.nobody")}</Caption1>
-            )}
+        {(access.data?.invites.length ?? 0) > 0 && (
+          <>
+            <Subtitle2 as="h3">{t("share.openInvites")}</Subtitle2>
             <ul className="share-list">
-              {access.data?.members.map((m) => (
-                <li key={m.user_id}>
+              {access.data?.invites.map((inv) => (
+                <li key={inv.id}>
                   <span className="grow">
-                    <Text weight="semibold">{m.display_name}</Text>
-                    {m.name && <Caption1 className="muted"> {m.email}</Caption1>}
-                    {m.user_id === me?.user?.id && (
-                      <Caption1 className="muted"> ({t("share.you")})</Caption1>
-                    )}
+                    {roleName(inv.cameras.find((c) => c.camera_id === camera.id)?.role ?? "viewer")}{" "}
+                    <Caption1 className="muted">
+                      {t("share.expires")} <Time iso={inv.expires_at} />
+                    </Caption1>
                   </span>
-                  <RoleSelect
-                    value={m.role}
-                    label={t("share.roleFor", { name: m.display_name })}
-                    disabled={setMemberRole.isPending}
-                    onChange={(r) => setMemberRole.mutate({ userId: m.user_id, r })}
-                  />
                   <Button
                     appearance="subtle"
                     icon={<Delete20Regular />}
-                    aria-label={t("share.removeFor", { name: m.display_name })}
-                    disabled={remove.isPending}
-                    onClick={() => remove.mutate(m.user_id)}
+                    aria-label={t("share.revoke")}
+                    disabled={revoke.isPending}
+                    onClick={() => revoke.mutate(inv.id)}
                   />
                 </li>
               ))}
             </ul>
-            {me?.is_admin && <Caption1 className="muted">{t("share.adminsSeeAll")}</Caption1>}
-
-            {(access.data?.invites.length ?? 0) > 0 && (
-              <>
-                <Subtitle2 as="h3">{t("share.openInvites")}</Subtitle2>
-                <ul className="share-list">
-                  {access.data?.invites.map((inv) => (
-                    <li key={inv.id}>
-                      <span className="grow">
-                        {roleName(
-                          inv.cameras.find((c) => c.camera_id === camera.id)?.role ?? "viewer",
-                        )}{" "}
-                        <Caption1 className="muted">
-                          {t("share.expires")} <Time iso={inv.expires_at} />
-                        </Caption1>
-                      </span>
-                      <Button
-                        appearance="subtle"
-                        icon={<Delete20Regular />}
-                        aria-label={t("share.revoke")}
-                        disabled={revoke.isPending}
-                        onClick={() => revoke.mutate(inv.id)}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={onClose}>{t("common.close")}</Button>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
+          </>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t("common.close")}</Button>
+      </DialogActions>
+    </>
   );
 }

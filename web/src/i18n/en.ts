@@ -487,6 +487,11 @@ export const en = {
   "cameras.profilesFromConfig": "Currently from config.yaml; saving here overrides it.",
   "cameras.profilesFromDefault": "Currently the default profiles; saving here overrides them.",
   "cameras.profilesReset": "Use defaults",
+  "cameras.settings": "Settings",
+  "cameras.settingsTitle": "{name}",
+  "cameras.tabGeneral": "General",
+  "cameras.editCensorAreas": "Edit censor areas",
+  "cameras.removeCamera": "Remove camera",
   "recording.title": "Recording",
   "recording.dialogTitle": "Recording – {name}",
   "recording.help":

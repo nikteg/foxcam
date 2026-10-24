@@ -15,7 +15,9 @@ import {
   Field,
   Input,
   MessageBar,
+  MessageBarActions,
   MessageBarBody,
+  MessageBarTitle,
   Radio,
   RadioGroup,
   Switch,
@@ -27,21 +29,18 @@ import {
 import {
   Add20Regular,
   Delete20Regular,
-  Edit20Regular,
-  People20Regular,
-  ScanObject20Regular,
   EyeOff20Regular,
+  Settings20Regular,
   Video20Regular,
-  VideoClip20Regular,
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router";
 
 import { api, type Camera, type CameraSource, type RecordingProfile } from "../api";
 import { useIsAdmin, hasRole, useMe } from "../auth";
 import { AddCameraDialog } from "../components/AddCameraDialog";
-import { ShareDialog, useRoleName } from "../components/ShareDialog";
+import { SharePanel, useRoleName } from "../components/ShareDialog";
 import { ProfileDialog, ProfilesSection } from "./Profiles";
 import { useProfileName, useProfiles } from "../components/ProfileSelect";
 import { TapoAccountCard } from "../components/TapoAccount";
@@ -78,11 +77,7 @@ export function Cameras() {
   });
   const [adding, setAdding] = useState(false);
   const [addingProfile, setAddingProfile] = useState(false);
-  const [editing, setEditing] = useState<Camera | null>(null);
-  const [removing, setRemoving] = useState<Camera | null>(null);
-  const [choosing, setChoosing] = useState<Camera | null>(null);
-  const [recordingFor, setRecordingFor] = useState<Camera | null>(null);
-  const [sharing, setSharing] = useState<Camera | null>(null);
+  const [settingsFor, setSettingsFor] = useState<Camera | null>(null);
   const me = useMe();
   const isAdmin = me?.is_admin ?? false;
   // Sub-pages with their own URL (links work even while parts are still loading).
@@ -154,15 +149,7 @@ export function Cameras() {
           {cameras.data?.length === 0 && <Empty>{t("cameras.none")}</Empty>}
           <div className="cards">
             {cameras.data?.map((c) => (
-              <CameraCard
-                key={c.id}
-                camera={c}
-                onEdit={() => setEditing(c)}
-                onRemove={() => setRemoving(c)}
-                onProfiles={() => setChoosing(c)}
-                onRecording={() => setRecordingFor(c)}
-                onShare={me?.enabled ? () => setSharing(c) : undefined}
-              />
+              <CameraCard key={c.id} camera={c} onSettings={() => setSettingsFor(c)} />
             ))}
           </div>
         </>
@@ -176,34 +163,21 @@ export function Cameras() {
           onClose={() => setAddingProfile(false)}
         />
       )}
-      {editing && <EditCameraDialog camera={editing} onClose={() => setEditing(null)} />}
-      {removing && <RemoveCameraDialog camera={removing} onClose={() => setRemoving(null)} />}
-      {choosing && <CameraProfilesDialog camera={choosing} onClose={() => setChoosing(null)} />}
-      {recordingFor && (
-        <RecordingProfileDialog camera={recordingFor} onClose={() => setRecordingFor(null)} />
+      {settingsFor && (
+        <CameraSettingsDialog
+          // Fresh state per camera; the camera object itself updates via the query.
+          key={settingsFor.id}
+          camera={cameras.data?.find((c) => c.id === settingsFor.id) ?? settingsFor}
+          onClose={() => setSettingsFor(null)}
+        />
       )}
-      {sharing && <ShareDialog camera={sharing} onClose={() => setSharing(null)} />}
     </>
   );
 }
 
-function CameraCard({
-  camera: c,
-  onEdit,
-  onRemove,
-  onProfiles,
-  onRecording,
-  onShare,
-}: {
-  camera: Camera;
-  onEdit: () => void;
-  onRemove: () => void;
-  onProfiles: () => void;
-  onRecording: () => void;
-  /** Undefined when accounts are turned off. */
-  onShare?: () => void;
-}) {
+function CameraCard({ camera: c, onSettings }: { camera: Camera; onSettings: () => void }) {
   const { t } = useI18n();
+  const me = useMe();
   const profileName = useProfileName();
   const recordingName = useRecordingProfileName();
   const sourceLabel = useSourceLabel();
@@ -232,7 +206,7 @@ function CameraCard({
           <span className="row wrap tags">
             <Tag>{sourceLabel(c.source_config.type)}</Tag>
             {c.managed === "config" && <Tag kind="pending">config.yaml</Tag>}
-            {onShare && c.role !== "owner" && <Tag>{roleName(c.role)}</Tag>}
+            {me?.enabled && c.role !== "owner" && <Tag>{roleName(c.role)}</Tag>}
             {!c.enabled && <Tag kind="warn">{t("cameras.disabled")}</Tag>}
             {c.private && <Tag kind="private">{t("state.private")}</Tag>}
           </span>
@@ -296,37 +270,9 @@ function CameraCard({
         >
           {t("nav.live")}
         </Button>
-        {canEdit && (
-          <>
-            <Button
-              as="a"
-              size="small"
-              icon={<EyeOff20Regular />}
-              {...routerHref(`/cameras/${c.id}/mask`)}
-            >
-              {t("camera.censorAreas")}
-            </Button>
-            <Button size="small" icon={<ScanObject20Regular />} onClick={onProfiles}>
-              {t("cameras.detect")}
-            </Button>
-            <Button size="small" icon={<VideoClip20Regular />} onClick={onRecording}>
-              {t("recording.title")}
-            </Button>
-          </>
-        )}
-        {onShare && isOwner && (
-          <Button size="small" icon={<People20Regular />} onClick={onShare}>
-            {t("share.button")}
-          </Button>
-        )}
-        {editable && (
-          <Button size="small" icon={<Edit20Regular />} onClick={onEdit}>
-            {t("common.edit")}
-          </Button>
-        )}
-        {editable && isOwner && (
-          <Button size="small" icon={<Delete20Regular />} onClick={onRemove}>
-            {t("common.remove")}
+        {(canEdit || isOwner) && (
+          <Button size="small" icon={<Settings20Regular />} onClick={onSettings}>
+            {t("cameras.settings")}
           </Button>
         )}
       </CardFooter>
@@ -334,11 +280,23 @@ function CameraCard({
   );
 }
 
-function EditCameraDialog({ camera, onClose }: { camera: Camera; onClose: () => void }) {
+function GeneralPanel({
+  camera,
+  tabs,
+  onClose,
+}: {
+  camera: Camera;
+  tabs: ReactNode;
+  onClose: () => void;
+}) {
   const { t } = useI18n();
   const client = useQueryClient();
+  const routerHref = useRouterHref();
+  const editable = camera.managed === "ui" && hasRole(camera, "editor");
+  const canRemove = camera.managed === "ui" && hasRole(camera, "owner");
   const [name, setName] = useState(camera.name);
   const [segment, setSegment] = useState(camera.segment_seconds_override?.toString() ?? "");
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const save = useMutation({
     mutationFn: () =>
       api.updateCamera(camera.id, {
@@ -350,46 +308,132 @@ function EditCameraDialog({ camera, onClose }: { camera: Camera; onClose: () => 
       onClose();
     },
   });
+  const remove = useMutation({
+    mutationFn: () => api.deleteCamera(camera.id),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["cameras"] });
+      void client.invalidateQueries({ queryKey: ["status"] });
+      onClose();
+    },
+  });
+  const error = save.error ?? remove.error;
+
+  return (
+    <form
+      className="contents"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (editable) save.mutate();
+      }}
+    >
+      <DialogContent className="form-stack">
+        {tabs}
+        {editable ? (
+          <>
+            <Field label={t("camera.name")} required>
+              <Input value={name} onChange={(_, d) => setName(d.value)} />
+            </Field>
+            <Field label={t("camera.segmentLengthSeconds")} hint={t("camera.segmentLengthHint")}>
+              <Input
+                type="number"
+                min={5}
+                max={3600}
+                value={segment}
+                placeholder={t("camera.default")}
+                onChange={(_, d) => setSegment(d.value)}
+              />
+            </Field>
+            <Caption1 className="muted">{t("cameras.changeSourceHint")}</Caption1>
+          </>
+        ) : (
+          <Body1 className="muted">{t("cameras.configHint")}</Body1>
+        )}
+        <div className="row wrap">
+          <Button
+            as="a"
+            size="small"
+            icon={<EyeOff20Regular />}
+            {...routerHref(`/cameras/${camera.id}/mask`)}
+          >
+            {t("cameras.editCensorAreas")}
+          </Button>
+          {canRemove && !confirmRemove && (
+            <Button size="small" icon={<Delete20Regular />} onClick={() => setConfirmRemove(true)}>
+              {t("cameras.removeCamera")}
+            </Button>
+          )}
+        </div>
+        {confirmRemove && (
+          <MessageBar intent="warning">
+            <MessageBarBody>
+              <MessageBarTitle>{t("cameras.removeTitle", { name: camera.name })}</MessageBarTitle>
+              {t("cameras.removeBody")}
+            </MessageBarBody>
+            <MessageBarActions>
+              <Button size="small" onClick={() => setConfirmRemove(false)}>
+                {t("common.cancel")}
+              </Button>
+              <Button
+                size="small"
+                appearance="primary"
+                icon={<Delete20Regular />}
+                disabled={remove.isPending}
+                onClick={() => remove.mutate()}
+              >
+                {t("common.remove")}
+              </Button>
+            </MessageBarActions>
+          </MessageBar>
+        )}
+        {error && (
+          <MessageBar intent="error">
+            <MessageBarBody>{error.message}</MessageBarBody>
+          </MessageBar>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{editable ? t("common.cancel") : t("common.close")}</Button>
+        {editable && (
+          <Button type="submit" appearance="primary" disabled={!name || save.isPending}>
+            {t("common.save")}
+          </Button>
+        )}
+      </DialogActions>
+    </form>
+  );
+}
+
+type SettingsTab = "general" | "detection" | "recording" | "sharing";
+
+/** Everything about one camera, under tabs (the card only keeps Live and Settings). */
+function CameraSettingsDialog({ camera, onClose }: { camera: Camera; onClose: () => void }) {
+  const { t } = useI18n();
+  const me = useMe();
+  const canEdit = hasRole(camera, "editor");
+  const canShare = !!me?.enabled && hasRole(camera, "owner");
+  const [tab, setTab] = useState<SettingsTab>("general");
+  const tabs = (
+    <TabList
+      className="block"
+      selectedValue={tab}
+      onTabSelect={(_, d) => setTab(d.value as SettingsTab)}
+    >
+      <Tab value="general">{t("cameras.tabGeneral")}</Tab>
+      {canEdit && <Tab value="detection">{t("cameras.detect")}</Tab>}
+      {canEdit && <Tab value="recording">{t("recording.title")}</Tab>}
+      {canShare && <Tab value="sharing">{t("share.button")}</Tab>}
+    </TabList>
+  );
   return (
     <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            save.mutate();
-          }}
-        >
-          <DialogBody>
-            <DialogTitle>{t("cameras.editTitle", { name: camera.name })}</DialogTitle>
-            <DialogContent className="form-stack">
-              <Field label={t("camera.name")} required>
-                <Input value={name} onChange={(_, d) => setName(d.value)} />
-              </Field>
-              <Field label={t("camera.segmentLengthSeconds")} hint={t("camera.segmentLengthHint")}>
-                <Input
-                  type="number"
-                  min={5}
-                  max={3600}
-                  value={segment}
-                  placeholder={t("camera.default")}
-                  onChange={(_, d) => setSegment(d.value)}
-                />
-              </Field>
-              <Caption1 className="muted">{t("cameras.changeSourceHint")}</Caption1>
-              {save.error && (
-                <MessageBar intent="error">
-                  <MessageBarBody>{save.error.message}</MessageBarBody>
-                </MessageBar>
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={onClose}>{t("common.cancel")}</Button>
-              <Button type="submit" appearance="primary" disabled={!name || save.isPending}>
-                {t("common.save")}
-              </Button>
-            </DialogActions>
-          </DialogBody>
-        </form>
+      <DialogSurface className="camera-settings-dialog">
+        <DialogBody>
+          <DialogTitle>{t("cameras.settingsTitle", { name: camera.name })}</DialogTitle>
+          {tab === "general" && <GeneralPanel camera={camera} tabs={tabs} onClose={onClose} />}
+          {tab === "detection" && <DetectionPanel camera={camera} tabs={tabs} onClose={onClose} />}
+          {tab === "recording" && <RecordingPanel camera={camera} tabs={tabs} onClose={onClose} />}
+          {tab === "sharing" && <SharePanel camera={camera} tabs={tabs} onClose={onClose} />}
+        </DialogBody>
       </DialogSurface>
     </Dialog>
   );
@@ -421,7 +465,15 @@ function useRecordingSummary(): (p: RecordingProfile) => string {
   };
 }
 
-function RecordingProfileDialog({ camera, onClose }: { camera: Camera; onClose: () => void }) {
+function RecordingPanel({
+  camera,
+  tabs,
+  onClose,
+}: {
+  camera: Camera;
+  tabs: ReactNode;
+  onClose: () => void;
+}) {
   const { t } = useI18n();
   const client = useQueryClient();
   const list = useRecordingProfiles();
@@ -447,90 +499,94 @@ function RecordingProfileDialog({ camera, onClose }: { camera: Camera; onClose: 
   });
 
   return (
-    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>{t("recording.dialogTitle", { name: camera.name })}</DialogTitle>
-          <DialogContent className="form-stack">
-            <Body1 className="muted">{t("recording.help")}</Body1>
-            <QueryState error={list.error} loading={list.isPending} />
-            <RadioGroup value={selected} onChange={(_, d) => setSelected(d.value)}>
-              {profiles.map((p) => (
-                <Radio
-                  key={p.id}
-                  value={p.id}
-                  label={
-                    <span>
-                      {p.display_name}
-                      {p.default && <Caption1 className="muted"> ({t("camera.default")})</Caption1>}
-                      <Caption1 as="span" className="muted option-hint">
-                        {summary(p)}
-                      </Caption1>
-                    </span>
-                  }
-                />
-              ))}
-            </RadioGroup>
-            {isAdmin && chosen && !chosen.default && (
-              <div className="row wrap">
-                <Button
-                  size="small"
-                  disabled={makeDefault.isPending}
-                  onClick={() => makeDefault.mutate(chosen.id)}
-                >
-                  {t("recording.makeDefault", { name: chosen.display_name })}
-                </Button>
-                <Caption1 className="muted">{t("recording.makeDefaultHint")}</Caption1>
-              </div>
-            )}
-            {makeDefault.error && (
-              <MessageBar intent="error">
-                <MessageBarBody>{makeDefault.error.message}</MessageBarBody>
-              </MessageBar>
-            )}
-            {chosen?.transcode && (
-              <MessageBar>
-                <MessageBarBody>
-                  {t("recording.transcodeNote")}
-                  {chosen.codec === "h265" && <> {t("recording.h265Note")}</>}
-                </MessageBarBody>
-              </MessageBar>
-            )}
-            <Caption1 className="muted">
-              {camera.recording_profile_source === "ui"
-                ? t("cameras.profilesFromUi")
-                : camera.recording_profile_source === "config"
-                  ? t("cameras.profilesFromConfig")
-                  : t("recording.fromDefault")}
-            </Caption1>
-            {save.error && (
-              <MessageBar intent="error">
-                <MessageBarBody>{save.error.message}</MessageBarBody>
-              </MessageBar>
-            )}
-          </DialogContent>
-          <DialogActions>
-            {camera.recording_profile_source === "ui" && (
-              <Button disabled={save.isPending} onClick={() => save.mutate(null)}>
-                {t("cameras.profilesReset")}
-              </Button>
-            )}
-            <Button onClick={onClose}>{t("common.cancel")}</Button>
+    <>
+      <DialogContent className="form-stack">
+        {tabs}
+        <Body1 className="muted">{t("recording.help")}</Body1>
+        <QueryState error={list.error} loading={list.isPending} />
+        <RadioGroup value={selected} onChange={(_, d) => setSelected(d.value)}>
+          {profiles.map((p) => (
+            <Radio
+              key={p.id}
+              value={p.id}
+              label={
+                <span>
+                  {p.display_name}
+                  {p.default && <Caption1 className="muted"> ({t("camera.default")})</Caption1>}
+                  <Caption1 as="span" className="muted option-hint">
+                    {summary(p)}
+                  </Caption1>
+                </span>
+              }
+            />
+          ))}
+        </RadioGroup>
+        {isAdmin && chosen && !chosen.default && (
+          <div className="row wrap">
             <Button
-              appearance="primary"
-              disabled={save.isPending}
-              onClick={() => save.mutate(selected)}
+              size="small"
+              disabled={makeDefault.isPending}
+              onClick={() => makeDefault.mutate(chosen.id)}
             >
-              {t("common.save")}
+              {t("recording.makeDefault", { name: chosen.display_name })}
             </Button>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
+            <Caption1 className="muted">{t("recording.makeDefaultHint")}</Caption1>
+          </div>
+        )}
+        {makeDefault.error && (
+          <MessageBar intent="error">
+            <MessageBarBody>{makeDefault.error.message}</MessageBarBody>
+          </MessageBar>
+        )}
+        {chosen?.transcode && (
+          <MessageBar>
+            <MessageBarBody>
+              {t("recording.transcodeNote")}
+              {chosen.codec === "h265" && <> {t("recording.h265Note")}</>}
+            </MessageBarBody>
+          </MessageBar>
+        )}
+        <Caption1 className="muted">
+          {camera.recording_profile_source === "ui"
+            ? t("cameras.profilesFromUi")
+            : camera.recording_profile_source === "config"
+              ? t("cameras.profilesFromConfig")
+              : t("recording.fromDefault")}
+        </Caption1>
+        {save.error && (
+          <MessageBar intent="error">
+            <MessageBarBody>{save.error.message}</MessageBarBody>
+          </MessageBar>
+        )}
+      </DialogContent>
+      <DialogActions>
+        {camera.recording_profile_source === "ui" && (
+          <Button disabled={save.isPending} onClick={() => save.mutate(null)}>
+            {t("cameras.profilesReset")}
+          </Button>
+        )}
+        <Button onClick={onClose}>{t("common.cancel")}</Button>
+        <Button
+          appearance="primary"
+          disabled={save.isPending}
+          onClick={() => save.mutate(selected)}
+        >
+          {t("common.save")}
+        </Button>
+      </DialogActions>
+    </>
   );
 }
 
-function CameraProfilesDialog({ camera, onClose }: { camera: Camera; onClose: () => void }) {
+function DetectionPanel({
+  camera,
+  tabs,
+  onClose,
+}: {
+  camera: Camera;
+  tabs: ReactNode;
+  onClose: () => void;
+}) {
   const { t } = useI18n();
   const client = useQueryClient();
   const { data: profiles = [] } = useProfiles();
@@ -547,98 +603,52 @@ function CameraProfilesDialog({ camera, onClose }: { camera: Camera; onClose: ()
     setSelected((cur) => (on ? [...cur, id] : cur.filter((x) => x !== id)));
 
   return (
-    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>{t("cameras.profilesTitle", { name: camera.name })}</DialogTitle>
-          <DialogContent className="form-stack">
-            <Body1 className="muted">{t("cameras.profilesHelp")}</Body1>
-            {profiles
-              .filter((p) => p.enabled)
-              .map((p) => (
-                <Checkbox
-                  key={p.id}
-                  checked={selected.includes(p.id)}
-                  onChange={(_, d) => toggle(p.id, d.checked === true)}
-                  label={
-                    <span>
-                      {p.display_name}{" "}
-                      <Caption1 className="muted">({p.targets.join(", ")})</Caption1>
-                    </span>
-                  }
-                />
-              ))}
-            <Caption1 className="muted">
-              {camera.profiles_source === "ui"
-                ? t("cameras.profilesFromUi")
-                : camera.profiles_source === "config"
-                  ? t("cameras.profilesFromConfig")
-                  : t("cameras.profilesFromDefault")}
-            </Caption1>
-            {save.error && (
-              <MessageBar intent="error">
-                <MessageBarBody>{save.error.message}</MessageBarBody>
-              </MessageBar>
-            )}
-          </DialogContent>
-          <DialogActions>
-            {camera.profiles_source === "ui" && (
-              <Button disabled={save.isPending} onClick={() => save.mutate(null)}>
-                {t("cameras.profilesReset")}
-              </Button>
-            )}
-            <Button onClick={onClose}>{t("common.cancel")}</Button>
-            <Button
-              appearance="primary"
-              disabled={save.isPending}
-              onClick={() => save.mutate(selected)}
-            >
-              {t("common.save")}
-            </Button>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
-  );
-}
-
-function RemoveCameraDialog({ camera, onClose }: { camera: Camera; onClose: () => void }) {
-  const { t } = useI18n();
-  const client = useQueryClient();
-  const remove = useMutation({
-    mutationFn: () => api.deleteCamera(camera.id),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ["cameras"] });
-      void client.invalidateQueries({ queryKey: ["status"] });
-      onClose();
-    },
-  });
-  return (
-    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>{t("cameras.removeTitle", { name: camera.name })}</DialogTitle>
-          <DialogContent>
-            <Body1>{t("cameras.removeBody")}</Body1>
-            {remove.error && (
-              <MessageBar intent="error">
-                <MessageBarBody>{remove.error.message}</MessageBarBody>
-              </MessageBar>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={onClose}>{t("common.cancel")}</Button>
-            <Button
-              appearance="primary"
-              icon={<Delete20Regular />}
-              disabled={remove.isPending}
-              onClick={() => remove.mutate()}
-            >
-              {t("common.remove")}
-            </Button>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
+    <>
+      <DialogContent className="form-stack">
+        {tabs}
+        <Body1 className="muted">{t("cameras.profilesHelp")}</Body1>
+        {profiles
+          .filter((p) => p.enabled)
+          .map((p) => (
+            <Checkbox
+              key={p.id}
+              checked={selected.includes(p.id)}
+              onChange={(_, d) => toggle(p.id, d.checked === true)}
+              label={
+                <span>
+                  {p.display_name} <Caption1 className="muted">({p.targets.join(", ")})</Caption1>
+                </span>
+              }
+            />
+          ))}
+        <Caption1 className="muted">
+          {camera.profiles_source === "ui"
+            ? t("cameras.profilesFromUi")
+            : camera.profiles_source === "config"
+              ? t("cameras.profilesFromConfig")
+              : t("cameras.profilesFromDefault")}
+        </Caption1>
+        {save.error && (
+          <MessageBar intent="error">
+            <MessageBarBody>{save.error.message}</MessageBarBody>
+          </MessageBar>
+        )}
+      </DialogContent>
+      <DialogActions>
+        {camera.profiles_source === "ui" && (
+          <Button disabled={save.isPending} onClick={() => save.mutate(null)}>
+            {t("cameras.profilesReset")}
+          </Button>
+        )}
+        <Button onClick={onClose}>{t("common.cancel")}</Button>
+        <Button
+          appearance="primary"
+          disabled={save.isPending}
+          onClick={() => save.mutate(selected)}
+        >
+          {t("common.save")}
+        </Button>
+      </DialogActions>
+    </>
   );
 }
