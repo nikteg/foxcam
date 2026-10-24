@@ -293,6 +293,9 @@ function RecordingDetail({
     if (!video.current) return;
     video.current.currentTime = ms / 1000;
     void video.current.play();
+    // The detections list is below the player: bring the player into view (only scrolls
+    // when it is not already visible).
+    video.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
   return (
