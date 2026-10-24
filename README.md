@@ -198,7 +198,7 @@ uv run media-streamer tapo-logout     # delete the saved session
 ## Workers and models
 
 A worker runs wherever the GPU is and only needs to reach the server over HTTP. Create a
-token under **Worker queue → Add worker**: the dialog shows ready-to-paste commands for
+token under **Worker queue → Workers → Add worker**: the dialog shows ready-to-paste commands for
 Windows + WSL 2, native Windows, Linux/macOS and Docker. For example:
 
 ```sh
