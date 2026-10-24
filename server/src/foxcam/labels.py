@@ -65,7 +65,9 @@ def seen_labels(camera_ids: set[str] | None = None) -> list[dict[str, Any]]:
     q = select(Detection.label, func.count(), func.max(Detection.confidence),
                func.max(Detection.ts),
                # case(): summing the Boolean column directly comes back as True/False.
-               func.sum(case((Detection.is_target.is_(True), 1), else_=0))
+               # Marked wrong on the Detections page = not a target.
+               func.sum(case((Detection.is_target.is_(True) & Detection.feedback.is_not(False),
+                              1), else_=0))
                ).group_by(Detection.label)
     if camera_ids is not None:
         q = q.where(Detection.camera_id.in_(camera_ids))

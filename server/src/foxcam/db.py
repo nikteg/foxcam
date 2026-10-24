@@ -107,6 +107,12 @@ def _backfill(engine: Engine, added: set[str]) -> None:
         for table in ("job", "detection", "event"):
             conn.execute(text(f"UPDATE {table} SET profile_id = 'default' "
                               "WHERE profile_id IS NULL"))
+        # Recordings whose only matches were marked wrong (from before marking one wrong
+        # updated the recording, pipeline/queue.py refresh_match): no match.
+        conn.execute(text(
+            "UPDATE segment SET has_target = 0, max_confidence = NULL WHERE has_target = 1 "
+            "AND NOT EXISTS (SELECT 1 FROM detection d WHERE d.segment_id = segment.id "
+            "AND d.is_target = 1 AND (d.feedback IS NULL OR d.feedback = 1))"))
         # ... and to its single detector, from before profiles had several.
         for table in ("job", "detection"):
             conn.execute(text(f"UPDATE {table} SET detector_id = 'default' "

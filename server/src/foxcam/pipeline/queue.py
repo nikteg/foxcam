@@ -228,6 +228,29 @@ def _cascade(settings: Settings, job: Job, hit: bool, reason: str | None = None)
             _cascade(settings, row, False, row.error)  # and whatever follows it
 
 
+def counts_as_match():
+    """A target detection that is a match: not marked wrong on the Detections page."""
+    return Detection.is_target.is_(True) & Detection.feedback.is_not(False)
+
+
+def refresh_match(settings: Settings, seg: Segment) -> None:
+    """``has_target`` / ``max_confidence`` from the segment's detections. Detections marked
+    wrong do not count, and targets of profiles with a confirming detector (cascade
+    `confirm`) only count when that detector reported them."""
+    s = object_session(seg)
+    s.flush()
+    confs = []
+    for pid, did, conf in s.execute(select(
+            Detection.profile_id, Detection.detector_id, Detection.confidence).where(
+            Detection.segment_id == seg.id, counts_as_match())):
+        profile = settings.profile(pid)
+        confirming = profile.confirming if profile else set()
+        if not confirming or did in confirming:
+            confs.append(conf)
+    seg.has_target = bool(confs)
+    seg.max_confidence = max(confs) if confs else None
+
+
 def settle_segment(settings: Settings, seg: Segment) -> None:
     """Update a segment from its jobs: finished once every job (profile and detector) is
     done or dead."""
@@ -238,18 +261,7 @@ def settle_segment(settings: Settings, seg: Segment) -> None:
         if seg.status in SegmentStatus.TERMINAL and seg.derived_path:
             seg.status = SegmentStatus.QUEUED
         return
-    # Targets of profiles with a confirming detector (cascade `confirm`) only count when
-    # that detector reported them.
-    confs = []
-    for pid, did, conf in s.execute(select(
-            Detection.profile_id, Detection.detector_id, Detection.confidence).where(
-            Detection.segment_id == seg.id, Detection.is_target.is_(True))):
-        profile = settings.profile(pid)
-        confirming = profile.confirming if profile else set()
-        if not confirming or did in confirming:
-            confs.append(conf)
-    seg.has_target = bool(confs)
-    seg.max_confidence = max(confs) if confs else None
+    refresh_match(settings, seg)
     if JobState.DONE in states or not states:
         seg.status = SegmentStatus.DONE
     else:

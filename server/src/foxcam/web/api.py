@@ -436,6 +436,7 @@ class FeedbackBody(BaseModel):
 
 @router.post("/detections/{detection_id}/feedback")
 def feedback(detection_id: int, body: FeedbackBody,
+             settings: Settings = Depends(settings_dep),
              p: Principal = Depends(principal)) -> dict[str, str]:
     """Editors of the camera label detections (training data for all models)."""
     with session_scope() as s:
@@ -444,7 +445,7 @@ def feedback(detection_id: int, body: FeedbackBody,
     if camera_id is None or not p.can(camera_id):
         raise HTTPException(404, "unknown detection")
     check_camera(p, camera_id, CameraRole.EDITOR)
-    if not queries.set_feedback(detection_id, body.correct):
+    if not queries.set_feedback(settings, detection_id, body.correct):
         raise HTTPException(404, "unknown detection")
     return {"status": "ok"}
 

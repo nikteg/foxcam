@@ -6,7 +6,7 @@ import shutil
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import exists, func, select
+from sqlalchemy import case, exists, func, select
 
 from .. import recording
 from ..accounts import Principal
@@ -169,7 +169,7 @@ def segment_jobs(settings: Settings, segment_id: int,
     with session_scope() as s:
         counts = {job_id: (total, targets) for job_id, total, targets in s.execute(
             select(Detection.job_id, func.count(),
-                   func.coalesce(func.sum(Detection.is_target), 0))
+                   func.coalesce(func.sum(case((queue.counts_as_match(), 1), else_=0)), 0))
             .where(Detection.segment_id == segment_id).group_by(Detection.job_id))}
         out = []
         for j in s.scalars(select(Job).where(Job.segment_id == segment_id).order_by(Job.id)):
@@ -310,13 +310,18 @@ def detections(camera_id: str | None = None, label: str | None = None,
         return [detection_dict(d) for d in s.scalars(q)]
 
 
-def set_feedback(detection_id: int, correct: bool | None) -> bool:
+def set_feedback(settings: Settings, detection_id: int, correct: bool | None) -> bool:
     with session_scope() as s:
         d = s.get(Detection, detection_id)
         if d is None:
             return False
         d.feedback = correct
         d.feedback_at = utcnow() if correct is not None else None
+        # A detection marked wrong is no match: the recording's "with a match" (and the
+        # archive's count) follow.
+        seg = s.get(Segment, d.segment_id)
+        if seg is not None:
+            queue.refresh_match(settings, seg)
         return True
 
 

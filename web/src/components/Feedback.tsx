@@ -27,6 +27,10 @@ export function Feedback({
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["detections"] });
       void client.invalidateQueries({ queryKey: ["events"] }); // shown or hidden as wrong
+      // A wrong detection is no match: the recording's and archive's match counts follow.
+      for (const key of ["segments", "segment", "segment-jobs", "archives", "status"]) {
+        void client.invalidateQueries({ queryKey: [key] });
+      }
     },
   });
   // Show the pending choice immediately.

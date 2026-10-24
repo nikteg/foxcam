@@ -156,9 +156,17 @@ def test_events_marked_wrong_can_be_left_out(settings):
         with session_scope() as s:
             s.get(Segment, seg_id).has_target = True
     events.assign_events(settings)
-    queries.set_feedback(dets[0], False)  # a wrong one
-    queries.set_feedback(dets[1], True)  # a right one
+    queries.set_feedback(settings, dets[0], False)  # a wrong one
+    queries.set_feedback(settings, dets[1], True)  # a right one
     by_id = {e["best_detection_id"]: e for e in queries.events()}
     assert [by_id[d]["feedback"] for d in dets] == ["wrong", "correct", None]
     shown = {e["best_detection_id"] for e in queries.events(hide_wrong=True)}
     assert shown == {dets[1], dets[2]}
+    # The recording with only a wrong match has no match any more (archives count these),
+    # and clearing the feedback brings it back.
+    with session_scope() as s:
+        assert [s.get(Segment, i).has_target for i in segs] == [False, True, True]
+    assert [j["targets"] for j in queries.segment_jobs(settings, segs[0])] == [0]
+    queries.set_feedback(settings, dets[0], None)
+    with session_scope() as s:
+        assert s.get(Segment, segs[0]).has_target is True

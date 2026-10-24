@@ -384,8 +384,8 @@ def test_model_stats_compare_detectors(wildlife):
     with session_scope() as s:
         yolo_fox = [d.id for d in s.query(Detection).filter(
             Detection.detector_id == "yolo", Detection.label == "fox")]
-    set_feedback(yolo_fox[0], True)
-    set_feedback(yolo_fox[1], False)
+    set_feedback(wildlife, yolo_fox[0], True)
+    set_feedback(wildlife, yolo_fox[1], False)
 
     with app_client(wildlife) as c:
         rows = {r["detector_id"]: r for r in c.get("/api/models/stats").json()}
