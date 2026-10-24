@@ -22,23 +22,33 @@ export function guessPlatform(): Platform {
   return /Windows/i.test(navigator.userAgent) ? "wsl" : "linux";
 }
 
-function detectorArgs(detector: DetectorChoice): string {
+/** One "--flag value" per entry, so commands can be shown one option per line. */
+function detectorArgs(detector: DetectorChoice): string[] {
   switch (detector) {
     case "speciesnet":
-      return "--detector speciesnet";
+      return ["--detector speciesnet"];
     case "ultralytics":
-      return "--detector ultralytics --model yolov8s-worldv2.pt --classes fox";
+      return ["--detector ultralytics", "--model yolov8s-worldv2.pt", "--classes fox"];
     case "dummy":
-      return "--detector dummy --dummy-label fox";
+      return ["--detector dummy", "--dummy-label fox"];
   }
 }
 
-function installCommand(detector: DetectorChoice, folder: string): string {
+/** A command split over lines with the shell's continuation character. */
+function lines(platform: Platform, command: string, args: string[]): string {
+  const cont = platform === "windows" ? " `" : " \\";
+  return [command, ...args].join(`${cont}\n  `);
+}
+
+function installCommand(platform: Platform, detector: DetectorChoice, folder: string): string {
   const extra = detector === "dummy" ? "" : `[${detector}]`;
-  const python = detector === "speciesnet" ? "--python 3.12 " : "";
-  // PyPI's PyTorch is CPU-only on Windows; auto picks the CUDA build for the driver.
-  const torch = detector === "dummy" ? "" : "--torch-backend auto ";
-  return `uv tool install ${python}${torch}"media-worker${extra} @ ${folder}"`;
+  const args = [
+    ...(detector === "speciesnet" ? ["--python 3.12"] : []),
+    // PyPI's PyTorch is CPU-only on Windows; auto picks the CUDA build for the driver.
+    ...(detector === "dummy" ? [] : ["--torch-backend auto"]),
+    `"media-worker${extra} @ ${folder}"`,
+  ];
+  return lines(platform, "uv tool install", args);
 }
 
 /** Copy-paste setup steps for a worker on the given platform (see docs/WORKER_SETUP.md). */
@@ -48,12 +58,15 @@ export function setupSteps(
   server: string,
   token: string,
 ): SetupStep[] {
-  const conn = `--server ${server} --token ${token}`;
+  const conn = [`--server ${server}`, `--token ${token}`];
   const folder = platform === "windows" ? ".\\worker" : "./worker";
   const common: SetupStep[] = [
-    { text: "workers.step.install", code: installCommand(detector, folder) },
-    { text: "workers.step.doctor", code: `media-worker doctor ${conn}` },
-    { text: "workers.step.run", code: `media-worker ${conn} ${detectorArgs(detector)}` },
+    { text: "workers.step.install", code: installCommand(platform, detector, folder) },
+    { text: "workers.step.doctor", code: lines(platform, "media-worker doctor", conn) },
+    {
+      text: "workers.step.run",
+      code: lines(platform, "media-worker", [...conn, ...detectorArgs(detector)]),
+    },
   ];
   switch (platform) {
     case "wsl":
@@ -79,7 +92,7 @@ export function setupSteps(
       return [
         {
           text: "workers.step.linuxTools",
-          code: "sudo apt install -y ffmpeg        # macOS: brew install ffmpeg\ncurl -LsSf https://astral.sh/uv/install.sh | sh",
+          code: "sudo apt install -y ffmpeg   # macOS: brew install ffmpeg\ncurl -LsSf https://astral.sh/uv/install.sh | sh",
         },
         { text: "workers.step.code" },
         ...common,
@@ -94,7 +107,7 @@ export function setupSteps(
             `MEDIA_SERVER=${server}`,
             `MEDIA_WORKER_TOKEN=${token}`,
             `DETECTOR=${detector}`,
-            `WORKER_ARGS=${detectorArgs(detector)}`,
+            `WORKER_ARGS=${detectorArgs(detector).join(" ")}`,
           ].join("\n"),
         },
         {

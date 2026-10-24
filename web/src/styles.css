@@ -785,6 +785,11 @@ table.table {
   flex-direction: column;
   gap: var(--spacingVerticalM);
 }
+/* In a scrolling dialog the column would otherwise squeeze children (e.g. a wrapped
+   MessageBar) below their content height. */
+.form-stack > * {
+  flex-shrink: 0;
+}
 .fui-DialogSurface.add-camera-dialog {
   max-width: min(720px, 95vw);
   width: 100%;
@@ -869,8 +874,10 @@ details.helper summary {
   margin: 0;
   font-family: var(--fontFamilyMonospace);
   font-size: var(--fontSizeBase200);
-  white-space: pre-wrap;
-  word-break: break-all;
+  /* Commands keep their lines (copy-paste safe); scroll sideways on narrow screens. */
+  white-space: pre;
+  overflow-x: auto;
+  min-width: 0;
 }
 .setup-steps {
   margin: 0;

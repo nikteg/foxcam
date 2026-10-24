@@ -180,9 +180,9 @@ export const en = {
   "workers.nameHint": "Shown in the queue, e.g. gpu-box. Letters, digits, '.', '_' or '-'.",
   "workers.detector": "Detector",
   "workers.detectorHint": "Only changes the suggested command; the worker decides what it runs.",
-  "workers.detector.speciesnet": "SpeciesNet: wildlife, ~2000 species (recommended for animals)",
-  "workers.detector.ultralytics": "YOLO-World: fast, needs a CUDA GPU for real-time",
-  "workers.detector.dummy": "Dummy: fake detections for testing the pipeline",
+  "workers.detector.speciesnet": "SpeciesNet: wildlife (recommended)",
+  "workers.detector.ultralytics": "YOLO-World: any object, fast",
+  "workers.detector.dummy": "Dummy: fake detections (testing)",
   "workers.createToken": "Create token",
   "workers.tokenOnce": "Copy the token now",
   "workers.tokenOnceBody":
@@ -190,10 +190,10 @@ export const en = {
   "workers.token": "Access token",
   "workers.setupTitle": "Set up the worker machine",
   "workers.platform": "Worker machine",
-  "workers.platform.wsl": "Windows + WSL 2 (recommended on Windows)",
+  "workers.platform.wsl": "Windows + WSL 2 (recommended)",
   "workers.platform.windows": "Windows (PowerShell)",
   "workers.platform.linux": "Linux / macOS",
-  "workers.platform.docker": "Docker with NVIDIA GPU",
+  "workers.platform.docker": "Docker (NVIDIA GPU)",
   "workers.speciesnetWindows":
     "SpeciesNet is untested on native Windows. Use WSL 2, or pick YOLO-World for native Windows.",
   "workers.step.wslDriver":

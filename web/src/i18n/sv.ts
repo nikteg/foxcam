@@ -182,9 +182,9 @@ export const sv: Record<MessageKey, string> = {
   "workers.nameHint": "Visas i kön, t.ex. gpu-box. Bokstäver, siffror, '.', '_' eller '-'.",
   "workers.detector": "Detektor",
   "workers.detectorHint": "Ändrar bara det föreslagna kommandot; arbetaren bestämmer vad den kör.",
-  "workers.detector.speciesnet": "SpeciesNet: vilt, ~2000 arter (rekommenderas för djur)",
-  "workers.detector.ultralytics": "YOLO-World: snabb, behöver CUDA-GPU för realtid",
-  "workers.detector.dummy": "Dummy: låtsasdetektioner för att testa flödet",
+  "workers.detector.speciesnet": "SpeciesNet: vilt (rekommenderas)",
+  "workers.detector.ultralytics": "YOLO-World: alla objekt, snabb",
+  "workers.detector.dummy": "Dummy: låtsasdetektioner (test)",
   "workers.createToken": "Skapa token",
   "workers.tokenOnce": "Kopiera token nu",
   "workers.tokenOnceBody":
@@ -192,10 +192,10 @@ export const sv: Record<MessageKey, string> = {
   "workers.token": "Åtkomsttoken",
   "workers.setupTitle": "Konfigurera arbetsdatorn",
   "workers.platform": "Arbetsdator",
-  "workers.platform.wsl": "Windows + WSL 2 (rekommenderas på Windows)",
+  "workers.platform.wsl": "Windows + WSL 2 (rekommenderas)",
   "workers.platform.windows": "Windows (PowerShell)",
   "workers.platform.linux": "Linux / macOS",
-  "workers.platform.docker": "Docker med NVIDIA-GPU",
+  "workers.platform.docker": "Docker (NVIDIA-GPU)",
   "workers.speciesnetWindows":
     "SpeciesNet är inte testat direkt i Windows. Använd WSL 2, eller välj YOLO-World för Windows.",
   "workers.step.wslDriver":
