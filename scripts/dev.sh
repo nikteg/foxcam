@@ -6,6 +6,7 @@
 #   WORKER_ARGS="--detector ultralytics --model yolov8s-worldv2.pt --classes fox --device mps" scripts/dev.sh
 #   WORKER_ARGS=none scripts/dev.sh                  # no worker (run your own elsewhere)
 #   RELOAD=0 scripts/dev.sh                          # don't restart on code changes
+#   RELOAD_INGEST=0 scripts/dev.sh                   # never restart ingest (camera streams)
 #
 # Server, ingest and worker restart when their Python code changes (web: Vite HMR).
 set -euo pipefail
@@ -67,7 +68,13 @@ if [ "$RELOAD" = 1 ]; then
 else
   start server uv run media-streamer serve --host 0.0.0.0 --port 8000
 fi
-start ingest watch server/src media-streamer ingest
+# Ingest only restarts for changes to its own code: a restart drops every camera stream
+# (Tapo cloud sessions take ~20-30 s to come back), so server/web edits leave it alone.
+if [ "${RELOAD_INGEST:-$RELOAD}" = 1 ]; then
+  start ingest watch server/src/media_streamer/ingest media-streamer ingest
+else
+  start ingest uv run media-streamer ingest
+fi
 start web pnpm --dir web dev --host
 if [ "$WORKER_ARGS" != none ]; then
   sleep 3

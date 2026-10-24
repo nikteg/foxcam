@@ -68,8 +68,8 @@ description = "Server only (API + pipeline) on :8000, restarts on code changes"
 run = "uv run media-streamer serve --host 0.0.0.0 --port 8000 --reload"
 
 [tasks.ingest]
-description = "Ingest only (publishes file / test / Tapo cloud cameras), restarts on code changes"
-run = "uv run watchfiles --filter python 'media-streamer ingest' server/src"
+description = "Ingest only (publishes file / test / Tapo cloud cameras), restarts when ingest code changes"
+run = "uv run watchfiles --filter python 'media-streamer ingest' server/src/media_streamer/ingest"
 
 [tasks.mediamtx]
 description = "MediaMTX only (recording names in UTC)"
