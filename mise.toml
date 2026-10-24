@@ -1,0 +1,218 @@
+# Developer tasks: `mise tasks` lists them, `mise run <task>` runs one.
+#
+#   mise run setup        # first time: Python + web deps, config.yaml, MediaMTX, sample clips
+#   mise run dev          # whole stack with a dummy worker
+#   mise run seed         # (stack running) add a fake camera per sample clip
+#   mise run check        # lint + typecheck + tests
+#   mise run reset        # wipe recordings, database and events (asks first)
+
+# --- setup -------------------------------------------------------------------------
+
+[tasks.setup]
+description = "Install everything for local development"
+depends = ["setup:python", "setup:web", "setup:config", "setup:mediamtx", "setup:samples"]
+run = "echo 'ready: mise run dev'"
+
+[tasks."setup:python"]
+description = "Python deps for server + worker (tapo-cloud and s3 extras)"
+run = "uv sync --all-packages --extra tapo-cloud --extra s3"
+
+[tasks."setup:yolo"]
+description = "Python deps including Ultralytics / YOLO-World for a local worker"
+run = "uv sync --all-packages --extra tapo-cloud --extra s3 --extra ultralytics"
+
+[tasks."setup:speciesnet"]
+description = "SpeciesNet worker in its own Python 3.12 env (out/speciesnet-venv)"
+run = [
+  "uv venv --python 3.12 --allow-existing out/speciesnet-venv",
+  "VIRTUAL_ENV=out/speciesnet-venv uv pip install -e './worker[speciesnet]'",
+]
+
+[tasks."setup:web"]
+description = "Web UI deps"
+run = "pnpm --dir web install"
+
+[tasks."setup:config"]
+description = "Create config.yaml from config.example.yaml if missing"
+run = "[ -f config.yaml ] && echo 'config.yaml exists' || { cp config.example.yaml config.yaml && echo 'created config.yaml'; }"
+
+[tasks."setup:mediamtx"]
+description = "Download MediaMTX into .tools/ (FORCE=1 to update)"
+run = "scripts/get_mediamtx.sh"
+
+[tasks."setup:samples"]
+description = "Download the fox test clips from Wikimedia Commons into samples/"
+run = "[ -n \"$(ls samples/*.mp4 2>/dev/null)\" ] && [ -z \"${FORCE:-}\" ] && echo 'samples present (FORCE=1 to refetch)' || uv run python scripts/fetch_samples.py"
+
+# --- run ---------------------------------------------------------------------------
+
+[tasks.dev]
+description = "Whole stack: MediaMTX, server, ingest, web (hot reload), dummy worker"
+depends = ["setup:config", "setup:mediamtx"]
+run = "scripts/dev.sh"
+
+[tasks."dev:no-worker"]
+description = "Whole stack without a worker (run your GPU worker elsewhere)"
+depends = ["setup:config", "setup:mediamtx"]
+env = { WORKER_ARGS = "none" }
+run = "scripts/dev.sh"
+
+[tasks."dev:yolo"]
+description = "Whole stack with a local YOLO-World worker (needs setup:yolo)"
+depends = ["setup:config", "setup:mediamtx"]
+env = { WORKER_ARGS = "--detector ultralytics --model yolov8s-worldv2.pt" }
+run = "scripts/dev.sh"
+
+[tasks.server]
+description = "Server only (API + pipeline) on :8000"
+run = "uv run media-streamer serve --host 0.0.0.0 --port 8000"
+
+[tasks.ingest]
+description = "Ingest only (publishes file / test / Tapo cloud cameras)"
+run = "uv run media-streamer ingest"
+
+[tasks.mediamtx]
+description = "MediaMTX only (in UTC: recording names are parsed as UTC)"
+depends = ["setup:mediamtx"]
+run = "TZ=UTC .tools/mediamtx mediamtx/mediamtx.yml"
+
+[tasks.web]
+description = "Web dev server with hot reload on :5173"
+run = "pnpm --dir web dev --host"
+
+[tasks.worker]
+description = "Dummy worker against MEDIA_SERVER (default http://localhost:8000)"
+run = "uv run media-worker --server ${MEDIA_SERVER:-http://localhost:8000} --detector dummy --dummy-label fox"
+
+[tasks."worker:yolo"]
+description = "YOLO-World worker, prompted with each job's profile targets (needs setup:yolo)"
+run = "uv run media-worker --server ${MEDIA_SERVER:-http://localhost:8000} --detector ultralytics --model yolov8s-worldv2.pt"
+
+[tasks."worker:speciesnet"]
+description = "SpeciesNet worker (needs setup:speciesnet)"
+run = "out/speciesnet-venv/bin/media-worker --server ${MEDIA_SERVER:-http://localhost:8000} --detector speciesnet"
+
+[tasks.doctor]
+description = "Check ffmpeg, GPU, detectors and the connection to MEDIA_SERVER"
+run = "uv run media-worker doctor --server ${MEDIA_SERVER:-http://localhost:8000}"
+
+[tasks."tapo:login"]
+description = "Sign in to the Tapo cloud (password typed locally, never stored)"
+run = "uv run media-streamer tapo-login"
+
+[tasks.stop]
+description = "Kill anything still listening on the dev ports (8000, 5173, MediaMTX)"
+run = """
+pids=$(lsof -ti tcp:8000,5173,8554,8888,8889,9997 2>/dev/null || true)
+if [ -n "$pids" ]; then kill $pids && echo "stopped: $(echo $pids | tr '\\n' ' ')"; else echo "nothing running"; fi
+"""
+
+# --- test data ---------------------------------------------------------------------
+
+[tasks.seed]
+description = "Running server: add a fake camera per sample clip (+ --profiles for examples)"
+run = "uv run python scripts/seed.py"
+
+[tasks."s3:local"]
+description = "Local S3 (SeaweedFS in Docker on :19000) for testing storage.s3"
+run = """
+docker run -d --rm --name media-streamer-s3 -p 19000:8333 chrislusf/seaweedfs server -s3 -dir=/data >/dev/null
+echo "S3 on http://localhost:19000 - add to config.yaml and restart the server:"
+cat <<'YAML'
+storage:
+  s3:
+    enabled: true
+    bucket: media-streamer
+    endpoint_url: http://localhost:19000
+    region: us-east-1
+    access_key_id: any
+    secret_access_key: any
+    addressing_style: path
+YAML
+echo "create the bucket once: uv run python -c \\"import boto3; boto3.client('s3', endpoint_url='http://localhost:19000', aws_access_key_id='any', aws_secret_access_key='any', region_name='us-east-1').create_bucket(Bucket='media-streamer')\\""
+"""
+
+[tasks."s3:stop"]
+description = "Stop the local S3 container (its data is discarded)"
+run = "docker rm -f media-streamer-s3"
+
+# --- quality -----------------------------------------------------------------------
+
+[tasks.test]
+description = "Server + worker tests"
+run = "uv run pytest server/tests worker/tests"
+
+[tasks."test:detectors"]
+description = "Accuracy tests on samples/ with YOLO-World (needs setup:yolo + setup:samples)"
+env = { MEDIA_WORKER_TEST_DETECTOR = "ultralytics", MEDIA_WORKER_TEST_CLASSES = "fox" }
+run = "uv run pytest worker/tests"
+
+[tasks.lint]
+description = "ruff (Python) + oxlint (web)"
+run = ["uv run ruff check server worker", "pnpm --dir web lint"]
+
+[tasks.fmt]
+description = "Auto-fix: ruff (imports etc.) + oxfmt (web)"
+run = ["uv run ruff check --fix server worker", "pnpm --dir web exec oxfmt src"]
+
+[tasks.check]
+description = "Everything CI would check: lint, typecheck, format check, tests"
+run = ["uv run ruff check server worker", "pnpm --dir web check", "uv run pytest server/tests worker/tests"]
+
+[tasks.build]
+description = "Build the web UI into web/dist (served by the server on :8000)"
+run = "pnpm --dir web build"
+
+# --- docker ------------------------------------------------------------------------
+
+[tasks."docker:up"]
+description = "Docker stack (MediaMTX + server + ingest) on :8000"
+run = "docker compose up --build -d"
+
+[tasks."docker:down"]
+description = "Stop the Docker stack"
+run = "docker compose down"
+
+[tasks."docker:logs"]
+description = "Follow the Docker stack logs"
+run = "docker compose logs -f"
+
+[tasks."docker:test"]
+description = "Second Docker stack on :18000 with its own data (out/docker-data), next to dev"
+run = """
+MEDIA_DATA_PATH=./out/docker-data HTTP_PORT=18000 RTSP_PORT=18554 HLS_PORT=18888 \
+WEBRTC_PORT=18889 WEBRTC_UDP_PORT=18189 docker compose -p media-streamer-test up --build -d
+echo "http://localhost:18000  (stop: mise run docker:test-down)"
+"""
+
+[tasks."docker:test-down"]
+description = "Stop the second Docker stack"
+run = "docker compose -p media-streamer-test down"
+
+# --- clean / reset -----------------------------------------------------------------
+
+[tasks.clean]
+description = "Remove build output and caches (keeps data, deps, models)"
+run = """
+rm -rf web/dist web/tsconfig.tsbuildinfo .pytest_cache .ruff_cache
+find server worker scripts -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || true
+echo "cleaned build output and caches"
+"""
+
+[tasks.reset]
+description = "Delete ALL recordings, clips, events, cameras added in the UI and the database"
+confirm = "Delete data/ (recordings, database, Tapo session)?"
+run = """
+rm -rf data auto.key auto.crt
+echo "data reset; config.yaml and samples/ kept"
+"""
+
+[tasks."clean:all"]
+description = "Back to a fresh checkout: data, deps, models, MediaMTX, samples (keeps config.yaml)"
+confirm = "Delete data/, .venv, web/node_modules, out/ (models!), .tools/ and samples/?"
+depends = ["clean"]
+run = """
+rm -rf data auto.key auto.crt .venv web/node_modules out .tools
+find samples -mindepth 1 ! -name README.md -delete 2>/dev/null || true
+echo "everything removed; mise run setup to start again"
+"""

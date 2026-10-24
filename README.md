@@ -18,18 +18,30 @@ cameras ─► MediaMTX ─► segments on disk ─► server (censor, queue, ev
 
 ## Running locally
 
-Requirements: `uv`, `pnpm`, `ffmpeg`, and the MediaMTX binary in `.tools/`:
+Requirements: [mise](https://mise.jdx.dev), `uv`, `pnpm` and `ffmpeg`. Everything else is a
+mise task (`mise tasks` lists them all):
 
 ```sh
-mkdir -p .tools && cd .tools
-TAG=$(curl -sL https://api.github.com/repos/bluenviron/mediamtx/releases/latest | python3 -c "import json,sys;print(json.load(sys.stdin)['tag_name'])")
-curl -L -o mediamtx.tar.gz "https://github.com/bluenviron/mediamtx/releases/download/${TAG}/mediamtx_${TAG}_darwin_arm64.tar.gz"
-tar xzf mediamtx.tar.gz mediamtx && rm mediamtx.tar.gz && cd ..
+mise run setup      # Python + web deps, config.yaml, MediaMTX binary, fox sample clips
+mise run dev        # whole stack with a dummy worker (Ctrl+C stops it)
+mise run seed       # with the stack running: a fake camera per sample clip
 ```
 
-First time:
+| Task | What it does |
+|---|---|
+| `dev`, `dev:no-worker`, `dev:yolo` | whole stack, with a dummy / no / YOLO-World worker |
+| `server`, `ingest`, `mediamtx`, `web`, `worker`, `worker:yolo`, `worker:speciesnet` | one part at a time |
+| `seed` (`-- --profiles`) | test cameras from `samples/` (and an example vehicles profile) |
+| `check`, `test`, `lint`, `fmt`, `test:detectors` | quality checks |
+| `s3:local` / `s3:stop` | local S3 (SeaweedFS) to try `storage.s3` |
+| `docker:up`, `docker:test`, … | Docker stacks (the test stack runs next to dev on :18000) |
+| `stop` | kill leftovers on the dev ports |
+| `clean` / `reset` / `clean:all` | caches · all data (asks) · back to a fresh checkout (asks) |
+
+Without mise, the same steps by hand:
 
 ```sh
+scripts/get_mediamtx.sh             # MediaMTX -> .tools/
 uv sync --all-packages              # Python: server + worker
 pnpm --dir web install              # web UI
 python3 scripts/fetch_samples.py    # fox clips from Wikimedia Commons -> samples/
