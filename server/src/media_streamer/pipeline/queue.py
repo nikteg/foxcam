@@ -338,6 +338,15 @@ def stats() -> dict[str, Any]:
                                   .where(Job.state == JobState.DONE, Job.finished_at >= hour_ago))
         avg_ms = s.scalar(select(func.avg(Job.processing_ms))
                           .where(Job.state == JobState.DONE, Job.finished_at >= hour_ago))
+        # Finished jobs per hour over the last day (Status page chart), oldest first.
+        day_start = (now - timedelta(hours=23)).replace(minute=0, second=0, microsecond=0)
+        hours = [day_start + timedelta(hours=i) for i in range(24)]
+        per_hour = {h: {"done": 0, "failed": 0} for h in hours}
+        for finished, state in s.execute(select(Job.finished_at, Job.state).where(
+                Job.finished_at >= day_start, Job.state.in_([JobState.DONE, JobState.DEAD]))):
+            bucket = per_hour.get(finished.replace(minute=0, second=0, microsecond=0))
+            if bucket is not None:
+                bucket["done" if state == JobState.DONE else "failed"] += 1
         by_profile: dict[str, dict[str, int]] = {}
         for pid, st, n in s.execute(select(Job.profile_id, Job.state, func.count())
                                     .where(Job.state.in_([JobState.PENDING, JobState.FAILED,
@@ -350,4 +359,6 @@ def stats() -> dict[str, Any]:
         "oldest_pending_age_s": (now - oldest).total_seconds() if oldest else None,
         "done_last_hour": done_last_hour or 0,
         "avg_processing_ms_last_hour": round(avg_ms) if avg_ms else None,
+        "per_hour": [{"hour": h.isoformat(timespec="seconds") + "Z", **per_hour[h]}
+                     for h in hours],
     }

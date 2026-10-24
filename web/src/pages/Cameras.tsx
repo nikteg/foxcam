@@ -2,9 +2,6 @@ import {
   Body1,
   Button,
   Caption1,
-  Card,
-  CardFooter,
-  CardHeader,
   Checkbox,
   Field,
   Input,
@@ -14,41 +11,30 @@ import {
   MessageBarTitle,
   Radio,
   RadioGroup,
-  Switch,
   Tab,
   TabList,
-  Text,
-  Tooltip,
 } from "@fluentui/react-components";
-import {
-  Add20Regular,
-  Delete20Regular,
-  EyeOff20Regular,
-  Settings20Regular,
-  Video20Regular,
-} from "@fluentui/react-icons";
+import { Add20Regular, Delete20Regular, EyeOff20Regular } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 
-import { api, type Camera, type CameraSource, type RecordingProfile } from "../api";
+import { api, type Camera, type RecordingProfile } from "../api";
 import { useIsAdmin, hasRole, useMe } from "../auth";
 import { AddCameraDialog } from "../components/AddCameraDialog";
-import { SharePanel, useRoleName } from "../components/ShareDialog";
+import { CameraCard } from "../components/CameraCard";
+import { SharePanel } from "../components/ShareDialog";
 import { ProfileDialog, ProfilesSection } from "./Profiles";
-import { useProfileName, useProfiles } from "../components/ProfileSelect";
+import { useProfiles } from "../components/ProfileSelect";
 import { TapoAccountCard } from "../components/TapoAccount";
 import {
-  Dot,
   Empty,
   InfoBanner,
   PageTabs,
   PageTitle,
   QueryState,
-  Tag,
   Toolbar,
   useRouterHref,
-  useSourceLabel,
   useSubPage,
 } from "../components/ui";
 import { useI18n } from "../i18n";
@@ -60,19 +46,6 @@ import {
   DialogSurface,
   DialogTitle,
 } from "../components/Drawer";
-
-function sourceDetail(source: CameraSource, synthetic: string): string {
-  switch (source.type) {
-    case "rtsp":
-      return source.url;
-    case "tapo_cloud":
-      return `${source.device_name ?? source.device_id ?? "?"} – ${source.resolution ?? "HD"}`;
-    case "file":
-      return source.path.split("/").pop() ?? source.path;
-    case "test":
-      return synthetic;
-  }
-}
 
 export function Cameras() {
   const { t, rich } = useI18n();
@@ -146,7 +119,13 @@ export function Cameras() {
           {cameras.data?.length === 0 && <Empty>{t("cameras.none")}</Empty>}
           <div className="cards">
             {cameras.data?.map((c) => (
-              <CameraCard key={c.id} camera={c} onSettings={() => setSettingsFor(c)} />
+              <CameraCard
+                key={c.id}
+                camera={c}
+                refreshKey={Math.floor(cameras.dataUpdatedAt / 10_000)}
+                manage
+                onSettings={() => setSettingsFor(c)}
+              />
             ))}
           </div>
         </>
@@ -169,111 +148,6 @@ export function Cameras() {
         />
       )}
     </>
-  );
-}
-
-function CameraCard({ camera: c, onSettings }: { camera: Camera; onSettings: () => void }) {
-  const { t } = useI18n();
-  const me = useMe();
-  const profileName = useProfileName();
-  const recordingName = useRecordingProfileName();
-  const sourceLabel = useSourceLabel();
-  const client = useQueryClient();
-  const routerHref = useRouterHref();
-  const toggle = useMutation({
-    mutationFn: (enabled: boolean) => api.updateCamera(c.id, { enabled }),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["cameras"] }),
-  });
-  const roleName = useRoleName();
-  const canEdit = hasRole(c, "editor");
-  const isOwner = hasRole(c, "owner");
-  const editable = c.managed === "ui" && canEdit;
-
-  return (
-    <Card>
-      <CardHeader
-        header={
-          <span className="row">
-            <Dot ok={c.online} />
-            <Text weight="semibold">{c.name}</Text>
-            <Caption1 className="muted">{c.id}</Caption1>
-          </span>
-        }
-        description={
-          <span className="row wrap tags">
-            <Tag>{sourceLabel(c.source_config.type)}</Tag>
-            {c.managed === "config" && <Tag kind="pending">config.yaml</Tag>}
-            {me?.enabled && c.role !== "owner" && <Tag>{roleName(c.role)}</Tag>}
-            {!c.enabled && <Tag kind="warn">{t("cameras.disabled")}</Tag>}
-            {c.private && <Tag kind="private">{t("state.private")}</Tag>}
-          </span>
-        }
-      />
-      <dl className="facts">
-        <dt>{t("cameras.source")}</dt>
-        <dd className="mono">{sourceDetail(c.source_config, t("cameras.synthetic"))}</dd>
-        <dt>{t("camera.segmentLength")}</dt>
-        <dd>
-          {c.segment_seconds} s
-          {c.segment_seconds_override === null && (
-            <span className="muted"> ({t("camera.default")})</span>
-          )}
-        </dd>
-        <dt>{t("recording.title")}</dt>
-        <dd>
-          <span className="row wrap tags">
-            {recordingName(c.recording_profile)}
-            {c.burn_masks && c.rects.length > 0 && <Tag>{t("recording.masksBurnedIn")}</Tag>}
-          </span>
-        </dd>
-        <dt>{t("camera.censorAreas")}</dt>
-        <dd>{c.rects.length}</dd>
-        <dt>{t("profiles.title")}</dt>
-        <dd>
-          {c.profiles.length ? (
-            <span className="row wrap tags">
-              {c.profiles.map((id) => (
-                <Tag key={id}>{profileName(id)}</Tag>
-              ))}
-            </span>
-          ) : (
-            <span className="muted">{t("cameras.noProfiles")}</span>
-          )}
-        </dd>
-      </dl>
-      <Tooltip
-        content={
-          editable
-            ? t("cameras.disableHint")
-            : c.managed === "config"
-              ? t("cameras.configHint")
-              : t("cameras.editorsOnly")
-        }
-        relationship="description"
-      >
-        <Switch
-          label={c.enabled ? t("cameras.recording") : t("cameras.disabled")}
-          checked={c.enabled}
-          disabled={!editable || toggle.isPending}
-          onChange={(_, d) => toggle.mutate(d.checked)}
-        />
-      </Tooltip>
-      <CardFooter className="wrap">
-        <Button
-          as="a"
-          size="small"
-          icon={<Video20Regular />}
-          {...routerHref(`/live?camera=${c.id}`)}
-        >
-          {t("nav.live")}
-        </Button>
-        {(canEdit || isOwner) && (
-          <Button size="small" icon={<Settings20Regular />} onClick={onSettings}>
-            {t("cameras.settings")}
-          </Button>
-        )}
-      </CardFooter>
-    </Card>
   );
 }
 
@@ -403,7 +277,7 @@ function GeneralPanel({
 type SettingsTab = "general" | "detection" | "recording" | "sharing";
 
 /** Everything about one camera, under tabs (the card only keeps Live and Settings). */
-function CameraSettingsDialog({ camera, onClose }: { camera: Camera; onClose: () => void }) {
+export function CameraSettingsDialog({ camera, onClose }: { camera: Camera; onClose: () => void }) {
   const { t } = useI18n();
   const me = useMe();
   const canEdit = hasRole(camera, "editor");
@@ -438,11 +312,6 @@ function CameraSettingsDialog({ camera, onClose }: { camera: Camera; onClose: ()
 
 function useRecordingProfiles() {
   return useQuery({ queryKey: ["recording-profiles"], queryFn: api.recordingProfiles });
-}
-
-function useRecordingProfileName(): (id: string) => string {
-  const { data = [] } = useRecordingProfiles();
-  return (id) => data.find((p) => p.id === id)?.display_name ?? id;
 }
 
 /** "≤ 720p, 1200 kbit/s, 15 fps, H.264, kept 30 days" */

@@ -85,6 +85,7 @@ export function TapoCameraList() {
                   <Tag kind="ok">{t("addCamera.addedAs", { id: d.camera_id })}</Tag>
                 ) : (
                   <Button
+                    size="small"
                     icon={<Add20Regular />}
                     disabled={add.isPending}
                     onClick={() =>

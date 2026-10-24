@@ -2,9 +2,6 @@ import {
   Button,
   Caption1,
   Card,
-  CardFooter,
-  CardHeader,
-  CardPreview,
   MessageBar,
   MessageBarBody,
   Subtitle2,
@@ -12,37 +9,36 @@ import {
 } from "@fluentui/react-components";
 import {
   Alert20Regular,
+  ArrowSync20Regular,
+  DismissCircle20Regular,
   CheckmarkCircle20Regular,
   Database20Regular,
-  Edit20Regular,
-  Folder20Regular,
   HardDrive20Regular,
   Hourglass20Regular,
-  Play20Filled,
   Video20Regular,
 } from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useNavigate } from "react-router";
 
-import { api, snapshotUrl, type Camera, type CompactionStatus } from "../api";
-import { ArchivingState } from "../components/ArchivingSection";
-import { useCameraName } from "../components/CameraSelect";
+import { api, type QueueStats } from "../api";
+import { useIsAdmin } from "../auth";
+import { JobsChart } from "../components/JobsChart";
+
+import { CameraCard } from "../components/CameraCard";
 import { EventsGrid } from "../components/EventsGrid";
 import {
   Dot,
   Empty,
-  Light,
   PageTitle,
   QueryState,
   RouterLink,
   Stat,
-  Tag,
-  Time,
   useRouterHref,
-  useSourceLabel,
-  useStateLabel,
 } from "../components/ui";
 import { useI18n } from "../i18n";
-import { fileSize, localTime } from "../format";
+import { CameraSettingsDialog } from "./Cameras";
+import { decimal, duration, fileSize } from "../format";
 
 export function Dashboard() {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status, refetchInterval: 10_000 });
@@ -52,8 +48,10 @@ export function Dashboard() {
     refetchInterval: 15_000,
   });
   const s = status.data;
+  const isAdmin = useIsAdmin();
+  const [settingsFor, setSettingsFor] = useState<string | null>(null);
+  const settingsCamera = s?.cameras.find((c) => c.id === settingsFor);
   const { t, rich } = useI18n();
-  const stateLabel = useStateLabel();
   const routerHref = useRouterHref();
 
   return (
@@ -73,16 +71,6 @@ export function Dashboard() {
             value={`${s.cameras.filter((c) => c.online).length} / ${s.cameras.length}`}
           />
           <Stat icon={<Alert20Regular />} label={t("dashboard.events24h")} value={s.events_24h} />
-          <Stat
-            icon={<Hourglass20Regular />}
-            label={t("dashboard.queueWaiting")}
-            value={s.queue.counts.pending + s.queue.counts.failed}
-          />
-          <Stat
-            icon={<CheckmarkCircle20Regular />}
-            label={t("dashboard.processedLastHour")}
-            value={s.queue.done_last_hour}
-          />
           <Stat
             icon={<Database20Regular />}
             label={t("dashboard.recordingsStored")}
@@ -108,6 +96,7 @@ export function Dashboard() {
             key={c.id}
             camera={c}
             refreshKey={Math.floor(status.dataUpdatedAt / 10_000)}
+            onSettings={() => setSettingsFor(c.id)}
           />
         ))}
       </div>
@@ -127,126 +116,95 @@ export function Dashboard() {
       </Subtitle2>
       <EventsGrid events={events.data ?? []} />
 
-      {s && (
-        <>
-          <Subtitle2 as="h2" className="section">
-            {t("dashboard.segments")}
-          </Subtitle2>
-          <div className="row wrap tags">
-            {Object.entries(s.segments).map(([state, n]) => (
-              <RouterLink
-                key={state}
-                to={`/recordings?status=${state}`}
-                className="tag-link"
-                title={t("dashboard.showRecordings")}
-              >
-                <Tag kind={state}>
-                  {stateLabel(state)}: {n}
-                </Tag>
-              </RouterLink>
-            ))}
-          </div>
-        </>
+      {settingsCamera && (
+        <CameraSettingsDialog
+          key={settingsCamera.id}
+          camera={settingsCamera}
+          onClose={() => setSettingsFor(null)}
+        />
       )}
-
-      {s?.compaction && <ArchivingSummary c={s.compaction} />}
+      {isAdmin && s && <JobsSummary stats={s.queue} />}
     </>
   );
 }
 
-/** The archiving process in one line (admins); details under Jobs → Archiving. */
-function ArchivingSummary({ c }: { c: CompactionStatus }) {
+/** The detection jobs at a glance (admins): what waits and runs, the last day's work
+ * per hour, and the workers. Details on the Jobs page. */
+function JobsSummary({ stats: q }: { stats: QueueStats }) {
   const { t } = useI18n();
-  const cameraName = useCameraName();
+  const navigate = useNavigate();
+  const routerHref = useRouterHref();
+  const queue = useQuery({
+    queryKey: ["queue", "summary"],
+    queryFn: () => api.queue({ limit: 1 }),
+    refetchInterval: 15_000,
+  });
+  const online = (queue.data?.workers ?? []).filter((w) => w.online);
+  const avg = q.avg_processing_ms_last_hour;
+  const open = (state: string) => void navigate(`/jobs?state=${state}`);
   return (
     <>
       <Subtitle2 as="h2" className="section">
-        {t("compaction.title")} <ArchivingState c={c} />
+        {t("nav.queue")}
+        <Button as="a" className="section-action" {...routerHref("/jobs")}>
+          {t("dashboard.allJobs")}
+        </Button>
       </Subtitle2>
-      <p className="muted">
-        {c.current
-          ? t(c.current.reencode ? "compaction.reencoding" : "compaction.joining", {
-              what: `${cameraName(c.current.camera_id)} ${localTime(c.current.start_at)}`,
-              n: c.current.segments,
-            })
-          : c.waiting_periods
-            ? t("archiving.summaryWaiting", { n: c.waiting_periods })
-            : t("archiving.summaryUpToDate")}{" "}
-        <RouterLink to="/jobs/archiving">{t("archiving.details")}</RouterLink>
-      </p>
+      <section className="stats">
+        <Stat
+          icon={<Hourglass20Regular />}
+          label={t("state.pending")}
+          value={q.counts.pending + q.counts.failed}
+          hint={
+            q.oldest_pending_age_s
+              ? t("dashboard.oldest", { age: duration(q.oldest_pending_age_s) })
+              : undefined
+          }
+          onClick={() => open("pending")}
+        />
+        <Stat
+          icon={<ArrowSync20Regular />}
+          label={t("state.leased")}
+          value={q.counts.leased}
+          onClick={() => open("leased")}
+        />
+        <Stat
+          icon={<CheckmarkCircle20Regular />}
+          label={t("queue.doneLastHour")}
+          value={q.done_last_hour}
+          hint={avg ? t("dashboard.avgEach", { s: decimal(avg / 1000, 1) }) : undefined}
+          onClick={() => open("done")}
+        />
+        <Stat
+          icon={<DismissCircle20Regular />}
+          label={t("state.dead")}
+          value={q.counts.dead}
+          onClick={() => open("dead")}
+        />
+      </section>
+      <Card className="jobs-summary">
+        <JobsChart hours={q.per_hour} />
+        <div className="jobs-workers">
+          <Caption1 className="muted">{t("dashboard.workersOnline")}</Caption1>
+          {online.length ? (
+            <ul className="plain-list">
+              {online.map((w) => (
+                <li key={w.id} className="row">
+                  <Dot ok />
+                  <Text weight="semibold">{w.id}</Text>
+                  <Caption1 className="muted">
+                    {w.current_job_id
+                      ? t("dashboard.workingOn", { id: w.current_job_id })
+                      : t("dashboard.idleWorker")}
+                  </Caption1>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Text className="muted">{t("dashboard.noWorkers")}</Text>
+          )}
+        </div>
+      </Card>
     </>
-  );
-}
-
-function CameraCard({ camera: c, refreshKey }: { camera: Camera; refreshKey: number }) {
-  const routerHref = useRouterHref();
-  const { t } = useI18n();
-  const sourceLabel = useSourceLabel();
-  return (
-    <Card>
-      <CardHeader
-        header={
-          <span className="row">
-            <Dot ok={c.online} />
-            <Text weight="semibold">{c.name}</Text>
-            <Caption1 className="muted">{sourceLabel(c.source)}</Caption1>
-          </span>
-        }
-        action={
-          // Fixed-height row; the light tag keeps its place (hidden) until the first
-          // segment has been tagged, so the header never changes height.
-          <span className="card-status">
-            {c.private && <Tag kind="private">{t("state.private")}</Tag>}
-            <span className={c.last_is_night === null ? "placeholder" : undefined}>
-              <Tag>
-                <Light night={c.last_is_night ?? false} long small />
-              </Tag>
-            </span>
-          </span>
-        }
-      />
-      <CardPreview>
-        <a
-          className="thumb-button"
-          aria-label={t("dashboard.openLive", { name: c.name })}
-          {...routerHref(`/live?camera=${c.id}`)}
-        >
-          {/* refreshKey re-requests the snapshot together with the status poll. */}
-          <img
-            className="thumb"
-            loading="lazy"
-            src={`${snapshotUrl(c.id)}?t=${refreshKey}`}
-            alt={t("dashboard.snapshotAlt", { name: c.name })}
-            onError={(e) => (e.currentTarget.style.visibility = "hidden")}
-          />
-          <span className="play-overlay" aria-hidden="true">
-            <Play20Filled />
-          </span>
-        </a>
-      </CardPreview>
-      <dl className="facts">
-        <dt>{t("camera.segmentLength")}</dt>
-        <dd>{c.segment_seconds}s</dd>
-        <dt>{t("camera.lastSegment")}</dt>
-        <dd>
-          <Time iso={c.last_segment_at} />
-        </dd>
-        <dt>{t("camera.censorAreas")}</dt>
-        <dd>{c.rects.length}</dd>
-        <dt>{t("camera.viewers")}</dt>
-        <dd>{c.readers}</dd>
-      </dl>
-      <CardFooter className="wrap">
-        <Button as="a" {...routerHref(`/live?camera=${c.id}`)} icon={<Video20Regular />}>
-          {t("nav.live")}
-        </Button>
-        <Button as="a" {...routerHref(`/recordings?camera=${c.id}`)} icon={<Folder20Regular />}>
-          {t("nav.recordings")}
-        </Button>
-        <Button as="a" {...routerHref(`/cameras/${c.id}/mask`)} icon={<Edit20Regular />}>
-          {t("camera.censorAreas")}
-        </Button>
-      </CardFooter>
-    </Card>
   );
 }

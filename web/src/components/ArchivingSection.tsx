@@ -21,22 +21,11 @@ import {
 } from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 
-import { api, type CompactionStatus } from "../api";
+import { api } from "../api";
 import { duration, fileSize, localTime } from "../format";
 import { useI18n } from "../i18n";
 import { useCameraName } from "./CameraSelect";
-import { Empty, InfoBanner, QueryState, RouterLink, Stat, Tag, Time } from "./ui";
-
-/** Running / not running / off, as a tag (also on the Status page). */
-export function ArchivingState({ c }: { c: CompactionStatus }) {
-  const { t } = useI18n();
-  if (!c.enabled) return <Tag>{t("compaction.off")}</Tag>;
-  return c.running ? (
-    <Tag kind="ok">{t("compaction.running")}</Tag>
-  ) : (
-    <Tag kind="bad">{t("compaction.stopped")}</Tag>
-  );
-}
+import { Empty, InfoBanner, QueryState, RouterLink, Stat, Time } from "./ui";
 
 export function ArchivingSection() {
   const { t, rich } = useI18n();
