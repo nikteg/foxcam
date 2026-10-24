@@ -116,6 +116,31 @@ event_segments = Table(
 )
 
 
+class Archive(Base):
+    """Consecutive segments of one camera joined into one file (compaction, stream copy).
+
+    Segment rows stay; they point into the archive with an offset."""
+
+    __tablename__ = "archive"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    camera_id: Mapped[str] = mapped_column(String, index=True)
+    # Path relative to recordings_dir, e.g. garden/archive/2026-10-24_14-00-00Z.mp4
+    path: Mapped[str] = mapped_column(String, unique=True)
+    start_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    duration_s: Mapped[float] = mapped_column(Float, default=0)
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    # Recording profile it was encoded with ("original" = joined without re-encoding),
+    # and the encoder used ("copy", "hevc_nvenc", ...).
+    profile_id: Mapped[str | None] = mapped_column(String)
+    encoder: Mapped[str | None] = mapped_column(String)
+    # Object key when archived to S3 (storage.s3.recordings).
+    remote_key: Mapped[str | None] = mapped_column(String)
+    # File removed (all its segments expired).
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class Segment(Base):
     __tablename__ = "segment"
 
@@ -151,6 +176,12 @@ class Segment(Base):
     # Files removed by retention; the row is kept so detections stay browsable.
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    # Joined into an hourly file by compaction: the footage is in `archive` from
+    # `archive_offset_s` on, and the file at `path` is gone.
+    archive_id: Mapped[int | None] = mapped_column(ForeignKey("archive.id"), index=True)
+    archive_offset_s: Mapped[float | None] = mapped_column(Float)
+
+    archive: Mapped[Archive | None] = relationship()
 
     @property
     def end_at(self) -> datetime:

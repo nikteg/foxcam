@@ -10,3 +10,6 @@ services:
       - ${MEDIA_HW_DEVICE:-/dev/dri/renderD128}:${MEDIA_HW_DEVICE:-/dev/dri/renderD128}
     # Intel before Broadwell: add `environment: { LIBVA_DRIVER_NAME: i965 }` (and install
     # i965-va-driver). Newer Intel (iHD) and AMD (radeonsi) are picked automatically.
+  compact: # re-encodes finished hours (recording profiles)
+    devices:
+      - ${MEDIA_HW_DEVICE:-/dev/dri/renderD128}:${MEDIA_HW_DEVICE:-/dev/dri/renderD128}

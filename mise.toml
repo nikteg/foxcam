@@ -71,6 +71,10 @@ run = "uv run media-streamer serve --host 0.0.0.0 --port 8000 --reload"
 description = "Ingest only (publishes file / test / Tapo cloud cameras), restarts when ingest code changes"
 run = "uv run watchfiles --filter python 'media-streamer ingest' server/src/media_streamer/ingest"
 
+[tasks.compact]
+description = "Compaction only: join finished hours into one file per camera (re-encode per recording profile)"
+run = "uv run media-streamer compact"
+
 [tasks.mediamtx]
 description = "MediaMTX only (recording names in UTC)"
 depends = ["setup:mediamtx"]

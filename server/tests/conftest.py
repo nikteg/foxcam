@@ -62,12 +62,12 @@ def recording_path(settings: Settings, camera: str, start: datetime) -> Path:
 
 def add_segment(settings: Settings, camera: str = "cam", start: datetime | None = None,
                 seconds: float = 2, status: str = SegmentStatus.DONE, with_file: bool = True,
-                **fields) -> int:
+                size: str = "160x90", **fields) -> int:
     """Insert a segment row (and optionally a real file) directly, bypassing the scanner."""
     start = start or utcnow().replace(microsecond=0)
     path = recording_path(settings, camera, start)
     if with_file:
-        make_video(path, seconds)
+        make_video(path, seconds, size=size)
     with session_scope() as s:
         seg = Segment(camera_id=camera, path=str(path.relative_to(settings.recordings_dir)),
                       start_at=start, duration_s=seconds,

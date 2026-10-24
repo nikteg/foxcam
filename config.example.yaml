@@ -111,6 +111,13 @@ events:
   merge_gap_seconds: 30
   settle_seconds: 90
 
+# Join finished segments into one file per camera and hour (`media-streamer compact`),
+# re-encoding per recording profile. Detection still works on the short segments.
+compaction:
+  enabled: true
+  period_minutes: 60
+  delay_minutes: 10         # after the hour ends (late segments, preprocessing)
+
 retention:
   segments_days: 7          # ordinary footage
   unprocessed_max_days: 14  # footage still waiting for a worker

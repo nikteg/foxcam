@@ -20,6 +20,7 @@ from .. import ffmpeg, notify
 from ..config import Settings
 from ..db import session_scope
 from ..models import Detection, Event, Segment, utcnow
+from .compaction import segment_source
 
 log = logging.getLogger(__name__)
 
@@ -124,17 +125,26 @@ def _build_clip(settings: Settings, event_id: int) -> bool:
         duration = (end - start).total_seconds()
 
         clip_rel = Path("clips") / ev.camera_id / f"event-{ev.id}.mp4"
-        sources = [settings.recordings_dir / g.path for g in segs]
+        sources: list[ffmpeg.ClipPart] = []
+        for g in segs:
+            src = segment_source(settings, g)
+            if src is None:
+                raise RuntimeError(f"recording {g.id} is gone")
+            sources.append((src.path, src.offset_s, src.offset_s + src.duration_s)
+                           if src.archived else (src.path, None, None))
         ffmpeg.concat_clip(sources, settings.data_dir / clip_rel, offset, duration)
 
         best = s.get(Detection, ev.best_detection_id) if ev.best_detection_id else None
         thumb_rel = None
         if best is not None:
             thumb_rel = Path("clips") / ev.camera_id / f"event-{ev.id}.jpg"
-            src_seg = s.get(Segment, best.segment_id)
-            ffmpeg.thumbnail(settings.recordings_dir / src_seg.path,
-                             settings.data_dir / thumb_rel, at_s=best.offset_ms / 1000,
-                             width=640, box=best.bbox)
+            src = segment_source(settings, s.get(Segment, best.segment_id))
+            if src is not None:
+                ffmpeg.thumbnail(src.path, settings.data_dir / thumb_rel,
+                                 at_s=src.offset_s + best.offset_ms / 1000, width=640,
+                                 box=best.bbox)
+            else:
+                thumb_rel = None
 
         for g in segs:
             g.pinned = True

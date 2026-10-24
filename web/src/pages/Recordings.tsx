@@ -238,6 +238,8 @@ function RecordingDetail({ segment: s }: { segment: Segment }) {
             ? t("recordings.maskVersion", { version: s.mask_version_id })
             : t("recordings.noMask")}
         </dd>
+        <dt>{t("recordings.storedIn")}</dt>
+        <dd>{s.archived ? t("recordings.storedHourly") : t("recordings.storedOwn")}</dd>
       </dl>
 
       <Text weight="semibold">{t("recordings.runs")}</Text>

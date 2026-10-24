@@ -14,3 +14,13 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu, video]
+  compact: # re-encodes finished hours (recording profiles)
+    environment:
+      NVIDIA_DRIVER_CAPABILITIES: video,compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, video]

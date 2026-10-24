@@ -20,7 +20,7 @@ from ..config import Settings
 from ..db import session_scope
 from ..mediamtx import MediaMtx
 from ..models import CameraRole, Detection, Event, Segment
-from ..pipeline import queue, uploader
+from ..pipeline import compaction, queue, uploader
 from ..storage import StorageError, boto3_available, get_storage
 from . import queries
 from .api_cameras import resync
@@ -131,11 +131,11 @@ async def snapshot(camera_id: str, fresh: bool = False, source: bool = False,
         try:
             await asyncio.to_thread(ffmpeg.snapshot_from_url, url, dst)
         except Exception:  # noqa: BLE001 - camera offline: use the newest recording instead
-            rel = await asyncio.to_thread(queries.latest_segment_path, camera_id)
-            if not rel:
+            seg_id = await asyncio.to_thread(queries.latest_segment_id, camera_id)
+            src = seg_id and await asyncio.to_thread(compaction.source_for, settings, seg_id)
+            if not src:
                 raise HTTPException(503, "camera offline and no recordings yet") from None
-            await asyncio.to_thread(ffmpeg.thumbnail, settings.recordings_dir / rel, dst, 0.5,
-                                    1280)
+            await asyncio.to_thread(ffmpeg.thumbnail, src.path, dst, src.offset_s + 0.5, 1280)
     return FileResponse(dst, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
@@ -203,6 +203,16 @@ def _segment(p: Principal, segment_id: int) -> Segment:
         return seg
 
 
+def _serve_segment(settings: Settings, seg: Segment, filename: str | None = None) -> Response:
+    """The segment's own file, or its part of a compacted archive; from S3 when the local
+    footage is gone (an archived segment then comes as its whole archive)."""
+    path = compaction.playable_file(settings, seg.id)
+    if path is not None:
+        return FileResponse(path, media_type="video/mp4", filename=filename)
+    remote = seg.remote_key or compaction.archive_remote(seg.id)
+    return _serve(settings, settings.recordings_dir, None, remote, "video/mp4", filename)
+
+
 @router.get("/segments/{segment_id}")
 def segment(segment_id: int, p: Principal = Depends(principal)) -> dict[str, Any]:
     return queries.segment_dict(_segment(p, segment_id))
@@ -221,14 +231,13 @@ def segment_download(segment_id: int, settings: Settings = Depends(settings_dep)
                      p: Principal = Depends(principal)) -> Response:
     seg = _segment(p, segment_id)
     name = f"{seg.camera_id}_{seg.start_at:%Y%m%d_%H%M%S}.mp4"
-    return _serve(settings, settings.recordings_dir, seg.path, seg.remote_key, "video/mp4", name)
+    return _serve_segment(settings, seg, name)
 
 
 @router.get("/segments/{segment_id}/play")
 def segment_play(segment_id: int, settings: Settings = Depends(settings_dep),
                  p: Principal = Depends(principal)) -> Response:
-    seg = _segment(p, segment_id)
-    return _serve(settings, settings.recordings_dir, seg.path, seg.remote_key, "video/mp4")
+    return _serve_segment(settings, _segment(p, segment_id))
 
 
 @router.get("/segments/{segment_id}/thumb")
@@ -256,14 +265,14 @@ async def detection_frame(detection_id: int, settings: Settings = Depends(settin
         det = s.get(Detection, detection_id)
         if det is None or not p.can(det.camera_id):
             raise HTTPException(404, "unknown detection")
-        seg_path, deleted = det.segment.path, det.segment.deleted_at is not None
+        src = compaction.segment_source(settings, det.segment)
         offset_s, bbox = det.offset_ms / 1000, det.bbox
-    if deleted:
+    if src is None:
         raise HTTPException(410, "recording deleted by retention")
     dst = settings.thumbs_dir / "detections" / f"{detection_id}.jpg"
     if not dst.exists():
-        await asyncio.to_thread(ffmpeg.thumbnail, safe_path(settings.recordings_dir, seg_path),
-                                dst, offset_s, 960, bbox)
+        await asyncio.to_thread(ffmpeg.thumbnail, src.path, dst, src.offset_s + offset_s, 960,
+                                bbox)
     return FileResponse(dst, media_type="image/jpeg")
 
 

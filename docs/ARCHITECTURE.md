@@ -169,11 +169,10 @@ worker/src/media_worker/
 web/src/             React + Fluent UI app (pages/, components/, i18n/)
 ```
 
-## Processing stage (recording profiles, burned-in masks)
+## Processing stage (burned-in masks)
 
 By default MediaMTX records `<camera>` exactly as the camera sends it. When a camera's
-recording profile re-encodes (`transcode: true`) or its censor areas are burned in, the
-server reconfigures MediaMTX:
+censor areas are burned in, the server reconfigures MediaMTX:
 
 - the camera's own stream goes to `<camera>/raw` (the RTSP source moves there; ingest
   publishers switch their publish URL, see `recording.source_path`);
@@ -182,6 +181,34 @@ server reconfigures MediaMTX:
 
 Recording, live view, the low-data path, snapshots and worker jobs all keep reading
 `<camera>`, so nothing downstream changes. The mask editor snapshots `<camera>/raw`
-(`?source=true`) so you can see what is under existing masks. Recording profiles may set
-`keep_days`, which replaces `retention.segments_days` for their cameras.
+(`?source=true`) so you can see what is under existing masks.
+
+## Compaction (hourly files, recording profiles)
+
+Segments are short (`segment_seconds`) so detection starts soon after something happens,
+but thousands of small files per camera and day are a burden on disk and in S3.
+`media-streamer compact` (its own process; `compact` service in Docker) joins them:
+
+- Once a period (`compaction.period_minutes`, default an hour) is over by
+  `delay_minutes` and none of its segments is still being preprocessed, each camera's
+  segments of that period are joined into `recordings/<camera>/archive/<start>Z.mp4`.
+  Runs of segments whose streams differ (resolution, codec, audio) become separate files.
+- Cameras on the `original` recording profile are joined with stream copy (the same bytes,
+  in seconds). Profiles that transcode are re-encoded here (best hardware encoder, see
+  [HARDWARE.md](HARDWARE.md)), with a keyframe forced at every segment start; if that
+  fails or the keyframes are missing, the hour is joined without re-encoding instead.
+- Segment rows stay and point into the file (`archive_id`, `archive_offset_s`); their
+  `size_bytes` become their share of it. Detections, events, feedback and the Recordings
+  page work as before: playback and downloads cut the segment back out without
+  re-encoding (cached briefly in `data/cache/segments`), clips and frames read from the
+  archive at the right offset (`pipeline/compaction.segment_source`).
+- The original files are deleted a couple of minutes later, so clips being cut from them
+  right then still find them.
+- Retention removes segments as before; an archive file goes once all its segments are
+  gone (an event's pinned segments keep their whole hour). With `storage.s3.recordings`,
+  the hourly files are uploaded instead of every segment.
+
+Recording profiles may set `keep_days`, which replaces `retention.segments_days` for
+their cameras. The encode step is behind `compaction.Encoder`, so it could later run on
+another (trusted) machine with a better GPU.
 

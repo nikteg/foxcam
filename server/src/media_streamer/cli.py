@@ -97,6 +97,9 @@ def main() -> None:
                        help="restart when the server's Python code changes (development)")
 
     sub.add_parser("ingest", help="publish non-RTSP sources (tapo_cloud, test, file) to MediaMTX")
+    comp = sub.add_parser("compact", help="join finished segments into hourly files (and "
+                                          "re-encode them per recording profile)")
+    comp.add_argument("--once", action="store_true", help="one pass, then exit")
     sub.add_parser("tapo-login", help="log in to the Tapo cloud and store a session")
     check = sub.add_parser("tapo-check", help="test the Tapo cloud relay with the saved session "
                                               "(prints no secrets)")
@@ -204,6 +207,27 @@ def main() -> None:
         signal.signal(signal.SIGTERM, stop)
         settings.ensure_dirs()
         run_ingest(settings)
+    elif args.cmd == "compact":
+        from .pipeline import compaction
+
+        if args.once:
+            from .db import init_db
+
+            init_db(settings)
+            print(f"{compaction.compact_once(settings)} archive(s) built")
+        else:
+            import signal
+
+            # Ctrl+C / SIGTERM stop a running ffmpeg too (subprocess.run kills it).
+            def stop_compact(*_: object) -> None:
+                raise KeyboardInterrupt
+
+            signal.signal(signal.SIGINT, signal.default_int_handler)
+            signal.signal(signal.SIGTERM, stop_compact)
+            try:
+                compaction.run_compaction(settings)
+            except KeyboardInterrupt:
+                logging.getLogger(__name__).info("stopping compaction")
     elif args.cmd == "tapo-login":
         from .ingest.tapo_cloud import interactive_login
 

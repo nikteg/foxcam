@@ -61,3 +61,16 @@ services:
       - ./samples:/app/samples:ro
     environment:
       MEDIA_DATA_DIR: /data
+
+  compact:
+    # Joins each finished hour into one file per camera, re-encoding it when the camera's
+    # recording profile says so (GPU via docker-compose.vaapi.yml / .nvidia.yml).
+    build: { context: ., dockerfile: server/Dockerfile }
+    image: media-streamer:local
+    restart: unless-stopped
+    command: ["compact"]
+    volumes:
+      - ${MEDIA_CONFIG:-./config.yaml}:/app/config.yaml:ro
+      - ${MEDIA_DATA_PATH:-./data}:/data
+    environment:
+      MEDIA_DATA_DIR: /data

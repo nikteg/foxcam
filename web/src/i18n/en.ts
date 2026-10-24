@@ -162,6 +162,9 @@ export const en = {
   "recordings.censorMask": "Censor mask",
   "recordings.maskVersion": "version {version}",
   "recordings.noMask": "none",
+  "recordings.storedIn": "Stored in",
+  "recordings.storedHourly": "an hourly file (joined after recording)",
+  "recordings.storedOwn": "its own file",
   "recordings.noDetections": "None in this recording.",
   "recordings.runs": "Detection runs",
   "recordings.noRuns": "None (private camera, or not analysed yet).",
@@ -446,7 +449,7 @@ export const en = {
   "recording.asSent": "as sent by the camera, no re-encoding",
   "recording.keptDays": "kept {n} {n:day|days}",
   "recording.transcodeNote":
-    "Re-encoding uses the server's hardware video encoder when there is one (Quick Sync, NVENC, AMD, Apple), else the CPU. Live view shows the re-encoded stream too, and the current recording file ends when you save.",
+    "Recordings are re-encoded when each finished hour is joined into one file, on the server's hardware video encoder when there is one (Quick Sync, NVENC, AMD, Apple). Detection and live view keep using the camera's original.",
   "recording.h265Note":
     "H.265 halves the size again but not every browser plays it (Safari and recent Chrome/Edge do).",
   "recording.fromDefault": "Currently the default profile; saving here overrides it.",

@@ -158,6 +158,8 @@ export interface Segment {
   mask_version_id: number | null;
   /** Archived in S3 storage. */
   remote: boolean;
+  /** Joined into an hourly file by compaction. */
+  archived: boolean;
   thumb_url: string | null;
   download_url: string | null;
 }

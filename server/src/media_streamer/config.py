@@ -235,6 +235,17 @@ class EventsConfig(BaseModel):
     settle_seconds: int = 90
 
 
+class CompactionConfig(BaseModel):
+    """Join finished segments into one file per camera and period (stream copy, no
+    re-encoding): far fewer files on disk and in S3. Segments stay short while recording,
+    so detection is not delayed. See docs/ARCHITECTURE.md (Compaction)."""
+
+    enabled: bool = True
+    period_minutes: int = Field(default=60, ge=5, le=1440)
+    # Wait this long after a period ends before joining it (late segments, preprocessing).
+    delay_minutes: int = Field(default=10, ge=1)
+
+
 class RetentionConfig(BaseModel):
     # Delete ordinary segments after this many days. 0 disables age-based deletion.
     segments_days: float = 7
@@ -437,6 +448,7 @@ class Settings(BaseModel):
     detection: DetectionConfig = DetectionConfig()
     events: EventsConfig = EventsConfig()
     retention: RetentionConfig = RetentionConfig()
+    compaction: CompactionConfig = CompactionConfig()
     location: LocationConfig = LocationConfig()
     storage: StorageConfig = StorageConfig()
     notifications: NotificationsConfig = NotificationsConfig()

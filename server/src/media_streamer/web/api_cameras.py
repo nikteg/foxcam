@@ -60,8 +60,8 @@ async def set_recording_profile(camera_id: str, body: RecordingProfileIn,
                                 settings: Settings = Depends(settings_dep),
                                 mtx: MediaMtx = Depends(mediamtx_dep),
                                 p: Principal = Depends(principal)) -> dict[str, Any]:
-    """Takes effect within seconds: MediaMTX starts / stops the re-encode, and the
-    current recording segment ends."""
+    """Applies to hours compacted from now on (recordings are re-encoded when they are
+    joined into hourly files)."""
     camera_for(p, settings, camera_id, CameraRole.EDITOR)
     try:
         await asyncio.to_thread(recording.set_camera_recording_profile, settings, camera_id,

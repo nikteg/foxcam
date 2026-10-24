@@ -19,13 +19,24 @@ from sqlalchemy import func, select
 from .. import notify
 from ..config import Settings
 from ..db import session_scope
-from ..models import Event, Job, JobState, Segment, SegmentStatus, event_segments, utcnow
+from ..models import (
+    Archive,
+    Event,
+    Job,
+    JobState,
+    Segment,
+    SegmentStatus,
+    event_segments,
+    utcnow,
+)
 from ..storage import StorageError, get_storage
 
 log = logging.getLogger(__name__)
 
 
 def _remove_files(settings: Settings, seg: Segment) -> None:
+    # A compacted segment's footage lives in its archive, which goes once all its
+    # segments are gone (_remove_empty_archives).
     (settings.recordings_dir / seg.path).unlink(missing_ok=True)
     for rel in (seg.derived_path, seg.thumb_path):
         if rel:
@@ -153,6 +164,19 @@ def _delete_remote(store, key: str) -> None:
         log.warning("%s", e)
 
 
+def _remove_empty_archives(settings: Settings) -> int:
+    """Delete archive files whose segments have all been removed."""
+    live = select(Segment.archive_id).where(Segment.archive_id.is_not(None),
+                                            Segment.deleted_at.is_(None))
+    with session_scope() as s:
+        archives = s.scalars(select(Archive).where(Archive.deleted_at.is_(None),
+                                                   Archive.id.not_in(live))).all()
+        for arc in archives:
+            (settings.recordings_dir / arc.path).unlink(missing_ok=True)
+            arc.deleted_at = utcnow()
+        return len(archives)
+
+
 def _expire_remote_recordings(settings: Settings) -> int:
     """Archived recordings in S3 older than storage.s3.recordings_days (0 = keep)."""
     store = get_storage(settings)
@@ -167,7 +191,15 @@ def _expire_remote_recordings(settings: Settings) -> int:
         for seg in segs:
             _delete_remote(store, seg.remote_key)
             seg.remote_key = None
-        return len(segs)
+        pinned = select(Segment.archive_id).where(Segment.archive_id.is_not(None),
+                                                  Segment.pinned.is_(True))
+        archives = s.scalars(select(Archive).where(Archive.remote_key.is_not(None),
+                                                   Archive.id.not_in(pinned),
+                                                   Archive.start_at < cutoff)).all()
+        for arc in archives:
+            _delete_remote(store, arc.remote_key)
+            arc.remote_key = None
+        return len(segs) + len(archives)
 
 
 def run_retention(settings: Settings) -> dict[str, int]:
@@ -175,6 +207,7 @@ def run_retention(settings: Settings) -> dict[str, int]:
         "events": _expire_events(settings),
         "segments_age": _expire_by_age(settings),
         "segments_disk": _enforce_disk_cap(settings),
+        "archives": _remove_empty_archives(settings),
         "remote_recordings": _expire_remote_recordings(settings),
         "notifications": notify.cleanup(),
     }

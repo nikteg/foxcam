@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 
 from ..config import Settings
 from ..db import session_scope
-from ..models import Event, Segment, SegmentStatus
+from ..models import Archive, Event, Segment, SegmentStatus
 from ..storage import StorageError, get_storage
 
 log = logging.getLogger(__name__)
@@ -84,6 +84,8 @@ def _upload_clips(settings: Settings, store) -> int:
 
 
 def _upload_recordings(settings: Settings, store) -> int:
+    if settings.compaction.enabled:  # upload the hourly archives, not every segment
+        return _upload_archives(settings, store)
     with session_scope() as s:
         rows = s.execute(select(Segment.id, Segment.path).where(
             Segment.status.in_(SegmentStatus.TERMINAL), Segment.deleted_at.is_(None),
@@ -101,6 +103,24 @@ def _upload_recordings(settings: Settings, store) -> int:
     return done
 
 
+def _upload_archives(settings: Settings, store) -> int:
+    with session_scope() as s:
+        rows = s.execute(select(Archive.id, Archive.path).where(
+            Archive.deleted_at.is_(None), Archive.remote_key.is_(None))
+            .order_by(Archive.start_at).limit(BATCH)).all()
+    done = 0
+    for arc_id, rel in rows:
+        path = settings.recordings_dir / rel
+        if not path.exists():
+            continue
+        key = store.key("recordings", rel)
+        store.upload(path, key)
+        with session_scope() as s:
+            s.get(Archive, arc_id).remote_key = key
+        done += 1
+    return done
+
+
 def stats(settings: Settings) -> dict:
     cfg = settings.storage.s3
     with session_scope() as s:
@@ -109,11 +129,18 @@ def stats(settings: Settings) -> dict:
         clips_pending = s.scalar(select(func.count()).select_from(Event).where(
             Event.clip_dirty.is_(False), Event.clip_path.is_not(None),
             Event.clip_remote_key.is_(None)))
-        segs_uploaded = s.scalar(select(func.count()).select_from(Segment)
-                                 .where(Segment.remote_key.is_not(None)))
-        segs_pending = s.scalar(select(func.count()).select_from(Segment).where(
-            Segment.status.in_(SegmentStatus.TERMINAL), Segment.deleted_at.is_(None),
-            Segment.remote_key.is_(None))) if cfg.recordings else 0
+        if settings.compaction.enabled:  # recordings go up as hourly archives
+            segs_uploaded = s.scalar(select(func.count()).select_from(Archive)
+                                     .where(Archive.remote_key.is_not(None)))
+            segs_pending = s.scalar(select(func.count()).select_from(Archive).where(
+                Archive.deleted_at.is_(None), Archive.remote_key.is_(None))) \
+                if cfg.recordings else 0
+        else:
+            segs_uploaded = s.scalar(select(func.count()).select_from(Segment)
+                                     .where(Segment.remote_key.is_not(None)))
+            segs_pending = s.scalar(select(func.count()).select_from(Segment).where(
+                Segment.status.in_(SegmentStatus.TERMINAL), Segment.deleted_at.is_(None),
+                Segment.remote_key.is_(None))) if cfg.recordings else 0
     return {"clips_uploaded": clips_uploaded, "clips_pending": clips_pending if cfg.clips else 0,
             "recordings_uploaded": segs_uploaded, "recordings_pending": segs_pending,
             "last_error": state.last_error}

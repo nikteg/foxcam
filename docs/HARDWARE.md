@@ -1,13 +1,19 @@
 # Hardware video encoding and decoding
 
-Media Streamer re-encodes video in three places, all run by MediaMTX through
-`media-streamer transcode`:
+Media Streamer re-encodes video in three places:
 
-| What | When |
-|---|---|
-| **Low-data live view** (`<camera>/low`, ~480p) | only while someone watches it |
-| **Recording profiles** that re-encode (1080p, 720p, 480p, H.265, custom) | continuously |
-| **Burned-in censor areas** | continuously |
+| What | When | Run by |
+|---|---|---|
+| **Low-data live view** (`<camera>/low`, ~480p) | only while someone watches it | MediaMTX (`media-streamer transcode`) |
+| **Burned-in censor areas** | continuously, live | MediaMTX (`media-streamer transcode`) |
+| **Recording profiles** that re-encode (1080p, 720p, 480p, H.265, custom) | once per finished hour | `media-streamer compact` |
+
+Recording profiles are applied when compaction joins an hour into one file, not live:
+detection and live view keep the camera's original, and a batch encode compresses better
+than a live one. With a GPU an hour of 3K footage takes a few minutes. Every segment
+must start on a keyframe in the hourly file (so it can be cut back out without
+re-encoding): compaction forces keyframes there and checks them, and joins the hour
+without re-encoding if the encoder did not comply.
 
 Each of these decodes the camera stream and encodes it again. On the CPU that is fine for a
 camera or two; with a GPU's video engine it costs almost nothing, even for many cameras.
@@ -71,6 +77,9 @@ The MediaMTX log shows the choice for each transcode, e.g.
 The image includes ffmpeg with VAAPI, QSV, NVENC and Vulkan support, the Intel media driver
 and Quick Sync runtime (amd64), and Mesa's VAAPI driver for AMD. MediaMTX runs from the same
 image, so its transcodes find all of it. The container only needs access to the GPU:
+
+The override files below give the GPU to both the `mediamtx` service (live transcodes) and
+the `compact` service (re-encoding finished hours).
 
 **Intel or AMD** (VAAPI / Quick Sync): pass the render node.
 

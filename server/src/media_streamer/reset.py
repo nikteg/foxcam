@@ -15,6 +15,7 @@ from sqlalchemy import delete, select, update
 from .config import Settings
 from .db import session_scope
 from .models import (
+    Archive,
     CameraAccess,
     CameraState,
     Detection,
@@ -57,7 +58,7 @@ def recordings(settings: Settings) -> str:
     with session_scope() as s:
         n = s.query(Segment).count()
         s.execute(delete(event_segments))
-        for model in (Event, Detection, Job, Segment):
+        for model in (Event, Detection, Job, Segment, Archive):
             s.execute(delete(model))
     for d in (settings.recordings_dir, settings.derived_dir, settings.thumbs_dir,
               settings.clips_dir):
@@ -194,6 +195,7 @@ def purge_camera(settings: Settings, camera_id: str) -> dict[str, int]:
         s.execute(delete(Detection).where(Detection.camera_id == camera_id))
         s.execute(delete(Job).where(Job.segment_id.in_(seg_ids)))
         s.execute(delete(Segment).where(Segment.camera_id == camera_id))
+        s.execute(delete(Archive).where(Archive.camera_id == camera_id))
         s.execute(delete(CameraState).where(CameraState.camera_id == camera_id))
         s.execute(delete(MaskVersion).where(MaskVersion.camera_id == camera_id))
         s.execute(delete(CameraAccess).where(CameraAccess.camera_id == camera_id))

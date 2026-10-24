@@ -182,6 +182,8 @@ def segment_dict(g: Segment) -> dict[str, Any]:
         "max_confidence": g.max_confidence, "pinned": g.pinned,
         "deleted": g.deleted_at is not None, "mask_version_id": g.mask_version_id,
         "remote": g.remote_key is not None,
+        # Joined into an hourly file by compaction (served cut back out of it).
+        "archived": g.archive_id is not None,
         "thumb_url": f"/api/segments/{g.id}/thumb" if g.thumb_path else None,
         "download_url": None if g.deleted_at and not g.remote_key
         else f"/api/segments/{g.id}/download",
@@ -308,9 +310,9 @@ def feedback_export() -> list[dict[str, Any]]:
                  "segment_deleted": d.segment.deleted_at is not None} for d in rows]
 
 
-def latest_segment_path(camera_id: str) -> str | None:
+def latest_segment_id(camera_id: str) -> int | None:
     with session_scope() as s:
-        return s.scalar(select(Segment.path).where(
+        return s.scalar(select(Segment.id).where(
             Segment.camera_id == camera_id, Segment.deleted_at.is_(None),
             Segment.status != SegmentStatus.FAILED).order_by(Segment.start_at.desc()).limit(1))
 

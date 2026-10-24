@@ -15,6 +15,11 @@ class FfmpegError(RuntimeError):
     pass
 
 
+def run_long(args: list[str]) -> subprocess.CompletedProcess[str]:
+    """For hour-long jobs (joining / re-encoding archives)."""
+    return _run(args, timeout=6 * 3600)
+
+
 def _run(args: list[str], timeout: float = 600) -> subprocess.CompletedProcess[str]:
     proc = subprocess.run(args, capture_output=True, text=True, timeout=timeout, check=False)
     if proc.returncode != 0:
@@ -109,11 +114,23 @@ def snapshot_from_url(url: str, dst: Path, timeout: float = 10) -> None:
           "-frames:v", "1", "-q:v", "3", str(dst)], timeout=timeout)
 
 
-def concat_clip(sources: list[Path], dst: Path, offset_s: float, duration_s: float) -> None:
+# A piece of footage for concat_clip: a file, or the [inpoint, outpoint) part of one
+# (a segment inside a compacted archive).
+ClipPart = tuple[Path, float | None, float | None]
+
+
+def concat_clip(sources: list[Path | ClipPart], dst: Path, offset_s: float,
+                duration_s: float) -> None:
     """Join consecutive segments and cut [offset, offset+duration) without re-encoding."""
     dst.parent.mkdir(parents=True, exist_ok=True)
     list_file = dst.with_suffix(".txt")
-    list_file.write_text("".join(f"file '{p.as_posix()}'\n" for p in sources))
+    lines = []
+    for src in sources:
+        path, inpoint, outpoint = src if isinstance(src, tuple) else (src, None, None)
+        lines.append(f"file '{path.as_posix()}'\n")
+        if inpoint is not None:  # segments start on keyframes, so this cut is exact
+            lines.append(f"inpoint {inpoint:.6f}\noutpoint {outpoint:.6f}\n")
+    list_file.write_text("".join(lines))
     try:
         # Input seeking snaps to the previous keyframe, so stream copy stays decodable.
         _run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0",
@@ -121,3 +138,43 @@ def concat_clip(sources: list[Path], dst: Path, offset_s: float, duration_s: flo
               "-t", f"{duration_s:.3f}", "-c", "copy", "-movflags", "+faststart", str(dst)])
     finally:
         list_file.unlink(missing_ok=True)
+
+
+def cut(src: Path, dst: Path, offset_s: float, duration_s: float) -> None:
+    """[offset, offset+duration) of a file, without re-encoding (offset on a keyframe)."""
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    part = dst.with_name(dst.stem + ".part.mp4")
+    _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{offset_s:.6f}", "-i", str(src),
+          "-t", f"{duration_s:.6f}", "-map", "0:v:0", "-map", "0:a:0?", "-c", "copy",
+          "-avoid_negative_ts", "make_zero", "-movflags", "+faststart", str(part)])
+    part.replace(dst)
+
+
+def keyframe_times(path: Path) -> list[float]:
+    """Timestamps (s) of the video keyframes, decoding only the keyframes."""
+    out = _run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-skip_frame", "nokey",
+                "-show_entries", "frame=best_effort_timestamp_time", "-of", "csv=p=0",
+                str(path)], timeout=1800).stdout
+    times = []
+    for line in out.splitlines():  # "1.234" or "1.234," (side data adds empty fields)
+        value = line.split(",", 1)[0].strip()
+        if value and value != "N/A":
+            times.append(float(value))
+    return times
+
+
+def stream_signature(path: Path) -> tuple:
+    """Codec, size and pixel format of the video, and the audio codec: files with the
+    same signature can be joined without re-encoding."""
+    out = _run(["ffprobe", "-v", "error", "-show_entries",
+                "stream=codec_type,codec_name,width,height,pix_fmt,sample_rate,channels",
+                "-of", "json", str(path)], timeout=60).stdout
+    streams = json.loads(out).get("streams", [])
+    video = next((x for x in streams if x.get("codec_type") == "video"), None)
+    if video is None:
+        raise FfmpegError(f"{path.name}: no video stream")
+    audio = next((x for x in streams if x.get("codec_type") == "audio"), {})
+    return (video.get("codec_name"), video.get("width"), video.get("height"),
+            video.get("pix_fmt"), audio.get("codec_name"), audio.get("sample_rate"),
+            audio.get("channels"))
+

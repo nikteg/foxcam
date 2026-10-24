@@ -104,6 +104,7 @@ def test_expired_event_removes_remote_clip(settings, s3):
 
 @needs_ffmpeg
 def test_recordings_archive_and_remote_expiry(settings, s3):
+    settings.compaction.enabled = False  # per-segment uploads (see test_compaction)
     cfg = settings.storage.s3
     cfg.clips, cfg.recordings, cfg.recordings_days = False, True, 3
     now = utcnow().replace(microsecond=0)
@@ -124,6 +125,7 @@ def test_recordings_archive_and_remote_expiry(settings, s3):
 
 @needs_ffmpeg
 def test_deleted_recording_served_from_archive(settings, s3):
+    settings.compaction.enabled = False
     settings.storage.s3.recordings = True
     seg_id = add_segment(settings)
     uploader.upload_pending(settings)

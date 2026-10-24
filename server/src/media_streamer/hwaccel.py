@@ -39,6 +39,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -147,7 +148,7 @@ def _encoder_args(backend: str, enc: Encode) -> list[str]:
         args += ["-preset", "veryfast", *(["-low_power", "1"] if enc.live else [])]
     elif backend == "videotoolbox":
         # allow_sw 0: fail instead of silently encoding on the CPU (so auto can tell).
-        args += ["-realtime", "1", "-allow_sw", "0"]
+        args += [*(["-realtime", "1"] if enc.live else []), "-allow_sw", "0"]
     elif backend == "amf":
         args += ["-usage", "lowlatency" if enc.live else "transcoding"]
     elif backend == "mf":
@@ -173,18 +174,20 @@ def _filters(backend: str, enc: Encode, upload: bool) -> str:
 
 
 def ffmpeg_args(backend: str, enc: Encode, src: str, dst: str, *, ffmpeg: str = "ffmpeg",
-                device: str | None = None) -> list[str]:
-    """Complete ffmpeg command: RTSP in, (masked / scaled / re-encoded) RTSP out."""
+                device: str | None = None, input_args: Sequence[str] = (),
+                output_args: Sequence[str] = ()) -> list[str]:
+    """Complete ffmpeg command: RTSP (or a file) in, (masked / scaled / re-encoded) RTSP (or
+    a file) out. ``input_args`` go before ``-i``, ``output_args`` before the output."""
     dev_args, upload = _device_args(backend, device)
     audio = {"copy": ["-c:a", "copy"],
              "opus": ["-c:a", "libopus", "-b:a", "24k", "-ac", "1", "-ar", "48000"],
              "none": ["-an"]}[enc.audio]
     src_args = ["-rtsp_transport", "tcp"] if src.startswith("rtsp") else []
     dst_args = ["-f", "rtsp", "-rtsp_transport", "tcp"] if dst.startswith("rtsp") else []
-    return [ffmpeg, "-hide_banner", "-v", "error", *dev_args, *src_args, "-i", src,
-            "-map", "0:v:0", *(["-map", "0:a:0?"] if enc.audio != "none" else []),
+    return [ffmpeg, "-hide_banner", "-v", "error", *dev_args, *src_args, *input_args,
+            "-i", src, "-map", "0:v:0", *(["-map", "0:a:0?"] if enc.audio != "none" else []),
             "-vf", _filters(backend, enc, upload), *_encoder_args(backend, enc), *audio,
-            *dst_args, dst]
+            *output_args, *dst_args, dst]
 
 
 # --- detection ----------------------------------------------------------------------------

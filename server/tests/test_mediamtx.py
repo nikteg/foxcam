@@ -42,19 +42,29 @@ def test_original_profile_records_source_directly(settings: Settings) -> None:
     assert "runOnInit" not in desired_paths(settings)["cam"]
 
 
-def test_transcoding_profile_adds_processing_stage(settings: Settings) -> None:
+def test_transcoding_profile_is_not_live(settings: Settings) -> None:
+    """Recording profiles re-encode at compaction; live view and recording stay original."""
     from media_streamer import recording
 
     recording.set_camera_recording_profile(settings, "cam", "720p")
+    cam = settings.camera("cam")
+    assert recording.source_path(settings, cam) == "cam"
+    assert "runOnInit" not in desired_paths(settings)["cam"]
+
+
+def test_masks_add_processing_stage(settings: Settings) -> None:
+    from media_streamer import recording
+    from media_streamer.web import queries
+
+    queries.save_camera_state("cam", [[0.1, 0.2, 0.3, 0.4]], False)
+    recording.set_burn_masks("cam", True)
     cam = settings.camera("cam")
     assert recording.source_path(settings, cam) == "cam/raw"
     paths = desired_paths(settings)
     assert paths["cam/raw"] == {"source": "publisher", "record": False}
     main = paths["cam"]
     assert main["record"] is True and main["source"] == "publisher"
-    cmd = main["runOnInit"]
-    assert "rtsp://localhost:$RTSP_PORT/cam/raw" in cmd
-    assert "--max-height 720 --bitrate 1200" in cmd and "--fps" not in cmd
+    assert "rtsp://localhost:$RTSP_PORT/cam/raw" in main["runOnInit"]
     # The low-data view reads the processed stream.
     assert "$RTSP_PORT/cam " in paths["cam/low"]["runOnDemand"]
 
@@ -67,7 +77,7 @@ def test_burned_in_masks(settings: Settings) -> None:
     assert recording.processing(settings, settings.camera("cam")) is None  # not burned in
     recording.set_burn_masks("cam", True)
     proc = recording.processing(settings, settings.camera("cam"))
-    assert proc is not None and not proc.transcode
+    assert proc is not None and proc.rects == [[0.1, 0.2, 0.3, 0.4]]
     cmd = desired_paths(settings)["cam"]["runOnInit"]
     assert "--mask 0.10000,0.20000,0.30000,0.40000" in cmd
     assert "--max-height" not in cmd and "--bitrate" not in cmd
@@ -78,13 +88,17 @@ def test_burned_in_masks(settings: Settings) -> None:
 def test_rtsp_camera_moves_to_raw(settings: Settings) -> None:
     from media_streamer import recording
     from media_streamer.config import CameraConfig
+    from media_streamer.web import queries
 
     settings.cameras.append(CameraConfig.model_validate(
         {"id": "door", "recording_profile": "h265",
          "source": {"type": "rtsp", "url": "rtsp://10.0.0.2/stream1"}}))
+    assert desired_paths(settings)["door"]["source"] == "rtsp://10.0.0.2/stream1"
+    queries.save_camera_state("door", [[0, 0, 0.5, 0.5]], False)
+    recording.set_burn_masks("door", True)
     paths = desired_paths(settings)
     assert paths["door/raw"]["source"] == "rtsp://10.0.0.2/stream1"
-    assert "--codec h265" in paths["door"]["runOnInit"]
+    assert "--mask 0.00000,0.00000,0.50000,0.50000" in paths["door"]["runOnInit"]
     profile, source = recording.camera_recording_profile(settings, settings.camera("door"))
     assert (profile.id, source) == ("h265", "config")
 

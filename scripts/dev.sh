@@ -75,6 +75,12 @@ if [ "${RELOAD_INGEST:-$RELOAD}" = 1 ]; then
 else
   start ingest uv run media-streamer ingest
 fi
+# Joins finished hours into one file each (and re-encodes per recording profile).
+if [ "$RELOAD" = 1 ]; then
+  start compact watch server/src/media_streamer/pipeline media-streamer compact
+else
+  start compact uv run media-streamer compact
+fi
 start web pnpm --dir web dev --host
 if [ "$WORKER_ARGS" != none ]; then
   sleep 3

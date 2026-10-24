@@ -1,10 +1,11 @@
 """Recording profiles, burned-in masks and the processing stage they share.
 
-Normally MediaMTX records ``<camera>`` exactly as the camera sends it. When a camera's
-recording profile re-encodes, or its censor rectangles are burned in, the camera's
-source goes to ``<camera>/raw`` instead and MediaMTX runs an ffmpeg that reads it, draws
-the masks, scales / re-encodes and publishes ``<camera>``. Everything downstream
-(recording, live view, low-data view, snapshots, workers) keeps reading ``<camera>``.
+MediaMTX records ``<camera>`` exactly as the camera sends it. Recording profiles that
+re-encode are applied when finished hours are compacted (pipeline/compaction.py), not
+live. Only burned-in censor rectangles need a live stage: the camera's source then goes
+to ``<camera>/raw`` and MediaMTX runs an ffmpeg that reads it, draws the masks and
+publishes ``<camera>``. Everything downstream (recording, live view, low-data view,
+snapshots, workers) keeps reading ``<camera>``.
 """
 
 from __future__ import annotations
@@ -100,24 +101,19 @@ def set_burn_masks(camera_id: str, on: bool) -> None:
 
 @dataclass
 class Processing:
-    """What the processing stage does for one camera."""
+    """What the live processing stage does for one camera: burn in censor areas.
 
-    profile: RecordingProfileConfig
+    Recording profiles do not re-encode live: compaction re-encodes each finished hour
+    (pipeline/compaction.py), so detection and live view keep the camera's original."""
+
     rects: list[list[float]]
-
-    @property
-    def transcode(self) -> bool:
-        return self.profile.transcode
 
 
 def processing(settings: Settings, cam: CameraConfig) -> Processing | None:
-    """None = record the camera's stream untouched (no processing stage)."""
+    """None = record the camera's stream untouched (no live processing stage)."""
     state = _state(cam.id)
-    profile, _ = camera_recording_profile(settings, cam, state)
     rects = state["rects"] if state["burn_masks"] else []
-    if not profile.transcode and not rects:
-        return None
-    return Processing(profile, rects)
+    return Processing(rects) if rects else None
 
 
 def source_path(settings: Settings, cam: CameraConfig) -> str:
@@ -136,10 +132,5 @@ def transcode(settings: Settings, enc: Encode, src_path: str) -> list[str]:
 
 
 def processor_args(settings: Settings, cam: CameraConfig, proc: Processing) -> list[str]:
-    """Reads ``<camera>/raw``, publishes the processed ``<camera>``."""
-    p = proc.profile
-    enc = Encode(codec=p.codec if p.transcode else "h264", masks=proc.rects,
-                 max_height=p.max_height if p.transcode else None,
-                 fps=p.fps if p.transcode else None,
-                 bitrate_kbit=p.bitrate_kbit if p.transcode else None)
-    return transcode(settings, enc, raw_path(cam.id))
+    """Reads ``<camera>/raw``, publishes ``<camera>`` with the censor areas burned in."""
+    return transcode(settings, Encode(masks=proc.rects), raw_path(cam.id))

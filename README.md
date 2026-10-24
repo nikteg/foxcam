@@ -31,8 +31,10 @@ anything else, and keep the clips.
 - **Privacy built in.** Draw censor rectangles per camera; they are burned into the pixels
   before a worker sees a frame, and optionally into recordings and live view as well.
   Private cameras are never sent anywhere.
-- **Recording profiles.** Keep the camera's original stream, or re-encode it smaller
-  (1080p, 720p, 480p, H.265 or your own) with its own retention, per camera.
+- **Recording profiles and hourly files.** Short segments while recording (fast detection),
+  joined into one file per camera and hour afterwards: far fewer files on disk and in S3.
+  Per camera, keep the original stream or re-encode the hour smaller (1080p, 720p, 480p,
+  1080p H.265 or your own), with its own retention.
 - **Hardware video encoding.** Re-encoding uses Intel Quick Sync, NVIDIA NVENC, AMD (VAAPI /
   AMF) or Apple VideoToolbox when available, also in Docker, with automatic CPU fallback
   ([docs/HARDWARE.md](docs/HARDWARE.md)).
@@ -104,14 +106,16 @@ flowchart LR
 ```
 
 1. **MediaMTX** pulls each camera, records fixed-length segments and serves the live view.
-   Cameras with a re-encoding recording profile or burned-in censor areas pass through a
-   transcode stage first (on the GPU when there is one), as does the low-data live view.
+   Cameras with burned-in censor areas pass through a transcode stage first (on the GPU
+   when there is one), as does the low-data live view.
 2. The **server** registers each segment, tags day/night, burns in the censor areas and
    creates one job per detection profile of the camera.
 3. **Workers** lease jobs, run their detector on the censored, down-sampled video and post
    the detections back.
 4. Target detections become **events**. Their clips are cut from the original footage and
    the segments are kept until the event expires.
+5. **Compaction** (`media-streamer compact`, its own process) joins each finished hour into
+   one file per camera, re-encoding it when the camera's recording profile says so.
 
 Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -227,6 +231,7 @@ detection profiles, censor areas and worker tokens can also be managed in the UI
 | `queue` | lease time, retries |
 | `events` | pre/post roll, merge gap |
 | `retention` | how long to keep footage, events and unprocessed segments; disk cap |
+| `compaction` | joining finished segments into hourly files (period, delay, on/off) |
 | `storage.s3` | S3-compatible bucket for clips and recordings |
 | `notifications` | ntfy / webhook / Apprise channels, filters, quiet hours ([guide](docs/NOTIFICATIONS.md)) |
 | `public_url` | how you open the UI; used for links in notifications |
@@ -241,7 +246,7 @@ detection profiles, censor areas and worker tokens can also be managed in the UI
 |---|---|
 | `setup`, `setup:yolo`, `setup:speciesnet` | install dependencies (plus a detector for a local worker) |
 | `dev`, `dev:no-worker`, `dev:yolo` | whole stack with a dummy / no / YOLO-World worker, live reload |
-| `server`, `ingest`, `mediamtx`, `web`, `worker*` | one part at a time |
+| `server`, `ingest`, `compact`, `mediamtx`, `web`, `worker*` | one part at a time |
 | `stop` | kill anything left on the dev ports |
 | `build` | build the web UI that the server serves on :8000 |
 | `tapo:login`, `worker:token` | sign in to the Tapo cloud; create a worker token |

@@ -243,16 +243,19 @@ def texts(settings: Settings, data: dict[str, Any]) -> tuple[str, str]:
 
 def event_image(settings: Settings, event_id: int) -> Path | None:
     """Frame of the event's best detection with its box, censor areas blacked out."""
+    from .pipeline.compaction import segment_source  # deferred: pipeline imports notify
+
     with session_scope() as s:
         ev = s.get(Event, event_id)
         det = s.get(Detection, ev.best_detection_id) if ev and ev.best_detection_id else None
         if det is None:
             return None
         seg = s.get(Segment, det.segment_id)
-        if seg is None or seg.deleted_at is not None:
+        footage = segment_source(settings, seg) if seg is not None else None
+        if footage is None:
             return None
         mask = s.get(MaskVersion, seg.mask_version_id) if seg.mask_version_id else None
-        src, offset, box = settings.recordings_dir / seg.path, det.offset_ms / 1000, det.bbox
+        src, offset, box = footage.path, footage.offset_s + det.offset_ms / 1000, det.bbox
         rects = mask.rects if mask else []
         det_id = det.id
     dst = settings.thumbs_dir / "notify" / f"event-{event_id}-{det_id}.jpg"
