@@ -1486,10 +1486,11 @@ h3.panel-heading {
 }
 /* The speed menu (VideoPlayer SpeedMenu): the rate as the button, a small list above it. */
 .video-player .speed-button {
+  /* As wide as it is tall, so the round hover highlight stays a circle. */
+  aspect-ratio: 1;
   width: auto;
-  min-width: 52px;
-  padding: 0 var(--spacingHorizontalS);
-  font-size: 15px;
+  padding: 0;
+  font-size: 13px;
   font-weight: var(--fontWeightSemibold);
   font-variant-numeric: tabular-nums;
 }
