@@ -3,6 +3,7 @@
 import {
   Button,
   Field,
+  Divider,
   Input,
   MessageBar,
   MessageBarBody,
@@ -12,7 +13,7 @@ import {
 } from "@fluentui/react-components";
 import { ArrowUndo16Regular, Save20Regular } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 
 import { api, type RuntimeSetting, type RuntimeSettings } from "../api";
 import { fileSize } from "../format";
@@ -222,77 +223,80 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
     >
       {groups
         .filter((g) => g.keys.some((k) => byKey.has(k) || k === DEFAULT_RECORDING))
-        .map((g) => (
-          <section key={g.keys.join()} className="form-stack">
-            {g.title && (
-              <Subtitle2 as="h2" className="panel-heading">
-                {t(g.title)}
-              </Subtitle2>
-            )}
-            {g.keys.map((k) => {
-              if (k === DEFAULT_RECORDING) {
-                return <DefaultRecordingField key={k} state={recording} />;
-              }
-              const s = byKey.get(k);
-              const meta = META[k];
-              if (!s || !meta) return null;
-              const value = draft[k]!;
-              return (
-                <Field
-                  key={k}
-                  label={
-                    <span className="row">
-                      {t(meta.label)}
-                      <SourceTag source={s.source} />
-                    </span>
-                  }
-                  hint={
-                    <>
-                      {t(meta.hint)}
-                      {s.source === "ui" && (
-                        <Button
-                          size="small"
-                          className="reset-setting"
-                          icon={<ArrowUndo16Regular />}
-                          disabled={save.isPending}
-                          onClick={() => save.mutate({ reset: [k] })}
-                        >
-                          {t(
-                            s.config_source === "config"
-                              ? "runtime.resetToConfig"
-                              : "runtime.resetToDefault",
-                            { value: shown(t, s.config_value, meta) },
-                          )}
-                        </Button>
-                      )}
-                    </>
-                  }
-                >
-                  {typeof value === "boolean" ? (
-                    <Switch
-                      checked={value}
-                      onChange={(_, d) => setDraft((v) => ({ ...v, [k]: d.checked }))}
-                    />
-                  ) : (
-                    <Input
-                      type={meta.kind === "url" ? "url" : "number"}
-                      min={s.ge ?? s.gt}
-                      max={s.le ?? s.lt}
-                      step="any"
-                      value={value}
-                      placeholder={
-                        s.nullable
-                          ? t(meta.kind === "url" ? "runtime.notSet" : "retention.noCap")
-                          : undefined
-                      }
-                      contentAfter={meta.unit ? t(meta.unit) : undefined}
-                      onChange={(_, d) => setDraft((v) => ({ ...v, [k]: d.value }))}
-                    />
-                  )}
-                </Field>
-              );
-            })}
-          </section>
+        .map((g, i) => (
+          <Fragment key={g.keys.join()}>
+            {i > 0 && <Divider className="settings-divider" />}
+            <section className="form-stack">
+              {g.title && (
+                <Subtitle2 as="h2" className="panel-heading">
+                  {t(g.title)}
+                </Subtitle2>
+              )}
+              {g.keys.map((k) => {
+                if (k === DEFAULT_RECORDING) {
+                  return <DefaultRecordingField key={k} state={recording} />;
+                }
+                const s = byKey.get(k);
+                const meta = META[k];
+                if (!s || !meta) return null;
+                const value = draft[k]!;
+                return (
+                  <Field
+                    key={k}
+                    label={
+                      <span className="row">
+                        {t(meta.label)}
+                        <SourceTag source={s.source} />
+                      </span>
+                    }
+                    hint={
+                      <>
+                        {t(meta.hint)}
+                        {s.source === "ui" && (
+                          <Button
+                            size="small"
+                            className="reset-setting"
+                            icon={<ArrowUndo16Regular />}
+                            disabled={save.isPending}
+                            onClick={() => save.mutate({ reset: [k] })}
+                          >
+                            {t(
+                              s.config_source === "config"
+                                ? "runtime.resetToConfig"
+                                : "runtime.resetToDefault",
+                              { value: shown(t, s.config_value, meta) },
+                            )}
+                          </Button>
+                        )}
+                      </>
+                    }
+                  >
+                    {typeof value === "boolean" ? (
+                      <Switch
+                        checked={value}
+                        onChange={(_, d) => setDraft((v) => ({ ...v, [k]: d.checked }))}
+                      />
+                    ) : (
+                      <Input
+                        type={meta.kind === "url" ? "url" : "number"}
+                        min={s.ge ?? s.gt}
+                        max={s.le ?? s.lt}
+                        step="any"
+                        value={value}
+                        placeholder={
+                          s.nullable
+                            ? t(meta.kind === "url" ? "runtime.notSet" : "retention.noCap")
+                            : undefined
+                        }
+                        contentAfter={meta.unit ? t(meta.unit) : undefined}
+                        onChange={(_, d) => setDraft((v) => ({ ...v, [k]: d.value }))}
+                      />
+                    )}
+                  </Field>
+                );
+              })}
+            </section>
+          </Fragment>
         ))}
       {save.error && (
         <MessageBar intent="error">

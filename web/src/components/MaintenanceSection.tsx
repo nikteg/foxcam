@@ -1,5 +1,12 @@
 // Settings → Detection: run the detection rules again on what is already there.
-import { Button, Field, MessageBar, MessageBarBody, Subtitle2 } from "@fluentui/react-components";
+import {
+  Button,
+  Divider,
+  Field,
+  MessageBar,
+  MessageBarBody,
+  Subtitle2,
+} from "@fluentui/react-components";
 import { ArrowClockwise20Regular, ArrowSync20Regular } from "@fluentui/react-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -43,6 +50,7 @@ export function MaintenanceSection() {
 
   return (
     <section className="form-stack maintenance">
+      <Divider className="settings-divider" />
       <Subtitle2 as="h2" className="panel-heading">
         {t("maintenance.title")}
       </Subtitle2>

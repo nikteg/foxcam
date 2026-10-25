@@ -1,4 +1,4 @@
-import { Card, CardHeader, Text, Title3 } from "@fluentui/react-components";
+import { Card, CardHeader, Divider, Text, Title3 } from "@fluentui/react-components";
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../api";
@@ -195,6 +195,7 @@ export function Settings() {
       {tab === "general" && (
         <>
           <AppearanceSection part />
+          <Divider className="settings-divider" />
           <Title3 as="h2" className="settings-part">
             {t("settings.serverPart")}
           </Title3>

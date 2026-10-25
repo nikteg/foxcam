@@ -300,8 +300,6 @@ h2.section > .section-link {
 .settings-part.settings-part {
   display: block;
   margin: var(--spacingVerticalM) 0 var(--spacingVerticalM);
-  padding-bottom: var(--spacingVerticalS);
-  border-bottom: 1px solid var(--colorNeutralStroke1);
 }
 /* Settings → General and Account: language and theme. */
 .appearance {
@@ -1478,11 +1476,15 @@ h3.panel-heading {
   margin: var(--spacingVerticalS) 0 0;
 }
 /* Group headings in Settings ("Recording", "Archives"…): no browser heading margins (the
-   section's gap spaces them), a thin line under each to separate the groups. */
+   section's gap spaces them). */
 h2.panel-heading {
   margin: 0;
-  padding-bottom: var(--spacingVerticalXS);
-  border-bottom: 1px solid var(--colorNeutralStroke2);
+}
+/* Divider between the groups of a settings form (components/RuntimeSettings.tsx) and
+   before the next part of the page; the surrounding gaps space it. */
+.settings-divider.settings-divider {
+  flex-grow: 0;
+  margin: 0;
 }
 
 /* Tags (components/ui.tsx Tag): a neutral pill with a coloured dot for the state. */
@@ -1742,7 +1744,7 @@ h2.panel-heading {
 /* Settings → Detection: below the settings form and its Save button. */
 .maintenance {
   max-width: 620px;
-  margin-top: var(--spacingVerticalXXXL);
+  margin-top: var(--spacingVerticalXXL);
 }
 .runtime-facts {
   margin-bottom: var(--spacingVerticalXL);
