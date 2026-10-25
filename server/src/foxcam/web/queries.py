@@ -341,10 +341,11 @@ def set_feedback(settings: Settings, detection_id: int, correct: bool | None) ->
             return False
         d.feedback = correct
         d.feedback_at = utcnow() if correct is not None else None
-        # A detection marked wrong is no match: the recording's "with a match" (and the
-        # archive's count) follow.
-        seg = s.get(Segment, d.segment_id)
-        if seg is not None:
+        # A detection marked wrong is no match, nor are the others of an event marked
+        # wrong: the recordings' "with a match" (and the archives' counts) follow.
+        if d.event_id is not None:
+            queue.refresh_event_matches(settings, s, d.event_id)
+        elif (seg := s.get(Segment, d.segment_id)) is not None:
             queue.refresh_match(settings, seg)
         return True
 

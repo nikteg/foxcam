@@ -172,6 +172,41 @@ def test_events_marked_wrong_can_be_left_out(settings):
         assert s.get(Segment, segs[0]).has_target is True
 
 
+def test_an_event_marked_wrong_is_no_match_in_any_of_its_recordings(settings):
+    from foxcam import db
+    from foxcam.web import queries
+
+    start = utcnow().replace(microsecond=0) - timedelta(minutes=5)
+    segs = [add_segment(settings, start=start + timedelta(seconds=2 * i), with_file=False)
+            for i in range(2)]
+    dets = []
+    for seg_id in segs:  # close together: one event over both recordings
+        add_job(seg_id, state="done")
+        dets.append(add_detection(seg_id, seg_id, 500))
+        with session_scope() as s:
+            s.get(Segment, seg_id).has_target = True
+    events.assign_events(settings)
+
+    def matches() -> list[bool]:
+        with session_scope() as s:
+            return [s.get(Segment, i).has_target for i in segs]
+
+    # Marking the event wrong (its drawer marks one detection) clears both recordings.
+    queries.set_feedback(settings, dets[0], False)
+    assert matches() == [False, False]
+    # Another detection marked correct: the event is a real visit after all (only the
+    # detection marked wrong itself stays no match).
+    queries.set_feedback(settings, dets[1], True)
+    assert matches() == [False, True]
+    # Recordings from before this rule are put right at startup.
+    queries.set_feedback(settings, dets[1], None)
+    with session_scope() as s:
+        for i in segs:
+            s.get(Segment, i).has_target = True
+    db._backfill(db._engine, set())
+    assert matches() == [False, False]
+
+
 def test_detections_standing_still_can_be_left_out(settings):
     from foxcam.models import Detection
     from foxcam.web import queries

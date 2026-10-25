@@ -22,8 +22,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import and_, func, or_, select, update
-from sqlalchemy.orm import object_session
+from sqlalchemy import and_, exists, func, or_, select, update
+from sqlalchemy.orm import aliased, object_session
 
 from ..config import Settings
 from ..db import session_scope
@@ -238,9 +238,28 @@ def _cascade(settings: Settings, job: Job, hit: bool, reason: str | None = None)
             _cascade(settings, row, False, row.error)  # and whatever follows it
 
 
+def in_wrong_event():
+    """Detections of an event marked wrong: one of its detections is wrong and none is
+    correct (marking an event wrong in its drawer marks its best detection)."""
+    other = aliased(Detection)
+    same_event = other.event_id == Detection.event_id
+    wrong = exists().where(same_event, other.feedback.is_(False))
+    correct = exists().where(same_event, other.feedback.is_(True))
+    return Detection.event_id.is_not(None) & wrong & ~correct
+
+
 def counts_as_match():
-    """A target detection that is a match: not marked wrong on the Detections page."""
-    return Detection.is_target.is_(True) & Detection.feedback.is_not(False)
+    """A target detection that is a match: neither it nor its event is marked wrong."""
+    return (Detection.is_target.is_(True) & Detection.feedback.is_not(False)
+            & ~in_wrong_event())
+
+
+def refresh_event_matches(settings: Settings, s, event_id: int) -> None:
+    """``refresh_match`` for every segment with a detection of the event (its wrong or
+    correct mark decides whether all of them count)."""
+    for seg in s.scalars(select(Segment).where(Segment.id.in_(
+            select(Detection.segment_id).where(Detection.event_id == event_id)))):
+        refresh_match(settings, seg)
 
 
 def refresh_match(settings: Settings, seg: Segment) -> None:

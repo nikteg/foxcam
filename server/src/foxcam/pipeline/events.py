@@ -28,7 +28,7 @@ from ..config import Settings
 from ..db import session_scope
 from ..models import Detection, Event, Segment, event_segments, utcnow
 from .compaction import segment_source
-from .queue import counts_as_match
+from .queue import counts_as_match, refresh_match
 
 log = logging.getLogger(__name__)
 
@@ -90,6 +90,8 @@ def _assign_events(settings: Settings, quiet: bool) -> int:
             seg = s.get(Segment, segment_id)
             if seg not in event.segments:
                 event.segments.append(seg)
+            # Joined an event already marked wrong: not a match in this recording either.
+            refresh_match(settings, seg)
             event.clip_dirty = True
             event.updated_at = utcnow()
             changed += 1
