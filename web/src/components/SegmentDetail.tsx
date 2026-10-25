@@ -6,7 +6,7 @@ import { useNavigate } from "react-router";
 
 import { api, type Segment, type SegmentJob } from "../api";
 import { hasRole, useCameraRole } from "../auth";
-import { decimal, duration, fileSize, localTime } from "../format";
+import { decimal, duration, fileSize, localTime, percent } from "../format";
 import { useI18n } from "../i18n";
 import { useCameraName } from "./CameraSelect";
 import { ConfirmPopover } from "./ConfirmPopover";
@@ -163,6 +163,13 @@ function SegmentDetail({
               ({t("recordings.saturation", { value: decimal(s.saturation_avg, 1) })})
             </span>
           )}
+        </Fact>
+        <Fact label={t("recordings.motion")}>
+          {s.motion_score === null
+            ? "–"
+            : s.motion_score === 0
+              ? t("recordings.noMotion")
+              : t("recordings.motionShare", { value: percent(s.motion_score, 1) })}
         </Fact>
         <Fact label={t("recordings.sunElevation")}>
           {s.sun_elevation !== null ? `${decimal(s.sun_elevation, 1)}°` : "–"}

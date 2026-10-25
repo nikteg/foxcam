@@ -38,8 +38,11 @@
    - otherwise a **censored derivative**: censor rectangles burned in, sampled to the highest
      frame rate any of the camera's profiles (and their detectors) need (≤ `sample_fps`),
      downscaled to `max_width`, no audio. This is the only thing a worker can download.
-   - one `job` row per profile and detector. The segment is `done` once all its jobs are
-     done (or dead).
+   - **motion** in that derivative ([below](#motion-detection)): how much of the picture
+     moved, and where, stored on the segment;
+   - one `job` row per profile and detector. Profiles with `skip_without_motion` get theirs
+     already `skipped` ("no motion") when nothing moved. The segment is `done` once all its
+     jobs are done, skipped (or dead).
    Every detection a worker reports is stored, except non-matches below
    `processing.keep_non_targets_from` (default 0.25; Settings → Detection, "Store non-matches
    from"). That setting only decides storage. What is a match (events, "with a match", pinned
@@ -79,6 +82,8 @@ A profile (`profiles.py`) says **what** to look for and **which models** look fo
 | `detectors` | the models that look (below); none = one detector `default` needing just `requires` |
 | `fps` | frames per second to analyse (cheaper profiles for slow-moving things) |
 | `ignore_stationary_minutes` | a target in the same place this long makes no event (default 10, 0 = off) |
+| `require_motion` | a target only counts when its box overlaps motion (default off) |
+| `skip_without_motion` | recordings where nothing moved get no jobs of this profile (default off) |
 | `default` | runs on cameras without their own selection |
 | `events_days` | per-profile event retention |
 
@@ -146,14 +151,47 @@ the event records which detectors saw it (`detectors`) and how many (`agreement`
 Events page can filter on "seen by ≥ N models", and notification channels can wait for
 `min_agreement` models.
 
+## Motion detection
+
+`pipeline/motion.py`, run in preprocessing on the censored derivative (so censor areas never
+count). Its frames are decoded once more as 96×54 greyscale: the downscale averages away
+most sensor noise, also the grain of IR night pictures. Each frame is compared with a
+running average of the ones before. A pixel counts when it differs by more than the
+sensitivity's threshold from every background pixel around it (3×3), so edges that wobble
+by a pixel (camera shake, compression) do not; counted pixels make 2×2 cells that need two
+each. Touching cells make a region, and regions smaller than the sensitivity's minimum are
+dropped (a leaf, a raindrop). A region with the same pattern as before, only brighter or
+darker, is light (a flickering lamp, headlights, a cloud's shadow) and dropped too. When
+more than `motion.light_change_fraction` of the picture changes at once, the frame is a
+light change (night mode switching, exposure) and the average starts over. Night pictures
+get a higher threshold. Plain Python, no numpy: about 0.2 s for a 20 s segment.
+
+Per camera (Settings → Detection → *Edit motion detection*): the sensitivity (low, medium,
+high; else `motion.sensitivity`) and **motion-ignore areas**, rectangles drawn like censor
+areas whose movement never counts (trees in the wind, a road), for what the filters above
+do not catch.
+
+Stored on the segment: `motion_score`, the largest share of the picture that moved in one
+frame (0 = nothing moved, null = not measured), and `motion_boxes`, per frame with motion
+the boxes around its regions. Profiles use it two ways, both opt-in:
+
+- `skip_without_motion`: when nothing moved, the profile's jobs are created `skipped` and no
+  worker sees the recording.
+- `require_motion`: a target counts only when its box overlaps a motion box within
+  `motion.window_seconds`; otherwise it is stored with `moving = false` and as no match
+  (like a detection marked wrong: no counts, events, notifications). Detections without a
+  box need any motion in that window. Segments without a measurement count as moving.
+
+Both apply to recordings analysed from then on; *Detect again* re-evaluates one.
+
 ## Data model (SQLite)
 
 | Table | Holds |
 |---|---|
-| `segment` | One recording file: camera, start (UTC), duration, status, light tags, mask version used, match flag, pinned, archive and offset in it, `deleted_at`. |
+| `segment` | One recording file: camera, start (UTC), duration, status, light tags, mask version used, motion (score and boxes), match flag, pinned, archive and offset in it, `deleted_at`. |
 | `archive` | One hourly file made by compaction: camera, start, size, recording profile and encoder used, S3 key. |
-| `job` | Work item per segment, profile and detector (with the worker's raw result, ≤ 256 kB, for debugging): state (`pending/leased/done/failed/dead`, `skipped` for cascade detectors that did not run), lease token and expiry, attempts, model, timing. |
-| `detection` | Worker result: profile, detector, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, standing still, event. |
+| `job` | Work item per segment, profile and detector (with the worker's raw result, ≤ 256 kB, for debugging): state (`pending/leased/done/failed/dead`, `skipped` for cascade detectors that did not run and profiles that skip recordings without motion), lease token and expiry, attempts, model, timing. |
+| `detection` | Worker result: profile, detector, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, standing still, moving (profiles that require motion), event. |
 | `event` | Merged sighting of one label for one profile: time range, best detection, detectors that saw it and how many (`agreement`), confirmed, quiet (rebuilt, notifies nobody), clip and thumbnail paths. |
 | `worker` | Last-seen info, tags and reported vocabulary per worker id (Jobs → Workers). |
 | `worker_token` | Worker access tokens (hashed) with their tags. |
@@ -161,7 +199,7 @@ Events page can filter on "seen by ≥ N models", and notification channels can 
 | `notification_channel` | Notification channels added in the web UI. |
 | `notification` | Outbox: one row per channel, event and trigger; status, attempts, error. |
 | `mask_version` | Immutable censor-rectangle sets; segments reference the version they were censored with. |
-| `camera_state` | Per-camera private flag, current mask version and profile selection. |
+| `camera_state` | Per-camera private flag, current mask version, profile selection, motion sensitivity and motion-ignore areas. |
 | `managed_camera` | Cameras added in the web UI (config.yaml cameras are not stored). |
 | `app_setting` | Settings changed in the web UI ([below](#settings-changed-in-the-web-ui)). |
 | `user_account`, `oauth_identity`, `user_session`, `api_key`, `camera_access`, `invite` | Accounts, their sign-ins, sessions, API keys, camera shares and invite links ([AUTH.md](AUTH.md)). |
@@ -266,8 +304,8 @@ server/src/foxcam/
   accounts.py, oauth.py, api_keys.py, download_links.py   users, sign-in, API keys, signed links
   mediamtx.py        MediaMTX API client (path sync, live status)
   ffmpeg.py, hwaccel.py  probe, censored derivative, thumbnails, clips; hardware encoders
-  pipeline/          scanner, preprocess, queue, events, retention, uploader, compaction,
-                     reanalyse, runner
+  pipeline/          scanner, preprocess, motion, queue, events, retention, uploader,
+                     compaction, reanalyse, runner
   storage.py         S3-compatible object storage client (boto3)
   notify.py          notification channels, outbox and senders (ntfy, webhook, Apprise)
   ingest/            publishers for tapo_cloud / file / test sources

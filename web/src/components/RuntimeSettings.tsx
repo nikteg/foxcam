@@ -21,8 +21,8 @@ import { useI18n, type MessageKey } from "../i18n";
 import { useRecordingProfiles, useRecordingSummary } from "../recordingProfiles";
 import { Fact, Facts, QueryState, Tag } from "./ui";
 
-/** "percent": stored 0–1, entered and shown as 0–100 %. */
-type Kind = "number" | "bool" | "url" | "percent";
+/** "percent": stored 0–1, entered and shown as 0–100 %. "choice": one of `options`. */
+type Kind = "number" | "bool" | "url" | "percent" | "choice";
 
 /** Not a runtime setting: the default recording profile (its own endpoint, saved with the
  * same Save button). Put this key in a group to show it there. */
@@ -31,7 +31,14 @@ export const DEFAULT_RECORDING = "recording_profile_default";
 /** Label, help text (the trade-off) and unit of each setting the UI shows. */
 const META: Record<
   string,
-  { label: MessageKey; hint: MessageKey; unit?: MessageKey; kind?: Kind }
+  {
+    label: MessageKey;
+    hint: MessageKey;
+    unit?: MessageKey;
+    kind?: Kind;
+    /** kind "choice": the values and their labels. */
+    options?: [string, MessageKey][];
+  }
 > = {
   public_url: { label: "runtime.publicUrl", hint: "runtime.publicUrlHint", kind: "url" },
   segment_seconds: {
@@ -108,6 +115,27 @@ const META: Record<
   "events.settle_seconds": {
     label: "runtime.settle",
     hint: "runtime.settleHint",
+    unit: "runtime.unit.seconds",
+  },
+  "motion.sensitivity": {
+    label: "motion.sensitivity",
+    hint: "runtime.motionSensitivityHint",
+    kind: "choice",
+    options: [
+      ["low", "motion.low"],
+      ["medium", "motion.medium"],
+      ["high", "motion.high"],
+    ],
+  },
+  "motion.light_change_fraction": {
+    label: "runtime.lightChange",
+    hint: "runtime.lightChangeHint",
+    unit: "runtime.unit.percent",
+    kind: "percent",
+  },
+  "motion.window_seconds": {
+    label: "runtime.motionWindow",
+    hint: "runtime.motionWindowHint",
     unit: "runtime.unit.seconds",
   },
   "queue.lease_seconds": {
@@ -216,7 +244,8 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
     if (typeof d === "boolean") return d;
     if (d.trim() === "") return null;
     const kind = META[k]?.kind;
-    return kind === "url" ? d.trim() : kind === "percent" ? Number(d) / 100 : Number(d);
+    if (kind === "url" || kind === "choice") return d.trim();
+    return kind === "percent" ? Number(d) / 100 : Number(d);
   };
 
   return (
@@ -282,6 +311,17 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
                         checked={value}
                         onChange={(_, d) => setDraft((v) => ({ ...v, [k]: d.checked }))}
                       />
+                    ) : meta.kind === "choice" ? (
+                      <Select
+                        value={value}
+                        onChange={(_, d) => setDraft((v) => ({ ...v, [k]: d.value }))}
+                      >
+                        {meta.options?.map(([option, label]) => (
+                          <option key={option} value={option}>
+                            {t(label)}
+                          </option>
+                        ))}
+                      </Select>
                     ) : (
                       <Input
                         type={meta.kind === "url" ? "url" : "number"}
@@ -420,6 +460,8 @@ function shown(
   if (v === null) return t(meta.kind === "url" ? "runtime.notSet" : "retention.noCap");
   if (typeof v === "boolean") return t(v ? "runtime.on" : "runtime.off");
   if (meta.kind === "percent") return `${toPercent(v as number)} %`;
+  const option = meta.options?.find(([o]) => o === v);
+  if (option) return t(option[1]);
   return meta.unit ? `${v} ${t(meta.unit)}` : String(v);
 }
 

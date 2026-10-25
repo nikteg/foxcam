@@ -54,6 +54,10 @@ class CameraState(Base):
     recording_profile: Mapped[str | None] = mapped_column(String)
     # Burn the censor rectangles into the recording and live view too (re-encodes).
     burn_masks: Mapped[bool | None] = mapped_column(Boolean, default=False)
+    # Motion detection: low / medium / high (None = motion.sensitivity), and areas whose
+    # movement is ignored (normalized [x, y, w, h], e.g. trees in the wind).
+    motion_sensitivity: Mapped[str | None] = mapped_column(String)
+    motion_rects: Mapped[list[Any] | None] = mapped_column(JSON)
 
 
 class ManagedCamera(Base):
@@ -178,6 +182,11 @@ class Segment(Base):
     # Frame rate of the derivative (the highest any of the camera's profiles needs).
     derived_fps: Mapped[float | None] = mapped_column(Float)
     mask_version_id: Mapped[int | None] = mapped_column(ForeignKey("mask_version.id"))
+    # Motion in the derivative (pipeline/motion.py): the largest share of the picture that
+    # moved in one frame (0 = none; None = not measured), and per frame with motion
+    # [offset_ms, [[x, y, w, h], ...]] (normalized boxes around what moved).
+    motion_score: Mapped[float | None] = mapped_column(Float)
+    motion_boxes: Mapped[list[Any] | None] = mapped_column(JSON)
 
     has_target: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     max_confidence: Mapped[float | None] = mapped_column(Float)
@@ -294,6 +303,9 @@ class Detection(Base):
     # A target that had been in the same place for the profile's ignore_stationary_minutes:
     # kept for the record, but not part of any event (pipeline/events.py).
     stationary: Mapped[bool | None] = mapped_column(Boolean)
+    # Profiles with require_motion: whether the box overlapped motion (False = no match).
+    # None = not checked.
+    moving: Mapped[bool | None] = mapped_column(Boolean)
     model: Mapped[str | None] = mapped_column(String)
     worker_id: Mapped[str | None] = mapped_column(String)
     extra: Mapped[dict[str, Any] | None] = mapped_column(JSON)

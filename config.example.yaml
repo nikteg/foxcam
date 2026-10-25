@@ -120,9 +120,19 @@ detection:
 #     requires: [open-vocabulary]
 #     fps: 1                   # fewer frames: cheaper
 #     ignore_stationary_minutes: 10   # default; parked cars stop counting (arrival still does), 0 = off
+#     require_motion: true     # a target only counts when its box overlaps motion
+#     skip_without_motion: true  # recordings where nothing moved get no jobs of this profile
 #     events_days: 14          # overrides retention.events_days
 #
 # Per camera (or in the UI: Cameras → Detection):  profiles: [wildlife, vehicles]
+
+# Motion detection on the censored derivative (pipeline/motion.py), used by profiles with
+# require_motion / skip_without_motion. Per camera (Cameras → Settings → Detection →
+# Motion detection): its own sensitivity and areas whose movement is ignored.
+motion:
+  sensitivity: medium       # low, medium, high: for cameras without their own
+  light_change_fraction: 0.5  # more of the picture changing at once is light, not motion
+  window_seconds: 1         # require_motion: motion this close in time to the detection
 
 events:
   pre_roll_seconds: 10

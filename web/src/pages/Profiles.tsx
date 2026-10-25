@@ -216,6 +216,16 @@ function ProfileCard({
             <span className="muted">{t("profiles.stationaryOff")}</span>
           )}
         </Fact>
+        <Fact label={t("profiles.motion")}>
+          {p.require_motion || p.skip_without_motion ? (
+            <span className="chips">
+              {p.require_motion && <Tag>{t("profiles.motionRequired")}</Tag>}
+              {p.skip_without_motion && <Tag>{t("profiles.motionSkips")}</Tag>}
+            </span>
+          ) : (
+            <span className="muted">{t("profiles.stationaryOff")}</span>
+          )}
+        </Fact>
         {p.events_days !== null && (
           <>
             <Fact label={t("profiles.keepEvents")}>
@@ -302,6 +312,8 @@ export function ProfileDialog({
   const [stationary, setStationary] = useState(
     (profile?.ignore_stationary_minutes ?? 10).toString(),
   );
+  const [requireMotion, setRequireMotion] = useState(profile?.require_motion ?? false);
+  const [skipStill, setSkipStill] = useState(profile?.skip_without_motion ?? false);
   const [isDefault, setDefault] = useState(profile?.default ?? false);
   const [enabled, setEnabled] = useState(profile?.enabled ?? true);
 
@@ -317,6 +329,8 @@ export function ProfileDialog({
     default: isDefault,
     events_days: eventsDays === "" ? null : Number(eventsDays),
     ignore_stationary_minutes: stationary === "" ? 10 : Number(stationary),
+    require_motion: requireMotion,
+    skip_without_motion: skipStill,
     enabled,
   });
   const save = useMutation({
@@ -506,6 +520,30 @@ export function ProfileDialog({
                   onChange={(_, d) => setStationary(d.value)}
                 />
               </Field>
+              <Switch
+                label={
+                  <>
+                    {t("profiles.requireMotion")}
+                    <Caption1 as="span" className="muted option-hint">
+                      {t("profiles.requireMotionHint")}
+                    </Caption1>
+                  </>
+                }
+                checked={requireMotion}
+                onChange={(_, d) => setRequireMotion(d.checked)}
+              />
+              <Switch
+                label={
+                  <>
+                    {t("profiles.skipWithoutMotion")}
+                    <Caption1 as="span" className="muted option-hint">
+                      {t("profiles.skipWithoutMotionHint")}
+                    </Caption1>
+                  </>
+                }
+                checked={skipStill}
+                onChange={(_, d) => setSkipStill(d.checked)}
+              />
               <Switch
                 label={t("profiles.defaultSwitch")}
                 checked={isDefault}

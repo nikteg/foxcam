@@ -41,7 +41,18 @@ def camera_state(camera_id: str) -> dict[str, Any]:
         mask = s.get(MaskVersion, st.mask_version_id) if st and st.mask_version_id else None
         return {"private": bool(st and st.private), "rects": mask.rects if mask else [],
                 "mask_version_id": mask.id if mask else None,
-                "burn_masks": bool(st and st.burn_masks)}
+                "burn_masks": bool(st and st.burn_masks),
+                # None = motion.sensitivity
+                "motion_sensitivity": st.motion_sensitivity if st else None,
+                "motion_rects": (st.motion_rects if st else None) or []}
+
+
+def save_motion(camera_id: str, sensitivity: str | None, rects: list[list[float]]) -> None:
+    with session_scope() as s:
+        st = s.get(CameraState, camera_id) or CameraState(camera_id=camera_id)
+        s.add(st)
+        st.motion_sensitivity = sensitivity
+        st.motion_rects = rects
 
 
 def save_camera_state(camera_id: str, rects: list[list[float]], private: bool) -> int | None:
@@ -198,6 +209,8 @@ def segment_dict(g: Segment) -> dict[str, Any]:
         "error": g.error, "is_night": g.is_night, "saturation_avg": g.saturation_avg,
         "sun_elevation": g.sun_elevation, "has_target": g.has_target,
         "max_confidence": g.max_confidence, "pinned": g.pinned,
+        # Largest share of the picture that moved (0 = none, None = not measured).
+        "motion_score": g.motion_score,
         "deleted": g.deleted_at is not None, "mask_version_id": g.mask_version_id,
         "remote": g.remote_key is not None,
         # Joined into an hourly file by compaction (served cut back out of it).
@@ -211,7 +224,7 @@ def segment_dict(g: Segment) -> dict[str, Any]:
 def segments(camera_id: str | None = None, day: str | None = None, only_targets: bool = False,
              include_deleted: bool = False, limit: int = 200,
              camera_ids: set[str] | None = None,
-             status: str | None = None) -> list[dict[str, Any]]:
+             status: str | None = None, motion: str | None = None) -> list[dict[str, Any]]:
     q = _only(select(Segment), Segment.camera_id, camera_ids) \
         .order_by(Segment.start_at.desc()).limit(limit)
     if camera_id:
@@ -223,6 +236,10 @@ def segments(camera_id: str | None = None, day: str | None = None, only_targets:
         q = q.where(Segment.has_target.is_(True))
     if status:
         q = q.where(Segment.status == status)
+    if motion == "yes":
+        q = q.where(Segment.motion_score > 0)
+    elif motion == "no":
+        q = q.where(Segment.motion_score == 0)
     if not include_deleted:
         q = q.where(Segment.deleted_at.is_(None))
     with session_scope() as s:
@@ -279,6 +296,8 @@ def detection_dict(d: Detection) -> dict[str, Any]:
         "feedback": d.feedback, "is_night": d.segment.is_night if d.segment else None,
         # In the same place for the profile's ignore_stationary_minutes: no event.
         "stationary": bool(d.stationary),
+        # The profile requires motion and the box overlapped none: no match.
+        "no_motion": d.moving is False,
         # Detector specifics, e.g. SpeciesNet's box label and top guesses.
         "extra": d.extra or {},
     }

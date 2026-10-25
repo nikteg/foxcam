@@ -40,7 +40,13 @@ export interface Camera {
   /** Re-encoded by the server (recording profile and/or burned-in masks). */
   processed: boolean;
   burn_masks: boolean;
+  /** null = the default (Settings → Detection). */
+  motion_sensitivity: MotionSensitivity | null;
+  /** Areas whose movement is ignored. */
+  motion_rects: Rect[];
 }
+
+export type MotionSensitivity = "low" | "medium" | "high";
 
 /** What to look for, and which workers may do it (see docs/ARCHITECTURE.md). */
 /** One model looking for a profile's targets (one job per segment and detector). */
@@ -79,6 +85,10 @@ export interface ProfileInput {
   events_days: number | null;
   /** Targets that stay in one place this long stop counting (a parked car). 0 = off. */
   ignore_stationary_minutes: number;
+  /** A target only counts when its box overlaps motion. */
+  require_motion: boolean;
+  /** Recordings without motion get no jobs of this profile. */
+  skip_without_motion: boolean;
   enabled: boolean;
 }
 
@@ -232,6 +242,8 @@ export interface Segment {
   pinned: boolean;
   deleted: boolean;
   mask_version_id: number | null;
+  /** Largest share of the picture that moved in one frame (0 = none, null = not measured). */
+  motion_score: number | null;
   /** Archived in S3 storage. */
   remote: boolean;
   /** Joined into an hourly file by compaction. */
@@ -359,6 +371,8 @@ export interface Detection {
   is_night: boolean | null;
   /** In the same place for the profile's ignore_stationary_minutes: no event. */
   stationary: boolean;
+  /** The profile requires motion and the box overlapped none: no match. */
+  no_motion: boolean;
   /** Detector specifics. SpeciesNet: `detector_label`/`detector_conf` (the box) and
    *  `classifications`, the classifier's top guesses. */
   extra: DetectionExtra;
@@ -433,6 +447,8 @@ export interface MaskState {
   mask_version_id: number | null;
   /** Masks are also burned into recordings and live view. */
   burn_masks: boolean;
+  motion_sensitivity: MotionSensitivity | null;
+  motion_rects: Rect[];
 }
 
 export interface RecordingProfile {
@@ -747,11 +763,15 @@ export const api = {
     request<MaskState>("GET", `/api/cameras/${encodeURIComponent(cameraId)}/mask`),
   saveMask: (cameraId: string, body: { rects: Rect[]; private: boolean; burn_in?: boolean }) =>
     request<MaskState>("PUT", `/api/cameras/${encodeURIComponent(cameraId)}/mask`, body),
+  saveMotion: (cameraId: string, body: { sensitivity: MotionSensitivity | null; rects: Rect[] }) =>
+    request<MaskState>("PUT", `/api/cameras/${encodeURIComponent(cameraId)}/motion`, body),
   segments: (q: {
     camera?: string;
     day?: string;
     only_targets?: boolean;
     status?: string;
+    /** yes = something moved, no = nothing did. */
+    motion?: "yes" | "no";
     limit?: number;
   }) => request<Segment[]>("GET", withQuery("/api/segments", q)),
   segment: (id: number) => request<Segment>("GET", `/api/segments/${id}`),

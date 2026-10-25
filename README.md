@@ -32,6 +32,9 @@ anything else, and keep the clips.
 - **Several models per profile.** Let YOLO-World and SpeciesNet both look (one event, with
   which models saw it), or chain them so an expensive model only confirms a cheap one's
   finds; notify only when models agree, and compare them under Events → Models.
+- **Motion detection, opt-in per profile.** Skip recordings where nothing moved (no GPU
+  time spent on quiet cameras) and count only targets that move, so a fox-shaped stump never
+  makes an event. Per camera: sensitivity and areas to ignore, like trees in the wind.
 - **Privacy built in.** Draw censor rectangles per camera; they are burned into the pixels
   before a worker sees a frame, and optionally into recordings and live view as well.
   Private cameras are never sent anywhere.
@@ -142,8 +145,9 @@ flowchart LR
 1. **MediaMTX** pulls each camera, records fixed-length segments and serves the live view.
    Cameras with burned-in censor areas pass through a transcode stage first (on the GPU
    when there is one), as does the low-data live view.
-2. The **server** registers each segment, tags day/night, burns in the censor areas and
-   creates one job per detection profile (and model) of the camera.
+2. The **server** registers each segment, tags day/night, burns in the censor areas,
+   measures motion and creates one job per detection profile (and model) of the camera
+   (profiles can skip recordings where nothing moved).
 3. **Workers** lease jobs, run their detector on the censored, down-sampled video and post
    the detections back.
 4. Target detections become **events** (not those marked wrong, nor objects standing
@@ -204,7 +208,8 @@ container can use with `docker compose exec mediamtx foxcam hwaccel`.
 
 Use **Cameras → Add camera** in the web UI; cameras start recording within seconds, no
 restart needed. A camera's **Settings** then has tabs for **General** (name, segment
-length, censor areas), **Detection** (which profiles run), **Recording** (quality profile
+length, censor areas), **Detection** (which profiles run, motion
+sensitivity and areas to ignore), **Recording** (quality profile
 and retention) and **Share**.
 
 - **RTSP** – the robust option when the server can reach the camera (same network, or a VPN

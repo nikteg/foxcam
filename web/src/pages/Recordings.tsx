@@ -119,13 +119,14 @@ export function Recordings() {
     "day",
     "only_targets",
     "status",
+    "motion",
     "selected",
     "file",
   ] as const);
   const navigate = useNavigate();
   const tab = useSubPage("/recordings", ["archives", "segments"] as const);
   const segments = useQuery({
-    queryKey: ["segments", f.camera, f.day, f.only_targets, f.status],
+    queryKey: ["segments", f.camera, f.day, f.only_targets, f.status, f.motion],
     enabled: tab === "segments",
     // A new filter keeps the current list on screen until its own data arrives.
     placeholderData: keepPreviousData,
@@ -135,6 +136,7 @@ export function Recordings() {
         day: f.day,
         only_targets: f.only_targets === "true",
         status: f.status || undefined,
+        motion: f.motion === "yes" || f.motion === "no" ? f.motion : undefined,
         limit: 500,
       }),
     refetchInterval: 20_000,
@@ -203,6 +205,15 @@ export function Recordings() {
                   {stateLabel(st)}
                 </option>
               ))}
+            </Select>
+            <Select
+              value={f.motion}
+              aria-label={t("recordings.motion")}
+              onChange={(_, d) => setFilter("motion", d.value)}
+            >
+              <option value="">{t("recordings.anyMotion")}</option>
+              <option value="yes">{t("recordings.withMotion")}</option>
+              <option value="no">{t("recordings.withoutMotion")}</option>
             </Select>
             <Checkbox
               label={t("recordings.onlyWithMatch")}

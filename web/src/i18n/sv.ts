@@ -100,6 +100,20 @@ export const sv: Record<MessageKey, string> = {
   "camera.default": "standard",
   "camera.lastSegment": "Senaste segment",
   "camera.censorAreas": "Maskerade områden",
+  "motion.title": "Rörelsedetektering",
+  "motion.help":
+    "Rörelse i de här områdena ignoreras, som träd i vinden eller en trafikerad väg. Flimrande ljus och kameraskakningar räknas redan bort. Maskerade områden räknas aldrig heller. Ändringar gäller bara nya inspelningar.",
+  "motion.actions": "Åtgärder för rörelseområden",
+  "motion.discard": "Slänga de osparade rörelseändringarna?",
+  "motion.sensitivity": "Känslighet",
+  "motion.sensitivityHint":
+    "Hög märker även små eller avlägsna djur men reagerar mer på regn, insekter och vind; låg bara på större rörelser.",
+  "motion.low": "Låg",
+  "motion.medium": "Medel",
+  "motion.high": "Hög",
+  "motion.summary":
+    "Känslighet: {sensitivity} – {n} {n:ignorerat område|ignorerade områden}. Används av profiler som kräver rörelse eller hoppar över inspelningar utan.",
+  "motion.edit": "Redigera rörelsedetektering",
   "camera.viewers": "Tittare",
 
   // Statussidan
@@ -174,6 +188,9 @@ export const sv: Record<MessageKey, string> = {
   "detections.stationary": "stilla",
   "detections.stationaryHint":
     "På samma plats längre än profilens ”Ignorera stillastående efter” (t.ex. en parkerad bil): ingen händelse eller avisering.",
+  "detections.noMotion": "ingen rörelse",
+  "detections.noMotionHint":
+    "Profilen kräver rörelse och inget rörde sig där detta syntes: ingen träff.",
   "detections.onlyTargets": "Endast mål",
   "detections.none": "Inga detektioner än.",
   "detections.frameAlt": "Bildruta med {label}",
@@ -188,6 +205,12 @@ export const sv: Record<MessageKey, string> = {
   "recordings.anyDay": "Alla dagar",
   "recordings.dayUtc": "Dag (UTC)",
   "recordings.onlyWithMatch": "Endast med träff",
+  "recordings.motion": "Rörelse",
+  "recordings.anyMotion": "Med eller utan rörelse",
+  "recordings.withMotion": "Med rörelse",
+  "recordings.withoutMotion": "Utan rörelse",
+  "recordings.noMotion": "ingen",
+  "recordings.motionShare": "{value} av bilden",
   "recordings.none": "Inga inspelningar än.",
   "recordings.pinnedTooltip": "Sparas: ingår i en händelse",
   "recordings.deleted": "Videon har gallrats bort; detektionerna finns kvar.",
@@ -410,6 +433,14 @@ export const sv: Record<MessageKey, string> = {
   "runtime.settle": "Vänta före klippet",
   "runtime.settleHint":
     "En händelses klipp görs när inget nytt har lagts till på så här länge. Kortare ger klipp snabbare; längre undviker att de görs om.",
+  "runtime.motionSensitivityHint":
+    "För kameror utan egen (kamerainställningar, fliken Detektering). Hög märker även små eller avlägsna djur men reagerar mer på regn, insekter och vind.",
+  "runtime.lightChange": "Ljusförändring över",
+  "runtime.lightChangeHint":
+    "När mer av bilden än så ändras på en gång är det ljus (nattläge som slås på, exponering), inte rörelse.",
+  "runtime.motionWindow": "Rörelsefönster",
+  "runtime.motionWindowHint":
+    "För profiler som kräver rörelse: hur nära i tid rörelsen måste vara detektionen. Längre behåller ett djur som stannar ett ögonblick.",
   "runtime.leaseSeconds": "Tidsgräns per jobb",
   "runtime.leaseSecondsHint":
     "En arbetare som inte har blivit klar med ett jobb inom den här tiden förlorar det, och en annan arbetare kan ta det. Höj värdet för långsamma arbetare.",
@@ -785,6 +816,15 @@ export const sv: Record<MessageKey, string> = {
   "profiles.stationaryHint":
     "Ett mål som står på samma plats så här länge, som en parkerad bil, slutar räknas: inga nya eller längre händelser (och ingen sparad film) förrän det flyttar sig eller försvinner. Ankomsten blir fortfarande en händelse. 0 = av.",
   "profiles.stationaryOff": "Av",
+  "profiles.requireMotion": "Bara mål som rör sig",
+  "profiles.requireMotionHint":
+    "Ett mål räknas bara när dess ruta överlappar rörelse, så en stubbe som liknar en räv eller en staty gör det aldrig. Ett mål som sitter still länge slutar räknas tills det rör sig.",
+  "profiles.skipWithoutMotion": "Hoppa över inspelningar utan rörelse",
+  "profiles.skipWithoutMotionHint":
+    "Inspelningar där inget rörde sig skickas inte till arbetarna. Sparar mycket arbete på lugna kameror.",
+  "profiles.motion": "Rörelse",
+  "profiles.motionRequired": "bara mål som rör sig",
+  "profiles.motionSkips": "hoppar över stilla inspelningar",
   "profiles.defaultSwitch": "Kör på kameror utan eget profilval",
   "profiles.enabled": "Aktiverad",
   "profiles.removeTitle": "Ta bort {name}?",

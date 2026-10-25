@@ -13,7 +13,12 @@ import {
   TabList,
   Select,
 } from "@fluentui/react-components";
-import { Add20Regular, Delete20Regular, EyeOff20Regular } from "@fluentui/react-icons";
+import {
+  Add20Regular,
+  Delete20Regular,
+  EyeOff20Regular,
+  Run20Regular,
+} from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
@@ -451,6 +456,7 @@ function DetectionPanel({
   });
   const toggle = (id: string, on: boolean) =>
     setSelected((cur) => (on ? [...cur, id] : cur.filter((x) => x !== id)));
+  const [editingMotion, setEditingMotion] = useState(false);
 
   return (
     <>
@@ -482,6 +488,25 @@ function DetectionPanel({
               ? t("cameras.profilesFromConfig")
               : t("cameras.profilesFromDefault")}
           </Caption1>
+        )}
+        <Subtitle2 as="h3" className="panel-heading">
+          {t("motion.title")}
+        </Subtitle2>
+        <Caption1 className="muted">
+          {t("motion.summary", {
+            sensitivity: camera.motion_sensitivity
+              ? t(`motion.${camera.motion_sensitivity}`)
+              : t("camera.default"),
+            n: camera.motion_rects.length,
+          })}
+        </Caption1>
+        <div>
+          <Button size="small" icon={<Run20Regular />} onClick={() => setEditingMotion(true)}>
+            {t("motion.edit")}
+          </Button>
+        </div>
+        {editingMotion && (
+          <MaskDrawer cameraId={camera.id} kind="motion" onClose={() => setEditingMotion(false)} />
         )}
         {save.error && (
           <MessageBar intent="error">

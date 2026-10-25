@@ -66,6 +66,7 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detec
         {d.stationary && (
           <Tag title={t("detections.stationaryHint")}>{t("detections.stationary")}</Tag>
         )}
+        {d.no_motion && <Tag title={t("detections.noMotionHint")}>{t("detections.noMotion")}</Tag>}
       </span>
     ),
     compare: byString((d) => d.label),
