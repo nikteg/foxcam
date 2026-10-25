@@ -48,7 +48,13 @@ export function EventsGrid({
   // grid, so the nav tab stays put, Back closes it and it can be linked. Looked up in the
   // (refreshed) list, so marking it right or wrong shows at once.
   const [params, setParams] = useSearchParams();
-  const details = events.find((e) => String(e.id) === params.get("details")) ?? null;
+  const open = params.get("details");
+  const found = events.find((e) => String(e.id) === open) ?? null;
+  // The last version seen in the list: an event can leave it while open (marked wrong on
+  // the Status page, which hides those), and the drawer stays until it is closed.
+  const [seen, setSeen] = useState<DetectionEvent | null>(null);
+  if (found && found !== seen) setSeen(found);
+  const details = found ?? (seen && String(seen.id) === open ? seen : null);
   const setDetails = (e: DetectionEvent | null) =>
     setParams(
       (p) => {
