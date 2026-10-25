@@ -296,7 +296,8 @@ h2.section > .section-link {
   }
 }
 /* Settings → General: "Appearance" and "This server", above their own headings. */
-.settings-part {
+/* Doubled class: Fluent's Title3 is display: inline (vertical margins would do nothing). */
+.settings-part.settings-part {
   display: block;
   margin: var(--spacingVerticalM) 0 var(--spacingVerticalL);
 }
