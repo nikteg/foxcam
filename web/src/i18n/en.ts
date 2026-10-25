@@ -126,6 +126,8 @@ export const en = {
 
   // Events
   "events.openDetails": "Details of {label}",
+  "events.clipPendingNote":
+    "The clip is still being made, so this is the recording, from just before the detection.",
   "events.allDetections": "All detections",
   "events.markedWrong": "marked wrong",
   "events.markedWrongHint": "One of its detections was marked wrong. Hidden on the Status page.",

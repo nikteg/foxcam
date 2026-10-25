@@ -128,6 +128,8 @@ export const sv: Record<MessageKey, string> = {
 
   // Händelser
   "events.openDetails": "Detaljer för {label}",
+  "events.clipPendingNote":
+    "Klippet skapas fortfarande, så det här är inspelningen, från strax före detektionen.",
   "events.allDetections": "Alla detektioner",
   "events.markedWrong": "markerad som fel",
   "events.markedWrongHint":

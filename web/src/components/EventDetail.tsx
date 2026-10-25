@@ -5,7 +5,7 @@ import { Button, Caption1 } from "@fluentui/react-components";
 import { ScanObject20Regular } from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 
-import { api, type DetectionEvent } from "../api";
+import { api, detectionFrameUrl, type DetectionEvent } from "../api";
 import { duration, percent } from "../format";
 import { useI18n } from "../i18n";
 import { useCameraName } from "./CameraSelect";
@@ -47,13 +47,17 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
         <VideoPlayer key={e.clip_url} title={e.label} src={e.clip_url} poster={e.thumb_url} />
       ) : (
         best && (
-          <VideoPlayer
-            key={best.id}
-            title={e.label}
-            src={`/api/segments/${best.segment_id}/play`}
-            startAt={Math.max(best.offset_ms / 1000 - 1, 0)}
-            thumbnails={`/api/segments/${best.segment_id}/thumbnails.vtt`}
-          />
+          <>
+            <VideoPlayer
+              key={best.id}
+              title={e.label}
+              src={`/api/segments/${best.segment_id}/play`}
+              poster={detectionFrameUrl(best.id)}
+              startAt={Math.max(best.offset_ms / 1000 - 1, 0)}
+              thumbnails={`/api/segments/${best.segment_id}/thumbnails.vtt`}
+            />
+            <Caption1 className="muted">{t("events.clipPendingNote")}</Caption1>
+          </>
         )
       )}
       {best && (
