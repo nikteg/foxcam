@@ -1,12 +1,12 @@
 // One event in the details drawer (components/DetailPanel.tsx, opened from an event card's
 // picture): its best detection's frame with the box, the feedback for it, and the event's
 // facts. "All detections" opens the Detections tab filtered to the event.
-import { Button, Caption1 } from "@fluentui/react-components";
+import { Button } from "@fluentui/react-components";
 import { ScanObject20Regular } from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 
 import { api, detectionFrameUrl, type DetectionEvent } from "../api";
-import { duration, percent } from "../format";
+import { duration } from "../format";
 import { useI18n } from "../i18n";
 import { useCameraName } from "./CameraSelect";
 import { Feedback } from "./Feedback";
@@ -16,7 +16,7 @@ import {
   useProfiles,
   useSeveralDetectors,
 } from "./ProfileSelect";
-import { Fact, Facts, Light, QueryState, Tag, Time, useRouterHref } from "./ui";
+import { ConfidenceBar, Fact, Facts, Light, QueryState, Tag, Time, useRouterHref } from "./ui";
 import { VideoPlayer } from "./VideoPlayer";
 
 /** The event's detections, with its best one open. */
@@ -56,16 +56,12 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
               startAt={Math.max(best.offset_ms / 1000 - 1, 0)}
               thumbnails={`/api/segments/${best.segment_id}/thumbnails.vtt`}
             />
-            <Caption1 className="muted">{t("events.clipPendingNote")}</Caption1>
           </>
         )
       )}
       {best && (
         <span className="row wrap">
           <Feedback detection={best} withLabels />
-          <Caption1 className="muted">
-            {best.model ?? "–"} / {best.worker_id ?? "–"}
-          </Caption1>
         </span>
       )}
       <Facts>
@@ -74,12 +70,25 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
           <Time iso={e.first_ts} />
         </Fact>
         {manyProfiles && <Fact label={t("profiles.profile")}>{profileName(e.profile_id)}</Fact>}
-        <Fact label={t("col.confidence")}>{percent(e.max_confidence, 1)}</Fact>
+        <Fact label={t("col.confidence")}>
+          <ConfidenceBar value={e.max_confidence} />
+        </Fact>
         <Fact label={t("col.light")}>
           <Light night={e.is_night} long />
         </Fact>
         <Fact label={t("nav.detections")}>{e.detection_count}</Fact>
-        <Fact label={t("col.length")}>{duration(e.clip_duration_s)}</Fact>
+        {/* Until the clip exists, the player above shows the whole recording. */}
+        <Fact label={t("col.length")}>
+          {e.clip_url ? (
+            duration(e.clip_duration_s)
+          ) : e.clip_error ? (
+            <Tag kind="bad" title={e.clip_error}>
+              {t("events.clipFailed")}
+            </Tag>
+          ) : (
+            <Tag kind="pending">{t("events.buildingClip")}</Tag>
+          )}
+        </Fact>
         {severalDetectors && e.detectors.length > 0 && (
           <Fact label={t("events.seenByModels")}>
             <span className="row wrap tags">

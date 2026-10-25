@@ -13,6 +13,7 @@ import {
   Checkbox,
   ConfidenceBar,
   DownloadButton,
+  DrawerTitle,
   Empty,
   Fact,
   Facts,
@@ -24,7 +25,7 @@ import {
   Toolbar,
   useRouterHref,
 } from "../components/ui";
-import { decimal, percent } from "../format";
+import { decimal, localTime } from "../format";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
 import { VideoPlayer } from "../components/VideoPlayer";
@@ -222,7 +223,14 @@ export function DetectionList() {
         </div>
         <DetailPanel
           open={!!selected}
-          title={selected ? `${selected.label} – ${percent(selected.confidence, 1)}` : ""}
+          title={
+            selected && (
+              <DrawerTitle
+                title={selected.label}
+                sub={`${cameraName(selected.camera_id)} – ${localTime(selected.ts)}`}
+              />
+            )
+          }
           onClose={() => setFilter("selected", "")}
         >
           {selected && <DetectionDetail detection={selected} />}

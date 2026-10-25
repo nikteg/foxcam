@@ -8,6 +8,7 @@ import { byNumber, byString, DataTable, type Column } from "../components/DataTa
 import { DetailPanel } from "../components/DetailPanel";
 import {
   DownloadButton,
+  DrawerTitle,
   Empty,
   Fact,
   Facts,
@@ -133,7 +134,12 @@ export function HourlyFiles({
         <DetailPanel
           open={!!selected}
           title={
-            selected ? `${cameraName(selected.camera_id)} – ${localTime(selected.start_at)}` : ""
+            selected && (
+              <DrawerTitle
+                title={cameraName(selected.camera_id)}
+                sub={localTime(selected.start_at)}
+              />
+            )
           }
           onClose={() => onSelect(null)}
         >

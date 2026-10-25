@@ -128,8 +128,6 @@ export const sv: Record<MessageKey, string> = {
 
   // Händelser
   "events.openDetails": "Detaljer för {label}",
-  "events.clipPendingNote":
-    "Klippet skapas fortfarande, så det här är inspelningen, från strax före detektionen.",
   "events.allDetections": "Alla detektioner",
   "events.markedWrong": "markerad som fel",
   "events.markedWrongHint":
@@ -315,7 +313,6 @@ export const sv: Record<MessageKey, string> = {
     "Arbetaren kan inte längre hämta jobb. Jobb som den håller på med går tillbaka till kön när deras tidsgräns går ut.",
 
   // Maskeringsredigeraren
-  "mask.title": "Maskerade områden – {name}",
   "mask.helpMouse":
     "Dra på bilden för att rita en rektangel. Dra en rektangel för att flytta den, dra i ett hörn för att ändra storlek och tryck på {key} eller klicka på × för att ta bort den.",
   "mask.helpTouch":
@@ -817,7 +814,6 @@ export const sv: Record<MessageKey, string> = {
   "workers.tagsHint":
     "Valfritt. Låter profiler som kräver dessa taggar använda arbetaren (t.ex. gpu, eller dess eget namn för att låsa profiler till den): välj en känd tagg eller skriv en ny.",
   "workers.editTags": "Taggar",
-  "workers.tagsTitle": "Taggar för {name}",
 
   // Inloggning, första konto och inbjudningar
   "login.title": "Logga in",
@@ -949,7 +945,6 @@ export const sv: Record<MessageKey, string> = {
   "users.signIn": "Loggar in med",
   "users.lastLogin": "Senaste inloggning",
   "users.setPassword": "Ange lösenord",
-  "users.passwordTitle": "Nytt lösenord för {name}",
   "users.passwordSignsOut": "Loggar ut {name} på alla enheter.",
   "users.passwordHint": "Lämna tomt för ett konto som bara loggar in med ett externt konto.",
   "users.makeAdmin": "Administratör (kan ändra allt)",

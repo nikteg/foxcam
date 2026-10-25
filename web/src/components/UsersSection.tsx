@@ -27,6 +27,7 @@ import { useI18n } from "../i18n";
 import { InviteLink, useRoleName } from "./ShareDialog";
 import {
   Checkbox,
+  DrawerTitle,
   Empty,
   Fact,
   Facts,
@@ -378,7 +379,9 @@ function PasswordDialog({ user, onClose }: { user: User; onClose: () => void }) 
           }}
         >
           <DialogBody>
-            <DialogTitle>{t("users.passwordTitle", { name: user.display_name })}</DialogTitle>
+            <DialogTitle>
+              <DrawerTitle title={user.display_name} sub={t("account.newPassword")} />
+            </DialogTitle>
             <DialogContent className="form-stack">
               <Caption1 className="muted">
                 {t("users.passwordSignsOut", { name: user.display_name })}

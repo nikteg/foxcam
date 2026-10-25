@@ -19,7 +19,7 @@ import { api, type Worker, type WorkerToken } from "../api";
 import { ConfirmPopover } from "./ConfirmPopover";
 import { useI18n } from "../i18n";
 import { TagsPicker } from "./LabelPicker";
-import { Dot, Empty, Tag, Time } from "./ui";
+import { Dot, DrawerTitle, Empty, Tag, Time } from "./ui";
 import {
   Dialog,
   DialogActions,
@@ -219,7 +219,9 @@ function TagsDialog({ token, onClose }: { token: WorkerToken; onClose: () => voi
           }}
         >
           <DialogBody>
-            <DialogTitle>{t("workers.tagsTitle", { name: token.name })}</DialogTitle>
+            <DialogTitle>
+              <DrawerTitle title={token.name} sub={t("workers.tags")} />
+            </DialogTitle>
             <DialogContent className="form-stack">
               <Field label={t("workers.tags")} hint={t("workers.tagsHint")}>
                 <TagsPicker value={tags} onChange={setTags} ariaLabel={t("workers.tags")} />

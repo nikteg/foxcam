@@ -12,7 +12,7 @@ import { Fragment, useState } from "react";
 import { useSearchParams } from "react-router";
 
 import type { DetectionEvent } from "../api";
-import { duration, localDay, localTime, percent } from "../format";
+import { duration, localDay, localTime } from "../format";
 import { useI18n } from "../i18n";
 import { useCameraName } from "./CameraSelect";
 import { DetailPanel } from "./DetailPanel";
@@ -23,7 +23,7 @@ import {
   useProfiles,
   useSeveralDetectors,
 } from "./ProfileSelect";
-import { DownloadButton, Empty, Light, Tag, Time } from "./ui";
+import { ConfidenceBar, DownloadButton, DrawerTitle, Empty, Light, Tag, Time } from "./ui";
 import { VideoPlayer } from "./VideoPlayer";
 import {
   Dialog,
@@ -106,7 +106,7 @@ export function EventsGrid({
               </CardPreview>
               <CardHeader
                 header={
-                  <span className="row">
+                  <span className="row wrap">
                     {/* The details drawer: frame, box, feedback. */}
                     <button
                       type="button"
@@ -116,9 +116,7 @@ export function EventsGrid({
                     >
                       <Text weight="semibold">{e.label}</Text>
                     </button>
-                    <Text weight="bold" className="brand-text">
-                      {percent(e.max_confidence)}
-                    </Text>
+                    <ConfidenceBar value={e.max_confidence} compact />
                     <Light night={e.is_night} />
                     {e.feedback === "wrong" && (
                       <Tag kind="bad" title={t("events.markedWrongHint")}>
@@ -175,9 +173,12 @@ export function EventsGrid({
       <DetailPanel
         open={!!details}
         title={
-          details
-            ? `${details.label} – ${cameraName(details.camera_id)} – ${localTime(details.first_ts)}`
-            : ""
+          details && (
+            <DrawerTitle
+              title={details.label}
+              sub={`${cameraName(details.camera_id)} – ${localTime(details.first_ts)}`}
+            />
+          )
         }
         onClose={() => setDetails(null)}
       >

@@ -132,6 +132,16 @@ export function PasswordInput(props: Omit<InputProps, "type" | "contentAfter">) 
   );
 }
 
+/** A drawer title: the thing in bold, where/when/what under it in small text. */
+export function DrawerTitle({ title, sub }: { title: ReactNode; sub?: ReactNode }) {
+  return (
+    <span className="detail-title">
+      <span className="detail-title-label">{title}</span>
+      {sub && <Caption1 className="muted">{sub}</Caption1>}
+    </span>
+  );
+}
+
 /** Fluent Checkbox with an id of its own. Inside a <Field> it takes the field's id, so with
  * several in one Field (a group of options) every label pointed at the first box and
  * pressing a label did not toggle its own checkbox. */
@@ -524,16 +534,15 @@ export function Stat({
   );
 }
 
-export function ConfidenceBar({ value }: { value: number }) {
+/** How sure a match is, everywhere it is shown: a bar coloured by level (green from 75 %,
+ * amber from 50 %, red below) and the number. ``compact``: a short bar and a whole percent,
+ * for card titles and narrow columns. */
+export function ConfidenceBar({ value, compact = false }: { value: number; compact?: boolean }) {
+  const color = value >= 0.75 ? "success" : value >= 0.5 ? "warning" : "error";
   return (
-    <span className="conf-cell">
-      <ProgressBar
-        className="conf-bar"
-        value={value}
-        thickness="large"
-        color={value >= 0.5 ? "brand" : "warning"}
-      />
-      <Text size={200}>{percent(value, 1)}</Text>
+    <span className={compact ? "conf-cell compact" : "conf-cell"}>
+      <ProgressBar className="conf-bar" value={value} thickness="large" color={color} />
+      <Text size={200}>{percent(value, compact ? 0 : 1)}</Text>
     </span>
   );
 }

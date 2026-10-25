@@ -9,6 +9,7 @@ import { byNumber, byString, DataTable, type Column } from "../components/DataTa
 import { SegmentPanel } from "../components/SegmentDetail";
 import {
   Checkbox,
+  ConfidenceBar,
   DateTimeInput,
   Empty,
   Light,
@@ -20,7 +21,7 @@ import {
   useStateLabel,
   useSubPage,
 } from "../components/ui";
-import { duration, fileSize, percent } from "../format";
+import { duration, fileSize } from "../format";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
 import { HourlyFiles } from "./HourlyFiles";
@@ -101,8 +102,13 @@ const columns = (
   {
     id: "match",
     header: t("col.match"),
-    width: 80,
-    cell: (r) => (r.has_target && r.max_confidence !== null ? percent(r.max_confidence) : ""),
+    width: 110,
+    cell: (r) =>
+      r.has_target && r.max_confidence !== null ? (
+        <ConfidenceBar value={r.max_confidence} compact />
+      ) : (
+        ""
+      ),
     compare: byNumber((r) => r.max_confidence),
   },
 ];

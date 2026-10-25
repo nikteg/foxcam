@@ -126,8 +126,6 @@ export const en = {
 
   // Events
   "events.openDetails": "Details of {label}",
-  "events.clipPendingNote":
-    "The clip is still being made, so this is the recording, from just before the detection.",
   "events.allDetections": "All detections",
   "events.markedWrong": "marked wrong",
   "events.markedWrongHint": "One of its detections was marked wrong. Hidden on the Status page.",
@@ -311,7 +309,6 @@ export const en = {
     "The worker can no longer fetch jobs. Jobs it holds go back to the queue when their time limit runs out.",
 
   // Censor-area editor
-  "mask.title": "Censor areas – {name}",
   "mask.helpMouse":
     "Drag on the image to draw a rectangle. Drag a rectangle to move it, drag its corner to resize, and press {key} or click × to remove it.",
   "mask.helpTouch":
@@ -722,7 +719,6 @@ export const en = {
   "workers.tagsHint":
     "Optional. Lets profiles that require these tags use this worker (e.g. gpu, or its own name to pin profiles to it): pick a known tag or type a new one.",
   "workers.editTags": "Tags",
-  "workers.tagsTitle": "Tags for {name}",
 
   // Cameras page
   "cameras.intro":
@@ -943,7 +939,6 @@ export const en = {
   "users.signIn": "Signs in with",
   "users.lastLogin": "Last sign-in",
   "users.setPassword": "Set password",
-  "users.passwordTitle": "New password for {name}",
   "users.passwordSignsOut": "Signs {name} out on every device.",
   "users.passwordHint": "Leave empty for an account that only signs in with an external account.",
   "users.makeAdmin": "Admin (can change everything)",

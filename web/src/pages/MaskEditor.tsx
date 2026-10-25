@@ -28,7 +28,7 @@ import {
   DialogTitle,
 } from "../components/Drawer";
 import { ConfirmPopover } from "../components/ConfirmPopover";
-import { QueryState, Tag } from "../components/ui";
+import { DrawerTitle, QueryState, Tag } from "../components/ui";
 import { useI18n } from "../i18n";
 
 /** Normalized (0..1) rectangle; independent of the stream resolution. */
@@ -86,7 +86,7 @@ export function MaskDrawer({ cameraId, onClose }: { cameraId: string; onClose: (
               </ConfirmPopover>
             }
           >
-            {t("mask.title", { name })}
+            <DrawerTitle title={t("camera.censorAreas")} sub={name} />
           </DialogTitle>
           <DialogContent className="form-stack">
             <Caption1 className="muted">

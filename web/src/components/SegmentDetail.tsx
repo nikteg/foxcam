@@ -6,13 +6,24 @@ import { useNavigate } from "react-router";
 
 import { api, type Segment, type SegmentJob } from "../api";
 import { hasRole, useCameraRole } from "../auth";
-import { decimal, duration, fileSize, localTime, percent } from "../format";
+import { decimal, duration, fileSize, localTime } from "../format";
 import { useI18n } from "../i18n";
 import { useCameraName } from "./CameraSelect";
 import { ConfirmPopover } from "./ConfirmPopover";
 import { DetailPanel } from "./DetailPanel";
 import { Feedback } from "./Feedback";
-import { DownloadButton, Empty, Fact, Facts, Light, Tag, Time, useStateLabel } from "./ui";
+import {
+  ConfidenceBar,
+  DownloadButton,
+  DrawerTitle,
+  Empty,
+  Fact,
+  Facts,
+  Light,
+  Tag,
+  Time,
+  useStateLabel,
+} from "./ui";
 import { VideoPlayer, type PlayerHandle } from "./VideoPlayer";
 
 /**
@@ -39,7 +50,11 @@ export function SegmentPanel({
   return (
     <DetailPanel
       open={!!selected}
-      title={selected ? `${cameraName(selected.camera_id)} – ${localTime(selected.start_at)}` : ""}
+      title={
+        selected && (
+          <DrawerTitle title={cameraName(selected.camera_id)} sub={localTime(selected.start_at)} />
+        )
+      }
       onClose={onClose}
     >
       {selected && (
@@ -185,7 +200,7 @@ function SegmentDetail({
               ▶ {decimal(d.offset_ms / 1000, 1)} s
             </Button>
             <Text weight="semibold">{d.label}</Text>
-            <Caption1>{percent(d.confidence, 1)}</Caption1>
+            <ConfidenceBar value={d.confidence} compact />
             <span className="spacer" />
             <Feedback detection={d} />
           </li>
