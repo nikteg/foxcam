@@ -1602,6 +1602,17 @@ h3.panel-heading {
     opacity: 0;
   }
 }
+/* Where the detail drawer is mounted, after its backdrop: the drawer sits inside it like on
+   the page, and clicks go through it everywhere else. */
+.detail-host {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+.detail-host .fui-OverlayDrawer {
+  pointer-events: auto;
+}
 .fui-OverlayDrawer.app-drawer {
   z-index: 1000;
 }
