@@ -25,6 +25,7 @@ import { duration, fileSize } from "../format";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
 import { HourlyFiles } from "./HourlyFiles";
+import { MotionShare } from "../components/Motion";
 
 const SEGMENT_STATES = ["new", "queued", "done", "private", "failed"] as const;
 
@@ -54,6 +55,13 @@ const columns = (
     width: 150,
     cell: (r) => <CameraTag id={r.camera_id} />,
     compare: byString((r) => cameraName(r.camera_id)),
+  },
+  {
+    id: "motion",
+    header: t("recordings.motion"),
+    width: 90,
+    cell: (r) => <MotionShare score={r.motion_score} short />,
+    compare: byNumber((r) => r.motion_score),
   },
   {
     id: "length",

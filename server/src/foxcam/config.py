@@ -257,11 +257,10 @@ class ProfileConfig(BaseModel):
     default: bool = False
     # Delete this profile's events after N days (None = retention.events_days).
     events_days: float | None = None
-    # A target that stays in the same place this long (a parked car) stops counting: it
-    # neither makes nor extends events until it moves or leaves. 0 = off.
-    ignore_stationary_minutes: float = Field(default=10, ge=0, le=1440)
-    # A target only counts when its box overlaps motion (pipeline/motion.py).
-    require_motion: bool = False
+    # A target standing still this long (its box overlapped no motion, pipeline/still.py)
+    # stops counting until it moves: a parked car, a stump. 0 = it must be moving right
+    # now; None = off.
+    still_minutes: float | None = Field(default=10, ge=0, le=1440)
     # Recordings without any motion get no jobs of this profile (marked skipped).
     skip_without_motion: bool = False
     enabled: bool = True

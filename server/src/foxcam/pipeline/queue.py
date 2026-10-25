@@ -38,7 +38,7 @@ from ..models import (
     utcnow,
 )
 from ..profiles import eligible_profiles
-from . import motion
+from . import still
 
 
 class LeaseError(Exception):
@@ -164,7 +164,7 @@ def complete(settings: Settings, job_id: int, token: str, detections: list[Detec
         job = _get_leased(s, job_id, token)
         seg = job.segment
         profile = settings.profile(job.profile_id)
-        hit = False
+        added: list[Detection] = []
         for d in detections:
             label = profile.canonical(d.label) if profile else d.label
             extra = d.extra
@@ -173,25 +173,21 @@ def complete(settings: Settings, job_id: int, token: str, detections: list[Detec
             bbox = d.bbox or [None] * 4
             is_target = bool(profile and profile.is_target(d.label, d.confidence,
                                                            job.detector_id))
-            # require_motion: a target whose box overlaps no motion is no match. Segments
-            # without a measurement count as moving.
-            moving = None
-            if is_target and profile.require_motion and seg.motion_score is not None:
-                moving = motion.overlaps(seg.motion_boxes, d.offset_ms, d.bbox,
-                                         settings.motion.window_seconds * 1000)
-                is_target = moving
-            hit = hit or is_target
             if not is_target and d.confidence < settings.processing.keep_non_targets_from:
                 continue  # a weak non-match: nothing would ever use it
-            s.add(Detection(
+            added.append(Detection(
                 segment_id=seg.id, job_id=job.id, profile_id=job.profile_id,
                 detector_id=job.detector_id, camera_id=seg.camera_id,
                 ts=seg.start_at + timedelta(milliseconds=d.offset_ms), offset_ms=d.offset_ms,
                 label=label, confidence=d.confidence,
                 bbox_x=bbox[0], bbox_y=bbox[1], bbox_w=bbox[2], bbox_h=bbox[3],
-                is_target=is_target, moving=moving,
+                is_target=is_target,
                 model=model, worker_id=job.leased_by, extra=extra,
             ))
+        # Targets standing still (the profile's still_minutes) are no match.
+        still.mark(settings, s, added)
+        s.add_all(added)
+        hit = any(d.is_target and not d.still for d in added)
         job.state = JobState.DONE
         job.finished_at = utcnow()
         job.model = model
@@ -249,9 +245,10 @@ def in_wrong_event():
 
 
 def counts_as_match():
-    """A target detection that is a match: neither it nor its event is marked wrong."""
+    """A target detection that is a match: not standing still, and neither it nor its
+    event is marked wrong."""
     return (Detection.is_target.is_(True) & Detection.feedback.is_not(False)
-            & ~in_wrong_event())
+            & Detection.still.is_not(True) & ~in_wrong_event())
 
 
 def refresh_event_matches(settings: Settings, s, event_id: int) -> None:

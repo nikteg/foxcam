@@ -85,10 +85,9 @@ export interface ProfileInput {
   fps: number | null;
   default: boolean;
   events_days: number | null;
-  /** Targets that stay in one place this long stop counting (a parked car). 0 = off. */
-  ignore_stationary_minutes: number;
-  /** A target only counts when its box overlaps motion. */
-  require_motion: boolean;
+  /** A target standing still (no motion under it) this long stops counting. 0 = it must
+   * be moving right now; null = off. */
+  still_minutes: number | null;
   /** Recordings without motion get no jobs of this profile. */
   skip_without_motion: boolean;
   enabled: boolean;
@@ -293,19 +292,22 @@ export interface MotionReportRow {
   camera_id: string;
   profile_id: string;
   profile_name: string;
-  require_motion: boolean;
+  /** The profile's own setting (null = off). */
+  still_minutes: number | null;
+  /** The minutes `standing_still` is counted for (the default when the profile has it off). */
+  still_minutes_tried: number;
   skip_without_motion: boolean;
   recordings: number;
   /** With motion measured. */
   measured: number;
   /** Measured, and nothing moved. */
-  still: number;
+  without_motion: number;
   /** Targets in measured recordings. */
   targets: Rated;
   /** Targets in recordings where nothing moved: skipping would miss them. */
   in_still: Rated;
-  /** Targets whose box overlaps no motion: "only moving targets" would drop them. */
-  no_motion: Rated;
+  /** Targets standing still for `still_minutes_tried`: no match then. */
+  standing_still: Rated;
 }
 
 export interface MotionBackfill {
@@ -369,6 +371,8 @@ export interface ArchiveFile {
   segments: number;
   first_segment_id: number | null;
   segments_with_match: number;
+  /** Recordings where something moved. */
+  segments_with_motion: number;
   /** Thumbnail of its first segment that has one. */
   thumb_url: string | null;
   deleted: boolean;
@@ -419,10 +423,10 @@ export interface Detection {
   worker_id: string | null;
   feedback: boolean | null;
   is_night: boolean | null;
-  /** In the same place for the profile's ignore_stationary_minutes: no event. */
-  stationary: boolean;
-  /** The profile requires motion and the box overlapped none: no match. */
-  no_motion: boolean;
+  /** Standing still for the profile's still_minutes: no match. */
+  still: boolean;
+  /** The box overlapped motion at that moment (null: not measured). */
+  moving: boolean | null;
   /** Detector specifics. SpeciesNet: `detector_label`/`detector_conf` (the box) and
    *  `classifications`, the classifier's top guesses. */
   extra: DetectionExtra;
@@ -837,7 +841,7 @@ export const api = {
     ),
   /** Every event again from the detections (admins); rebuilt events notify nobody. */
   rebuildEvents: () =>
-    request<{ removed: number; created: number; stationary: number }>(
+    request<{ removed: number; created: number; still: number }>(
       "POST",
       "/api/admin/rebuild-events",
     ),
@@ -860,7 +864,7 @@ export const api = {
     /** An event's own detections. */
     event?: number;
     /** Leave out objects standing still (they make no event). */
-    hide_stationary?: boolean;
+    hide_still?: boolean;
     limit?: number;
   }) => request<Detection[]>("GET", withQuery("/api/detections", q)),
   feedback: (id: number, correct: boolean | null) =>

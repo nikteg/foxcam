@@ -6,7 +6,8 @@ detections it got, split by the correct / wrong marks on the Detections page:
 
 - ``skip_without_motion``: recordings where nothing moved (no worker time), and the
   targets found in them anyway (these would have been missed);
-- ``require_motion``: targets whose box overlaps no motion (these would be no match).
+- ``still_minutes``: targets standing still that long (no match), with the profile's
+  minutes, or the default 10 when it has the option off.
 
 ``backfill`` measures motion on recordings from before motion detection, from their stored
 footage (with the censor areas they were analysed with), so existing marks count too. It
@@ -20,7 +21,7 @@ import threading
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 
 from ..config import Settings
 from ..db import session_scope
@@ -33,12 +34,14 @@ from ..models import (
     SegmentStatus,
     utcnow,
 )
-from . import motion
+from . import motion, still
 from .compaction import segment_source
 
 log = logging.getLogger(__name__)
 
 FEEDBACK = ("correct", "wrong", "unrated")
+# What the "still" counts try when a profile has the option off.
+DEFAULT_STILL_MINUTES = 10
 
 
 def _rated(d: Detection) -> str:
@@ -52,7 +55,7 @@ def _counts() -> dict[str, int]:
 def report(settings: Settings, since: datetime, camera: str | None = None) -> list[dict[str, Any]]:
     """One row per camera and profile with recordings in the period. Profiles that no
     longer exist are left out: their options cannot be turned on any more."""
-    window_ms = settings.motion.window_seconds * 1000
+    window = settings.motion.window_seconds
     rows: dict[tuple[str, str], dict[str, Any]] = {}
 
     def row(camera_id: str, profile_id: str | None) -> dict[str, Any] | None:
@@ -63,12 +66,15 @@ def report(settings: Settings, since: datetime, camera: str | None = None) -> li
             rows[camera_id, profile_id] = {
                 "camera_id": camera_id, "profile_id": profile_id,
                 "profile_name": profile.display_name,
-                "require_motion": profile.require_motion,
+                "still_minutes": profile.still_minutes,
+                # The minutes the "still" counts are for.
+                "still_minutes_tried": (profile.still_minutes if profile.still_minutes is not None
+                                        else DEFAULT_STILL_MINUTES),
                 "skip_without_motion": profile.skip_without_motion,
-                "recordings": 0, "measured": 0, "still": 0,
+                "recordings": 0, "measured": 0, "without_motion": 0,
                 # Targets in measured recordings; of them, the ones in still recordings
-                # (skipping would miss them) and the ones overlapping no motion.
-                "targets": _counts(), "in_still": _counts(), "no_motion": _counts(),
+                # (skipping would miss them) and the ones standing still.
+                "targets": _counts(), "in_still": _counts(), "standing_still": _counts(),
             }
         return rows[camera_id, profile_id]
 
@@ -90,21 +96,23 @@ def report(settings: Settings, since: datetime, camera: str | None = None) -> li
             r["recordings"] += 1
             if g.motion_score is not None:
                 r["measured"] += 1
-                r["still"] += g.motion_score == 0
-        # Targets as found, also the ones require_motion already turned into no match.
-        for d in s.scalars(select(Detection).where(
-                Detection.segment_id.in_(ids),
-                or_(Detection.is_target.is_(True), Detection.moving.is_(False)))):
+                r["without_motion"] += g.motion_score == 0
+        targets = [d for d in s.scalars(select(Detection).where(
+                       Detection.segment_id.in_(ids), Detection.is_target.is_(True))
+                       .order_by(Detection.ts))
+                   if segments[d.segment_id].motion_score is not None]
+        cameras: dict[str, still.Frames] = {}
+        for d in targets:
             g = segments[d.segment_id]
-            if g.motion_score is None or (r := row(g.camera_id, d.profile_id)) is None:
+            if (r := row(g.camera_id, d.profile_id)) is None:
                 continue
             kind = _rated(d)
             r["targets"][kind] += 1
             if g.motion_score == 0:
                 r["in_still"][kind] += 1
-            bbox = None if d.bbox_x is None else [d.bbox_x, d.bbox_y, d.bbox_w, d.bbox_h]
-            if not motion.overlaps(g.motion_boxes, d.offset_ms, bbox, window_ms):
-                r["no_motion"][kind] += 1
+            frames = cameras.setdefault(g.camera_id, still.Frames(s, g.camera_id))
+            if frames.still(d.ts, still.bbox_of(d), r["still_minutes_tried"], window):
+                r["standing_still"][kind] += 1
     return sorted(rows.values(), key=lambda r: (r["camera_id"], r["profile_id"]))
 
 
@@ -153,8 +161,7 @@ def pending(since: datetime) -> list[int]:
                                         Segment.motion_score.is_(None),
                                         Segment.status == SegmentStatus.DONE)
         with_targets = set(s.scalars(base.where(Segment.id.in_(
-            select(Detection.segment_id).where(or_(Detection.is_target.is_(True),
-                                                   Detection.moving.is_(False)))))))
+            select(Detection.segment_id).where(Detection.is_target.is_(True))))))
         rest = [i for i in s.scalars(base.order_by(Segment.start_at.desc()))
                 if i not in with_targets]
         return sorted(with_targets, reverse=True) + rest

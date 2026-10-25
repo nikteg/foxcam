@@ -173,7 +173,7 @@ export const en = {
   "maintenance.rebuildBody":
     "Current events, their clips and their notification history are replaced. Detections and your correct/wrong marks stay.",
   "maintenance.rebuildDone":
-    "{removed} {removed:event|events} replaced by {created}; {stationary} {stationary:detection|detections} standing still.",
+    "{removed} {removed:event|events} replaced by {created}; {still} {still:detection|detections} standing still.",
   "maintenance.reanalyse": "Detect again",
   "maintenance.reanalyseHint":
     "Runs detection again on the recordings in these days, with the current censor areas and profiles. Their detections (and correct/wrong marks) are replaced. At most 500 recordings at once.",
@@ -185,15 +185,16 @@ export const en = {
     "{queued} {queued:recording|recordings} queued, {skipped} skipped (being analysed or already waiting); {detections_removed} {detections_removed:detection|detections} removed.",
   "maintenance.from": "From",
   "maintenance.to": "To",
-  "detections.showStationary": "Show stationary",
-  "detections.stationary": "still",
-  "detections.stationaryHint":
-    'In the same place longer than the profile\'s "Ignore stationary after" (e.g. a parked car): no event or notification.',
-  "detections.noMotion": "no motion",
-  "detections.noMotionHint":
-    "The profile requires motion and nothing moved where this was seen: no match.",
   "detections.onlyTargets": "Only targets",
   "detections.none": "No detections yet.",
+  "detections.showStill": "Show standing still",
+  "detections.still": "standing still",
+  "detections.stillHint":
+    "Stood still longer than its profile allows (no motion under it), like a parked car: no match.",
+  "detections.motion": "Motion",
+  "detections.moving": "moving",
+  "detections.notMoving": "no motion at that moment",
+  "detections.motionUnknown": "not measured",
   "detections.frameAlt": "{label} detection frame",
   "detections.frameNote":
     "Original frame with the detected box. Workers only ever saw the censored copy.",
@@ -224,14 +225,16 @@ export const en = {
   "motionReport.nothingToSkip": "nothing to skip",
   "motionReport.checkUnrated": "check {n} unrated",
   "motionReport.saves": "saves {value}",
+  "motionReport.skipDetail":
+    "{still} of {measured} recordings without motion. Targets in them: {correct} correct, {wrong} wrong, {unrated} unrated.",
+  "motionReport.stillHeader": "Ignore standing still",
   "motionReport.dropsCorrect": "drops {n} correct",
   "motionReport.dropsWrong": "drops {n} wrong",
   "motionReport.dropsUnrated": "drops {n} unrated",
   "motionReport.changesNothing": "changes nothing",
-  "motionReport.skipDetail":
-    "{still} of {measured} recordings without motion. Targets in them: {correct} correct, {wrong} wrong, {unrated} unrated.",
-  "motionReport.requireDetail":
-    "Of {total} targets, would drop {correct} correct, {wrong} wrong and {unrated} unrated.",
+  "motionReport.stillDetail":
+    "After {minutes} min standing still, of {total} targets {correct} correct, {wrong} wrong and {unrated} unrated would be dropped.",
+  "motionReport.tried": "tried at {n} min",
   "motionReport.unmeasured":
     "{n} {n:recording|recordings} in this period {n:has|have} no motion measured (from before motion detection). Measure them from the stored footage to include them; nothing else changes.",
   "motionReport.measure": "Measure motion",
@@ -257,6 +260,7 @@ export const en = {
     "Finished recordings are joined into one file per camera and period (compaction.period_minutes in config.yaml, an hour by default), re-encoded when the camera's recording profile says so. Segments still show up one by one under Segments.",
   "hourly.none": "No archives yet.",
   "hourly.segments": "Segments",
+  "hourly.withMotion": "{n} with motion",
   "hourly.segmentsWithMatch": "{n} ({matches} with a match)",
   "hourly.deleted": "deleted by retention",
   "player.speed": "Playback speed",
@@ -751,18 +755,17 @@ export const en = {
   "profiles.fpsHint": "Analyse fewer frames per second to save GPU time (e.g. 1 for cars).",
   "profiles.keepEventsDays": "Keep events (days)",
   "profiles.keepEventsHint": "Empty = the global retention setting. 0 = forever.",
-  "profiles.stationary": "Ignore stationary after (minutes)",
-  "profiles.stationaryHint":
-    "A target that stays in the same place this long, like a parked car, stops counting: no new or longer events (and no kept footage) until it moves or leaves. Its arrival is still an event. 0 = off.",
   "profiles.stationaryOff": "Off",
-  "profiles.requireMotion": "Only moving targets",
-  "profiles.requireMotionHint":
-    "A target only counts when its box overlaps motion, so a fox-shaped stump or a statue never does. A target sitting still for long stops counting until it moves.",
+  "profiles.still": "Ignore standing still after (minutes)",
+  "profiles.stillHint":
+    "A target with no motion under it this long stops counting until it moves, like a parked car or a stump; its arrival still counts. 0 = it must be moving right now. Empty = off.",
+  "profiles.stillFact": "Standing still",
+  "profiles.stillAfter": "ignored after {n} min",
+  "profiles.stillNow": "must be moving",
   "profiles.skipWithoutMotion": "Skip recordings without motion",
   "profiles.skipWithoutMotionHint":
     "Recordings where nothing moved are not sent to the workers. Saves a lot of work on quiet cameras.",
   "profiles.motion": "Motion",
-  "profiles.motionRequired": "only moving targets",
   "profiles.motionSkips": "skips still recordings",
   "profiles.defaultSwitch": "Run on cameras without their own selection",
   "profiles.enabled": "Enabled",

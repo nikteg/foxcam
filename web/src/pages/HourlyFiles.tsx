@@ -82,6 +82,13 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Archi
         : r.segments,
     compare: byNumber((r) => r.segments),
   },
+  {
+    id: "motion",
+    header: t("recordings.motion"),
+    width: 120,
+    cell: (r) => t("hourly.withMotion", { n: r.segments_with_motion }),
+    compare: byNumber((r) => r.segments_with_motion),
+  },
 ];
 
 /** Recordings → Hourly files: what compaction made of the segments. */
@@ -181,6 +188,9 @@ export function HourlyFiles({
                         matches: selected.segments_with_match,
                       })
                     : selected.segments}
+                </Fact>
+                <Fact label={t("recordings.motion")}>
+                  {t("hourly.withMotion", { n: selected.segments_with_motion })}
                 </Fact>
                 <Fact label={t("hourly.reencoded")}>{howMade(selected)}</Fact>
               </Facts>

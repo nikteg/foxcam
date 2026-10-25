@@ -29,6 +29,7 @@ import { decimal, localTime } from "../format";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
 import { VideoPlayer } from "../components/VideoPlayer";
+import { DetectionMotion } from "../components/Motion";
 
 const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detection>[] => [
   {
@@ -63,10 +64,7 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detec
     cell: (d) => (
       <span className="row">
         <Text weight="semibold">{d.label}</Text>
-        {d.stationary && (
-          <Tag title={t("detections.stationaryHint")}>{t("detections.stationary")}</Tag>
-        )}
-        {d.no_motion && <Tag title={t("detections.noMotionHint")}>{t("detections.noMotion")}</Tag>}
+        {d.still && <Tag title={t("detections.stillHint")}>{t("detections.still")}</Tag>}
       </span>
     ),
     compare: byString((d) => d.label),
@@ -106,7 +104,7 @@ export function DetectionList() {
     "profile",
     "label",
     "only_targets",
-    "stationary",
+    "still",
     "min_confidence",
     "detector",
     "event",
@@ -119,8 +117,8 @@ export function DetectionList() {
     event: Number(f.event) || undefined,
     label: f.label,
     only_targets: f.only_targets === "true",
-    // Objects standing still make no event: hidden unless asked for (they pile up).
-    hide_stationary: f.stationary !== "true",
+    // Targets standing still are no match: hidden unless asked for (they pile up).
+    hide_still: f.still !== "true",
     min_confidence: Number(f.min_confidence) || 0,
     limit: 500,
   };
@@ -204,9 +202,9 @@ export function DetectionList() {
           onChange={(_, d) => setFilter("only_targets", d.checked === true)}
         />
         <Checkbox
-          label={t("detections.showStationary")}
-          checked={f.stationary === "true"}
-          onChange={(_, d) => setFilter("stationary", d.checked === true)}
+          label={t("detections.showStill")}
+          checked={f.still === "true"}
+          onChange={(_, d) => setFilter("still", d.checked === true)}
         />
       </div>
       <QueryState error={detections.error} loading={detections.isPending} />
@@ -270,6 +268,9 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
         <Fact label={t("detections.target")}>{d.is_target ? t("common.yes") : t("common.no")}</Fact>
         <Fact label={t("col.light")}>
           <Light night={d.is_night} long />
+        </Fact>
+        <Fact label={t("detections.motion")}>
+          <DetectionMotion detection={d} />
         </Fact>
         <Fact label={t("detections.box")} className="mono">
           {d.bbox ? d.bbox.map((v) => decimal(v, 3)).join("; ") : "–"}

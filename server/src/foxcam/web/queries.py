@@ -24,7 +24,7 @@ from ..models import (
     Worker,
     utcnow,
 )
-from ..pipeline import queue
+from ..pipeline import motion, queue, still
 from ..profiles import camera_profiles
 from .live import live_url
 
@@ -272,12 +272,18 @@ def archives(camera_id: str | None = None, day: str | None = None, limit: int = 
             select(Segment.archive_id, func.count()).where(
                 Segment.archive_id.in_([a.id for a in rows]), Segment.has_target.is_(True))
             .group_by(Segment.archive_id)).all())
+        moving = dict(s.execute(
+            select(Segment.archive_id, func.count()).where(
+                Segment.archive_id.in_([a.id for a in rows]), Segment.motion_score > 0)
+            .group_by(Segment.archive_id)).all())
         return [{
             "id": a.id, "camera_id": a.camera_id, "start_at": iso(a.start_at),
             "duration_s": round(a.duration_s, 1), "size_bytes": a.size_bytes,
             "profile_id": a.profile_id, "encoder": a.encoder,
             "segments": counts.get(a.id, 0), "first_segment_id": first.get(a.id),
             "segments_with_match": targets.get(a.id, 0),
+            # Recordings where something moved (motion detection).
+            "segments_with_motion": moving.get(a.id, 0),
             "thumb_url": f"/api/segments/{thumbs[a.id]}/thumb" if a.id in thumbs else None,
             "deleted": a.deleted_at is not None, "remote": a.remote_key is not None,
             "play_url": None if a.deleted_at and not a.remote_key
@@ -287,6 +293,14 @@ def archives(camera_id: str | None = None, day: str | None = None, limit: int = 
         } for a in rows]
 
 
+def _moving(d: Detection) -> bool | None:
+    """Whether the box overlapped motion at that moment (None: not measured)."""
+    seg = d.segment
+    if seg is None or seg.motion_score is None:
+        return None
+    return motion.overlaps(seg.motion_boxes, d.offset_ms, still.bbox_of(d), 1000)
+
+
 def detection_dict(d: Detection) -> dict[str, Any]:
     return {
         "id": d.id, "segment_id": d.segment_id, "camera_id": d.camera_id, "ts": iso(d.ts),
@@ -294,10 +308,10 @@ def detection_dict(d: Detection) -> dict[str, Any]:
         "offset_ms": d.offset_ms, "label": d.label, "confidence": round(d.confidence, 3),
         "bbox": d.bbox, "is_target": d.is_target, "model": d.model, "worker_id": d.worker_id,
         "feedback": d.feedback, "is_night": d.segment.is_night if d.segment else None,
-        # In the same place for the profile's ignore_stationary_minutes: no event.
-        "stationary": bool(d.stationary),
-        # The profile requires motion and the box overlapped none: no match.
-        "no_motion": d.moving is False,
+        # Standing still for the profile's still_minutes: no match.
+        "still": bool(d.still),
+        # The box overlapped motion at that moment (None: not measured).
+        "moving": _moving(d),
         # Detector specifics, e.g. SpeciesNet's box label and top guesses.
         "extra": d.extra or {},
     }
@@ -310,7 +324,7 @@ def detections(camera_id: str | None = None, label: str | None = None,
                camera_ids: set[str] | None = None,
                detector_id: str | None = None,
                event_id: int | None = None,
-               hide_stationary: bool = False) -> list[dict[str, Any]]:
+               hide_still: bool = False) -> list[dict[str, Any]]:
     q = _only(select(Detection), Detection.camera_id, camera_ids) \
         .where(Detection.confidence >= min_confidence) \
         .order_by(Detection.ts.desc()).limit(limit)
@@ -328,8 +342,8 @@ def detections(camera_id: str | None = None, label: str | None = None,
         q = q.where(Detection.event_id == event_id)
     if only_targets:
         q = q.where(Detection.is_target.is_(True))
-    if hide_stationary:
-        q = q.where(Detection.stationary.is_not(True))
+    if hide_still:
+        q = q.where(Detection.still.is_not(True))
     with session_scope() as s:
         return [detection_dict(d) for d in s.scalars(q)]
 

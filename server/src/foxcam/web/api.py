@@ -380,7 +380,7 @@ def reanalyse_range(body: ReanalyseRange, settings: Settings = Depends(settings_
 @router.post("/admin/rebuild-events", dependencies=[Depends(require_admin)])
 async def rebuild_events(settings: Settings = Depends(settings_dep)) -> dict[str, int]:
     """Every event again from the detections, with the profiles' current rules (e.g. the
-    standing-still check, also for detections from before it existed). Rebuilt events
+    standing-still decision, also for older detections). Rebuilt events
     notify nobody; their clips are cut again in the background."""
     return await asyncio.to_thread(rebuild_all_events, settings)
 
@@ -503,13 +503,13 @@ def detections(camera: str | None = None, label: str | None = None, only_targets
                min_confidence: float = 0.0, segment: int | None = None,
                profile: str | None = None, detector: str | None = None,
                event: int | None = None,
-               hide_stationary: bool = Query(
-                   False, description="leave out objects standing still (they make no event)"),
+               hide_still: bool = Query(
+                   False, description="leave out targets standing still (no match)"),
                limit: int = Query(200, le=2000),
                p: Principal = Depends(principal)) -> list[dict[str, Any]]:
     return queries.detections(camera, label, only_targets, min_confidence, limit, segment,
                               profile, _camera_filter(p, camera), detector, event,
-                              hide_stationary)
+                              hide_still)
 
 
 @router.get("/detections/{detection_id}/frame.jpg")

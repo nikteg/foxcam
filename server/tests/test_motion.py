@@ -156,9 +156,9 @@ def test_motion_settings_of_the_camera_apply(skipping):
 
 
 @pytest.mark.parametrize("required", [True, False])
-def test_required_motion_decides_the_match(settings, required):
+def test_must_be_moving_now_decides_the_match(settings, required):
     settings.profiles.append(ProfileConfig(id="moving", targets=["fox"],
-                                           require_motion=required))
+                                           still_minutes=0 if required else None))
     seg_id = add_segment(settings, start=utcnow() - timedelta(minutes=1), with_file=False,
                          status=SegmentStatus.QUEUED, motion_score=0.02,
                          motion_boxes=[[500, [[0.1, 0.1, 0.2, 0.2]]]])
@@ -170,14 +170,14 @@ def test_required_motion_decides_the_match(settings, required):
     ], model="m", processing_ms=1)
     with session_scope() as s:
         dets = s.query(Detection).order_by(Detection.id).all()
-        if required:
-            assert [(d.is_target, d.moving) for d in dets] == [(True, True), (False, False)]
+        if required:  # the one beside the motion stands still: no match
+            assert [(d.is_target, d.still) for d in dets] == [(True, False), (True, True)]
         else:
-            assert [(d.is_target, d.moving) for d in dets] == [(True, None), (True, None)]
+            assert [(d.is_target, d.still) for d in dets] == [(True, None), (True, None)]
 
 
 def test_unmeasured_recordings_count_as_moving(settings):
-    settings.profiles.append(ProfileConfig(id="moving", targets=["fox"], require_motion=True))
+    settings.profiles.append(ProfileConfig(id="moving", targets=["fox"], still_minutes=0))
     seg_id = add_segment(settings, with_file=False, status=SegmentStatus.QUEUED)
     add_job(seg_id, profile_id="moving")
     job = queue.lease(settings, "w1")

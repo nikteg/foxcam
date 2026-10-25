@@ -137,6 +137,15 @@ def _backfill(engine: Engine, added: set[str]) -> None:
                 "COUNT(DISTINCT d.detector_id) FROM detection d WHERE d.event_id = event.id)"))
             conn.execute(text("UPDATE event SET detectors = '[\"default\"]', agreement = 1 "
                               "WHERE agreement IS NULL OR agreement = 0"))
+        if "detection.still" in added:
+            # Standing still was two flags (parked for minutes; no motion under the box,
+            # which also cleared is_target): one now, so neither starts making events.
+            cols = {r[1] for r in conn.execute(text("PRAGMA table_info(detection)"))}
+            if "stationary" in cols:
+                conn.execute(text("UPDATE detection SET still = 1 WHERE stationary = 1"))
+            if "moving" in cols:
+                conn.execute(text("UPDATE detection SET still = 1, is_target = 1 "
+                                  "WHERE moving = 0"))
         if "detection.event_id" in added:
             # Events used to be per segment: link their target detections.
             conn.execute(text(

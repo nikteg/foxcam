@@ -176,7 +176,7 @@ export const sv: Record<MessageKey, string> = {
   "maintenance.rebuildBody":
     "Nuvarande händelser, deras klipp och aviseringshistorik ersätts. Detektioner och dina rätt/fel-markeringar finns kvar.",
   "maintenance.rebuildDone":
-    "{removed} {removed:händelse ersatt|händelser ersatta} av {created}; {stationary} {stationary:detektion|detektioner} stillastående.",
+    "{removed} {removed:händelse ersatt|händelser ersatta} av {created}; {still} {still:detektion|detektioner} stillastående.",
   "maintenance.reanalyse": "Detektera igen",
   "maintenance.reanalyseHint":
     "Kör detektion igen på inspelningarna under de här dagarna, med nuvarande maskering och profiler. Deras detektioner (och rätt/fel-markeringar) ersätts. Högst 500 inspelningar åt gången.",
@@ -188,15 +188,16 @@ export const sv: Record<MessageKey, string> = {
     "{queued} {queued:inspelning|inspelningar} i kö, {skipped} överhoppade (analyseras eller väntar redan); {detections_removed} {detections_removed:detektion borttagen|detektioner borttagna}.",
   "maintenance.from": "Från",
   "maintenance.to": "Till",
-  "detections.showStationary": "Visa stillastående",
-  "detections.stationary": "stilla",
-  "detections.stationaryHint":
-    "På samma plats längre än profilens ”Ignorera stillastående efter” (t.ex. en parkerad bil): ingen händelse eller avisering.",
-  "detections.noMotion": "ingen rörelse",
-  "detections.noMotionHint":
-    "Profilen kräver rörelse och inget rörde sig där detta syntes: ingen träff.",
   "detections.onlyTargets": "Endast mål",
   "detections.none": "Inga detektioner än.",
+  "detections.showStill": "Visa stillastående",
+  "detections.still": "står still",
+  "detections.stillHint":
+    "Stod still längre än profilen tillåter (ingen rörelse under den), som en parkerad bil: ingen träff.",
+  "detections.motion": "Rörelse",
+  "detections.moving": "rör sig",
+  "detections.notMoving": "ingen rörelse just då",
+  "detections.motionUnknown": "inte uppmätt",
   "detections.frameAlt": "Bildruta med {label}",
   "detections.frameNote":
     "Originalbildrutan med detektionens ruta. Arbetarna såg bara den maskerade kopian.",
@@ -228,14 +229,16 @@ export const sv: Record<MessageKey, string> = {
   "motionReport.nothingToSkip": "inget att hoppa över",
   "motionReport.checkUnrated": "kolla {n} omarkerade",
   "motionReport.saves": "sparar {value}",
+  "motionReport.skipDetail":
+    "{still} av {measured} inspelningar utan rörelse. Mål i dem: {correct} rätt, {wrong} fel, {unrated} omarkerade.",
+  "motionReport.stillHeader": "Ignorera stillastående",
   "motionReport.dropsCorrect": "tappar {n} rätt",
   "motionReport.dropsWrong": "tar bort {n} fel",
   "motionReport.dropsUnrated": "tar bort {n} omarkerade",
   "motionReport.changesNothing": "ändrar inget",
-  "motionReport.skipDetail":
-    "{still} av {measured} inspelningar utan rörelse. Mål i dem: {correct} rätt, {wrong} fel, {unrated} omarkerade.",
-  "motionReport.requireDetail":
-    "Av {total} mål skulle {correct} rätt, {wrong} fel och {unrated} omarkerade tas bort.",
+  "motionReport.stillDetail":
+    "Efter {minutes} min stillastående skulle {correct} rätt, {wrong} fel och {unrated} omarkerade av {total} mål tas bort.",
+  "motionReport.tried": "provat med {n} min",
   "motionReport.unmeasured":
     "{n} {n:inspelning|inspelningar} under perioden saknar uppmätt rörelse (från före rörelsedetekteringen). Mät dem från den sparade filmen för att ta med dem; inget annat ändras.",
   "motionReport.measure": "Mät rörelse",
@@ -261,6 +264,7 @@ export const sv: Record<MessageKey, string> = {
     "Färdiga inspelningar fogas ihop till en fil per kamera och period (compaction.period_minutes i config.yaml, en timme som standard) och kodas om när kamerans inspelningsprofil anger det. Segmenten finns kvar ett och ett under Segment.",
   "hourly.none": "Inga arkiv än.",
   "hourly.segments": "Segment",
+  "hourly.withMotion": "{n} med rörelse",
   "hourly.segmentsWithMatch": "{n} ({matches} med träff)",
   "hourly.deleted": "gallrad",
   "player.speed": "Uppspelningshastighet",
@@ -847,18 +851,17 @@ export const sv: Record<MessageKey, string> = {
     "Analysera färre bilder per sekund för att spara GPU-tid (t.ex. 1 för bilar).",
   "profiles.keepEventsDays": "Spara händelser (dagar)",
   "profiles.keepEventsHint": "Tomt = den globala inställningen. 0 = för alltid.",
-  "profiles.stationary": "Ignorera stillastående efter (minuter)",
-  "profiles.stationaryHint":
-    "Ett mål som står på samma plats så här länge, som en parkerad bil, slutar räknas: inga nya eller längre händelser (och ingen sparad film) förrän det flyttar sig eller försvinner. Ankomsten blir fortfarande en händelse. 0 = av.",
   "profiles.stationaryOff": "Av",
-  "profiles.requireMotion": "Bara mål som rör sig",
-  "profiles.requireMotionHint":
-    "Ett mål räknas bara när dess ruta överlappar rörelse, så en stubbe som liknar en räv eller en staty gör det aldrig. Ett mål som sitter still länge slutar räknas tills det rör sig.",
+  "profiles.still": "Ignorera stillastående efter (minuter)",
+  "profiles.stillHint":
+    "Ett mål utan rörelse under sig så här länge slutar räknas tills det rör sig, som en parkerad bil eller en stubbe; ankomsten räknas fortfarande. 0 = det måste röra sig just nu. Tomt = av.",
+  "profiles.stillFact": "Stillastående",
+  "profiles.stillAfter": "ignoreras efter {n} min",
+  "profiles.stillNow": "måste röra sig",
   "profiles.skipWithoutMotion": "Hoppa över inspelningar utan rörelse",
   "profiles.skipWithoutMotionHint":
     "Inspelningar där inget rörde sig skickas inte till arbetarna. Sparar mycket arbete på lugna kameror.",
   "profiles.motion": "Rörelse",
-  "profiles.motionRequired": "bara mål som rör sig",
   "profiles.motionSkips": "hoppar över stilla inspelningar",
   "profiles.defaultSwitch": "Kör på kameror utan eget profilval",
   "profiles.enabled": "Aktiverad",

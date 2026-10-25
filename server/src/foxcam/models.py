@@ -300,12 +300,9 @@ class Detection(Base):
     bbox_w: Mapped[float | None] = mapped_column(Float)
     bbox_h: Mapped[float | None] = mapped_column(Float)
     is_target: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
-    # A target that had been in the same place for the profile's ignore_stationary_minutes:
-    # kept for the record, but not part of any event (pipeline/events.py).
-    stationary: Mapped[bool | None] = mapped_column(Boolean)
-    # Profiles with require_motion: whether the box overlapped motion (False = no match).
-    # None = not checked.
-    moving: Mapped[bool | None] = mapped_column(Boolean)
+    # A target standing still for its profile's still_minutes (pipeline/still.py): kept
+    # for the record, but no match. None = not checked (off, or no motion measured).
+    still: Mapped[bool | None] = mapped_column(Boolean)
     model: Mapped[str | None] = mapped_column(String)
     worker_id: Mapped[str | None] = mapped_column(String)
     extra: Mapped[dict[str, Any] | None] = mapped_column(JSON)

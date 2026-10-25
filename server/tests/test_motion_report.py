@@ -43,21 +43,23 @@ def test_report_counts_what_the_options_would_do(settings):
     _target(still, j2, 0.15, feedback=True)     # in a still recording: skipping misses it
     unmeasured, _ = _recording(settings, 30)
     [row] = motion_report.report(settings, utcnow() - timedelta(days=1))
-    assert (row["recordings"], row["measured"], row["still"]) == (3, 2, 1)
+    assert (row["recordings"], row["measured"], row["without_motion"]) == (3, 2, 1)
     assert row["targets"] == {"correct": 2, "wrong": 1, "unrated": 0}
     assert row["in_still"] == {"correct": 1, "wrong": 0, "unrated": 0}
-    assert row["no_motion"] == {"correct": 1, "wrong": 1, "unrated": 0}
+    # Standing still for the default 10 minutes: the one beside the motion, and the one
+    # in the recording where nothing moved.
+    assert row["standing_still"] == {"correct": 1, "wrong": 1, "unrated": 0}
     assert motion_report.pending(utcnow() - timedelta(days=1)) == [unmeasured]
 
 
 def test_report_has_a_row_per_profile(settings):
-    settings.profiles.append(ProfileConfig(id="cars", targets=["car"], require_motion=True))
+    settings.profiles.append(ProfileConfig(id="cars", targets=["car"], still_minutes=0))
     seg = _segment(settings, 5, motion_score=0.1, motion_boxes=MOVED)
     add_job(seg, state="done")
     add_job(seg, state="done", profile_id="cars")
     rows = motion_report.report(settings, utcnow() - timedelta(days=1))
-    assert [(r["profile_id"], r["require_motion"]) for r in rows] == [
-        ("cars", True), ("default", False)]
+    assert [(r["profile_id"], r["still_minutes_tried"]) for r in rows] == [
+        ("cars", 0), ("default", 10)]
 
 
 @needs_ffmpeg

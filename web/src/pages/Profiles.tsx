@@ -215,18 +215,19 @@ function ProfileCard({
         <Fact label={t("profiles.fps")}>
           {p.fps ? `${p.fps} fps` : <span className="muted">{t("profiles.allFrames")}</span>}
         </Fact>
-        <Fact label={t("profiles.stationary")}>
-          {p.ignore_stationary_minutes ? (
-            t("notify.minutes", { n: p.ignore_stationary_minutes })
-          ) : (
+        <Fact label={t("profiles.stillFact")}>
+          {p.still_minutes === null ? (
             <span className="muted">{t("profiles.stationaryOff")}</span>
+          ) : p.still_minutes === 0 ? (
+            t("profiles.stillNow")
+          ) : (
+            t("profiles.stillAfter", { n: p.still_minutes })
           )}
         </Fact>
         <Fact label={t("profiles.motion")}>
-          {p.require_motion || p.skip_without_motion ? (
+          {p.skip_without_motion ? (
             <span className="chips">
-              {p.require_motion && <Tag>{t("profiles.motionRequired")}</Tag>}
-              {p.skip_without_motion && <Tag>{t("profiles.motionSkips")}</Tag>}
+              <Tag>{t("profiles.motionSkips")}</Tag>
             </span>
           ) : (
             <span className="muted">{t("profiles.stationaryOff")}</span>
@@ -325,10 +326,10 @@ export function ProfileDialog({
   const [detectors, setDetectors] = useState<DetectorRow[]>(() => toRows(profile?.detectors));
   const [fps, setFps] = useState(profile?.fps?.toString() ?? "");
   const [eventsDays, setEventsDays] = useState(profile?.events_days?.toString() ?? "");
-  const [stationary, setStationary] = useState(
-    (profile?.ignore_stationary_minutes ?? 10).toString(),
+  // "" = off.
+  const [stillMinutes, setStillMinutes] = useState(
+    profile ? (profile.still_minutes?.toString() ?? "") : "10",
   );
-  const [requireMotion, setRequireMotion] = useState(profile?.require_motion ?? false);
   const [skipStill, setSkipStill] = useState(profile?.skip_without_motion ?? false);
   const [isDefault, setDefault] = useState(profile?.default ?? false);
   const [enabled, setEnabled] = useState(profile?.enabled ?? true);
@@ -350,8 +351,7 @@ export function ProfileDialog({
     fps: fps ? Number(fps) : null,
     default: isDefault,
     events_days: eventsDays === "" ? null : Number(eventsDays),
-    ignore_stationary_minutes: stationary === "" ? 10 : Number(stationary),
-    require_motion: requireMotion,
+    still_minutes: stillMinutes === "" ? null : Number(stillMinutes),
     skip_without_motion: skipStill,
     enabled,
   });
@@ -582,27 +582,16 @@ export function ProfileDialog({
                   onChange={(_, d) => setEventsDays(d.value)}
                 />
               </Field>
-              <Field label={t("profiles.stationary")} hint={t("profiles.stationaryHint")}>
+              <Field label={t("profiles.still")} hint={t("profiles.stillHint")}>
                 <Input
                   type="number"
                   min={0}
                   max={1440}
-                  value={stationary}
-                  onChange={(_, d) => setStationary(d.value)}
+                  value={stillMinutes}
+                  placeholder={t("profiles.stationaryOff")}
+                  onChange={(_, d) => setStillMinutes(d.value)}
                 />
               </Field>
-              <Switch
-                label={
-                  <>
-                    {t("profiles.requireMotion")}
-                    <Caption1 as="span" className="muted option-hint">
-                      {t("profiles.requireMotionHint")}
-                    </Caption1>
-                  </>
-                }
-                checked={requireMotion}
-                onChange={(_, d) => setRequireMotion(d.checked)}
-              />
               <Switch
                 label={
                   <>

@@ -58,11 +58,12 @@
    - **marked wrong** (❌ on the Detections page): a wrong detection is no match anywhere,
      not in counts, "with a match", the Status page, notifications or archives. An event
      counts as wrong once one of its detections is marked wrong and none correct;
-   - **standing still**: with the profile's `ignore_stationary_minutes` (default 10, 0 =
-     off), a target seen in an overlapping box all that time (a parked car) is marked
-     `stationary`, so it neither keeps an event open forever nor pins its footage. It
-     counts again once it moves. The Detections page hides these unless *Show standing
-     still* is ticked.
+   - **standing still**: a target whose box has had no motion under it for the profile's
+     `still_minutes` (default 10; 0 = it must be moving right now; off) is marked `still`
+     and is no match (`pipeline/still.py`, with [motion detection](#motion-detection)): a
+     parked car neither keeps an event open forever nor pins its footage, and a stump
+     never makes one. It counts again once it moves; its arrival counts. The Detections
+     page hides these unless *Show standing still* is ticked.
 5. **Retention** (every 10 min): see below.
 6. **Upload** (every 30 s, only with `storage.s3.enabled`): see [Object storage](#object-storage-s3).
 7. **Notify** (every 5 s): new events and finished clips are queued per matching channel in
@@ -82,8 +83,7 @@ A profile (`profiles.py`) says **what** to look for and **which models** look fo
 | `requires` | worker tags every detector of the profile needs |
 | `detectors` | the models that look (below); none = one detector `default` needing just `requires` |
 | `fps` | frames per second to analyse (cheaper profiles for slow-moving things) |
-| `ignore_stationary_minutes` | a target in the same place this long makes no event (default 10, 0 = off) |
-| `require_motion` | a target only counts when its box overlaps motion (default off) |
+| `still_minutes` | a target with no motion under its box this long stops counting until it moves (default 10; 0 = must be moving now; empty = off) |
 | `skip_without_motion` | recordings where nothing moved get no jobs of this profile (default off) |
 | `default` | runs on cameras without their own selection |
 | `events_days` | per-profile event retention |
@@ -177,22 +177,27 @@ do not catch.
 
 Stored on the segment: `motion_score`, the largest share of the picture that moved in one
 frame (0 = nothing moved, null = not measured), and `motion_boxes`, per frame with motion
-the boxes around its regions. Profiles use it two ways, both opt-in:
+the boxes around its regions. Profiles use it two ways:
 
-- `skip_without_motion`: when nothing moved, the profile's jobs are created `skipped` and no
-  worker sees the recording.
-- `require_motion`: a target counts only when its box overlaps a motion box within
-  `motion.window_seconds`; otherwise it is stored with `moving = false` and as no match
-  (like a detection marked wrong: no counts, events, notifications). Detections without a
-  box need any motion in that window. Segments without a measurement count as moving.
+- `skip_without_motion` (opt-in): when nothing moved, the profile's jobs are created
+  `skipped` and no worker sees the recording.
+- `still_minutes` (standing still, above): a target counts until its box has had no motion
+  box over it (within `motion.window_seconds`) for that long, looking back through the
+  camera's earlier recordings. Detections without a box need any motion. Recordings
+  without a measurement count as moving.
 
-Both apply to recordings analysed from then on; *Detect again* re-evaluates one.
+They apply to recordings analysed from then on; *Detect again* re-evaluates one, and
+*Rebuild events* (Settings → Detection) decides standing still again for all detections.
+Where motion shows: the recording drawer (share of the picture, *Show motion* over the
+video), the Recordings list and filter, hourly files (recordings with motion), and the
+detection and event drawers (whether the box was moving, or counts as standing still).
 
 **Whether it helps** (Events → Motion, admins; `pipeline/motion_report.py`): since motion is
 measured on every recording whatever the profiles say, the report shows per camera and
 profile (ones that still exist) what each option *would* do with the period's recordings and targets, split by the
 correct / wrong marks: how many recordings skipping would save and which targets it would
-miss, and which targets "only moving targets" would drop. Recordings from before motion
+miss, and which targets standing still would drop (with the profile's minutes, or 10 when
+it has the option off). Recordings from before motion
 detection can be measured afterwards from their stored footage (*Measure motion* there,
 or `foxcam motion-backfill --days 7`); that changes no detections or events. The recording
 drawer's *Show motion* draws the motion boxes over the video.
@@ -204,7 +209,7 @@ drawer's *Show motion* draws the motion boxes over the video.
 | `segment` | One recording file: camera, start (UTC), duration, status, light tags, mask version used, motion (score and boxes), match flag, pinned, archive and offset in it, `deleted_at`. |
 | `archive` | One hourly file made by compaction: camera, start, size, recording profile and encoder used, S3 key. |
 | `job` | Work item per segment, profile and detector (with the worker's raw result, ≤ 256 kB, for debugging): state (`pending/leased/done/failed/dead`, `skipped` for cascade detectors that did not run and profiles that skip recordings without motion), lease token and expiry, attempts, model, timing. |
-| `detection` | Worker result: profile, detector, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, standing still, moving (profiles that require motion), event. |
+| `detection` | Worker result: profile, detector, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, standing still, event. |
 | `event` | Merged sighting of one label for one profile: time range, best detection, detectors that saw it and how many (`agreement`), confirmed, quiet (rebuilt, notifies nobody), clip and thumbnail paths. |
 | `worker` | Last-seen info, tags and reported vocabulary per worker id (Jobs → Workers). |
 | `worker_token` | Worker access tokens (hashed) with their tags. |

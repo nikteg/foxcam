@@ -33,19 +33,19 @@ const total = (r: Rated) => r.correct + r.wrong + r.unrated;
 /** Verdict for "Skip recordings without motion". */
 function skipVerdict(t: I18n["t"], r: MotionReportRow) {
   if (!r.measured) return null;
-  const saves = percent(r.still / r.measured);
+  const saves = percent(r.without_motion / r.measured);
   if (r.in_still.correct)
     return <Tag kind="bad">{t("motionReport.misses", { n: r.in_still.correct })}</Tag>;
-  if (!r.still) return <Tag>{t("motionReport.nothingToSkip")}</Tag>;
+  if (!r.without_motion) return <Tag>{t("motionReport.nothingToSkip")}</Tag>;
   if (r.in_still.unrated)
     return <Tag kind="warn">{t("motionReport.checkUnrated", { n: r.in_still.unrated })}</Tag>;
   return <Tag kind="ok">{t("motionReport.saves", { value: saves })}</Tag>;
 }
 
-/** Verdict for "Only moving targets". */
+/** Verdict for "Ignore standing still". */
 function requireVerdict(t: I18n["t"], r: MotionReportRow) {
   if (!total(r.targets)) return null;
-  const d = r.no_motion;
+  const d = r.standing_still;
   if (d.correct) return <Tag kind="bad">{t("motionReport.dropsCorrect", { n: d.correct })}</Tag>;
   if (d.wrong) return <Tag kind="ok">{t("motionReport.dropsWrong", { n: d.wrong })}</Tag>;
   if (d.unrated) return <Tag kind="warn">{t("motionReport.dropsUnrated", { n: d.unrated })}</Tag>;
@@ -93,7 +93,7 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Motio
           </span>
           <Caption1 className="muted">
             {t("motionReport.skipDetail", {
-              still: r.still,
+              still: r.without_motion,
               measured: r.measured,
               correct: r.in_still.correct,
               wrong: r.in_still.wrong,
@@ -104,11 +104,11 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Motio
       ) : (
         <Caption1 className="muted">{t("motionReport.notMeasured")}</Caption1>
       ),
-    compare: byNumber((r) => (r.measured ? r.still / r.measured : -1)),
+    compare: byNumber((r) => (r.measured ? r.without_motion / r.measured : -1)),
   },
   {
     id: "require",
-    header: t("profiles.requireMotion"),
+    header: t("motionReport.stillHeader"),
     width: 260,
     minWidth: 200,
     phone: "full",
@@ -117,13 +117,20 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Motio
         <span className="report-cell">
           <span className="row wrap">
             {requireVerdict(t, r)}
-            {r.require_motion && <Tag kind="target">{t("motionReport.on")}</Tag>}
+            {r.still_minutes !== null ? (
+              <Tag kind="target">{t("motionReport.on")}</Tag>
+            ) : (
+              <Caption1 className="muted">
+                {t("motionReport.tried", { n: r.still_minutes_tried })}
+              </Caption1>
+            )}
           </span>
           <Caption1 className="muted">
-            {t("motionReport.requireDetail", {
-              correct: r.no_motion.correct,
-              wrong: r.no_motion.wrong,
-              unrated: r.no_motion.unrated,
+            {t("motionReport.stillDetail", {
+              minutes: r.still_minutes_tried,
+              correct: r.standing_still.correct,
+              wrong: r.standing_still.wrong,
+              unrated: r.standing_still.unrated,
               total: total(r.targets),
             })}
           </Caption1>
@@ -131,7 +138,7 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Motio
       ) : (
         <Caption1 className="muted">{t("motionReport.noTargets")}</Caption1>
       ),
-    compare: byNumber((r) => total(r.no_motion)),
+    compare: byNumber((r) => total(r.standing_still)),
   },
 ];
 

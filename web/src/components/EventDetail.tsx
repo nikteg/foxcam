@@ -13,6 +13,7 @@ import { Feedback } from "./Feedback";
 import { ProfileTag, useDetectorNames, useProfiles, useSeveralDetectors } from "./ProfileSelect";
 import { ConfidenceBar, Fact, Facts, Light, QueryState, Tag, Time, useRouterHref } from "./ui";
 import { VideoPlayer } from "./VideoPlayer";
+import { DetectionMotion } from "./Motion";
 
 /** The event's detections, with its best one open. */
 const detectionsHref = (e: DetectionEvent) =>
@@ -75,6 +76,11 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
         <Fact label={t("col.light")}>
           <Light night={e.is_night} long />
         </Fact>
+        {best && (
+          <Fact label={t("detections.motion")}>
+            <DetectionMotion detection={best} />
+          </Fact>
+        )}
         <Fact label={t("nav.detections")}>{e.detection_count}</Fact>
         {/* Until the clip exists, the player above shows the whole recording. */}
         <Fact label={t("col.length")}>
