@@ -1636,6 +1636,11 @@ h3.panel-heading {
   max-width: 620px;
   gap: var(--spacingVerticalXXL);
 }
+/* Each setting clearly apart from the next, so its hint and reset button read as its own
+   (the gap between fields, plus this). */
+.runtime-form section > .fui-Field + .fui-Field {
+  margin-top: var(--spacingVerticalL);
+}
 /* Reset: a small secondary button on its own line under the hint. */
 .runtime-form .reset-setting {
   display: flex;
