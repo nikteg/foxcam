@@ -11,6 +11,7 @@ anything else, and keep the clips.
 ![React](https://img.shields.io/badge/React_19-Fluent_UI-61DAFB?logo=react&logoColor=black)
 ![MediaMTX](https://img.shields.io/badge/MediaMTX-RTSP%20%E2%80%93%20WebRTC%20%E2%80%93%20HLS-555)
 ![Detectors](https://img.shields.io/badge/detectors-SpeciesNet%20%E2%80%93%20YOLO--World-orange)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
 ![Status page with four cameras](docs/screenshots/dashboard.jpg)
 
@@ -64,6 +65,11 @@ anything else, and keep the clips.
 
 ## Screenshots
 
+<details>
+<summary>Show screenshots</summary>
+
+### Desktop
+
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/events.jpg" alt="Events grid with fox clips"></td>
@@ -99,6 +105,8 @@ anything else, and keep the clips.
   </tr>
 </table>
 
+### Phone
+
 <p align="center">
   <img src="docs/screenshots/mobile-status.jpg" width="250" alt="Status page on a phone">
   &nbsp;
@@ -108,6 +116,12 @@ anything else, and keep the clips.
   &nbsp;
   <img src="docs/screenshots/add-worker.jpg" width="250" alt="Add worker drawer with setup commands">
 </p>
+
+<sub>Footage: Wikimedia Commons clips by Peter Cooper Jr. (CC0), Domdomegg (CC BY 4.0), Huw
+(CC BY-SA 2.0) and Greenmars (CC BY-SA 3.0); sources and licences under
+[Credits](#credits).</sub>
+
+</details>
 
 ## How it works
 
@@ -328,8 +342,20 @@ before exposing it to the internet. Details: [docs/AUTH.md](docs/AUTH.md).
 
 ## Credits
 
-The screenshots show four Wikimedia Commons clips used as test cameras, with detections by
-YOLO-World: *Red fox playing with prey in yard* by Peter Cooper Jr. (CC0), *Urban fox at
-night* by Domdomegg (CC BY 4.0), *Fox Family Cam* by Huw (CC BY-SA 2.0) and *Red Fox 2012 11*
-by Greenmars (CC BY-SA 3.0). `scripts/fetch_samples.py` downloads them and writes
-`samples/CREDITS.md`.
+The camera pictures in the screenshots are frames from four Wikimedia Commons clips, used
+as test cameras with detections by YOLO-World. The frames are scaled and cropped, and boxes
+are drawn on some of them; those parts of the screenshots stay under the clip's licence.
+
+| Camera in the screenshots | Clip | Author | Licence |
+| --- | --- | --- | --- |
+| Snowy backyard | [Red fox playing with prey in yard, Charlton MA 2025-12-26](https://commons.wikimedia.org/wiki/File:Red_fox_playing_with_prey_in_yard,_Charlton_MA_2025-12-26.webm) | Peter Cooper Jr. | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| Street (night) | [Urban fox at night](https://commons.wikimedia.org/wiki/File:Urban_fox_at_night.webm) | Domdomegg | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| Den cam | [Fox Family Cam](https://commons.wikimedia.org/wiki/File:Fox_Family_Cam.webm) | Huw | [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0/) |
+| Woodland edge | [Red Fox 2012 11 640 480](https://commons.wikimedia.org/wiki/File:Red_Fox_2012_11_640_480.webm) | Greenmars | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
+
+`scripts/fetch_samples.py` downloads the clips and writes `samples/CREDITS.md`.
+
+## License
+
+Foxcam is released under the [MIT License](LICENSE). The screenshot footage keeps the
+licences listed under [Credits](#credits).

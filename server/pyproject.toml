@@ -2,6 +2,7 @@
 name = "foxcam"
 version = "0.1.0"
 description = "Tapo camera recorder: segments streams, queues detection jobs for external workers, serves a web UI."
+license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",

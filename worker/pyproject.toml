@@ -2,6 +2,7 @@
 name = "foxcam-worker"
 version = "0.1.0"
 description = "Detection worker for foxcam: leases jobs over HTTP, runs a pluggable detector, posts results."
+license = "MIT"
 requires-python = ">=3.11"
 dependencies = ["httpx>=0.27"]
 
