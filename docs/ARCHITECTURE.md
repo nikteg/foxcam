@@ -170,7 +170,7 @@ more than `motion.light_change_fraction` of the picture changes at once, the fra
 light change (night mode switching, exposure) and the average starts over. Night pictures
 get a higher threshold. Plain Python, no numpy: about half a second for a 20 s segment.
 
-Per camera (Settings → Detection → *Edit motion detection*): the sensitivity (low, medium,
+Per camera (the camera's settings → Detection → *Edit motion detection*): the sensitivity (low, medium,
 high; else `motion.sensitivity`) and **motion-ignore areas**, rectangles drawn like censor
 areas whose movement never counts (trees in the wind, a road), for what the filters above
 do not catch.
@@ -199,8 +199,7 @@ correct / wrong marks: how many recordings skipping would save and which targets
 miss, and which targets standing still would drop (with the profile's minutes, or 10 when
 it has the option off). Recordings from before motion
 detection can be measured afterwards from their stored footage (*Measure motion* there,
-or `foxcam motion-backfill --days 7`); that changes no detections or events. The recording
-drawer's *Show motion* draws the motion boxes over the video.
+or `foxcam motion-backfill --days 7`); that changes no detections or events.
 
 ## Data model (SQLite)
 
@@ -248,7 +247,8 @@ a restart: `public_url`, `segment_seconds`, the default recording quality
 (`recording_profile_default`), `compaction.enabled` and `delay_minutes`,
 `processing.sample_fps`, `max_width`, `concurrency`, `night_saturation_threshold` and
 `keep_non_targets_from`, the low-data live view (`mediamtx.low_data`), the `events` timings,
-the `queue` lease, attempts and backoff, and the `retention` days and disk cap
+the `motion` defaults (sensitivity, light-change share, time window), the `queue` lease,
+attempts and backoff, and the `retention` days and disk cap
 (`runtime_settings.EDITABLE`). Each value set there is an `app_setting` row keyed by its
 config.yaml path and wins over config.yaml (and its environment variables) until it is
 reset, which brings config.yaml's value back. They are validated with the bounds of the
@@ -322,8 +322,8 @@ server/src/foxcam/
   accounts.py, oauth.py, api_keys.py, download_links.py   users, sign-in, API keys, signed links
   mediamtx.py        MediaMTX API client (path sync, live status)
   ffmpeg.py, hwaccel.py  probe, censored derivative, thumbnails, clips; hardware encoders
-  pipeline/          scanner, preprocess, motion, queue, events, retention, uploader,
-                     compaction, reanalyse, runner
+  pipeline/          scanner, preprocess, motion (+ still, motion_report), queue, events,
+                     retention, uploader, compaction, reanalyse, runner
   storage.py         S3-compatible object storage client (boto3)
   notify.py          notification channels, outbox and senders (ntfy, webhook, Apprise)
   ingest/            publishers for tapo_cloud / file / test sources

@@ -765,8 +765,6 @@ export const en = {
   "profiles.skipWithoutMotion": "Skip recordings without motion",
   "profiles.skipWithoutMotionHint":
     "Recordings where nothing moved are not sent to the workers. Saves a lot of work on quiet cameras.",
-  "profiles.motion": "Motion",
-  "profiles.motionSkips": "skips still recordings",
   "profiles.defaultSwitch": "Run on cameras without their own selection",
   "profiles.enabled": "Enabled",
   "profiles.removeTitle": "Remove {name}?",

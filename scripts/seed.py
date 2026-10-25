@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Fill a running server with test data: one fake camera per clip in samples/ and,
-optionally, extra detection profiles.
+"""Fill a running server with test data: one fake camera per clip in samples/, a default
+"wildlife" (fox) profile when there is no profile yet, and optionally extra profiles.
 
-    uv run python scripts/seed.py                       # cameras from samples/
+    uv run python scripts/seed.py                       # cameras + a fox profile
     uv run python scripts/seed.py --profiles            # + a "vehicles" profile
     uv run python scripts/seed.py --server http://localhost:18000
 
@@ -21,6 +21,9 @@ from pathlib import Path
 import httpx
 
 ROOT = Path(__file__).resolve().parents[1]
+# When the server has no profile at all (there is no built-in one any more).
+DEFAULT_PROFILE = {"id": "wildlife", "name": "Wildlife", "targets": ["fox"],
+                   "aliases": {"red fox": "fox", "vulpes vulpes": "fox"}, "default": True}
 EXTRA_PROFILES = [
     {"id": "vehicles", "name": "Vehicles", "targets": ["car", "truck", "person"],
      "requires": ["open-vocabulary"], "fps": 1},
@@ -63,8 +66,13 @@ def main() -> None:
         print(f"  {'added' if r.is_success else 'FAIL '} camera {title}"
               f"{'' if r.is_success else ': ' + r.text}")
 
+    have = {p["id"] for p in api.get("/api/profiles").json()}
+    if not have:
+        r = api.post("/api/profiles", json=DEFAULT_PROFILE)
+        print(f"  {'added' if r.is_success else 'FAIL '} profile {DEFAULT_PROFILE['id']}"
+              f"{'' if r.is_success else ': ' + r.text}")
+        have.add(DEFAULT_PROFILE["id"])
     if args.profiles:
-        have = {p["id"] for p in api.get("/api/profiles").json()}
         for prof in EXTRA_PROFILES:
             if prof["id"] in have:
                 print(f"  skip  profile {prof['id']} (exists)")

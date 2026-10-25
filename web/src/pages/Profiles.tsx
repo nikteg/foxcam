@@ -224,11 +224,9 @@ function ProfileCard({
             t("profiles.stillAfter", { n: p.still_minutes })
           )}
         </Fact>
-        <Fact label={t("profiles.motion")}>
+        <Fact label={t("profiles.skipWithoutMotion")}>
           {p.skip_without_motion ? (
-            <span className="chips">
-              <Tag>{t("profiles.motionSkips")}</Tag>
-            </span>
+            t("common.yes")
           ) : (
             <span className="muted">{t("profiles.stationaryOff")}</span>
           )}

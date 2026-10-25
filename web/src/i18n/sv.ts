@@ -861,8 +861,6 @@ export const sv: Record<MessageKey, string> = {
   "profiles.skipWithoutMotion": "Hoppa över inspelningar utan rörelse",
   "profiles.skipWithoutMotionHint":
     "Inspelningar där inget rörde sig skickas inte till arbetarna. Sparar mycket arbete på lugna kameror.",
-  "profiles.motion": "Rörelse",
-  "profiles.motionSkips": "hoppar över stilla inspelningar",
   "profiles.defaultSwitch": "Kör på kameror utan eget profilval",
   "profiles.enabled": "Aktiverad",
   "profiles.removeTitle": "Ta bort {name}?",

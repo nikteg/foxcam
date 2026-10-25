@@ -28,7 +28,8 @@ anything else, and keep the clips.
 - **Detect anything with profiles.** A detection profile says *what* to look for (fox; car
   and person; …) and *which* workers may do it. Open-vocabulary models (YOLO-World) are
   prompted with each job's targets, so a new profile needs no new model and no worker
-  restart; SpeciesNet knows ~2000 species.
+  restart; SpeciesNet knows ~2000 species. Each target can have its own match threshold
+  (a high one for `person`, a low one for animals you don't want to miss).
 - **Several models per profile.** Let YOLO-World and SpeciesNet both look (one event, with
   which models saw it), or chain them so an expensive model only confirms a cheap one's
   finds; notify only when models agree, and compare them under Events → Models.
@@ -89,7 +90,7 @@ anything else, and keep the clips.
     <td><img src="docs/screenshots/mask-editor.jpg" alt="Censor-area editor"></td>
   </tr>
   <tr>
-    <td><b>Recordings</b> – every segment with day/night tag and match; hourly archives under their own tab</td>
+    <td><b>Recordings</b> – every segment with day/night tag, motion and match; hourly archives under their own tab</td>
     <td><b>Censor areas</b> – drawn on a snapshot (camera settings), blacked out before detection</td>
   </tr>
   <tr>
@@ -136,7 +137,7 @@ flowchart LR
   mtx -->|segments| pre
   subgraph server ["Server – FastAPI + SQLite"]
     direction TB
-    pre["Preprocess<br/>censor, day/night"] --> q["Job queue<br/>one job per profile and model"]
+    pre["Preprocess<br/>censor, day/night, motion"] --> q["Job queue<br/>one job per profile and model"]
     q --> ev["Events & clips"] --> ret["Retention – S3"]
   end
   q <-->|"HTTP lease / result<br/>censored video only"| workers["🖥️ Workers<br/>SpeciesNet, YOLO-World, your model"]
@@ -168,7 +169,7 @@ Requirements: [mise](https://mise.jdx.dev) and `ffmpeg`. mise installs the other
 ```sh
 mise run setup      # tools, Python + web deps, config.yaml, fox sample clips
 mise run dev        # MediaMTX, server, ingest, web UI and a dummy worker (live reload)
-mise run seed       # in another terminal: one fake camera per sample clip
+mise run seed       # in another terminal: one fake camera per sample clip + a fox profile
 ```
 
 Open **http://localhost:5173**, or the LAN address `dev` prints (`http://192.168.x.y:5173`)
@@ -191,7 +192,7 @@ cd web && FOXCAM_API=https://cams.example.org pnpm dev
 ### Docker
 
 ```sh
-cp config.example.yaml config.yaml          # add your cameras
+cp config.example.yaml config.yaml          # add your cameras (or add them in the UI)
 docker compose up --build -d                # MediaMTX + server (with UI) + ingest on :8000
 docker compose logs server | grep "setup code"   # for the first (admin) account
 
@@ -199,6 +200,9 @@ docker compose logs server | grep "setup code"   # for the first (admin) account
 docker compose -f docker-compose.yml -f docker-compose.vaapi.yml up --build -d   # Intel / AMD
 docker compose -f docker-compose.yml -f docker-compose.nvidia.yml up --build -d  # NVIDIA
 ```
+
+Then add a detection profile (what to look for) under **Cameras → Detection profiles**, or
+under `profiles:` in `config.yaml`; without one, cameras only record.
 
 Live view goes through the server (behind the login), so only port 8000 and the WebRTC
 media port 8189 (TCP, no UDP needed) have to be reachable. In Docker, add the host's LAN IP
@@ -277,13 +281,15 @@ and more without a restart; resetting a value brings back config.yaml's
 | Section | What it controls |
 |---|---|
 | `cameras` | sources, per-camera segment length, which profiles run, recording profile |
-| `profiles` | targets, aliases, confidence, required worker tags, detectors (several models per profile, cascades that confirm), frame rate, standing-still minutes, event retention |
+| `profiles` | targets, aliases, match thresholds (also per target), required worker tags, detectors (several models per profile, cascades that confirm), frame rate, standing-still minutes, skipping recordings without motion, event retention |
+| `detection` | optional: a quick built-in `default` profile when there are no `profiles` (commented out in the example) |
 | `recording_profiles` | extra recording qualities (resolution, fps, bitrate, H.264/H.265, `keep_days`) next to the built-in original, 1080p, 720p, 480p and 1080p H.265 |
 | `recording_profile_default` | the recording quality of cameras without their own (default `original`) |
 | `mediamtx` | addresses, low-data live view, hardware encoding (`hwaccel`, [guide](docs/HARDWARE.md)) |
 | `processing` | frames per second sent to workers, resolution, night detection threshold, which non-matches to keep (`keep_non_targets_from`, default 0.25) |
 | `queue` | lease time, retries |
 | `events` | pre/post roll, merge gap |
+| `motion` | motion detection defaults: sensitivity, light-change share, how close in time motion must be to a detection (per camera: sensitivity and areas to ignore, in the UI) |
 | `retention` | how long to keep footage, events and unprocessed segments; disk cap |
 | `compaction` | joining finished segments into hourly files (period, delay, on/off) |
 | `storage.s3` | S3-compatible bucket for clips and recordings |
@@ -305,7 +311,7 @@ and more without a restart; resetting a value brings back config.yaml's
 | `build` | build the web UI that the server serves on :8000 |
 | `tapo:login`, `worker:token` | sign in to the Tapo cloud; create a worker token |
 | `user:add`, `user:password`, `user:list` | manage accounts from the command line |
-| `seed` (`-- --profiles`) | fake cameras from `samples/` (and an example profile) |
+| `seed` (`-- --profiles`) | fake cameras from `samples/` and a fox profile (and an example vehicles profile) |
 | `cameras:remove-test` | remove the test cameras and the data of removed cameras |
 | `check` | ruff, oxlint, typecheck, oxfmt and all tests |
 | `doctor` | check ffmpeg, GPU, detectors and the connection to the server |

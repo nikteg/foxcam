@@ -2,7 +2,7 @@
 #
 #   mise run setup        # first time: tools, Python + web deps, config.yaml, sample clips
 #   mise run dev          # whole stack with a dummy worker
-#   mise run seed         # (stack running) add a fake camera per sample clip
+#   mise run seed         # (stack running) a fake camera per sample clip + a fox profile
 #   mise run check        # lint + typecheck + tests
 #   mise run reset        # wipe all data (asks first); reset:events, reset:queue, ... for parts
 
@@ -138,7 +138,7 @@ if [ -n "$pids" ]; then kill $pids && echo "stopped: $(echo $pids | tr '\\n' ' '
 # --- test data ---------------------------------------------------------------------
 
 [tasks.seed]
-description = "Running server: add a fake camera per sample clip (+ --profiles for examples)"
+description = "Running server: a fake camera per sample clip and a fox profile (+ --profiles for more)"
 run = "uv run python scripts/seed.py"
 
 [tasks.screenshots]
