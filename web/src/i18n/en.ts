@@ -3,7 +3,6 @@
 export const en = {
   // Navigation
   "nav.status": "Status",
-  "nav.live": "Live",
   "nav.events": "Events",
   "nav.eventsShort": "Events",
   "nav.detections": "Detections",
@@ -15,12 +14,11 @@ export const en = {
   "nav.settings": "Settings",
   "nav.main": "Main",
   "notFound.title": "Not found",
-  "notFound.back": "Back to status",
+  "notFound.back": "Back to Status",
 
   // Shared
   "common.add": "Add",
   "common.allCameras": "All cameras",
-  "common.back": "Back",
   "common.camera": "Camera",
   "common.cancel": "Cancel",
   "common.close": "Close",
@@ -93,7 +91,7 @@ export const en = {
   "camera.name": "Name",
   "camera.segmentLength": "Segment length",
   "camera.segmentLengthSeconds": "Segment length (seconds)",
-  "camera.segmentLengthHint": "Leave empty to use the default from config.",
+  "camera.segmentLengthHint": "Leave empty to use the default from Settings → General.",
   "camera.default": "default",
   "camera.lastSegment": "Last segment",
   "camera.censorAreas": "Censor areas",
@@ -115,7 +113,6 @@ export const en = {
   "dashboard.snapshotAlt": "Snapshot from {name}",
 
   // Live
-  "live.noCameras": "No cameras configured.",
   "live.hlsFallback": "Open as HLS",
   "live.frameTitle": "{name} live",
   "live.offline": "Camera offline",
@@ -128,7 +125,7 @@ export const en = {
   "events.details": "Details",
   "events.markedWrong": "marked wrong",
   "events.markedWrongHint": "One of its detections was marked wrong. Hidden on the Status page.",
-  "events.showDetectionsHint": "The detections this event was made from, its best one open",
+  "events.showDetectionsHint": "The detections behind this event, with the best one open",
   "events.none": "No events yet.",
   "events.intro":
     "Sightings of {labels} (from the detection profiles) close in time are merged into one clip, with {before} s before and {after} s after. Clips are cut from the original, uncensored footage.",
@@ -151,7 +148,7 @@ export const en = {
   "maintenance.title": "Maintenance",
   "maintenance.rebuild": "Events",
   "maintenance.rebuildHint":
-    "Builds every event again from the detections, with the profiles' current rules (such as ignoring objects standing still, also for detections from before that existed). Rebuilt events send no notifications; their clips are cut again in the background.",
+    "Builds every event again from the detections, with the profiles' current rules (such as ignoring objects that stand still, also for detections made before the rule existed). Rebuilt events send no notifications; their clips are cut again in the background.",
   "maintenance.rebuildButton": "Rebuild events",
   "maintenance.rebuildConfirm": "Rebuild all events?",
   "maintenance.rebuildBody":
@@ -166,10 +163,10 @@ export const en = {
   "maintenance.reanalyseBody":
     "The recordings' detections and correct/wrong marks are replaced, and the workers get the recordings again.",
   "maintenance.reanalyseDone":
-    "{queued} {queued:recording|recordings} queued, {skipped} skipped (being analysed or already waiting); {detections_removed} detections removed.",
+    "{queued} {queued:recording|recordings} queued, {skipped} skipped (being analysed or already waiting); {detections_removed} {detections_removed:detection|detections} removed.",
   "maintenance.from": "From",
   "maintenance.to": "To",
-  "detections.showStationary": "Show standing still",
+  "detections.showStationary": "Show stationary",
   "detections.stationary": "still",
   "detections.stationaryHint":
     'In the same place longer than the profile\'s "Ignore stationary after" (e.g. a parked car): no event or notification.',
@@ -197,11 +194,11 @@ export const en = {
   "recordings.maskVersion": "version {version}",
   "recordings.noMask": "none",
   "recordings.segmentsTab": "Segments",
-  "recordings.inHourlyFile": "Joined into a longer file",
-  "recordings.analyseAgain": "Analyse again",
-  "recordings.analyseAgainTitle": "Analyse this recording again?",
+  "recordings.inHourlyFile": "Joined into an archive file",
+  "recordings.analyseAgain": "Detect again",
+  "recordings.analyseAgainTitle": "Detect again in this recording?",
   "recordings.analyseAgainBody":
-    "Detection runs again with the camera's current censor areas and detection profiles. The new results replace this recording's detections (and their correct/wrong feedback); events are updated to match.",
+    "Detection runs again with the camera's current censor areas and detection profiles. The new results replace this recording's detections (and their correct/wrong marks); events are updated to match.",
   "hourly.title": "Archives",
   "hourly.intro":
     "Finished recordings are joined into one file per camera and period (compaction.period_minutes in config.yaml, an hour by default), re-encoded when the camera's recording profile says so. Segments still show up one by one under Segments.",
@@ -216,15 +213,12 @@ export const en = {
   "compaction.running": "running",
   "compaction.stopped": "not running",
   "compaction.notRunning":
-    "Nothing is joining finished recordings into longer files. Start {command} (part of mise run dev, and the compact service in Docker).",
+    "Nothing is joining finished recordings into archive files. Start {command} (part of mise run dev, and the compact service in Docker).",
   "compaction.now": "Now",
   "compaction.idle": "idle",
   "compaction.joining": "joining {what} ({n} {n:segment|segments})",
   "compaction.reencoding": "re-encoding {what} ({n} {n:segment|segments})",
   "compaction.waiting": "Waiting",
-  "compaction.waitingValue": "{n} {n:period|periods} ({segments} {segments:segment|segments})",
-  "compaction.done": "Joined",
-  "compaction.doneValue": "{n} {n:file|files} ({segments} {segments:segment|segments})",
   "recordings.allStates": "All states",
   "recordings.storedIn": "Stored in",
   "recordings.storedHourly": "an archive file (joined after recording)",
@@ -245,7 +239,6 @@ export const en = {
   "queue.lastSeen": "Last seen",
   "queue.currentJob": "Current job",
   "queue.noWorkers": "No worker has connected yet. Use Add worker to get the setup command.",
-  "queue.jobs": "Jobs",
   "queue.latestJobs": "Latest jobs",
   "queue.queueTab": "Queue",
   "queue.clearFilter": "Clear filter",
@@ -304,16 +297,13 @@ export const en = {
   "workers.modeLockedEmpty":
     "No worker can connect yet: workers need an access token. Use Add worker to create one.",
   "workers.sharedToken": "A shared worker_token from config.yaml is also accepted.",
-  "workers.created": "Created",
-  "workers.lastUsed": "Last used",
-  "workers.never": "never",
   "workers.revoke": "Revoke",
   "workers.tokenBadge": "Token",
   "workers.hasToken": "Has its own access token.",
   "workers.neverConnected": "never connected",
   "workers.revokeTitle": "Revoke {name}?",
   "workers.revokeBody":
-    "The worker can no longer fetch jobs. Jobs it holds go back to the queue when their lease expires.",
+    "The worker can no longer fetch jobs. Jobs it holds go back to the queue when their time limit runs out.",
 
   // Censor-area editor
   "mask.title": "Censor areas – {name}",
@@ -322,7 +312,7 @@ export const en = {
   "mask.helpTouch":
     "Draw a rectangle with your finger. Tap one to select it, then drag it or its corners; tap × to remove it.",
   "mask.helpCommon":
-    "These areas are blacked out in everything sent to the detection workers. Changes apply to new segments only.",
+    "These areas are blacked out in everything sent to the workers. Changes apply to new segments only.",
   "mask.actions": "Censor area actions",
   "mask.revert": "Revert",
   "mask.clearAll": "Clear all",
@@ -359,11 +349,10 @@ export const en = {
   "runtime.unit.fps": "fps",
   "runtime.unit.px": "px",
   "runtime.group.recording": "Recording",
-  "runtime.group.archiving": "Hourly files",
+  "runtime.group.archiving": "Archives",
   "runtime.group.frames": "Frames for the workers",
   "runtime.group.events": "Events",
   "runtime.group.queue": "Job queue",
-  "runtime.group.retention": "How long things are kept",
   "runtime.unit.lines": "lines",
   "runtime.unit.kbit": "kbit/s",
   "runtime.group.live": "Low-data live view",
@@ -388,17 +377,17 @@ export const en = {
     "Length of each recorded file. Longer means fewer files and less work per hour, but detection and notifications wait until a file is finished. Cameras can have their own. Applies from the next file.",
   "runtime.recordingDefault": "Recording quality",
   "runtime.recordingDefaultHint":
-    "For every camera without its own choice (camera settings → Recording). Applies to hourly files joined from now on.",
+    "For every camera without its own choice (camera settings → Recording). Applies to archive files joined from now on.",
   "runtime.group.detections": "Detections",
   "runtime.keepNonTargets": "Keep non-matches from",
   "runtime.keepNonTargetsHint":
     "Confidence (0–1) from which detections that are no match (below the profile's threshold, or another label) are kept. Weaker ones are dropped, also those already stored; matches and the ones you marked correct or wrong always stay. 0 keeps everything the workers report.",
-  "runtime.compactionEnabled": "Join segments into hourly files",
+  "runtime.compactionEnabled": "Join segments into archive files",
   "runtime.compactionEnabledHint":
-    "Fewer, larger files that are easier to browse and download, re-encoded per recording profile. Costs CPU (or GPU) once an hour.",
+    "Fewer, larger files that are easier to browse and download, re-encoded per recording profile. Costs CPU (or GPU) once per period.",
   "runtime.compactionDelay": "Wait before joining",
   "runtime.compactionDelayHint":
-    "After an hour ends. Longer gives late segments and preprocessing time to finish; shorter makes hourly files appear sooner.",
+    "After a period ends. Longer gives late segments and preprocessing time to finish; shorter makes archive files appear sooner.",
   "runtime.sampleFps": "Frames per second",
   "runtime.sampleFpsHint":
     "How many frames of each segment the workers look at. Fewer is much lighter on this server and the workers, but a fast animal can slip past between frames.",
@@ -422,7 +411,7 @@ export const en = {
   "runtime.leaseSecondsHint":
     "A worker that has not finished a job in this time loses it and another worker can take it. Raise it for slow workers.",
   "runtime.maxAttempts": "Attempts per job",
-  "runtime.maxAttemptsHint": "How often a failing job is tried before it is given up.",
+  "runtime.maxAttemptsHint": "How many times a failing job is tried before giving up.",
   "runtime.retryBackoff": "Wait between attempts",
   "runtime.retryBackoffHint": "Grows with each attempt (this times the attempt number).",
   "retention.title": "Retention",
@@ -471,7 +460,7 @@ export const en = {
   "notify.quietHint": "No notifications in this window (e.g. 23:00 – 06:00). Leave empty for none.",
   "notify.cooldown": "Cooldown",
   "notify.cooldownMinutes": "Cooldown (minutes)",
-  "notify.cooldownHint": "At most one 'event starts' message per camera in this time. 0 = off.",
+  "notify.cooldownHint": "At most one “Event starts” message per camera in this time. 0 = off.",
   "notify.minutes": "{n} {n:minute|minutes}",
   "notify.image": "Image",
   "notify.includeImage": "Attach the detection frame (censor areas blacked out)",
@@ -604,7 +593,6 @@ export const en = {
   "models.jobs": "Jobs",
   "models.jobsCell": "{done} done – {dead} gave up – {skipped} skipped",
   "recordings.rawResult": "Raw result",
-  "detections.extra": "Other details",
   "detectors.requiresPlaceholder": "none, e.g. speciesnet",
   "detectors.profileValue": "profile's ({value})",
   "archiving.intro":
@@ -625,8 +613,7 @@ export const en = {
   "install.addToHomeScreen": "Add to Home Screen",
   "dashboard.overview": "Overview",
   "recordings.playerTitle": "Recording {id}",
-  "cameras.censorSummary":
-    "{n} {n:area|areas}, blacked out in everything sent to the detection workers.",
+  "cameras.censorSummary": "{n} {n:area|areas}, blacked out in everything sent to the workers.",
   "cameras.censorBurned": "Also burned into recordings and live view.",
   "live.hlsFallbackHint":
     "Opens the camera as an HLS stream in a new tab, for browsers or networks where WebRTC does not work.",
@@ -698,7 +685,6 @@ export const en = {
 
   "cameras.noProfiles": "none (not analysed)",
   "cameras.detect": "Detection",
-  "cameras.profilesTitle": "Detection on {name}",
   "cameras.profilesHelp":
     "Each recording is sent to a worker once per chosen profile. Choose none to only record.",
   "cameras.profilesFromConfig": "Currently from config.yaml; saving here overrides it.",
@@ -710,10 +696,9 @@ export const en = {
   "cameras.editCensorAreas": "Edit censor areas",
   "cameras.removeCamera": "Remove camera",
   "recording.title": "Recording",
-  "recording.dialogTitle": "Recording – {name}",
   "recording.help":
     "Quality of what is stored for this camera. Smaller profiles re-encode the stream on the server and save a lot of disk space.",
-  "recording.masksBurnedIn": "masks burned in",
+  "recording.masksBurnedIn": "censor areas burned in",
   "recording.sameResolution": "same resolution",
   "recording.constantQuality": "constant quality",
   "recording.asSent": "as sent by the camera, no re-encoding",
@@ -728,7 +713,6 @@ export const en = {
   "workers.removeTitle": "Remove {name} from the list?",
   "queue.removeWorkerHint":
     "Remove this offline worker from the list. It comes back if it connects again; revoke its token to keep it out.",
-  "queue.running": "Running",
   "workers.tags": "Tags",
   "workers.tagsHint":
     "Optional. Lets profiles that require these tags use this worker (e.g. gpu, or its own name to pin profiles to it): pick a known tag or type a new one.",
@@ -746,7 +730,6 @@ export const en = {
   "cameras.synthetic": "synthetic",
   "cameras.disableHint": "Disabled cameras stop recording",
   "cameras.configHint": "Defined in config.yaml",
-  "cameras.editTitle": "Edit {name}",
   "cameras.changeSourceHint": "To change the source itself, remove the camera and add it again.",
   "cameras.removeTitle": "Remove {name}?",
   "cameras.removeBody":
@@ -881,7 +864,7 @@ export const en = {
   "account.leave": "Stop seeing",
   "apiKeys.title": "API keys",
   "apiKeys.intro":
-    "For scripts and other programs: send {header}. A key acts as you, limited to what you tick below, and can't manage your account or make more keys.",
+    "For scripts and other programs: send {header}. A key acts as you, limited to what you tick below, and cannot manage your account or make more keys.",
   "apiKeys.none": "No API keys.",
   "apiKeys.add": "New API key",
   "apiKeys.name": "Name",
@@ -891,7 +874,7 @@ export const en = {
   "apiKeys.scope.write": "Write",
   "apiKeys.scope.admin": "Admin",
   "apiKeys.scope.readHint": "Look at cameras, recordings, events and detections",
-  "apiKeys.scope.writeHint": "Change what you may change (cameras, feedback, sharing…)",
+  "apiKeys.scope.writeHint": "Change what you may change (cameras, correct/wrong marks, sharing…)",
   "apiKeys.scope.adminHint":
     "Admin: users, workers, profiles, notifications and settings. Only if the program really needs it.",
   "apiKeys.expiry": "Expires",
@@ -902,15 +885,12 @@ export const en = {
   "apiKeys.colScopes": "Access",
   "apiKeys.colKey": "Key",
   "apiKeys.colLastUsed": "Last used",
-  "apiKeys.lastUsed": "last used",
   "apiKeys.never": "never",
-  "apiKeys.expires": "expires",
   "apiKeys.revoke": "Revoke",
   "apiKeys.revokeConfirm": "Revoke the key {name}? Programs using it lose access at once.",
 
   // Sharing
   "share.button": "Share",
-  "share.title": "Share {name}",
   "share.intro":
     "People you share with see the camera's live view, recordings and events. Admins see every camera.",
   "share.email": "E-mail of an account",
@@ -920,7 +900,7 @@ export const en = {
   "share.role.owner": "Owner",
   "share.roleHelp.viewer": "Viewer: live view, recordings, events and detections.",
   "share.roleHelp.editor":
-    "Editor: also censor areas, detection and recording settings, name and feedback.",
+    "Editor: also censor areas, detection and recording settings, name and correct/wrong marks.",
   "share.roleHelp.owner": "Owner: also sharing and removing the camera.",
   "share.add": "Share",
   "share.noAccount":
@@ -949,7 +929,7 @@ export const en = {
   "users.add": "Add user",
   "users.invite": "Invite link",
   "users.introInvite":
-    "New accounts need an invite link (auth.registration: invite). Camera owners create them in the share dialog, admins here.",
+    "New accounts need an invite link (auth.registration: invite). Camera owners create them with Share on the Cameras page, admins here.",
   "users.introOpen":
     "Anyone who reaches this server may create an account (auth.registration: open).",
   "users.introClosed": "Only admins add accounts (auth.registration: closed).",
@@ -960,7 +940,7 @@ export const en = {
   "users.setPassword": "Set password",
   "users.passwordTitle": "New password for {name}",
   "users.passwordSignsOut": "Signs {name} out on every device.",
-  "users.passwordHint": "Leave empty for an account that signs in with OAuth only.",
+  "users.passwordHint": "Leave empty for an account that only signs in with an external account.",
   "users.makeAdmin": "Admin (can change everything)",
   "users.openInvites": "Open invite links",
   "users.noInvites": "No open invite links.",
