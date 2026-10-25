@@ -9,6 +9,7 @@ import {
 } from "@fluentui/react-components";
 import { Dismiss24Regular, Info20Regular, Play20Filled } from "@fluentui/react-icons";
 import { Fragment, useState } from "react";
+import { useSearchParams } from "react-router";
 
 import type { DetectionEvent } from "../api";
 import { duration, localDay, localTime, percent } from "../format";
@@ -43,7 +44,22 @@ export function EventsGrid({
 }) {
   const { t } = useI18n();
   const [playing, setPlaying] = useState<DetectionEvent | null>(null);
-  const [details, setDetails] = useState<DetectionEvent | null>(null);
+  // The open event's details are in the URL (?details=<id>) on whichever page shows the
+  // grid, so the nav tab stays put, Back closes it and it can be linked. Looked up in the
+  // (refreshed) list, so marking it right or wrong shows at once.
+  const [params, setParams] = useSearchParams();
+  const details = events.find((e) => String(e.id) === params.get("details")) ?? null;
+  const setDetails = (e: DetectionEvent | null) =>
+    setParams(
+      (p) => {
+        const next = new URLSearchParams(p);
+        if (e) next.set("details", String(e.id));
+        else next.delete("details");
+        return next;
+      },
+      // Opening adds a history entry (Back closes it); closing does not.
+      { replace: !e },
+    );
   const profileName = useProfileName();
   const cameraName = useCameraName();
   const manyProfiles = (useProfiles().data?.length ?? 0) > 1;
