@@ -53,7 +53,7 @@ export function Feedback({
     const toggleButton = (
       <ToggleButton
         size={size}
-        appearance={withLabels ? "outline" : "subtle"}
+        appearance={withLabels ? "secondary" : "subtle"}
         checked={checked}
         // With labels the chosen button is filled in its colour (styles.css).
         className={withLabels && checked ? `feedback-on ${want ? "ok" : "bad"}` : undefined}
