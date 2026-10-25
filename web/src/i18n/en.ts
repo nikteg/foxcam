@@ -27,7 +27,6 @@ export const en = {
   "common.done": "Done",
   "common.download": "Download",
   "common.edit": "Edit",
-  "common.saveFile": "Save file",
   "common.refresh": "Refresh",
   "appearance.title": "Appearance",
   "appearance.hint": "Language and theme are saved in this browser only.",

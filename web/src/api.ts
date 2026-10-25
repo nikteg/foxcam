@@ -756,6 +756,8 @@ export const api = {
   }) => request<Segment[]>("GET", withQuery("/api/segments", q)),
   segment: (id: number) => request<Segment>("GET", `/api/segments/${id}`),
   segmentJobs: (id: number) => request<SegmentJob[]>("GET", `/api/segments/${id}/jobs`),
+  /** A link to one file that works for 10 minutes without signing in (Safari, iOS app). */
+  downloadLink: (path: string) => request<{ url: string }>("POST", "/api/download-links", { path }),
   /** Detection again on every recording starting in [start, end) (ISO times). */
   reanalyseRange: (body: { camera?: string; start: string; end: string }) =>
     request<{ queued: number; skipped: number; detections_removed: number }>(

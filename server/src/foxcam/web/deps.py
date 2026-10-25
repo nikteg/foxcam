@@ -6,7 +6,7 @@ from urllib.parse import urlsplit
 
 from fastapi import Depends, Header, HTTPException, Request
 
-from .. import accounts, api_keys, worker_tokens
+from .. import accounts, api_keys, download_links, worker_tokens
 from ..accounts import Principal
 from ..config import CameraConfig, Settings
 from ..mediamtx import MediaMtx
@@ -64,10 +64,15 @@ def current_principal(request: Request) -> Principal | None:
     if cached is _UNSET:
         token = request.cookies.get(SESSION_COOKIE)
         key = _api_key(request)
+        link = request.query_params.get("dl")
         if token:
             cached = accounts.session_principal(settings, token)
         elif key and not request.url.path.startswith("/api/auth/"):
             cached = api_keys.principal(key)
+        elif link and request.method in ("GET", "HEAD"):
+            # A signed download link (download_links.py), e.g. opened in Safari.
+            user_id = download_links.verify(settings, link, request.url.path)
+            cached = accounts.principal_for(user_id) if user_id is not None else None
         else:
             cached = None
         request.state.principal = cached

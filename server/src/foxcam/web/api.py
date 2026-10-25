@@ -17,7 +17,15 @@ from fastapi.responses import FileResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 
-from .. import ffmpeg, mediamtx_auth, model_stats, recording, runtime_settings, sprites
+from .. import (
+    download_links,
+    ffmpeg,
+    mediamtx_auth,
+    model_stats,
+    recording,
+    runtime_settings,
+    sprites,
+)
 from ..accounts import Principal
 from ..config import Settings
 from ..db import session_scope
@@ -281,6 +289,24 @@ def reanalyse(segment_id: int, settings: Settings = Depends(settings_dep),
     except ReanalyseError as e:
         raise HTTPException(409, str(e)) from e
     return {"status": "queued", "detections_removed": removed}
+
+
+class DownloadLinkBody(BaseModel):
+    path: str
+
+
+@router.post("/download-links")
+def download_link(body: DownloadLinkBody, settings: Settings = Depends(settings_dep),
+                  p: Principal = Depends(principal)) -> dict[str, str]:
+    """A link to one file that works for 10 minutes without signing in (for Safari, from
+    the iOS home screen app). It acts as the caller, so access checks still apply."""
+    if p.user_id is None:  # accounts turned off: every link works already
+        return {"url": body.path}
+    try:
+        token = download_links.sign(settings, p.user_id, body.path)
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from e
+    return {"url": f"{body.path}?dl={token}"}
 
 
 class ReanalyseRange(BaseModel):

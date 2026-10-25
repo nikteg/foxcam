@@ -143,7 +143,7 @@ export function EventsGrid({
                     >
                       {t("common.play")}
                     </Button>
-                    <DownloadButton href={`${e.clip_url}?download=true`} small>
+                    <DownloadButton href={`${e.clip_url}?download=true`}>
                       {t("common.download")}
                     </DownloadButton>
                   </>
@@ -200,7 +200,7 @@ export function EventsGrid({
                 )}
               </DialogContent>
               <DialogActions>
-                <DownloadButton href={`${playing.clip_url}?download=true`} small>
+                <DownloadButton href={`${playing.clip_url}?download=true`}>
                   {t("common.download")}
                 </DownloadButton>
                 <Button appearance="primary" onClick={() => setPlaying(null)}>

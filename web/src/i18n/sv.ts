@@ -28,7 +28,6 @@ export const sv: Record<MessageKey, string> = {
   "common.done": "Klar",
   "common.download": "Ladda ner",
   "common.edit": "Redigera",
-  "common.saveFile": "Spara filen",
   "common.refresh": "Uppdatera",
   "appearance.title": "Utseende",
   "appearance.hint": "Språk och tema sparas bara i den här webbläsaren.",
