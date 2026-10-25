@@ -399,10 +399,13 @@ def detections(camera: str | None = None, label: str | None = None, only_targets
                min_confidence: float = 0.0, segment: int | None = None,
                profile: str | None = None, detector: str | None = None,
                event: int | None = None,
+               hide_stationary: bool = Query(
+                   False, description="leave out objects standing still (they make no event)"),
                limit: int = Query(200, le=2000),
                p: Principal = Depends(principal)) -> list[dict[str, Any]]:
     return queries.detections(camera, label, only_targets, min_confidence, limit, segment,
-                              profile, _camera_filter(p, camera), detector, event)
+                              profile, _camera_filter(p, camera), detector, event,
+                              hide_stationary)
 
 
 @router.get("/detections/{detection_id}/frame.jpg")

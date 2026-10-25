@@ -145,6 +145,10 @@ export const sv: Record<MessageKey, string> = {
   "detections.labelPlaceholder": "Etikett, t.ex. fox",
   "detections.minConfidence": "Lägsta säkerhet",
   "detections.min": "min",
+  "detections.showStationary": "Visa stillastående",
+  "detections.stationary": "stilla",
+  "detections.stationaryHint":
+    'På samma plats längre än profilens "Ignorera stillastående efter" (t.ex. en parkerad bil): ingen händelse eller avisering.',
   "detections.onlyTargets": "Endast mål",
   "detections.none": "Inga detektioner än.",
   "detections.frameAlt": "Bildruta med {label}",

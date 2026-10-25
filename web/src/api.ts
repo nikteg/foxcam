@@ -357,6 +357,8 @@ export interface Detection {
   worker_id: string | null;
   feedback: boolean | null;
   is_night: boolean | null;
+  /** In the same place for the profile's ignore_stationary_minutes: no event. */
+  stationary: boolean;
   /** Detector specifics. SpeciesNet: `detector_label`/`detector_conf` (the box) and
    *  `classifications`, the classifier's top guesses. */
   extra: DetectionExtra;
@@ -772,6 +774,8 @@ export const api = {
     detector?: string;
     /** An event's own detections. */
     event?: number;
+    /** Leave out objects standing still (they make no event). */
+    hide_stationary?: boolean;
     limit?: number;
   }) => request<Detection[]>("GET", withQuery("/api/detections", q)),
   feedback: (id: number, correct: boolean | null) =>

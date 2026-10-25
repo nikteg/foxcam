@@ -277,6 +277,8 @@ def detection_dict(d: Detection) -> dict[str, Any]:
         "offset_ms": d.offset_ms, "label": d.label, "confidence": round(d.confidence, 3),
         "bbox": d.bbox, "is_target": d.is_target, "model": d.model, "worker_id": d.worker_id,
         "feedback": d.feedback, "is_night": d.segment.is_night if d.segment else None,
+        # In the same place for the profile's ignore_stationary_minutes: no event.
+        "stationary": bool(d.stationary),
         # Detector specifics, e.g. SpeciesNet's box label and top guesses.
         "extra": d.extra or {},
     }
@@ -288,7 +290,8 @@ def detections(camera_id: str | None = None, label: str | None = None,
                profile_id: str | None = None,
                camera_ids: set[str] | None = None,
                detector_id: str | None = None,
-               event_id: int | None = None) -> list[dict[str, Any]]:
+               event_id: int | None = None,
+               hide_stationary: bool = False) -> list[dict[str, Any]]:
     q = _only(select(Detection), Detection.camera_id, camera_ids) \
         .where(Detection.confidence >= min_confidence) \
         .order_by(Detection.ts.desc()).limit(limit)
@@ -306,6 +309,8 @@ def detections(camera_id: str | None = None, label: str | None = None,
         q = q.where(Detection.event_id == event_id)
     if only_targets:
         q = q.where(Detection.is_target.is_(True))
+    if hide_stationary:
+        q = q.where(Detection.stationary.is_not(True))
     with session_scope() as s:
         return [detection_dict(d) for d in s.scalars(q)]
 

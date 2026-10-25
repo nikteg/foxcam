@@ -143,6 +143,10 @@ export const en = {
   "detections.labelPlaceholder": "Label, e.g. fox",
   "detections.minConfidence": "Minimum confidence",
   "detections.min": "min",
+  "detections.showStationary": "Show standing still",
+  "detections.stationary": "still",
+  "detections.stationaryHint":
+    'In the same place longer than the profile\'s "Ignore stationary after" (e.g. a parked car): no event or notification.',
   "detections.onlyTargets": "Only targets",
   "detections.none": "No detections yet.",
   "detections.frameAlt": "{label} detection frame",

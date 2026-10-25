@@ -170,3 +170,17 @@ def test_events_marked_wrong_can_be_left_out(settings):
     queries.set_feedback(settings, dets[0], None)
     with session_scope() as s:
         assert s.get(Segment, segs[0]).has_target is True
+
+
+def test_detections_standing_still_can_be_left_out(settings):
+    from foxcam.models import Detection
+    from foxcam.web import queries
+
+    seg = add_segment(settings)
+    add_job(seg, state="done")
+    moving, still = add_detection(seg, seg, 0), add_detection(seg, seg, 1000)
+    with session_scope() as s:
+        s.get(Detection, still).stationary = True
+    assert {d["id"]: d["stationary"] for d in queries.detections()} == {
+        moving: False, still: True}
+    assert [d["id"] for d in queries.detections(hide_stationary=True)] == [moving]

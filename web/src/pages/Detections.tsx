@@ -19,6 +19,7 @@ import {
   InfoBanner,
   Light,
   QueryState,
+  Tag,
   Time,
   Toolbar,
   useRouterHref,
@@ -58,7 +59,14 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detec
     id: "label",
     header: t("col.label"),
     width: 130,
-    cell: (d) => <Text weight="semibold">{d.label}</Text>,
+    cell: (d) => (
+      <span className="row">
+        <Text weight="semibold">{d.label}</Text>
+        {d.stationary && (
+          <Tag title={t("detections.stationaryHint")}>{t("detections.stationary")}</Tag>
+        )}
+      </span>
+    ),
     compare: byString((d) => d.label),
   },
   {
@@ -96,6 +104,7 @@ export function DetectionList() {
     "profile",
     "label",
     "only_targets",
+    "stationary",
     "min_confidence",
     "detector",
     "event",
@@ -108,6 +117,8 @@ export function DetectionList() {
     event: Number(f.event) || undefined,
     label: f.label,
     only_targets: f.only_targets === "true",
+    // Objects standing still make no event: hidden unless asked for (they pile up).
+    hide_stationary: f.stationary !== "true",
     min_confidence: Number(f.min_confidence) || 0,
     limit: 500,
   };
@@ -185,6 +196,11 @@ export function DetectionList() {
           label={t("detections.onlyTargets")}
           checked={f.only_targets === "true"}
           onChange={(_, d) => setFilter("only_targets", d.checked === true)}
+        />
+        <Checkbox
+          label={t("detections.showStationary")}
+          checked={f.stationary === "true"}
+          onChange={(_, d) => setFilter("stationary", d.checked === true)}
         />
       </div>
       <QueryState error={detections.error} loading={detections.isPending} />
