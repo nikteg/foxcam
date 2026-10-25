@@ -355,6 +355,9 @@ export const en = {
   "runtime.segmentSeconds": "Segment length",
   "runtime.segmentSecondsHint":
     "Length of each recorded file. Longer means fewer files and less work per hour, but detection and notifications wait until a file is finished. Cameras can have their own. Applies from the next file.",
+  "runtime.recordingDefault": "Recording quality",
+  "runtime.recordingDefaultHint":
+    "For every camera without its own choice (camera settings → Recording). Applies to hourly files joined from now on.",
   "runtime.compactionEnabled": "Join segments into hourly files",
   "runtime.compactionEnabledHint":
     "Fewer, larger files that are easier to browse and download, re-encoded per recording profile. Costs CPU (or GPU) once an hour.",
@@ -684,9 +687,9 @@ export const en = {
     "Recordings are re-encoded when a finished period is joined into one file, on the server's hardware video encoder when there is one (Quick Sync, NVENC, AMD, Apple). Detection and live view keep using the camera's original.",
   "recording.h265Note":
     "Not every browser plays H.265 (Safari and recent Chrome/Edge do). On hardware encoders it saves only a little over H.264 at the same bitrate: resolution and bitrate matter most.",
+  "recording.defaultInSettings": "The default for all cameras is set in {link}.",
+  "recording.settingsLink": "Settings → General",
   "recording.fromDefault": "Currently the default profile; saving here overrides it.",
-  "recording.makeDefault": "Make {name} the default",
-  "recording.makeDefaultHint": "For every camera without its own choice.",
   "workers.removeTitle": "Remove {name} from the list?",
   "queue.removeWorkerHint":
     "Remove this offline worker from the list. It comes back if it connects again; revoke its token to keep it out.",

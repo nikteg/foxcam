@@ -4,7 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import { useIsAdmin, useMe } from "../auth";
 import { Notifications } from "../components/Notifications";
-import { RuntimeSettingsSection, type SettingsGroup } from "../components/RuntimeSettings";
+import {
+  DEFAULT_RECORDING,
+  RuntimeSettingsSection,
+  type SettingsGroup,
+} from "../components/RuntimeSettings";
 import { StorageCard } from "../components/StorageCard";
 import { UsersSection } from "../components/UsersSection";
 import {
@@ -32,7 +36,10 @@ type SubPage =
 
 // The tunables on each tab (server: runtime_settings.EDITABLE).
 const GENERAL: SettingsGroup[] = [
-  { title: "runtime.group.recording", keys: ["public_url", "segment_seconds"] },
+  {
+    title: "runtime.group.recording",
+    keys: ["public_url", "segment_seconds", DEFAULT_RECORDING],
+  },
   {
     title: "runtime.group.archiving",
     keys: ["compaction.enabled", "compaction.delay_minutes"],

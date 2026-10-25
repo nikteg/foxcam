@@ -18,7 +18,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 
-import { api, type Camera, type RecordingProfile } from "../api";
+import { api, type Camera } from "../api";
 import { useIsAdmin, hasRole, useMe } from "../auth";
 import { AddCameraDialog } from "../components/AddCameraDialog";
 import { MaskDrawer } from "./MaskEditor";
@@ -35,12 +35,14 @@ import {
   PageTabs,
   PageTitle,
   QueryState,
+  RouterLink,
   Tag,
   Toolbar,
   useSubPage,
 } from "../components/ui";
 import { ConfirmPopover } from "../components/ConfirmPopover";
 import { useI18n } from "../i18n";
+import { useRecordingProfiles, useRecordingSummary } from "../recordingProfiles";
 import {
   Dialog,
   DialogActions,
@@ -322,27 +324,6 @@ export function CameraSettingsDialog({ camera, onClose }: { camera: Camera; onCl
   );
 }
 
-function useRecordingProfiles() {
-  return useQuery({ queryKey: ["recording-profiles"], queryFn: api.recordingProfiles });
-}
-
-/** "≤ 720p, 1200 kbit/s, 15 fps, H.264, kept 30 days" */
-function useRecordingSummary(): (p: RecordingProfile) => string {
-  const { t } = useI18n();
-  return (p) => {
-    const parts = p.transcode
-      ? [
-          p.max_height ? `≤ ${p.max_height}p` : t("recording.sameResolution"),
-          p.bitrate_kbit ? `${p.bitrate_kbit} kbit/s` : t("recording.constantQuality"),
-          ...(p.fps ? [`${p.fps} fps`] : []),
-          p.codec === "h265" ? "H.265" : "H.264",
-        ]
-      : [t("recording.asSent")];
-    if (p.keep_days !== null) parts.push(t("recording.keptDays", { n: p.keep_days }));
-    return parts.join(", ");
-  };
-}
-
 function RecordingPanel({
   camera,
   tabs,
@@ -352,7 +333,7 @@ function RecordingPanel({
   tabs: ReactNode;
   onClose: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, rich } = useI18n();
   const client = useQueryClient();
   const list = useRecordingProfiles();
   const profiles = list.data ?? [];
@@ -368,13 +349,6 @@ function RecordingPanel({
   });
   const chosen = profiles.find((p) => p.id === selected);
   const isAdmin = useIsAdmin();
-  const makeDefault = useMutation({
-    mutationFn: (id: string) => api.setDefaultRecordingProfile(id),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ["cameras"] });
-      void client.invalidateQueries({ queryKey: ["recording-profiles"] });
-    },
-  });
 
   return (
     <>
@@ -399,23 +373,6 @@ function RecordingPanel({
             />
           ))}
         </RadioGroup>
-        {isAdmin && chosen && !chosen.default && (
-          <div className="row wrap">
-            <Button
-              size="small"
-              disabled={makeDefault.isPending}
-              onClick={() => makeDefault.mutate(chosen.id)}
-            >
-              {t("recording.makeDefault", { name: chosen.display_name })}
-            </Button>
-            <Caption1 className="muted">{t("recording.makeDefaultHint")}</Caption1>
-          </div>
-        )}
-        {makeDefault.error && (
-          <MessageBar intent="error">
-            <MessageBarBody>{makeDefault.error.message}</MessageBarBody>
-          </MessageBar>
-        )}
         {chosen?.transcode && (
           <MessageBar>
             <MessageBarBody>
@@ -429,6 +386,13 @@ function RecordingPanel({
             {camera.recording_profile_source === "config"
               ? t("cameras.profilesFromConfig")
               : t("recording.fromDefault")}
+          </Caption1>
+        )}
+        {isAdmin && (
+          <Caption1 className="muted">
+            {rich("recording.defaultInSettings", {
+              link: <RouterLink to="/settings">{t("recording.settingsLink")}</RouterLink>,
+            })}
           </Caption1>
         )}
         {save.error && (

@@ -357,6 +357,9 @@ export const sv: Record<MessageKey, string> = {
   "runtime.segmentSeconds": "Segmentlängd",
   "runtime.segmentSecondsHint":
     "Längden på varje inspelad fil. Längre ger färre filer och mindre arbete per timme, men detektion och aviseringar väntar tills en fil är klar. Kameror kan ha en egen. Gäller från nästa fil.",
+  "runtime.recordingDefault": "Inspelningskvalitet",
+  "runtime.recordingDefaultHint":
+    "För alla kameror utan eget val (kamerans inställningar → Inspelning). Gäller timfiler som slås ihop från och med nu.",
   "runtime.compactionEnabled": "Slå ihop segment till timfiler",
   "runtime.compactionEnabledHint":
     "Färre, större filer som är lättare att bläddra i och ladda ner, omkodade per inspelningsprofil. Kostar CPU (eller GPU) en gång i timmen.",
@@ -776,9 +779,9 @@ export const sv: Record<MessageKey, string> = {
     "Inspelningarna kodas om när en avslutad period fogas ihop till en fil, med serverns hårdvarukodare när det finns en (Quick Sync, NVENC, AMD, Apple). Detektering och livebild använder fortfarande kamerans original.",
   "recording.h265Note":
     "Alla webbläsare spelar inte upp H.265 (Safari och nyare Chrome/Edge gör det). Med hårdvarukodare sparar det bara lite jämfört med H.264 vid samma bithastighet: upplösning och bithastighet betyder mest.",
+  "recording.defaultInSettings": "Standarden för alla kameror ställs in under {link}.",
+  "recording.settingsLink": "Inställningar → Allmänt",
   "recording.fromDefault": "Just nu standardprofilen; att spara här ersätter den.",
-  "recording.makeDefault": "Gör {name} till standard",
-  "recording.makeDefaultHint": "För alla kameror utan eget val.",
   "workers.removeTitle": "Ta bort {name} från listan?",
   "queue.removeWorkerHint":
     "Ta bort den här offline-arbetaren från listan. Den kommer tillbaka om den ansluter igen; återkalla dess token för att stänga ute den.",

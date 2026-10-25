@@ -453,6 +453,8 @@ export interface RecordingProfile {
 
 export type Settings = Record<string, unknown> & {
   segment_seconds: number;
+  /** config.yaml's default recording profile (the UI can override it). */
+  recording_profile_default: string;
   cameras: {
     id: string;
     name: string | null;

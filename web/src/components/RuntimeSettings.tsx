@@ -6,6 +6,7 @@ import {
   Input,
   MessageBar,
   MessageBarBody,
+  Select,
   Subtitle2,
   Switch,
 } from "@fluentui/react-components";
@@ -16,9 +17,14 @@ import { useState } from "react";
 import { api, type RuntimeSetting, type RuntimeSettings } from "../api";
 import { fileSize } from "../format";
 import { useI18n, type MessageKey } from "../i18n";
+import { useRecordingProfiles, useRecordingSummary } from "../recordingProfiles";
 import { Fact, Facts, QueryState, Tag } from "./ui";
 
 type Kind = "number" | "bool" | "url";
+
+/** Not a runtime setting: the default recording profile (its own endpoint, saved with the
+ * same Save button). Put this key in a group to show it there. */
+export const DEFAULT_RECORDING = "recording_profile_default";
 
 /** Label, help text (the trade-off) and unit of each setting the UI shows. */
 const META: Record<
@@ -166,6 +172,7 @@ export function RuntimeSettingsSection({
 function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: RuntimeSettings }) {
   const { t } = useI18n();
   const client = useQueryClient();
+  const recording = useDefaultRecording(groups.some((g) => g.keys.includes(DEFAULT_RECORDING)));
   const byKey = new Map(data.settings.map((s) => [s.key, s]));
   const keys = groups.flatMap((g) => g.keys).filter((k) => byKey.has(k));
   const [draft, setDraft] = useState<Record<string, string | boolean>>(() =>
@@ -177,8 +184,17 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
     ),
   );
   const save = useMutation({
-    mutationFn: api.setRuntimeSettings,
-    onSuccess: (next) => client.setQueryData(["runtimeSettings"], next),
+    mutationFn: async (change: { values?: Record<string, unknown>; reset?: string[] }) => {
+      if (!change.reset && recording.changed) {
+        await api.setDefaultRecordingProfile(recording.draft);
+      }
+      const runtime = change.reset?.length || Object.keys(change.values ?? {}).length;
+      return runtime ? api.setRuntimeSettings(change) : null;
+    },
+    onSuccess: (next) => {
+      if (next) client.setQueryData(["runtimeSettings"], next);
+      if (recording.changed) recording.saved();
+    },
   });
   const original = (k: string) => {
     const v = byKey.get(k)!.value;
@@ -201,7 +217,7 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
       }}
     >
       {groups
-        .filter((g) => g.keys.some((k) => byKey.has(k)))
+        .filter((g) => g.keys.some((k) => byKey.has(k) || k === DEFAULT_RECORDING))
         .map((g) => (
           <section key={g.keys.join()} className="form-stack">
             {g.title && (
@@ -210,6 +226,9 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
               </Subtitle2>
             )}
             {g.keys.map((k) => {
+              if (k === DEFAULT_RECORDING) {
+                return <DefaultRecordingField key={k} state={recording} />;
+              }
               const s = byKey.get(k);
               const meta = META[k];
               if (!s || !meta) return null;
@@ -281,12 +300,94 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
           type="submit"
           appearance="primary"
           icon={<Save20Regular />}
-          disabled={changed.length === 0 || save.isPending}
+          disabled={(changed.length === 0 && !recording.changed) || save.isPending}
         >
           {t("common.save")}
         </Button>
       </div>
     </form>
+  );
+}
+
+type DefaultRecording = ReturnType<typeof useDefaultRecording>;
+
+/** The default recording profile: the list, the current choice and its source, and the
+ * unsaved choice in the form. */
+function useDefaultRecording(enabled: boolean) {
+  const client = useQueryClient();
+  const profiles = useRecordingProfiles();
+  const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings, enabled });
+  const [choice, setChoice] = useState<string | null>(null);
+  const list = enabled ? (profiles.data ?? []) : [];
+  const current = list.find((p) => p.default);
+  const draft = choice ?? current?.id ?? null;
+  const refresh = () => {
+    void client.invalidateQueries({ queryKey: ["recording-profiles"] });
+    void client.invalidateQueries({ queryKey: ["cameras"] });
+  };
+  const reset = useMutation({
+    mutationFn: () => api.setDefaultRecordingProfile(null),
+    onSuccess: () => {
+      setChoice(null);
+      refresh();
+    },
+  });
+  return {
+    list,
+    current,
+    draft,
+    choose: setChoice,
+    changed: choice !== null && choice !== current?.id,
+    /** config.yaml's profile, for the reset button. */
+    fromConfig: list.find((p) => p.id === settings.data?.recording_profile_default),
+    saved: () => {
+      setChoice(null);
+      refresh();
+    },
+    reset,
+  };
+}
+
+function DefaultRecordingField({ state }: { state: DefaultRecording }) {
+  const { t } = useI18n();
+  const summary = useRecordingSummary();
+  const chosen = state.list.find((p) => p.id === state.draft);
+  if (!state.current) return null;
+  const fromUi = state.current.default_source === "ui";
+  return (
+    <Field
+      label={
+        <span className="row">
+          {t("runtime.recordingDefault")}
+          <SourceTag source={fromUi ? "ui" : "config"} />
+        </span>
+      }
+      hint={
+        <>
+          {chosen && <>{summary(chosen)}. </>}
+          {t("runtime.recordingDefaultHint")}
+          {fromUi && state.fromConfig && (
+            <Button
+              size="small"
+              className="reset-setting"
+              icon={<ArrowUndo16Regular />}
+              disabled={state.reset.isPending}
+              onClick={() => state.reset.mutate()}
+            >
+              {t("runtime.resetToConfig", { value: state.fromConfig.display_name })}
+            </Button>
+          )}
+        </>
+      }
+    >
+      <Select value={state.draft ?? ""} onChange={(_, d) => state.choose(d.value)}>
+        {state.list.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.display_name}
+          </option>
+        ))}
+      </Select>
+    </Field>
   );
 }
 
