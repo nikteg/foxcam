@@ -12,7 +12,9 @@ import {
 import { DefaultVideoLayout, defaultLayoutIcons } from "@vidstack/react/player/layouts/default";
 import "@vidstack/react/player/styles/default/theme.css";
 import "@vidstack/react/player/styles/default/layouts/video.css";
-import { useRef, type RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+
+import type { MotionFrame } from "../api";
 
 import { useI18n } from "../i18n";
 
@@ -54,6 +56,7 @@ export function VideoPlayer({
   startAt,
   autoPlay = false,
   playerRef,
+  overlay,
 }: {
   src: string;
   title: string;
@@ -65,6 +68,8 @@ export function VideoPlayer({
   autoPlay?: boolean;
   /** For seeking from outside (e.g. a detection's play button). */
   playerRef?: RefObject<MediaPlayerInstance | null>;
+  /** Drawn over the picture (e.g. `<MotionOverlay>`), under the controls. */
+  overlay?: ReactNode;
 }) {
   const own = useRef<MediaPlayerInstance>(null);
   const ref = playerRef ?? own;
@@ -85,6 +90,7 @@ export function VideoPlayer({
       <MediaProvider>
         {poster && <Poster className="vds-poster" src={poster} alt="" />}
       </MediaProvider>
+      {overlay}
       <DefaultVideoLayout
         icons={defaultLayoutIcons}
         thumbnails={thumbnails}
@@ -95,5 +101,51 @@ export function VideoPlayer({
         slots={{ settingsMenu: <SpeedMenu />, pipButton: null }}
       />
     </MediaPlayer>
+  );
+}
+
+/** How long one frame's motion stays on screen (frames are 0.5 s apart at 2 fps). */
+const FRAME_MS = 600;
+
+/** Boxes around what moved, following the playback (inside a `VideoPlayer`). */
+export function MotionOverlay({ frames }: { frames: MotionFrame[] }) {
+  const time = useMediaState("currentTime");
+  const width = useMediaState("width");
+  const height = useMediaState("height");
+  const canPlay = useMediaState("canPlay");
+  // Until playback starts the poster (the recording's first moment) covers the video.
+  const started = useMediaState("started");
+  const box = useRef<HTMLDivElement>(null);
+  // The video's own aspect ratio: the picture is letterboxed inside the player.
+  const [aspect, setAspect] = useState<number | null>(null);
+  useEffect(() => {
+    const video = box.current?.closest(".video-player")?.querySelector("video");
+    if (video?.videoWidth) setAspect(video.videoWidth / video.videoHeight);
+  }, [canPlay]);
+  const ms = time * 1000;
+  const frame = started ? frames.findLast(([at]) => at <= ms && ms < at + FRAME_MS) : undefined;
+  let picture = { left: 0, top: 0, width, height };
+  if (aspect && width && height) {
+    const w = Math.min(width, height * aspect);
+    const h = w / aspect;
+    picture = { left: (width - w) / 2, top: (height - h) / 2, width: w, height: h };
+  }
+  return (
+    <div ref={box} className="motion-overlay" aria-hidden="true">
+      <div className="motion-picture" style={picture}>
+        {frame?.[1].map(([x, y, w, h]) => (
+          <span
+            key={`${x},${y}`}
+            className="motion-box"
+            style={{
+              left: `${x * 100}%`,
+              top: `${y * 100}%`,
+              width: `${w * 100}%`,
+              height: `${h * 100}%`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
   );
 }

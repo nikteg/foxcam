@@ -17,7 +17,7 @@ import {
   Dismiss20Regular,
   Edit20Regular,
 } from "@fluentui/react-icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api, type Profile, type ProfileInput } from "../api";
@@ -50,6 +50,7 @@ import {
   DialogSurface,
   DialogTitle,
 } from "../components/Drawer";
+import { CameraTag } from "../components/CameraSelect";
 
 type AliasRow = { from: string; to: string };
 
@@ -63,7 +64,6 @@ const aliasMap = (rows: AliasRow[]): Record<string, string> =>
 export function ProfilesSection() {
   const { t, rich } = useI18n();
   const profiles = useProfiles();
-  const cameras = useQuery({ queryKey: ["cameras"], queryFn: api.cameras });
   const [editing, setEditing] = useState<Profile | null>(null);
   const client = useQueryClient();
   const remove = (p: Profile) =>
@@ -72,7 +72,6 @@ export function ProfilesSection() {
       void client.invalidateQueries({ queryKey: ["cameras"] });
       void client.invalidateQueries({ queryKey: ["queue"] });
     });
-  const cameraName = (id: string) => cameras.data?.find((c) => c.id === id)?.name ?? id;
 
   return (
     <section id="profiles">
@@ -88,7 +87,6 @@ export function ProfilesSection() {
           <ProfileCard
             key={p.id}
             profile={p}
-            cameraName={cameraName}
             onEdit={() => setEditing(p)}
             onRemove={() => remove(p)}
           />
@@ -101,12 +99,10 @@ export function ProfilesSection() {
 
 function ProfileCard({
   profile: p,
-  cameraName,
   onEdit,
   onRemove,
 }: {
   profile: Profile;
-  cameraName: (id: string) => string;
   onEdit: () => void;
   onRemove: () => Promise<unknown>;
 }) {
@@ -237,7 +233,7 @@ function ProfileCard({
           {p.cameras.length ? (
             <span className="chips">
               {p.cameras.map((id) => (
-                <Tag key={id}>{cameraName(id)}</Tag>
+                <CameraTag key={id} id={id} />
               ))}
             </span>
           ) : (

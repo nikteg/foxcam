@@ -43,6 +43,14 @@ iPad and desktop, in light and dark theme, and as an iOS home screen app.
   words wrap, dropdowns shrink, and dropdown options are short (a word or two) with the
   explanation in the field's hint, not in the option text.
 
+### Components
+
+- Use the shared components, and prefer them over building the same thing by hand: when a
+  component's name says what something is (`CameraTag`, `ProfileTag`, `Fact`, `DataTable`,
+  `DrawerTitle`, `ConfidenceBar`, `Checkbox`, `DateTimeInput`, `ConfirmPopover`…), use it.
+- When the same markup shows up in a second place, make it a component with a name that
+  says what it is, and switch the first place over too.
+
 ### Layout
 
 - No page headers: the nav shows where you are. Sub-pages are tabs (`PageTabs`) with their
@@ -56,6 +64,8 @@ iPad and desktop, in light and dark theme, and as an iOS home screen app.
   tables, and no CSS that restyles table cells to look like facts.
 - Label/value facts use the shared `Fact` component; groups of values (cameras, labels,
   tags) are `Tag`s in a `chips` wrapper, not comma-separated text.
+- Camera and profile names are `CameraTag` / `ProfileTag` in tables, facts and lists
+  (titles stay text), never `<Tag>{cameraName(id)}</Tag>` by hand.
 - Do a layout pass on every change: no values wrapped mid-word, no cropped tags, even
   vertical gaps between wrapped buttons, nothing that jumps when its content changes (status
   dots, day/night tags), spinners with room around them.

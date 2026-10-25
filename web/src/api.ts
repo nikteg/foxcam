@@ -244,6 +244,8 @@ export interface Segment {
   mask_version_id: number | null;
   /** Largest share of the picture that moved in one frame (0 = none, null = not measured). */
   motion_score: number | null;
+  /** Where things moved: only from api.segment (one recording). */
+  motion_boxes?: MotionFrame[] | null;
   /** Archived in S3 storage. */
   remote: boolean;
   /** Joined into an hourly file by compaction. */
@@ -274,6 +276,52 @@ export interface SegmentJob {
 }
 
 /** One row of GET /api/models/stats: a profile's detector running one model. */
+/** One frame with motion: its time in the recording and boxes around what moved. */
+export type MotionFrame = [offsetMs: number, boxes: Rect[]];
+
+/** Detections split by the correct / wrong marks. */
+export interface Rated {
+  correct: number;
+  wrong: number;
+  unrated: number;
+}
+
+/** What the motion options would do on one camera and profile (shadow mode). */
+export interface MotionReportRow {
+  camera_id: string;
+  profile_id: string;
+  profile_name: string;
+  require_motion: boolean;
+  skip_without_motion: boolean;
+  recordings: number;
+  /** With motion measured. */
+  measured: number;
+  /** Measured, and nothing moved. */
+  still: number;
+  /** Targets in measured recordings. */
+  targets: Rated;
+  /** Targets in recordings where nothing moved: skipping would miss them. */
+  in_still: Rated;
+  /** Targets whose box overlaps no motion: "only moving targets" would drop them. */
+  no_motion: Rated;
+}
+
+export interface MotionBackfill {
+  running: boolean;
+  done: number;
+  total: number;
+  failed: number;
+  started_at: string | null;
+  finished_at: string | null;
+}
+
+export interface MotionReport {
+  rows: MotionReportRow[];
+  /** Recordings in the period without a motion measurement. */
+  unmeasured: number;
+  backfill: MotionBackfill;
+}
+
 export interface ModelStats {
   profile_id: string;
   profile_name: string;
@@ -823,6 +871,10 @@ export const api = {
     hide_wrong?: boolean;
     limit?: number;
   }) => request<DetectionEvent[]>("GET", withQuery("/api/events", q)),
+  motionReport: (days: number) =>
+    request<MotionReport>("GET", withQuery("/api/motion/report", { days })),
+  motionBackfill: (days: number) =>
+    request<MotionBackfill & { started: boolean }>("POST", "/api/motion/backfill", { days }),
   modelStats: (days?: number) =>
     request<ModelStats[]>("GET", withQuery("/api/models/stats", { days })),
   queue: (q: { state?: string; limit?: number }) =>

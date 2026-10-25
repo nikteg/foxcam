@@ -3,11 +3,18 @@ import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../api";
 import { useI18n } from "../i18n";
+import { Tag } from "./ui";
 
 /** Display name for a camera id (falls back to the id, e.g. for removed cameras). */
 export function useCameraName(): (id: string) => string {
   const { data: cameras = [] } = useQuery({ queryKey: ["cameras"], queryFn: api.cameras });
   return (id) => cameras.find((c) => c.id === id)?.name ?? id;
+}
+
+/** A camera's name as a tag (lists, facts, drawers). */
+export function CameraTag({ id }: { id: string }) {
+  const cameraName = useCameraName();
+  return <Tag>{cameraName(id)}</Tag>;
 }
 
 export function CameraSelect({

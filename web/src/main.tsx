@@ -32,6 +32,7 @@ const router = createBrowserRouter([
       { path: "events", Component: Events },
       { path: "events/detections", Component: Events },
       { path: "events/models", Component: Events },
+      { path: "events/motion", Component: Events },
       { path: "recordings", Component: Recordings },
       { path: "recordings/segments", Component: Recordings },
       { path: "jobs", Component: Queue },

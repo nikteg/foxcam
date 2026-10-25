@@ -7,7 +7,9 @@ before it. A pixel counts as changed when it differs by more than the sensitivit
 threshold from every background pixel around it (3x3), so edges that wobble by a pixel
 (camera shake, compression) do not count. Changed pixels count in cells of 2x2 that need
 at least two each. Connected cells make a region, and regions smaller than the
-sensitivity's minimum are dropped (a leaf, a raindrop). A region whose pattern is the same
+sensitivity's minimum are dropped (a leaf, a raindrop), and so are regions where nothing
+differs from both the previous and the next frame: the place something just left (it
+looks the same in the next frame), still in the background for a few frames. A region whose pattern is the same
 as before, only brighter or darker, is light (a flickering lamp, headlights, a cloud's
 shadow) and dropped too. When more than ``motion.light_change_fraction`` of the picture
 changes at once, the frame is a light change (IR switching on, exposure), not motion, and
@@ -64,13 +66,16 @@ class Motion:
     boxes: list[list[Any]]  # [[offset_ms, [box, ...]], ...], frames with motion only
 
 
-def decode(video: Path, fps: float) -> list[bytes]:
-    """The video's frames at ``fps`` as ``WIDTH`` x ``HEIGHT`` greyscale bytes."""
+def decode(video: Path, fps: float, start_s: float = 0.0,
+           duration_s: float | None = None) -> list[bytes]:
+    """The video's frames at ``fps`` as ``WIDTH`` x ``HEIGHT`` greyscale bytes (from
+    ``start_s``, for ``duration_s``: a segment in its hourly file)."""
+    part = ["-t", f"{duration_s:.3f}"] if duration_s else []
     proc = subprocess.run(
-        ["ffmpeg", "-v", "error", "-i", str(video), "-an",
+        ["ffmpeg", "-v", "error", "-ss", f"{start_s:.3f}", "-i", str(video), *part, "-an",
          "-vf", f"fps={fps},scale={WIDTH}:{HEIGHT}:flags=area,format=gray",
          "-f", "rawvideo", "-"],
-        capture_output=True, timeout=300, check=False)
+        capture_output=True, timeout=600, check=False)
     if proc.returncode != 0:
         raise RuntimeError(f"motion: ffmpeg failed: {proc.stderr.decode()[-300:]}")
     size = WIDTH * HEIGHT
@@ -100,19 +105,25 @@ def analyse(frames: list[bytes], fps: float, sensitivity: str = "medium", night:
     score = 0.0
     out: list[list[Any]] = []
     background: list[float] | None = None
+    previous: list[float] = []
     for i, frame in enumerate(frames):
         if background is None:
-            background = [float(v) for v in frame]
+            background = previous = [float(v) for v in frame]
             continue
-        low, high = _spread(background)
-        changed = [not skip[p] and (frame[p] > high[p] + threshold or frame[p] < low[p] - threshold)
-                   for p in range(WIDTH * HEIGHT)]
+        changed = _changed(frame, background, threshold, skip)
+        since_last = _changed(frame, previous, threshold, skip)
+        following = frames[i + 1] if i + 1 < len(frames) else None
+        if following is not None:  # also changed before the next frame
+            to_next = _changed(frame, [float(v) for v in following], threshold, skip)
+            since_last = [a and b for a, b in zip(since_last, to_next, strict=True)]
+        previous = [float(v) for v in frame]
         if sum(changed) > light_change_fraction * counted:
-            background = [float(v) for v in frame]  # light change: start over
+            background = list(previous)  # light change: start over
             continue
         cells = _cells(changed)
         regions = [r for r in _regions(cells)
-                   if len(r) >= level.min_cells and not _lit(r, frame, background)]
+                   if len(r) >= level.min_cells and _moved(r, since_last)
+                   and not _lit(r, frame, background)]
         background = [b + ALPHA * (v - b) for b, v in zip(background, frame, strict=True)]
         if not regions:
             continue
@@ -120,6 +131,20 @@ def analyse(frames: list[bytes], fps: float, sensitivity: str = "medium", night:
         score = max(score, moving / (COLS * ROWS))
         out.append([round(i * 1000 / fps), [_box(r) for r in regions]])
     return Motion(round(score, 4), out)
+
+
+def _changed(frame: bytes, reference: list[float], threshold: float,
+             skip: list[bool]) -> list[bool]:
+    """Per pixel: differs by more than ``threshold`` from every reference pixel around it."""
+    low, high = _spread(reference)
+    return [not skip[p] and (frame[p] > high[p] + threshold or frame[p] < low[p] - threshold)
+            for p in range(WIDTH * HEIGHT)]
+
+
+def _moved(region: list[tuple[int, int]], since_last: list[bool]) -> bool:
+    """Something in the region changed since the previous frame."""
+    return any(since_last[(cy * CELL + dy) * WIDTH + cx * CELL + dx]
+               for cx, cy in region for dy in range(CELL) for dx in range(CELL))
 
 
 def _spread(image: list[float]) -> tuple[list[float], list[float]]:

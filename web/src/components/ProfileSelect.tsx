@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../api";
 import { useI18n } from "../i18n";
+import { Tag } from "./ui";
 
 export function useProfiles() {
   return useQuery({ queryKey: ["profiles"], queryFn: api.profiles, refetchInterval: 15_000 });
@@ -12,6 +13,12 @@ export function useProfiles() {
 export function useProfileName(): (id: string | null | undefined) => string {
   const { data = [] } = useProfiles();
   return (id) => data.find((p) => p.id === (id ?? "default"))?.display_name ?? id ?? "default";
+}
+
+/** A detection profile's name as a tag (lists, facts, drawers). */
+export function ProfileTag({ id }: { id: string | null | undefined }) {
+  const profileName = useProfileName();
+  return <Tag>{profileName(id)}</Tag>;
 }
 
 export function ProfileSelect({

@@ -717,6 +717,33 @@ div.thumb.placeholder {
   color: var(--colorNeutralForeground3);
 }
 
+/* Events → Motion: a verdict with its numbers under it (they wrap). */
+.report-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalXS);
+}
+.data-table div.dt-cell .report-cell,
+.data-table div.dt-cell .report-cell .fui-Caption1 {
+  white-space: normal;
+}
+
+/* Motion boxes over the recording player (Show motion). */
+.motion-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.motion-picture {
+  position: absolute;
+}
+.motion-box {
+  position: absolute;
+  outline: 2px solid #4aa3ff;
+  background: rgb(74 163 255 / 15%);
+}
+
 /* Mask editor */
 .mask-toolbar {
   margin-bottom: var(--spacingVerticalM);

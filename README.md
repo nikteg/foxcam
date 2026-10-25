@@ -35,6 +35,8 @@ anything else, and keep the clips.
 - **Motion detection, opt-in per profile.** Skip recordings where nothing moved (no GPU
   time spent on quiet cameras) and count only targets that move, so a fox-shaped stump never
   makes an event. Per camera: sensitivity and areas to ignore, like trees in the wind.
+  Events → Motion shows, from your own recordings and correct/wrong marks, where each
+  option would help before you turn it on.
 - **Privacy built in.** Draw censor rectangles per camera; they are burned into the pixels
   before a worker sees a frame, and optionally into recordings and live view as well.
   Private cameras are never sent anywhere.

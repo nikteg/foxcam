@@ -160,11 +160,13 @@ running average of the ones before. A pixel counts when it differs by more than 
 sensitivity's threshold from every background pixel around it (3×3), so edges that wobble
 by a pixel (camera shake, compression) do not; counted pixels make 2×2 cells that need two
 each. Touching cells make a region, and regions smaller than the sensitivity's minimum are
-dropped (a leaf, a raindrop). A region with the same pattern as before, only brighter or
+dropped (a leaf, a raindrop), and so are regions where nothing differs from both the
+previous and the next frame: the place something just left, still fading from the
+background. A region with the same pattern as before, only brighter or
 darker, is light (a flickering lamp, headlights, a cloud's shadow) and dropped too. When
 more than `motion.light_change_fraction` of the picture changes at once, the frame is a
 light change (night mode switching, exposure) and the average starts over. Night pictures
-get a higher threshold. Plain Python, no numpy: about 0.2 s for a 20 s segment.
+get a higher threshold. Plain Python, no numpy: about half a second for a 20 s segment.
 
 Per camera (Settings → Detection → *Edit motion detection*): the sensitivity (low, medium,
 high; else `motion.sensitivity`) and **motion-ignore areas**, rectangles drawn like censor
@@ -183,6 +185,15 @@ the boxes around its regions. Profiles use it two ways, both opt-in:
   box need any motion in that window. Segments without a measurement count as moving.
 
 Both apply to recordings analysed from then on; *Detect again* re-evaluates one.
+
+**Whether it helps** (Events → Motion, admins; `pipeline/motion_report.py`): since motion is
+measured on every recording whatever the profiles say, the report shows per camera and
+profile what each option *would* do with the period's recordings and targets, split by the
+correct / wrong marks: how many recordings skipping would save and which targets it would
+miss, and which targets "only moving targets" would drop. Recordings from before motion
+detection can be measured afterwards from their stored footage (*Measure motion* there,
+or `foxcam motion-backfill --days 7`); that changes no detections or events. The recording
+drawer's *Show motion* draws the motion boxes over the video.
 
 ## Data model (SQLite)
 

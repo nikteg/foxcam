@@ -37,8 +37,8 @@ import { ConfirmPopover } from "./ConfirmPopover";
 import { DataTable, type Column } from "./DataTable";
 import { useI18n, type MessageKey } from "../i18n";
 import { LabelPicker, useLabelSuggestions, useSuggestionList } from "./LabelPicker";
-import { useCameraName } from "./CameraSelect";
-import { useProfileName, useProfiles } from "./ProfileSelect";
+import { CameraTag } from "./CameraSelect";
+import { ProfileTag, useProfiles } from "./ProfileSelect";
 import {
   Checkbox,
   ConfigTag,
@@ -158,8 +158,6 @@ function ChannelCard({
   onRemove: () => Promise<unknown>;
 }) {
   const { t } = useI18n();
-  const cameraName = useCameraName();
-  const profileName = useProfileName();
   const [result, setResult] = useState<ProbeResult | null>(null);
   const test = useMutation({ mutationFn: () => api.testChannel(c.id), onSuccess: setResult });
   const target = c.type === "ntfy" ? `${c.server.replace(/\/$/, "")}/${c.topic}` : (c.url ?? "");
@@ -197,7 +195,7 @@ function ChannelCard({
           {c.cameras ? (
             <span className="chips">
               {c.cameras.map((id) => (
-                <Tag key={id}>{cameraName(id)}</Tag>
+                <CameraTag key={id} id={id} />
               ))}
             </span>
           ) : (
@@ -209,7 +207,7 @@ function ChannelCard({
             <Fact label={t("profiles.title")}>
               <span className="chips">
                 {c.profiles.map((p) => (
-                  <Tag key={p}>{profileName(p)}</Tag>
+                  <ProfileTag key={p} id={p} />
                 ))}
               </span>
             </Fact>
@@ -289,7 +287,6 @@ function ChannelCard({
 
 function Deliveries({ channelName }: { channelName: (id: string) => string }) {
   const { t } = useI18n();
-  const cameraName = useCameraName();
   const { data = [] } = useQuery({
     queryKey: ["notifications", "deliveries"],
     queryFn: api.deliveries,
@@ -313,7 +310,7 @@ function Deliveries({ channelName }: { channelName: (id: string) => string }) {
       id: "camera",
       header: t("common.camera"),
       width: 150,
-      cell: (d) => d.camera_id && <Tag>{cameraName(d.camera_id)}</Tag>,
+      cell: (d) => d.camera_id && <CameraTag id={d.camera_id} />,
     },
     {
       id: "trigger",

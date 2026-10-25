@@ -8,14 +8,9 @@ import { useQuery } from "@tanstack/react-query";
 import { api, detectionFrameUrl, type DetectionEvent } from "../api";
 import { duration } from "../format";
 import { useI18n } from "../i18n";
-import { useCameraName } from "./CameraSelect";
+import { CameraTag } from "./CameraSelect";
 import { Feedback } from "./Feedback";
-import {
-  useDetectorNames,
-  useProfileName,
-  useProfiles,
-  useSeveralDetectors,
-} from "./ProfileSelect";
+import { ProfileTag, useDetectorNames, useProfiles, useSeveralDetectors } from "./ProfileSelect";
 import { ConfidenceBar, Fact, Facts, Light, QueryState, Tag, Time, useRouterHref } from "./ui";
 import { VideoPlayer } from "./VideoPlayer";
 
@@ -27,8 +22,6 @@ const detectionsHref = (e: DetectionEvent) =>
 export function EventDetail({ event: e }: { event: DetectionEvent }) {
   const { t } = useI18n();
   const routerHref = useRouterHref();
-  const cameraName = useCameraName();
-  const profileName = useProfileName();
   const manyProfiles = (useProfiles().data?.length ?? 0) > 1;
   const severalDetectors = useSeveralDetectors();
   const detectorNames = useDetectorNames();
@@ -66,14 +59,14 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
       )}
       <Facts>
         <Fact label={t("common.camera")}>
-          <Tag>{cameraName(e.camera_id)}</Tag>
+          <CameraTag id={e.camera_id} />
         </Fact>
         <Fact label={t("col.time")}>
           <Time iso={e.first_ts} />
         </Fact>
         {manyProfiles && (
           <Fact label={t("profiles.profile")}>
-            <Tag>{profileName(e.profile_id)}</Tag>
+            <ProfileTag id={e.profile_id} />
           </Fact>
         )}
         <Fact label={t("col.confidence")}>

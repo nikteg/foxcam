@@ -4,7 +4,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Fragment } from "react";
 
 import { api, detectionFrameUrl, type Detection } from "../api";
-import { CameraSelect, useCameraName } from "../components/CameraSelect";
+import { CameraSelect, CameraTag, useCameraName } from "../components/CameraSelect";
 import { ProfileSelect, useDetectorNames, useSeveralDetectors } from "../components/ProfileSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
@@ -53,7 +53,7 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detec
     id: "camera",
     header: t("common.camera"),
     width: 150,
-    cell: (d) => <Tag>{cameraName(d.camera_id)}</Tag>,
+    cell: (d) => <CameraTag id={d.camera_id} />,
     compare: byString((d) => cameraName(d.camera_id)),
   },
   {
@@ -247,7 +247,6 @@ export function DetectionList() {
 
 function DetectionDetail({ detection: d }: { detection: Detection }) {
   const routerHref = useRouterHref();
-  const cameraName = useCameraName();
   const { t } = useI18n();
   return (
     <div className="detail-stack">
@@ -263,7 +262,7 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
           <Time iso={d.ts} />
         </Fact>
         <Fact label={t("common.camera")}>
-          <Tag>{cameraName(d.camera_id)}</Tag>
+          <CameraTag id={d.camera_id} />
         </Fact>
         <Fact label={t("col.confidence")}>
           <ConfidenceBar value={d.confidence} />

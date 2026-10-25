@@ -18,7 +18,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, snapshotUrl, type Camera, type CameraSource } from "../api";
 import { hasRole, useMe } from "../auth";
 import { useI18n } from "../i18n";
-import { useProfileName } from "./ProfileSelect";
+import { ProfileTag } from "./ProfileSelect";
 import { useRoleName } from "./ShareDialog";
 import { ConfigTag, Dot, Fact, Facts, Light, Tag, Time, useRouterHref, useSourceLabel } from "./ui";
 
@@ -64,7 +64,6 @@ export function CameraCard({
   const me = useMe();
   const routerHref = useRouterHref();
   const sourceLabel = useSourceLabel();
-  const profileName = useProfileName();
   const recordingName = useRecordingProfileName();
   const roleName = useRoleName();
   const client = useQueryClient();
@@ -159,7 +158,7 @@ export function CameraCard({
               {c.profiles.length ? (
                 <span className="row wrap tags">
                   {c.profiles.map((id) => (
-                    <Tag key={id}>{profileName(id)}</Tag>
+                    <ProfileTag key={id} id={id} />
                   ))}
                 </span>
               ) : (

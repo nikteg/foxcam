@@ -219,6 +219,9 @@ def main() -> None:
                     help="normalized rectangle to black out (repeatable)")
     tc.add_argument("--audio", choices=["copy", "opus", "none"], default="copy")
     tc.add_argument("--archive", action="store_true", help="B-frames allowed (not for live)")
+    mb = sub.add_parser("motion-backfill", help="measure motion on recordings from before "
+                        "motion detection (for the motion report; changes no detections)")
+    mb.add_argument("--days", type=float, default=7, help="recordings of the last N days")
     hw = sub.add_parser("hwaccel", help="show which hardware encoders work on this machine")
     hw.add_argument("--ffmpeg", default="ffmpeg")
     hw.add_argument("--device", help="Linux render node (default /dev/dri/renderD128)")
@@ -325,6 +328,24 @@ def main() -> None:
                 print(worker_tokens.create(args.name, tags=tags)[1])
         except worker_tokens.TokenError as e:
             raise SystemExit(f"error: {e}") from None
+    elif args.cmd == "motion-backfill":
+        from datetime import timedelta
+
+        from .db import init_db
+        from .models import utcnow
+        from .pipeline import motion_report
+
+        init_db(settings)
+        ids = motion_report.pending(utcnow() - timedelta(days=args.days))
+        failed = 0
+        for i, seg_id in enumerate(ids, 1):
+            try:
+                motion_report.measure_segment(settings, seg_id)
+            except Exception as e:  # noqa: BLE001 - footage gone, broken file
+                failed += 1
+                logging.getLogger(__name__).warning("segment %s: %s", seg_id, e)
+            if i % 50 == 0 or i == len(ids):
+                print(f"{i}/{len(ids)} measured ({failed} failed)", flush=True)
     elif args.cmd == "settings":
         raise SystemExit(_settings_command(settings, args))
     elif args.cmd == "user":

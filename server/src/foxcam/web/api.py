@@ -31,7 +31,7 @@ from ..config import Settings
 from ..db import session_scope
 from ..mediamtx import MediaMtx
 from ..models import Archive, CameraRole, Detection, Event, Segment, utcnow
-from ..pipeline import compaction, queue, uploader
+from ..pipeline import compaction, motion_report, queue, uploader
 from ..pipeline.events import rebuild_events as rebuild_all_events
 from ..pipeline.reanalyse import ReanalyseError, reanalyse_segment
 from ..storage import StorageError, boto3_available, get_storage
@@ -296,7 +296,9 @@ def _serve_segment(settings: Settings, seg: Segment, filename: str | None = None
 
 @router.get("/segments/{segment_id}")
 def segment(segment_id: int, p: Principal = Depends(principal)) -> dict[str, Any]:
-    return queries.segment_dict(_segment(p, segment_id))
+    """One recording, with where things moved (``motion_boxes``)."""
+    seg = _segment(p, segment_id)
+    return {**queries.segment_dict(seg), "motion_boxes": seg.motion_boxes}
 
 
 @router.post("/segments/{segment_id}/reanalyse")
@@ -609,6 +611,32 @@ def models_stats(days: float | None = Query(None, gt=0, description="last N days
     processing time, job outcomes and agreement with the profile's other detectors."""
     since = utcnow() - timedelta(days=days) if days else None
     return model_stats.model_stats(settings, since)
+
+
+@router.get("/motion/report", dependencies=[Depends(require_admin)])
+def motion_report_get(days: float = Query(7, gt=0, le=365),
+                      camera: str | None = None,
+                      settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
+    """Per camera and profile, what the motion options would do with the recordings and
+    targets of the last ``days`` (shadow mode), split by correct / wrong marks; plus how
+    many recordings still have no motion measured, and the backfill's progress."""
+    since = utcnow() - timedelta(days=days)
+    return {"rows": motion_report.report(settings, since, camera),
+            "unmeasured": len(motion_report.pending(since)),
+            "backfill": motion_report.backfill.state}
+
+
+class BackfillBody(BaseModel):
+    days: float = Field(default=7, gt=0, le=365)
+
+
+@router.post("/motion/backfill", dependencies=[Depends(require_admin)])
+def motion_backfill(body: BackfillBody,
+                    settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
+    """Measure motion on the period's recordings that have none yet, in the background
+    (from their stored footage; detections and events stay as they are)."""
+    started = motion_report.backfill.start(settings, utcnow() - timedelta(days=body.days))
+    return {"started": started, **motion_report.backfill.state}
 
 
 @router.get("/queue", dependencies=[Depends(require_admin)])

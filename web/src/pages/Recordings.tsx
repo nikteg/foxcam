@@ -4,7 +4,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 
 import { api, type Segment } from "../api";
-import { CameraSelect, useCameraName } from "../components/CameraSelect";
+import { CameraSelect, CameraTag, useCameraName } from "../components/CameraSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { SegmentPanel } from "../components/SegmentDetail";
 import {
@@ -52,7 +52,7 @@ const columns = (
     id: "camera",
     header: t("common.camera"),
     width: 150,
-    cell: (r) => <Tag>{cameraName(r.camera_id)}</Tag>,
+    cell: (r) => <CameraTag id={r.camera_id} />,
     compare: byString((r) => cameraName(r.camera_id)),
   },
   {

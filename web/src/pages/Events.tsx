@@ -6,6 +6,7 @@ import { EventsGrid } from "../components/EventsGrid";
 import { Select } from "@fluentui/react-components";
 
 import { ModelsSection } from "../components/ModelsSection";
+import { MotionSection } from "../components/MotionSection";
 import { ProfileSelect, useProfiles, useSeveralDetectors } from "../components/ProfileSelect";
 import { InfoBanner, PageTabs, PageTitle, QueryState, useSubPage } from "../components/ui";
 import { useIsAdmin } from "../auth";
@@ -20,7 +21,9 @@ export function Events() {
   const isAdmin = useIsAdmin();
   const tab = useSubPage(
     "/events",
-    isAdmin ? (["events", "detections", "models"] as const) : (["events", "detections"] as const),
+    isAdmin
+      ? (["events", "detections", "models", "motion"] as const)
+      : (["events", "detections"] as const),
   );
   return (
     <>
@@ -31,11 +34,18 @@ export function Events() {
         tabs={[
           { id: "events", label: t("nav.events") },
           { id: "detections", label: t("nav.detections") },
-          ...(isAdmin ? [{ id: "models" as const, label: t("models.tab") }] : []),
+          ...(isAdmin
+            ? [
+                { id: "models" as const, label: t("models.tab") },
+                { id: "motion" as const, label: t("motion.tab") },
+              ]
+            : []),
         ]}
       />
       {tab === "models" ? (
         <ModelsSection />
+      ) : tab === "motion" ? (
+        <MotionSection />
       ) : tab === "detections" ? (
         <DetectionList />
       ) : (

@@ -3,7 +3,7 @@ import { Folder20Regular } from "@fluentui/react-icons";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { api, type ArchiveFile } from "../api";
-import { useCameraName } from "../components/CameraSelect";
+import { CameraTag, useCameraName } from "../components/CameraSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
 import {
@@ -53,7 +53,7 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Archi
     id: "camera",
     header: t("common.camera"),
     width: 150,
-    cell: (r) => <Tag>{cameraName(r.camera_id)}</Tag>,
+    cell: (r) => <CameraTag id={r.camera_id} />,
     compare: byString((r) => cameraName(r.camera_id)),
   },
   {

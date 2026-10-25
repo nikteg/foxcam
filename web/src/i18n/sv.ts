@@ -101,6 +101,7 @@ export const sv: Record<MessageKey, string> = {
   "camera.lastSegment": "Senaste segment",
   "camera.censorAreas": "Maskerade områden",
   "motion.title": "Rörelsedetektering",
+  "motion.tab": "Rörelse",
   "motion.help":
     "Rörelse i de här områdena ignoreras, som träd i vinden eller en trafikerad väg. Flimrande ljus och kameraskakningar räknas redan bort. Maskerade områden räknas aldrig heller. Ändringar gäller bara nya inspelningar.",
   "motion.actions": "Åtgärder för rörelseområden",
@@ -211,6 +212,32 @@ export const sv: Record<MessageKey, string> = {
   "recordings.withoutMotion": "Utan rörelse",
   "recordings.noMotion": "ingen",
   "recordings.motionShare": "{value} av bilden",
+  "recordings.showMotion": "Visa rörelse",
+  "motionReport.intro":
+    "Vad de två rörelsealternativen skulle göra med varje kameras inspelningar hittills, utan att ändra något. Ett mål du markerat som rätt som ett alternativ skulle tappa räknas emot det; ett som markerats fel och som det skulle ta bort räknas för det. Markera fler detektioner på fliken Detektioner för ett tydligare svar.",
+  "motionReport.recordings": "Mätta",
+  "motionReport.measuredHint":
+    "Inspelningar med uppmätt rörelse, av alla analyserade under perioden.",
+  "motionReport.notMeasured": "ingen rörelse uppmätt än",
+  "motionReport.noTargets": "inga mål under perioden",
+  "motionReport.on": "på",
+  "motionReport.misses": "missar {n} rätt",
+  "motionReport.nothingToSkip": "inget att hoppa över",
+  "motionReport.checkUnrated": "kolla {n} omarkerade",
+  "motionReport.saves": "sparar {value}",
+  "motionReport.dropsCorrect": "tappar {n} rätt",
+  "motionReport.dropsWrong": "tar bort {n} fel",
+  "motionReport.dropsUnrated": "tar bort {n} omarkerade",
+  "motionReport.changesNothing": "ändrar inget",
+  "motionReport.skipDetail":
+    "{still} av {measured} inspelningar utan rörelse. Mål i dem: {correct} rätt, {wrong} fel, {unrated} omarkerade.",
+  "motionReport.requireDetail":
+    "Av {total} mål skulle {correct} rätt, {wrong} fel och {unrated} omarkerade tas bort.",
+  "motionReport.unmeasured":
+    "{n} {n:inspelning|inspelningar} under perioden saknar uppmätt rörelse (från före rörelsedetekteringen). Mät dem från den sparade filmen för att ta med dem; inget annat ändras.",
+  "motionReport.measure": "Mät rörelse",
+  "motionReport.measuring": "Mäter rörelse: {done} av {total} inspelningar…",
+  "motionReport.none": "Inga analyserade inspelningar under perioden.",
   "recordings.none": "Inga inspelningar än.",
   "recordings.pinnedTooltip": "Sparas: ingår i en händelse",
   "recordings.deleted": "Videon har gallrats bort; detektionerna finns kvar.",

@@ -15,7 +15,7 @@ import { api } from "../api";
 import { duration, fileSize, localTime } from "../format";
 import { useI18n, type I18n } from "../i18n";
 import { byNumber, byString, DataTable, type Column } from "./DataTable";
-import { useCameraName } from "./CameraSelect";
+import { CameraTag, useCameraName } from "./CameraSelect";
 import { Empty, InfoBanner, QueryState, Stat, Tag, Time } from "./ui";
 
 interface PeriodRow {
@@ -47,7 +47,7 @@ const periodColumns = (t: I18n["t"], cameraName: (id: string) => string): Column
     id: "camera",
     header: t("common.camera"),
     width: 150,
-    cell: (r) => <Tag>{cameraName(r.camera)}</Tag>,
+    cell: (r) => <CameraTag id={r.camera} />,
     compare: byString((r) => cameraName(r.camera)),
   },
   {

@@ -19,7 +19,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { useState } from "react";
 
 import { api, type Job, type JobState } from "../api";
-import { useCameraName } from "../components/CameraSelect";
+import { CameraTag, useCameraName } from "../components/CameraSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import {
   Empty,
@@ -34,7 +34,7 @@ import {
   useSubPage,
 } from "../components/ui";
 import { decimal, duration } from "../format";
-import { useProfileName } from "../components/ProfileSelect";
+import { ProfileTag } from "../components/ProfileSelect";
 import { AddWorkerDialog } from "../components/AddWorkerDialog";
 import { ArchivingSection } from "../components/ArchivingSection";
 import { SegmentPanel } from "../components/SegmentDetail";
@@ -71,11 +71,9 @@ export function Queue() {
   const { t } = useI18n();
   const stateLabel = useStateLabel();
   const cameraName = useCameraName();
-  const profileName = useProfileName();
   const jobColumns = makeJobColumns(
     t,
     stateLabel,
-    profileName,
     cameraName,
     (id) => requeue.mutate(id),
     requeue.isPending,
@@ -199,7 +197,6 @@ export function Queue() {
 function makeJobColumns(
   t: I18n["t"],
   stateLabel: (s: string) => string,
-  profileName: (id: string | null) => string,
   cameraName: (id: string) => string,
   retry: (id: number) => void,
   busy: boolean,
@@ -216,14 +213,14 @@ function makeJobColumns(
       id: "camera",
       header: t("common.camera"),
       width: 150,
-      cell: (j) => <Tag>{cameraName(j.camera_id)}</Tag>,
+      cell: (j) => <CameraTag id={j.camera_id} />,
       compare: byString((j) => cameraName(j.camera_id)),
     },
     {
       id: "profile",
       header: t("profiles.profile"),
       width: 110,
-      cell: (j) => (j.profile_id ? <Tag>{profileName(j.profile_id)}</Tag> : "–"),
+      cell: (j) => (j.profile_id ? <ProfileTag id={j.profile_id} /> : "–"),
       compare: byString((j) => j.profile_id),
     },
     {
