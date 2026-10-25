@@ -78,6 +78,24 @@ kbd {
 .bad-icon {
   color: var(--colorPaletteRedForeground1);
 }
+/* The chosen Correct / Wrong button: filled, not Fluent's thick checked border. */
+.fui-ToggleButton.feedback-on,
+.fui-ToggleButton.feedback-on:hover,
+.fui-ToggleButton.feedback-on:hover:active {
+  border-width: var(--strokeWidthThin);
+  color: var(--colorNeutralForegroundOnBrand);
+}
+.fui-ToggleButton.feedback-on .fui-Button__icon svg {
+  color: inherit;
+}
+.fui-ToggleButton.feedback-on.ok {
+  background: var(--colorPaletteGreenBackground3);
+  border-color: var(--colorPaletteGreenBackground3);
+}
+.fui-ToggleButton.feedback-on.bad {
+  background: var(--colorPaletteRedBackground3);
+  border-color: var(--colorPaletteRedBackground3);
+}
 .row {
   display: inline-flex;
   align-items: center;

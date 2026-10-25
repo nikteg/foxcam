@@ -41,12 +41,15 @@ export function Feedback({
   const role = useCameraRole(detection.camera_id);
   const readOnly = !hasRole(role ? { role } : undefined, "editor");
   const button = (want: boolean, label: string, on: ReactElement, off: ReactElement) => {
+    const checked = value === want;
     const toggleButton = (
       <ToggleButton
         size={size}
         appearance={withLabels ? "outline" : "subtle"}
-        checked={value === want}
-        icon={value === want ? on : off}
+        checked={checked}
+        // With labels the chosen button is filled in its colour (styles.css).
+        className={withLabels && checked ? `feedback-on ${want ? "ok" : "bad"}` : undefined}
+        icon={checked ? on : off}
         disabled={readOnly}
         onClick={() => toggle(want)}
         // In table rows a native tooltip: hundreds of Fluent Tooltips make lists slow.
