@@ -4,7 +4,11 @@ Rules agreed while building this project. `CLAUDE.md` is a symlink to this file.
 
 ## Git
 
-- Commit and push straight to `main` (no feature branches unless asked).
+- The repository is public: don't push to `main` on your own. Work on a branch and open a
+  pull request, or commit locally and ask before pushing. Push to `main` only when asked to
+  for that change.
+- Nothing private in commits: no secrets, tokens, real camera URLs, IP addresses or
+  personal data, in code, docs, screenshots or commit messages.
 - Never force push. If it seems needed, write out the commands for a person to run.
 - No backwards compatibility needed yet: links, URLs, config keys, headers and names may
   change freely.
