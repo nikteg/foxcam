@@ -42,6 +42,7 @@ import {
 } from "../components/ui";
 import { ConfirmPopover } from "../components/ConfirmPopover";
 import { useI18n } from "../i18n";
+import { PHONE, useMediaQuery } from "../useMediaQuery";
 import { useRecordingProfiles, useRecordingSummary } from "../recordingProfiles";
 import {
   Dialog,
@@ -174,6 +175,7 @@ function GeneralPanel({
   tabs: ReactNode;
   onClose: () => void;
 }) {
+  const phone = useMediaQuery(PHONE);
   const { t } = useI18n();
   const client = useQueryClient();
   const editable = camera.managed === "ui" && hasRole(camera, "editor");
@@ -271,8 +273,14 @@ function GeneralPanel({
               onConfirm={() => remove.mutateAsync()}
               align="start"
             >
-              <Button appearance="subtle" className="danger" icon={<Delete20Regular />}>
-                {t("cameras.removeCamera")}
+              {/* Icon only on phones, so Cancel and Save still fit on the row. */}
+              <Button
+                appearance="subtle"
+                className="danger"
+                icon={<Delete20Regular />}
+                aria-label={phone ? t("cameras.removeCamera") : undefined}
+              >
+                {phone ? null : t("cameras.removeCamera")}
               </Button>
             </ConfirmPopover>
           </span>

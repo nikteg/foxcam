@@ -33,7 +33,11 @@ iPad and desktop, in light and dark theme, and as an iOS home screen app.
 - Confirmations for removing things are a `ConfirmPopover` at the button, never a drawer
   and never `window.confirm`. Destructive actions always ask.
 - Drawer footers: back / other-option buttons left aligned, the main action right aligned;
-  a danger "Remove" is a flat button on the left.
+  a danger "Remove" is a flat button on the left. The footer's buttons fit on one row at
+  phone width: there the danger button is icon only (with an `aria-label`).
+- Nothing in a drawer is wider than the drawer at phone width (check at 390 px): long
+  words wrap, dropdowns shrink, and dropdown options are short (a word or two) with the
+  explanation in the field's hint, not in the option text.
 
 ### Layout
 
