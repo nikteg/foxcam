@@ -189,27 +189,53 @@ function ChannelCard({
         <Fact label={t("notify.target")} className="mono">
           {target}
         </Fact>
-        <Fact label={t("notify.when")}>{c.when.map((o) => t(TRIGGER_LABELS[o])).join(", ")}</Fact>
+        <Fact label={t("notify.when")}>
+          <span className="chips">
+            {c.when.map((o) => (
+              <Tag key={o}>{t(TRIGGER_LABELS[o])}</Tag>
+            ))}
+          </span>
+        </Fact>
         <Fact label={t("nav.cameras")}>
-          {c.cameras ? c.cameras.map(cameraName).join(", ") : t("notify.all")}
+          {c.cameras ? (
+            <span className="chips">
+              {c.cameras.map((id) => (
+                <Tag key={id}>{cameraName(id)}</Tag>
+              ))}
+            </span>
+          ) : (
+            t("notify.all")
+          )}
         </Fact>
         {c.profiles && (
           <>
             <Fact label={t("profiles.title")}>
-              {c.profiles.map((p) => profileName(p)).join(", ")}
+              <span className="chips">
+                {c.profiles.map((p) => (
+                  <Tag key={p}>{profileName(p)}</Tag>
+                ))}
+              </span>
             </Fact>
           </>
         )}
         {(c.labels || c.min_confidence > 0 || c.min_agreement > 1) && (
           <>
             <Fact label={t("notify.only")}>
-              {[
-                c.labels?.join(", "),
-                c.min_confidence > 0 && `≥ ${percent(c.min_confidence)}`,
-                c.min_agreement > 1 && t("events.seenByAtLeast", { n: c.min_agreement }),
-              ]
-                .filter(Boolean)
-                .join(" – ")}
+              <span className="chips">
+                {c.labels?.map((l) => (
+                  <Tag key={l}>{l}</Tag>
+                ))}
+                {(c.min_confidence > 0 || c.min_agreement > 1) && (
+                  <span>
+                    {[
+                      c.min_confidence > 0 && `≥ ${percent(c.min_confidence)}`,
+                      c.min_agreement > 1 && t("events.seenByAtLeast", { n: c.min_agreement }),
+                    ]
+                      .filter(Boolean)
+                      .join(" – ")}
+                  </span>
+                )}
+              </span>
             </Fact>
           </>
         )}

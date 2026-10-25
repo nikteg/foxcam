@@ -1,4 +1,5 @@
 import {
+  Button,
   Caption1,
   Card,
   Spinner,
@@ -12,6 +13,7 @@ import {
   Camera20Regular,
   Delete20Regular,
   Dismiss16Filled,
+  Dismiss24Regular,
   Save20Regular,
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -25,6 +27,7 @@ import {
   DialogSurface,
   DialogTitle,
 } from "../components/Drawer";
+import { ConfirmPopover } from "../components/ConfirmPopover";
 import { QueryState, Tag } from "../components/ui";
 import { useI18n } from "../i18n";
 
@@ -49,22 +52,42 @@ const toBox = ([x, y, w, h]: Rect): Box => ({ x, y, w, h });
 const toRect = (b: Box): Rect => [b.x, b.y, b.w, b.h];
 
 /** Censor areas of a camera, in a large drawer. Closing with unsaved changes asks
- * first. */
+ * first, in a popover at the close button (also for Escape and the backdrop). */
 export function MaskDrawer({ cameraId, onClose }: { cameraId: string; onClose: () => void }) {
   const mask = useQuery({ queryKey: ["mask", cameraId], queryFn: () => api.mask(cameraId) });
   const cameras = useQuery({ queryKey: ["cameras"], queryFn: api.cameras });
   const name = cameras.data?.find((c) => c.id === cameraId)?.name ?? cameraId;
   const { t, rich } = useI18n();
   const dirty = useRef(false);
+  const [asking, setAsking] = useState(false);
   const close = () => {
-    if (!dirty.current || window.confirm(t("mask.discard"))) onClose();
+    if (dirty.current) setAsking(true);
+    else onClose();
   };
 
   return (
     <Dialog open size="large" onOpenChange={(_, d) => !d.open && close()}>
       <DialogSurface>
         <DialogBody>
-          <DialogTitle>{t("mask.title", { name })}</DialogTitle>
+          <DialogTitle
+            action={
+              <ConfirmPopover
+                title={t("mask.discard")}
+                confirmLabel={t("mask.discardConfirm")}
+                open={asking}
+                onOpenChange={(o) => (o ? close() : setAsking(false))}
+                onConfirm={async () => onClose()}
+              >
+                <Button
+                  appearance="subtle"
+                  aria-label={t("common.close")}
+                  icon={<Dismiss24Regular />}
+                />
+              </ConfirmPopover>
+            }
+          >
+            {t("mask.title", { name })}
+          </DialogTitle>
           <DialogContent className="form-stack">
             <Caption1 className="muted">
               <span className="only-mouse">

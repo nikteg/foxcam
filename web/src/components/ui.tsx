@@ -239,27 +239,6 @@ export function Toolbar({ children }: { children: ReactNode }) {
   return <div className="toolbar">{children}</div>;
 }
 
-export function PageHeader({
-  title,
-  children,
-  actions,
-}: {
-  title: string;
-  children?: ReactNode;
-  actions?: ReactNode;
-}) {
-  usePageTitle(title);
-  return (
-    <div className="page-header">
-      <div className="page-title">
-        <Title2 as="h1">{title}</Title2>
-        {actions}
-      </div>
-      {children && <Body1 className="muted">{children}</Body1>}
-    </div>
-  );
-}
-
 export function Time({
   iso,
   relative = false,

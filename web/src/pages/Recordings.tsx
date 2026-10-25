@@ -1,20 +1,12 @@
-import {
-  Button,
-  Caption1,
-  Link,
-  MessageBar,
-  MessageBarBody,
-  Select,
-  Text,
-  Tooltip,
-} from "@fluentui/react-components";
+import { Button, Caption1, Link, Select, Text, Tooltip } from "@fluentui/react-components";
 import { Archive16Regular, ArrowClockwise20Regular, Pin16Filled } from "@fluentui/react-icons";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { useNavigate } from "react-router";
 
 import { api, type Segment, type SegmentJob } from "../api";
 import { CameraSelect, useCameraName } from "../components/CameraSelect";
+import { ConfirmPopover } from "../components/ConfirmPopover";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
 import { Feedback } from "../components/Feedback";
@@ -39,14 +31,6 @@ import { useI18n, type I18n } from "../i18n";
 import { hasRole, useCameraRole } from "../auth";
 import { useFilters } from "../useFilters";
 import { HourlyFiles } from "./HourlyFiles";
-import {
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
-} from "../components/Drawer";
 import { VideoPlayer, type PlayerHandle } from "../components/VideoPlayer";
 
 const SEGMENT_STATES = ["new", "queued", "done", "private", "failed"] as const;
@@ -239,7 +223,7 @@ export function Recordings() {
             <div className="master">
               {segments.data && segments.data.length > 0 && (
                 <DataTable
-                  ariaLabel="Recordings"
+                  ariaLabel={t("recordings.segmentsTab")}
                   items={segments.data}
                   columns={columns(t, stateLabel, cameraName)}
                   getRowId={(r) => r.id}
@@ -286,7 +270,16 @@ function RecordingDetail({
   const { t } = useI18n();
   const role = useCameraRole(s.camera_id);
   const canEdit = role !== undefined && hasRole({ role }, "editor");
-  const [confirming, setConfirming] = useState(false);
+  const client = useQueryClient();
+  // Its detections are replaced: asks first.
+  const reanalyse = useMutation({
+    mutationFn: () => api.reanalyse(s.id),
+    onSuccess: () => {
+      for (const key of ["segments", "segment", "segment-jobs", "detections", "events", "queue"]) {
+        void client.invalidateQueries({ queryKey: [key] });
+      }
+    },
+  });
   const stateLabel = useStateLabel();
   const detections = useQuery({
     queryKey: ["detections", { segment: s.id }],
@@ -328,16 +321,20 @@ function RecordingDetail({
           </DownloadButton>
         )}
         {canEdit && !s.deleted && (
-          <Button
+          <ConfirmPopover
+            title={t("recordings.analyseAgainTitle")}
+            body={t("recordings.analyseAgainBody")}
+            confirmLabel={t("recordings.analyseAgain")}
             icon={<ArrowClockwise20Regular />}
-            disabled={s.status === "new"}
-            onClick={() => setConfirming(true)}
+            align="start"
+            onConfirm={() => reanalyse.mutateAsync()}
           >
-            {t("recordings.analyseAgain")}
-          </Button>
+            <Button icon={<ArrowClockwise20Regular />} disabled={s.status === "new"}>
+              {t("recordings.analyseAgain")}
+            </Button>
+          </ConfirmPopover>
         )}
       </div>
-      {confirming && <ReanalyseDialog segment={s} onClose={() => setConfirming(false)} />}
       <Facts>
         <Fact label={t("col.status")} className="row wrap">
           <Tag kind={s.status} title={s.error ?? undefined}>
@@ -439,48 +436,5 @@ function RunSummary({ job: j }: { job: SegmentJob }) {
         </details>
       )}
     </li>
-  );
-}
-
-/** Confirm, then run detection on the recording again (its detections are replaced). */
-function ReanalyseDialog({ segment: s, onClose }: { segment: Segment; onClose: () => void }) {
-  const { t } = useI18n();
-  const client = useQueryClient();
-  const run = useMutation({
-    mutationFn: () => api.reanalyse(s.id),
-    onSuccess: () => {
-      for (const key of ["segments", "segment", "segment-jobs", "detections", "events", "queue"]) {
-        void client.invalidateQueries({ queryKey: [key] });
-      }
-      onClose();
-    },
-  });
-  return (
-    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>{t("recordings.analyseAgainTitle")}</DialogTitle>
-          <DialogContent className="form-stack">
-            <Text>{t("recordings.analyseAgainBody")}</Text>
-            {run.error && (
-              <MessageBar intent="error">
-                <MessageBarBody>{run.error.message}</MessageBarBody>
-              </MessageBar>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={onClose}>{t("common.cancel")}</Button>
-            <Button
-              appearance="primary"
-              icon={<ArrowClockwise20Regular />}
-              disabled={run.isPending}
-              onClick={() => run.mutate()}
-            >
-              {t("recordings.analyseAgain")}
-            </Button>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
   );
 }

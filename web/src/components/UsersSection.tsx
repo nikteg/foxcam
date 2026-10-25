@@ -116,9 +116,16 @@ function UserCard({
       />
       <Facts>
         <Fact label={t("users.signIn")}>
-          {[u.has_password ? t("login.password") : null, ...u.providers]
-            .filter(Boolean)
-            .join(", ") || "–"}
+          {u.has_password || u.providers.length ? (
+            <span className="chips">
+              {u.has_password && <Tag>{t("login.password")}</Tag>}
+              {u.providers.map((p) => (
+                <Tag key={p}>{p}</Tag>
+              ))}
+            </span>
+          ) : (
+            "–"
+          )}
         </Fact>
         <Fact label={t("users.lastLogin")}>
           <Time iso={u.last_login_at} relative />
@@ -183,24 +190,34 @@ function InvitesList() {
         {open.map((inv) => (
           <li key={inv.id}>
             <span className="grow">
-              <Text>
-                {inv.cameras.length
-                  ? inv.cameras.map((c) => `${name(c.camera_id)} (${roleName(c.role)})`).join(", ")
-                  : t("users.accountOnly")}
-              </Text>
-              {inv.is_admin && <Tag kind="target">{t("users.admin")}</Tag>}{" "}
+              <span className="chips">
+                {inv.cameras.length ? (
+                  inv.cameras.map((c) => (
+                    <Tag key={c.camera_id}>
+                      {name(c.camera_id)} ({roleName(c.role)})
+                    </Tag>
+                  ))
+                ) : (
+                  <Text>{t("users.accountOnly")}</Text>
+                )}
+                {inv.is_admin && <Tag kind="target">{t("users.admin")}</Tag>}
+              </span>
               <Caption1 className="muted">
                 {inv.note && <>“{inv.note}” – </>}
                 {inv.created_by_name} – {t("share.expires")} <Time iso={inv.expires_at} />
               </Caption1>
             </span>
-            <Button
-              appearance="subtle"
-              icon={<Delete20Regular />}
-              aria-label={t("share.revoke")}
-              disabled={revoke.isPending}
-              onClick={() => revoke.mutate(inv.id)}
-            />
+            <ConfirmPopover
+              title={t("share.revokeTitle")}
+              confirmLabel={t("share.revoke")}
+              onConfirm={() => revoke.mutateAsync(inv.id)}
+            >
+              <Button
+                appearance="subtle"
+                icon={<Delete20Regular />}
+                aria-label={t("share.revoke")}
+              />
+            </ConfirmPopover>
           </li>
         ))}
       </ul>

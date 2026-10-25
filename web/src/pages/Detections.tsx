@@ -192,7 +192,7 @@ export function DetectionList() {
         <div className="master">
           {detections.data && detections.data.length > 0 && (
             <DataTable
-              ariaLabel="Detections"
+              ariaLabel={t("nav.detections")}
               items={detections.data}
               columns={columns(t, cameraName)}
               getRowId={(d) => d.id}

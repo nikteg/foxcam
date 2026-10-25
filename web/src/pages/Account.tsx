@@ -41,7 +41,7 @@ import {
   DialogSurface,
   DialogTitle,
 } from "../components/Drawer";
-import { Checkbox, Empty, PageHeader, Tag, Time } from "../components/ui";
+import { Checkbox, Empty, PageTitle, Tag, Time } from "../components/ui";
 import { useRoleName } from "../components/ShareDialog";
 import { useI18n } from "../i18n";
 
@@ -54,7 +54,7 @@ export function Account() {
   return (
     <>
       {/* Signing out is in the account menu in the top bar. */}
-      <PageHeader title={t("account.title")} />
+      <PageTitle title={t("account.title")} />
       {params.get("error") && (
         <MessageBar intent="error" className="block">
           <MessageBarBody>{params.get("error")}</MessageBarBody>
@@ -210,14 +210,17 @@ function LinkedAccounts() {
               }
               action={
                 linked.has(p.id) ? (
-                  <Button
-                    size="small"
+                  <ConfirmPopover
+                    title={t("account.disconnectTitle", { name: p.name })}
+                    body={t("account.disconnectBody")}
+                    confirmLabel={t("account.disconnect")}
                     icon={<LinkDismiss20Regular />}
-                    disabled={unlink.isPending}
-                    onClick={() => unlink.mutate(p.id)}
+                    onConfirm={() => unlink.mutateAsync(p.id)}
                   >
-                    {t("account.disconnect")}
-                  </Button>
+                    <Button size="small" icon={<LinkDismiss20Regular />}>
+                      {t("account.disconnect")}
+                    </Button>
+                  </ConfirmPopover>
                 ) : (
                   <Button
                     size="small"

@@ -252,7 +252,7 @@ export function SharePanel({
                     </Caption1>
                   </span>
                   <ConfirmPopover
-                    title={t("share.revoke")}
+                    title={t("share.revokeTitle")}
                     confirmLabel={t("share.revoke")}
                     onConfirm={() => revoke.mutateAsync(inv.id)}
                   >

@@ -35,6 +35,7 @@ import {
   PageTabs,
   PageTitle,
   QueryState,
+  Tag,
   Toolbar,
   useSubPage,
 } from "../components/ui";
@@ -492,8 +493,13 @@ function DetectionPanel({
               checked={selected.includes(p.id)}
               onChange={(_, d) => toggle(p.id, d.checked === true)}
               label={
-                <span>
-                  {p.display_name} <Caption1 className="muted">({p.targets.join(", ")})</Caption1>
+                <span className="row wrap">
+                  {p.display_name}
+                  <span className="chips">
+                    {p.targets.map((x) => (
+                      <Tag key={x}>{x}</Tag>
+                    ))}
+                  </span>
                 </span>
               }
             />

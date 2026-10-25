@@ -176,7 +176,7 @@ export function Queue() {
               </Subtitle2>
               {q.jobs.length > 0 && (
                 <DataTable
-                  ariaLabel="Jobs"
+                  ariaLabel={t("nav.queue")}
                   items={q.jobs}
                   columns={jobColumns}
                   getRowId={(j) => j.id}

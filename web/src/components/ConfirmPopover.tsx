@@ -14,27 +14,40 @@ import { useState, type ReactElement } from "react";
 import { useI18n } from "../i18n";
 
 /** Wraps the button that asks; ``onConfirm`` runs on the red button and the popover closes
- * when it succeeds (an error is shown in it). */
+ * when it succeeds (an error is shown in it). With ``open`` / ``onOpenChange`` the caller
+ * decides when it shows (e.g. also when a drawer is closed another way). */
 export function ConfirmPopover({
   title,
   body,
   confirmLabel,
+  icon,
   onConfirm,
   align = "end",
+  open: openProp,
+  onOpenChange,
   children,
 }: {
   title: string;
   body?: string;
   /** Default: Remove. */
   confirmLabel?: string;
+  /** Of the red button. Default: a bin. */
+  icon?: ReactElement;
   onConfirm: () => Promise<unknown>;
   /** Which edge of the button the popover lines up with. */
   align?: "start" | "end";
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   /** The trigger button. */
   children: ReactElement;
 }) {
   const { t } = useI18n();
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = openProp ?? ownOpen;
+  const setOpen = (o: boolean) => {
+    setOwnOpen(o);
+    onOpenChange?.(o);
+  };
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   return (
@@ -71,7 +84,7 @@ export function ConfirmPopover({
             size="small"
             appearance="primary"
             className="danger-primary"
-            icon={<Delete20Regular />}
+            icon={icon ?? <Delete20Regular />}
             disabled={pending}
             onClick={() => {
               setPending(true);

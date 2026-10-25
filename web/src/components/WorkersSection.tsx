@@ -10,7 +10,6 @@ import {
   TableHeaderCell,
   TableRow,
   Text,
-  Tooltip,
 } from "@fluentui/react-components";
 import { Delete16Regular, Key16Regular, Tag16Regular } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -174,16 +173,15 @@ export function WorkersSection({ workers }: { workers: Worker[] }) {
                         </ConfirmPopover>
                       )}
                       {w && !w.online && (
-                        <Tooltip content={t("queue.removeWorkerHint")} relationship="description">
-                          <Button
-                            size="small"
-                            icon={<Delete16Regular />}
-                            disabled={remove.isPending}
-                            onClick={() => remove.mutate(w.id)}
-                          >
+                        <ConfirmPopover
+                          title={t("workers.removeTitle", { name: w.id })}
+                          body={t("queue.removeWorkerHint")}
+                          onConfirm={() => remove.mutateAsync(w.id)}
+                        >
+                          <Button size="small" icon={<Delete16Regular />}>
                             {t("common.remove")}
                           </Button>
-                        </Tooltip>
+                        </ConfirmPopover>
                       )}
                     </span>
                   </TableCell>

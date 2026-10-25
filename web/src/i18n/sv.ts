@@ -671,6 +671,7 @@ export const sv: Record<MessageKey, string> = {
   "dashboard.oldest": "äldsta {age}",
   "dashboard.avgEach": "{s} s vardera",
   "mask.discard": "Släng de osparade ändringarna av censurområdena?",
+  "mask.discardConfirm": "Släng",
   "install.ios":
     "Använd den som en app: tryck på {share} (rutan med en pil) i Safari och sedan {add}. Den öppnas i helskärm från hemskärmen; där loggar du in en gång till.",
   "install.share": "Dela",
@@ -778,6 +779,7 @@ export const sv: Record<MessageKey, string> = {
   "recording.fromDefault": "Just nu standardprofilen; att spara här ersätter den.",
   "recording.makeDefault": "Gör {name} till standard",
   "recording.makeDefaultHint": "För alla kameror utan eget val.",
+  "workers.removeTitle": "Ta bort {name} från listan?",
   "queue.removeWorkerHint":
     "Ta bort den här offline-arbetaren från listan. Den kommer tillbaka om den ansluter igen; återkalla dess token för att stänga ute den.",
   "queue.running": "Pågår",
@@ -836,6 +838,8 @@ export const sv: Record<MessageKey, string> = {
   "account.notConnected": "Inte kopplat",
   "account.connect": "Koppla",
   "account.disconnect": "Koppla bort",
+  "account.disconnectTitle": "Koppla bort {name}?",
+  "account.disconnectBody": "Du kan inte längre logga in med det.",
   "account.myCameras": "Mina kameror",
   "account.noCameras": "Inga kameror är delade med dig än.",
   "account.leave": "Sluta se",
@@ -901,6 +905,7 @@ export const sv: Record<MessageKey, string> = {
   "share.openInvites": "Öppna inbjudningslänkar",
   "share.expires": "går ut",
   "share.revoke": "Återkalla",
+  "share.revokeTitle": "Återkalla inbjudningslänken?",
   "cameras.introUser": "Dina kameror och de som delats med dig. Dela de du äger med andra konton.",
   "cameras.editorsOnly": "Bara redaktörer för kameran kan ändra den",
 

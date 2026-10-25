@@ -251,25 +251,6 @@ main {
   max-width: 1500px;
   margin: 0 auto;
 }
-.page-header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacingVerticalS);
-  margin-bottom: var(--spacingVerticalL);
-}
-.page-title {
-  flex-wrap: wrap;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacingHorizontalM);
-}
-.page-title h1 {
-  margin: 0;
-}
-.page-title > :not(h1) {
-  flex-shrink: 0;
-}
 /* Dates and small values never break across lines. */
 time,
 .fui-Badge,

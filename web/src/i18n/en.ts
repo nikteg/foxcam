@@ -580,6 +580,7 @@ export const en = {
   "dashboard.oldest": "oldest {age}",
   "dashboard.avgEach": "{s} s each",
   "mask.discard": "Discard the unsaved censor-area changes?",
+  "mask.discardConfirm": "Discard",
   "install.ios":
     "Use this as an app: in Safari, tap {share} (the square with an arrow), then {add}. It opens full screen from your home screen; you sign in once more there.",
   "install.share": "Share",
@@ -686,6 +687,7 @@ export const en = {
   "recording.fromDefault": "Currently the default profile; saving here overrides it.",
   "recording.makeDefault": "Make {name} the default",
   "recording.makeDefaultHint": "For every camera without its own choice.",
+  "workers.removeTitle": "Remove {name} from the list?",
   "queue.removeWorkerHint":
     "Remove this offline worker from the list. It comes back if it connects again; revoke its token to keep it out.",
   "queue.running": "Running",
@@ -834,6 +836,8 @@ export const en = {
   "account.notConnected": "Not connected",
   "account.connect": "Connect",
   "account.disconnect": "Disconnect",
+  "account.disconnectTitle": "Disconnect {name}?",
+  "account.disconnectBody": "You can no longer sign in with it.",
   "account.myCameras": "My cameras",
   "account.noCameras": "No cameras are shared with you yet.",
   "account.leave": "Stop seeing",
@@ -897,6 +901,7 @@ export const en = {
   "share.openInvites": "Open invite links",
   "share.expires": "expires",
   "share.revoke": "Revoke",
+  "share.revokeTitle": "Revoke this invite link?",
   "cameras.introUser":
     "Your cameras and the ones shared with you. Share the ones you own with other accounts.",
   "cameras.editorsOnly": "Only editors of this camera can change it",
