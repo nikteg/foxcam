@@ -229,7 +229,6 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
                       {s.source === "ui" && (
                         <Button
                           size="small"
-                          appearance="subtle"
                           className="reset-setting"
                           icon={<ArrowUndo16Regular />}
                           disabled={save.isPending}
