@@ -17,7 +17,6 @@ import type { ReactElement } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useState } from "react";
-import { useNavigate } from "react-router";
 
 import { api, type Job, type JobState } from "../api";
 import { useCameraName } from "../components/CameraSelect";
@@ -38,6 +37,7 @@ import { decimal, duration } from "../format";
 import { useProfileName } from "../components/ProfileSelect";
 import { AddWorkerDialog } from "../components/AddWorkerDialog";
 import { ArchivingSection } from "../components/ArchivingSection";
+import { SegmentPanel } from "../components/SegmentDetail";
 
 import { WorkersSection } from "../components/WorkersSection";
 import { useI18n, type I18n } from "../i18n";
@@ -55,7 +55,7 @@ const STATE_ICON: Record<JobState, ReactElement> = {
 };
 
 export function Queue() {
-  const [{ state }, setFilter] = useFilters(["state"] as const);
+  const [{ state, segment }, setFilter] = useFilters(["state", "segment"] as const);
   const client = useQueryClient();
   const queue = useQuery({
     queryKey: ["queue", state],
@@ -68,7 +68,6 @@ export function Queue() {
     mutationFn: api.requeue,
     onSuccess: () => client.invalidateQueries({ queryKey: ["queue"] }),
   });
-  const navigate = useNavigate();
   const { t } = useI18n();
   const stateLabel = useStateLabel();
   const cameraName = useCameraName();
@@ -85,6 +84,7 @@ export function Queue() {
   const avgMs = q?.stats.avg_processing_ms_last_hour;
   const tab = useSubPage("/jobs", ["queue", "workers", "archiving"] as const);
   const [addingWorker, setAddingWorker] = useState(false);
+  const segmentId = Number(segment) || null;
 
   return (
     <>
@@ -181,10 +181,13 @@ export function Queue() {
                   columns={jobColumns}
                   getRowId={(j) => j.id}
                   defaultSort={{ column: "id", direction: "descending" }}
-                  onRowClick={(j) => navigate(`/recordings/segments?selected=${j.segment_id}`)}
+                  // Every job of the open recording is marked, not only the one pressed.
+                  rowClassName={(j) => (j.segment_id === segmentId ? "selected" : undefined)}
+                  onRowClick={(j) => setFilter("segment", String(j.segment_id))}
                 />
               )}
               {q.jobs.length === 0 && <Empty>{t("queue.noJobs")}</Empty>}
+              <SegmentPanel segmentId={segmentId} onClose={() => setFilter("segment", "")} />
             </>
           )}
         </>
