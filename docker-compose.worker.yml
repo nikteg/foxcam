@@ -25,6 +25,8 @@ services:
       FOXCAM_WORKER_TOKEN: ${LOCAL_WORKER_TOKEN:?create a worker token in the web UI (Jobs → Add worker)}
       FOXCAM_WORKER_ID: ${LOCAL_WORKER_ID:-local-intel}
       OMP_NUM_THREADS: ${WORKER_CPUS:-2} # pre/post-processing threads; the GPU detects
+      # Frames per second at most (0 = flat out): spreads each job out so the box stays quiet.
+      FOXCAM_WORKER_MAX_FPS: ${WORKER_MAX_FPS:-0}
     # Recording and live view come first: the worker gets at most 2 cores (WORKER_CPUS=1 for
     # a quieter box), and less when the rest of the box is busy.
     cpus: ${WORKER_CPUS:-2}

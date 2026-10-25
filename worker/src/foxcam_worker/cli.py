@@ -23,6 +23,7 @@ from .client import Client, LeaseLost
 from .detectors import add_detector_args, create_detector
 from .doctor import environment, gpu_summary
 from .frames import extract_frames, frame_batches
+from .pacing import Pacer
 
 log = logging.getLogger("foxcam_worker")
 
@@ -55,7 +56,8 @@ class Heartbeat:
         self.thread.join(timeout=5)
 
 
-def process(client: Client, detector, job: dict, args: argparse.Namespace) -> None:
+def process(client: Client, detector, job: dict, args: argparse.Namespace,
+            pacer: Pacer | None = None) -> None:
     seg = job["segment"]
     log.info("job %s: camera=%s profile=%s start=%s (attempt %s)", job["job_id"],
              seg["camera_id"], job.get("profile", {}).get("id", "-"), seg["start_at"],
@@ -71,14 +73,18 @@ def process(client: Client, detector, job: dict, args: argparse.Namespace) -> No
             # The profile's frame rate (older servers: everything in the input).
             fps = min(args.fps or job.get("sample_fps") or job["input_fps"], job["input_fps"])
             hints = job.get("hints", {})
+            pace = pacer or Pacer(None)
+            pace.start()
             if detector.in_memory:
                 detections, frames = [], 0
                 for batch in frame_batches(video, fps, 16):
                     detections += detector.detect(batch, hints)
                     frames += len(batch)
+                    pace(len(batch))
             else:
                 files = extract_frames(video, tmp_path / "frames", fps)
                 detections, frames = detector.detect(files, hints), len(files)
+                pace(frames)  # one call per job: the cap holds on average, not within it
         except LeaseLost:
             log.warning("job %s: lease lost, dropping", job["job_id"])
             return
@@ -140,6 +146,12 @@ def main() -> None:
                         "detector adds its own (speciesnet, ultralytics, open-vocabulary, dummy)")
     add_detector_args(p)
     p.add_argument("--fps", type=float, help="subsample frames further (default: all)")
+    p.add_argument("--max-fps", type=float,
+                   default=float(os.environ.get("FOXCAM_WORKER_MAX_FPS") or 0),
+                   help="analyse at most this many frames per second, spreading each job out "
+                        "instead of running it flat out (a quieter, cooler box). Keep it above "
+                        "what the cameras produce (cameras x sample fps) or the queue grows. "
+                        "0 = no cap (default; FOXCAM_WORKER_MAX_FPS)")
     p.add_argument("--poll", type=float, default=5, help="seconds to wait when queue is empty")
     p.add_argument("--heartbeat", type=float, default=30)
     p.add_argument("--once", action="store_true", help="process at most one job and exit")
@@ -166,6 +178,9 @@ def main() -> None:
                     detector.vocabulary())
     log.info("worker %s using %s (tags: %s) -> %s", args.worker_id, detector.name,
              ",".join(tags), args.server)
+    pacer = Pacer(args.max_fps)
+    if pacer.max_fps:
+        log.info("pacing detection to at most %g frames per second", pacer.max_fps)
 
     backoff = args.poll
     try:
@@ -196,7 +211,7 @@ def main() -> None:
                 time.sleep(args.poll)
                 continue
             try:
-                process(client, detector, job, args)
+                process(client, detector, job, args, pacer)
             except httpx.HTTPError as e:
                 log.warning("job %s: server error %s (lease will expire and be retried)",
                             job["job_id"], e)

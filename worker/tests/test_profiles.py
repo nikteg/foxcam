@@ -166,3 +166,33 @@ def test_in_memory_detectors_get_decoded_frames_in_batches(tmp_path):
     assert len(det.batches[0]) == 16 and 38 <= len(frames) <= 41
     assert all(path is None and shape == (90, 160, 3) for path, _, shape in frames)
     assert [ms for _, ms, _ in frames[:3]] == [0, 250, 500]
+
+
+def test_pacer_spreads_frames_but_saves_no_idle_credit():
+    from foxcam_worker.pacing import Pacer
+
+    now, slept = [100.0], []
+
+    def sleep(s):
+        slept.append(s)
+        now[0] += s
+
+    pace = Pacer(4, clock=lambda: now[0], sleep=sleep)
+    pace.start()
+    now[0] += 1  # 16 frames took 1 s: wait 3 s more (16 frames at 4 fps = 4 s)
+    pace(16)
+    now[0] += 5  # slower than the cap: no wait
+    pace(16)
+    assert slept == [3.0]
+    now[0] += 600  # idle between jobs
+    pace.start()
+    pace(8)
+    assert slept[-1] == 2.0  # paced from the new job's start, not from the old debt
+
+
+def test_no_cap_never_sleeps():
+    from foxcam_worker.pacing import Pacer
+
+    pace = Pacer(0, sleep=lambda s: pytest.fail("slept"))
+    pace.start()
+    pace(1000)

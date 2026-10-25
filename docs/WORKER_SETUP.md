@@ -171,6 +171,19 @@ two cores. Set `WORKER_CPUS=1` for a quieter box (jobs take a little longer). To
 detection really runs on the GPU, look for `on GPU.0` in the worker's log, or watch
 `sudo intel_gpu_top` on the host while a job runs.
 
+### A quieter box: `--max-fps`
+
+Every camera's segment finishes at about the same time, so by default the worker runs flat
+out for a minute or two and then waits for the next segments; the fan follows those bursts.
+`--max-fps` (or `FOXCAM_WORKER_MAX_FPS`; `WORKER_MAX_FPS` in `docker-compose.worker.yml`)
+caps how many frames per second the worker analyses, so the same work runs at an even,
+lower load. Keep the cap above what the cameras produce, cameras x the profile's sample
+rate, with room for catching up after an outage: 4 cameras at 1 fps produce 4 frames per
+second, so `WORKER_MAX_FPS=6` or so. Lower than that and the queue only grows. Jobs take
+longer to finish, so events arrive later (up to the segment length). Detectors that take
+the whole segment at once (SpeciesNet) are paced per job: they still run in one go, then
+wait before the next job.
+
 Each new prompt (a profile's targets) is exported to OpenVINO once, which takes a few
 seconds; the first job also downloads the weights. In LXC containers, pass
 `/dev/dri/renderD128` through to the container (as for hardware encoding, [HARDWARE.md](HARDWARE.md)).
