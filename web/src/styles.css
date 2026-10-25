@@ -96,6 +96,14 @@ kbd {
   background: var(--colorPaletteRedBackground3);
   border-color: var(--colorPaletteRedBackground3);
 }
+.fui-ToggleButton.feedback-on.ok:hover {
+  background: color-mix(in srgb, var(--colorPaletteGreenBackground3), black 15%);
+  border-color: color-mix(in srgb, var(--colorPaletteGreenBackground3), black 15%);
+}
+.fui-ToggleButton.feedback-on.bad:hover {
+  background: color-mix(in srgb, var(--colorPaletteRedBackground3), black 15%);
+  border-color: color-mix(in srgb, var(--colorPaletteRedBackground3), black 15%);
+}
 .row {
   display: inline-flex;
   align-items: center;

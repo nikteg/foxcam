@@ -48,6 +48,9 @@ export const sv: Record<MessageKey, string> = {
   "light.nightIr": "natt / IR",
   "feedback.correct": "Rätt",
   "feedback.wrong": "Fel",
+  "feedback.correctHint": "Bekräftar träffen. Tryck igen för att ta bort.",
+  "feedback.wrongHint":
+    "Ingen träff: räknas inte i antal, händelser, aviseringar eller arkiv. Tryck igen för att ta bort.",
 
   // Status för jobb och segment
   "state.new": "ny",

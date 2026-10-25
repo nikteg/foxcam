@@ -47,6 +47,9 @@ export const en = {
   "light.nightIr": "night / IR",
   "feedback.correct": "Correct",
   "feedback.wrong": "Wrong",
+  "feedback.correctHint": "Confirms the match. Press again to clear.",
+  "feedback.wrongHint":
+    "Not a match: left out of counts, events, notifications and archives. Press again to clear.",
 
   // Job and segment states
   "state.new": "new",
