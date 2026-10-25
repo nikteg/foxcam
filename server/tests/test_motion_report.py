@@ -79,6 +79,15 @@ def test_backfill_measures_older_recordings(settings):
         assert detail["motion_score"] > 0 and detail["motion_boxes"]
 
 
+def test_profiles_that_no_longer_exist_are_left_out(settings):
+    seg = _segment(settings, 5, motion_score=0.1, motion_boxes=MOVED)
+    add_job(seg, state="done")
+    gone = add_job(seg, state="done", profile_id="removed")
+    _target(seg, gone, 0.15, profile="removed")
+    rows = motion_report.report(settings, utcnow() - timedelta(days=1))
+    assert [r["profile_id"] for r in rows] == ["default"]
+
+
 def test_the_report_is_for_admins(settings):
     with app_client(settings, email="viewer@example.org", admin=False) as c:
         assert c.get("/api/motion/report").status_code == 403

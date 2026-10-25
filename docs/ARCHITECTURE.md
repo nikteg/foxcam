@@ -190,7 +190,7 @@ Both apply to recordings analysed from then on; *Detect again* re-evaluates one.
 
 **Whether it helps** (Events → Motion, admins; `pipeline/motion_report.py`): since motion is
 measured on every recording whatever the profiles say, the report shows per camera and
-profile what each option *would* do with the period's recordings and targets, split by the
+profile (ones that still exist) what each option *would* do with the period's recordings and targets, split by the
 correct / wrong marks: how many recordings skipping would save and which targets it would
 miss, and which targets "only moving targets" would drop. Recordings from before motion
 detection can be measured afterwards from their stored footage (*Measure motion* there,

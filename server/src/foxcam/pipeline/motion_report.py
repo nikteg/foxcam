@@ -50,18 +50,21 @@ def _counts() -> dict[str, int]:
 
 
 def report(settings: Settings, since: datetime, camera: str | None = None) -> list[dict[str, Any]]:
-    """One row per camera and profile with recordings in the period."""
+    """One row per camera and profile with recordings in the period. Profiles that no
+    longer exist are left out: their options cannot be turned on any more."""
     window_ms = settings.motion.window_seconds * 1000
     rows: dict[tuple[str, str], dict[str, Any]] = {}
 
-    def row(camera_id: str, profile_id: str) -> dict[str, Any]:
+    def row(camera_id: str, profile_id: str | None) -> dict[str, Any] | None:
+        profile = settings.profile(profile_id)
+        if profile is None or profile_id is None:
+            return None
         if (camera_id, profile_id) not in rows:
-            profile = settings.profile(profile_id)
             rows[camera_id, profile_id] = {
                 "camera_id": camera_id, "profile_id": profile_id,
-                "profile_name": profile.display_name if profile else profile_id,
-                "require_motion": bool(profile and profile.require_motion),
-                "skip_without_motion": bool(profile and profile.skip_without_motion),
+                "profile_name": profile.display_name,
+                "require_motion": profile.require_motion,
+                "skip_without_motion": profile.skip_without_motion,
                 "recordings": 0, "measured": 0, "still": 0,
                 # Targets in measured recordings; of them, the ones in still recordings
                 # (skipping would miss them) and the ones overlapping no motion.
@@ -82,7 +85,8 @@ def report(settings: Settings, since: datetime, camera: str | None = None) -> li
                 select(Job.segment_id, Job.profile_id).where(Job.segment_id.in_(ids))
                 .distinct()):
             g = segments[seg_id]
-            r = row(g.camera_id, profile_id)
+            if (r := row(g.camera_id, profile_id)) is None:
+                continue
             r["recordings"] += 1
             if g.motion_score is not None:
                 r["measured"] += 1
@@ -92,9 +96,8 @@ def report(settings: Settings, since: datetime, camera: str | None = None) -> li
                 Detection.segment_id.in_(ids),
                 or_(Detection.is_target.is_(True), Detection.moving.is_(False)))):
             g = segments[d.segment_id]
-            if g.motion_score is None or d.profile_id is None:
+            if g.motion_score is None or (r := row(g.camera_id, d.profile_id)) is None:
                 continue
-            r = row(g.camera_id, d.profile_id)
             kind = _rated(d)
             r["targets"][kind] += 1
             if g.motion_score == 0:
