@@ -17,8 +17,8 @@ from __future__ import annotations
 
 import logging
 import time
-from itertools import pairwise
 from datetime import UTC, datetime
+from itertools import pairwise
 from pathlib import Path
 
 from sqlalchemy import select
