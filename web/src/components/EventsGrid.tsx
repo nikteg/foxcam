@@ -7,20 +7,22 @@ import {
   CardPreview,
   Text,
 } from "@fluentui/react-components";
-import { Dismiss24Regular, Play20Filled, Search20Regular } from "@fluentui/react-icons";
+import { Dismiss24Regular, Info20Regular, Play20Filled } from "@fluentui/react-icons";
 import { Fragment, useState } from "react";
 
 import type { DetectionEvent } from "../api";
 import { duration, localDay, localTime, percent } from "../format";
 import { useI18n } from "../i18n";
 import { useCameraName } from "./CameraSelect";
+import { DetailPanel } from "./DetailPanel";
+import { EventDetail } from "./EventDetail";
 import {
   useDetectorNames,
   useProfileName,
   useProfiles,
   useSeveralDetectors,
 } from "./ProfileSelect";
-import { DownloadButton, Empty, Light, Tag, Time, useRouterHref } from "./ui";
+import { DownloadButton, Empty, Light, Tag, Time } from "./ui";
 import { VideoPlayer } from "./VideoPlayer";
 import {
   Dialog,
@@ -31,11 +33,6 @@ import {
   DialogTitle,
 } from "./Drawer";
 
-/** The event's detections, with its best one open in the drawer. */
-const detailsHref = (e: DetectionEvent) =>
-  `/events/detections?event=${e.id}&only_targets=true` +
-  (e.best_detection_id ? `&selected=${e.best_detection_id}` : "");
-
 export function EventsGrid({
   events,
   byDay = false,
@@ -45,8 +42,8 @@ export function EventsGrid({
   byDay?: boolean;
 }) {
   const { t } = useI18n();
-  const routerHref = useRouterHref();
   const [playing, setPlaying] = useState<DetectionEvent | null>(null);
+  const [details, setDetails] = useState<DetectionEvent | null>(null);
   const profileName = useProfileName();
   const cameraName = useCameraName();
   const manyProfiles = (useProfiles().data?.length ?? 0) > 1;
@@ -68,9 +65,9 @@ export function EventsGrid({
                   <button
                     type="button"
                     className="thumb-button"
-                    disabled={!e.clip_url}
-                    onClick={() => setPlaying(e)}
-                    aria-label={t("events.playClip", { label: e.label })}
+                    onClick={() => setDetails(e)}
+                    aria-label={t("events.openDetails", { label: e.label })}
+                    title={t("events.showDetectionsHint")}
                   >
                     <img
                       className="thumb"
@@ -81,11 +78,9 @@ export function EventsGrid({
                         camera: cameraName(e.camera_id),
                       })}
                     />
-                    {e.clip_url && (
-                      <span className="play-overlay" aria-hidden="true">
-                        <Play20Filled />
-                      </span>
-                    )}
+                    <span className="thumb-overlay" aria-hidden="true">
+                      <Info20Regular />
+                    </span>
                   </button>
                 ) : (
                   <div className="thumb placeholder">
@@ -96,10 +91,15 @@ export function EventsGrid({
               <CardHeader
                 header={
                   <span className="row">
-                    {/* The detection drawer: frame, box, feedback. */}
-                    <a className="event-title" {...routerHref(detailsHref(e))}>
+                    {/* The details drawer: frame, box, feedback. */}
+                    <button
+                      type="button"
+                      className="event-title"
+                      onClick={() => setDetails(e)}
+                      title={t("events.showDetectionsHint")}
+                    >
                       <Text weight="semibold">{e.label}</Text>
-                    </a>
+                    </button>
                     <Text weight="bold" className="brand-text">
                       {percent(e.max_confidence)}
                     </Text>
@@ -133,17 +133,13 @@ export function EventsGrid({
                   </Caption1>
                 }
               />
-              <CardFooter>
+              <CardFooter className="wrap">
                 {e.clip_url ? (
                   <>
-                    <Button
-                      appearance="primary"
-                      icon={<Play20Filled />}
-                      onClick={() => setPlaying(e)}
-                    >
+                    <Button size="small" icon={<Play20Filled />} onClick={() => setPlaying(e)}>
                       {t("common.play")}
                     </Button>
-                    <DownloadButton href={`${e.clip_url}?download=true`}>
+                    <DownloadButton size="small" href={`${e.clip_url}?download=true`}>
                       {t("common.download")}
                     </DownloadButton>
                   </>
@@ -154,21 +150,23 @@ export function EventsGrid({
                 ) : (
                   <Tag kind="pending">{t("events.buildingClip")}</Tag>
                 )}
-                <Button
-                  as="a"
-                  appearance="subtle"
-                  className="push-end"
-                  icon={<Search20Regular />}
-                  title={t("events.showDetectionsHint")}
-                  {...routerHref(detailsHref(e))}
-                >
-                  {t("events.details")}
-                </Button>
               </CardFooter>
             </Card>
           </Fragment>
         ))}
       </div>
+
+      <DetailPanel
+        open={!!details}
+        title={
+          details
+            ? `${details.label} – ${cameraName(details.camera_id)} – ${localTime(details.first_ts)}`
+            : ""
+        }
+        onClose={() => setDetails(null)}
+      >
+        {details && <EventDetail event={details} />}
+      </DetailPanel>
 
       <Dialog size="large" open={!!playing} onOpenChange={(_, d) => !d.open && setPlaying(null)}>
         <DialogSurface className="clip-dialog">

@@ -116,7 +116,7 @@ export function CameraCard({
             alt={t("dashboard.snapshotAlt", { name: c.name })}
             onError={(e) => (e.currentTarget.style.visibility = "hidden")}
           />
-          <span className="play-overlay" aria-hidden="true">
+          <span className="thumb-overlay play" aria-hidden="true">
             <Play20Filled />
           </span>
         </button>

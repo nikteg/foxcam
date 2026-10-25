@@ -123,14 +123,14 @@ export const en = {
   "live.lowDataTag": "WebRTC 480p",
 
   // Events
-  "events.details": "Details",
+  "events.openDetails": "Details of {label}",
+  "events.allDetections": "All detections",
   "events.markedWrong": "marked wrong",
   "events.markedWrongHint": "One of its detections was marked wrong. Hidden on the Status page.",
   "events.showDetectionsHint": "The detections this event was made from, its best one open",
   "events.none": "No events yet.",
   "events.intro":
     "Sightings of {labels} (from the detection profiles) close in time are merged into one clip, with {before} s before and {after} s after. Clips are cut from the original, uncensored footage.",
-  "events.playClip": "Play {label} clip",
   "events.thumbAlt": "{label} on {camera}",
   "events.buildingClip": "Building clip…",
   "events.noThumbnail": "No thumbnail",
