@@ -1323,6 +1323,16 @@ Fluent's text styles would otherwise reset the margins. */
 .drawer-content :where(img, video, canvas, svg, iframe) {
   max-width: 100%;
 }
+/* A dropdown is as wide as its longest option (e.g. Tapo stream quality) unless told
+   otherwise: never wider than the drawer, the chosen text cut off with an ellipsis. */
+.drawer-content .fui-Select,
+.drawer-content .fui-Select > select {
+  min-width: 0;
+  max-width: 100%;
+}
+.drawer-content .fui-Select > select {
+  text-overflow: ellipsis;
+}
 .drawer-content pre {
   max-width: 100%;
   overflow-x: auto;

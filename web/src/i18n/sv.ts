@@ -563,7 +563,7 @@ export const sv: Record<MessageKey, string> = {
     "HD är bäst för detektion men behöver mer uppladdning där kameran sitter; VGA för långsamma anslutningar. Kan ändras senare i kamerans inställningar.",
   "cameras.tapoQualityHint":
     "HD är bäst för detektion men behöver mer uppladdning där kameran sitter; VGA för långsamma anslutningar. Reläet startar om med den (några sekunder utan inspelning).",
-  "addCamera.qualityHd": "HD (bäst för detektion, mer uppladdningsbandbredd)",
+  "addCamera.qualityHd": "HD",
   "addCamera.qualityVga": "VGA (låg bandbredd)",
   "addCamera.findingCameras": "Söker kameror på ditt konto…",
   "addCamera.noTapoCameras": "Inga kameror hittades på det här Tapo-kontot.",

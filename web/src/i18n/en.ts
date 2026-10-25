@@ -741,7 +741,7 @@ export const en = {
     "HD is best for detection but needs more upload bandwidth at the camera's site; VGA for slow connections. Can be changed later in the camera's settings.",
   "cameras.tapoQualityHint":
     "HD is best for detection but needs more upload bandwidth at the camera's site; VGA for slow connections. The relay restarts with it (a few seconds without recording).",
-  "addCamera.qualityHd": "HD (best for detection, more upload bandwidth)",
+  "addCamera.qualityHd": "HD",
   "addCamera.qualityVga": "VGA (low bandwidth)",
   "addCamera.findingCameras": "Finding cameras on your account…",
   "addCamera.noTapoCameras": "No cameras found on this Tapo account.",
