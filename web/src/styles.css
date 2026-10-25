@@ -1624,6 +1624,29 @@ h2.panel-heading {
 .video-player .vds-controls .vds-controls-group:has(.speed-menu) {
   z-index: 12;
 }
+/* Anchored to its button by CSS: Vidstack's own coordinates measure from the drawer (it
+   has a transform), so in fullscreen the menu landed far to the side. Centred above the
+   button; in the small layout (button in the top bar) below it. */
+.video-player .speed-menu {
+  /* Vidstack makes menus display: contents (inline); this one is the box its list
+     hangs from. */
+  display: inline-flex !important;
+  position: relative;
+}
+.video-player .speed-items.vds-menu-items {
+  top: auto !important;
+  bottom: calc(100% + 8px);
+  left: 50% !important;
+  translate: -50% 0;
+}
+.video-player .vds-video-layout[data-sm] .speed-items.vds-menu-items {
+  top: calc(100% + 8px) !important;
+  bottom: auto;
+  /* The button is in the top right corner: line up with its right edge. */
+  left: auto !important;
+  right: 0;
+  translate: none;
+}
 .video-player .speed-items.vds-menu-items {
   min-width: 0;
   max-height: none;
