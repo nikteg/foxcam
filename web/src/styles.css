@@ -1732,9 +1732,14 @@ h2.panel-heading {
 /* Settings page tunables (components/RuntimeSettings.tsx): a column, not page-wide inputs. */
 /* More room between settings than inside one, so a reset button clearly belongs to the
    setting above it. */
+/* The fields keep a readable column (620 px); the dividers between groups span the page,
+   like the one above "This server". */
 .runtime-form {
-  max-width: 620px;
   gap: var(--spacingVerticalXXL);
+}
+.runtime-form > :not(.settings-divider),
+.maintenance > :not(.settings-divider) {
+  max-width: 620px;
 }
 /* Each setting clearly apart from the next, so its hint and reset button read as its own
    (the gap between fields, plus this). */
@@ -1761,7 +1766,6 @@ h2.panel-heading {
 }
 /* Settings → Detection: below the settings form and its Save button. */
 .maintenance {
-  max-width: 620px;
   margin-top: var(--spacingVerticalXXL);
 }
 .runtime-facts {
