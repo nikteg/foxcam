@@ -4,7 +4,8 @@
 
 Starts MediaMTX, the server, ingest and a worker on their own ports with their own data
 (out/screenshots/), using the sample fox clips (`mise run setup:samples`) as cameras. The
-worker is YOLO-World when it is installed (`mise run setup:yolo`), else the dummy worker.
+worker is YOLO-World when its weights are in out/models/yolov8s-worldv2.pt, else the
+dummy worker.
 Once enough events with clips exist, it captures the pages with the installed Google
 Chrome (or Playwright's Chromium) in dark mode, desktop and phone size, and stops it all.
 Your dev stack and its data are not touched.
@@ -190,17 +191,21 @@ def wait_for(what: str, check, timeout: float, every: float = 3,
     raise SystemExit(f"timed out waiting for {what}; see the logs in {STACK}")
 
 
-def worker_args() -> tuple[list[str], str]:
-    try:
-        import importlib.util
+def worker_command() -> tuple[list[str], str]:
+    """YOLO-World when its weights are in out/models/. Without
+    Ultralytics in .venv the worker runs with it added for this run only (uv's cache), so
+    the project environment is left as it is. Else the dummy worker."""
+    import importlib.util
 
-        yolo = importlib.util.find_spec("ultralytics") is not None and MODEL.exists()
-    except ImportError:
-        yolo = False
-    if yolo:
-        return (["--detector", "ultralytics", "--model", str(MODEL)], "YOLO-World")
-    return (["--detector", "dummy", "--dummy-label", "fox", "--dummy-every", "1"],
-            "dummy (run `mise run setup:yolo` for real detections)")
+    if MODEL.exists():
+        args = ["--detector", "ultralytics", "--model", str(MODEL)]
+        if importlib.util.find_spec("ultralytics") is not None:
+            return [str(BIN / "foxcam-worker"), *args], "YOLO-World"
+        return (["uv", "run", "--no-sync", "--with", "ultralytics>=8.3",
+                 "--with", "clip-anytorch>=2.6", "foxcam-worker", *args],
+                "YOLO-World (Ultralytics added for this run)")
+    return ([str(BIN / "foxcam-worker"), "--detector", "dummy", "--dummy-label", "fox",
+             "--dummy-every", "1"], "dummy (run `mise run setup:yolo` for real detections)")
 
 
 def port_in_use(port: int) -> bool:
@@ -210,7 +215,8 @@ def port_in_use(port: int) -> bool:
         return sock.connect_ex(("127.0.0.1", port)) == 0
 
 
-def run_stack(stack: Stack, min_events: int, timeout: float) -> None:
+def run_stack(stack: Stack, min_events: int, timeout: float) -> set[str]:
+    """Runs the stack until there are events; returns the cameras paused on the way."""
     busy = [p for p in (PORT, 19997, 18554) if port_in_use(p)]
     if busy:
         raise SystemExit(f"port(s) {busy} in use: is an earlier screenshots run still going?")
@@ -232,10 +238,10 @@ def run_stack(stack: Stack, min_events: int, timeout: float) -> None:
     token = subprocess.run([str(BIN / "foxcam"), "worker-token", "gpu-box",
                             "--tags", "gpu"], env=stack.env, check=True, capture_output=True,
                            text=True).stdout.strip()
-    args, kind = worker_args()
+    command, kind = worker_command()
     log(f"worker: {kind}")
     worker_env = {**stack.env, "FOXCAM_WORKER_TOKEN": token, "FOXCAM_WORKER_HOST": "gpu-box"}
-    stack.start("worker", [str(BIN / "foxcam-worker"), "--server", SERVER, *args],
+    stack.start("worker", [*command, "--server", SERVER],
                 cwd=MODEL.parent if MODEL.parent.exists() else ROOT, env=worker_env)
     # A censor area to show in the mask editor.
     put("/api/cameras/street/mask", {"rects": [[0.0, 0.0, 0.34, 0.12]]})
@@ -257,11 +263,11 @@ def run_stack(stack: Stack, min_events: int, timeout: float) -> None:
         if len(ready) != last[0]:
             last[0] = len(ready)
             log(f"  {len(ready)}/{min_events} cameras")
-        return len(ready) >= min_events
+        # Every clip built too, so no card in the shots says "Building clip…".
+        return len(ready) >= min_events and not any(e["building"] for e in events)
 
     wait_for("events", enough, timeout, every=5, stack=stack)
-    for cam in paused:  # back to the default profiles (the profiles screenshot shows them)
-        put(f"/api/cameras/{cam}/profiles", {"profiles": None})
+    return paused
 
 
 # --- capture ------------------------------------------------------------------------------
@@ -279,15 +285,20 @@ def to_jpg(png: Path, name: str) -> None:
 
 
 def settle(page) -> None:
-    """Wait until the page's images (thumbnails, snapshots) have loaded."""
+    """Wait until the images on screen (thumbnails, snapshots) have loaded. Lazy images
+    further down never load, so only those in view count."""
     page.wait_for_load_state("load")
     page.wait_for_timeout(1200)
-    page.wait_for_function(
-        "[...document.images].every(i => i.complete)", timeout=20_000)
+    pending = ("[...document.images].filter(i => { const r = i.getBoundingClientRect();"
+               " return !i.complete && r.width > 0 && r.bottom > 0 && r.top < innerHeight; })")
+    try:
+        page.wait_for_function(f"{pending}.length === 0", timeout=20_000)
+    except Exception:  # noqa: BLE001 - take the shot anyway, say which images were missing
+        log(f"  images still loading: {page.evaluate(pending + '.map(i => i.src)')}")
     page.wait_for_timeout(600)
 
 
-def capture(tmp: Path) -> list[str]:
+def capture(tmp: Path, paused: set[str]) -> list[str]:
     from playwright.sync_api import sync_playwright
 
     det = best_detection()
@@ -309,10 +320,18 @@ def capture(tmp: Path) -> list[str]:
 
     def add_worker(page) -> None:
         page.get_by_role("button", name="Add worker").click()
-        dialog = page.get_by_role("dialog")
-        dialog.get_by_role("textbox").first.fill("garage-pc")
-        dialog.get_by_role("button", name="Create token").click()
+        drawer = page.get_by_role("dialog")
+        drawer.get_by_role("textbox").first.fill("garage-pc")
+        drawer.get_by_role("button", name="Create token").click()
         page.wait_for_timeout(800)
+
+    def mask_editor(page) -> None:
+        # Cameras -> the camera's Settings drawer -> Edit censor areas (a second drawer).
+        card = page.locator(".camera-card").filter(has_text=CAMERAS[1][1])
+        card.get_by_role("button", name="Settings").click()
+        page.get_by_role("button", name="Edit censor areas").click()
+        page.locator(".mask-stage:not(.loading)").wait_for(timeout=20_000)
+        settle(page)
 
     with sync_playwright() as p:
         try:
@@ -325,21 +344,28 @@ def capture(tmp: Path) -> list[str]:
         desk = browser.new_context(color_scheme="dark", **DESKTOP)
         desk.add_cookies(cookie)
         desk.add_init_script(init)
-        page = desk.new_page()
+        desk_page = page = desk.new_page()
+        detections = f"/events/detections?only_targets=true&selected={det['id']}"
         shot(page, "dashboard", "/")
         shot(page, "events", "/events")
-        shot(page, "detections", f"/detections?selected={det['id']}")
-        shot(page, "recordings", f"/recordings?selected={det['segment_id']}")
-        shot(page, "mask-editor", "/cameras/street/mask")
-        shot(page, "profiles", "/cameras/profiles", element="section#profiles")
+        shot(page, "detections", detections)
+        shot(page, "recordings", f"/recordings/segments?selected={det['segment_id']}")
+        shot(page, "mask-editor", "/cameras", prepare=mask_editor)
         shot(page, "queue", "/jobs")
+        shot(page, "settings", "/settings/detection")
         phone = browser.new_context(color_scheme="dark", **PHONE)
         phone.add_cookies(cookie)
         phone.add_init_script(init)
         page = phone.new_page()
+        shot(page, "mobile-status", "/")
         shot(page, "mobile-events", "/events")
-        shot(page, "mobile-detections", f"/detections?selected={det['id']}")
-        shot(page, "add-worker", "/jobs", prepare=add_worker)
+        shot(page, "mobile-detections", detections)
+        shot(page, "add-worker", "/jobs/workers", prepare=add_worker)
+        # Detection stayed paused so no new event was half built in the shots above; the
+        # cameras go back to the default profiles, which the profiles screenshot shows.
+        for cam in paused:
+            put(f"/api/cameras/{cam}/profiles", {"profiles": None})
+        shot(desk_page, "profiles", "/cameras/profiles", element="section#profiles")
         browser.close()
     return shots
 
@@ -357,10 +383,10 @@ def main() -> None:
     write_config()
     stack = Stack()
     try:
-        run_stack(stack, args.min_events, args.timeout)
+        paused = run_stack(stack, args.min_events, args.timeout)
         SHOTS.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory() as tmp:
-            shots = capture(Path(tmp))
+            shots = capture(Path(tmp), paused)
         log(f"wrote {len(shots)} screenshots to {SHOTS.relative_to(ROOT)}")
     finally:
         stack.stop()

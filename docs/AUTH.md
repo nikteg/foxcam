@@ -77,7 +77,15 @@ An admin's key without `admin` still sees every camera, but counts as a regular 
 everywhere else. Keys can also **expire**. Keys can't reach `/api/auth/`: no making more keys,
 changing the password or signing in. Only a SHA-256 of each key is stored, and the key
 itself is shown once; revoke it on the Account page. Workers use their own tokens
-(`msw_…`, Jobs → Add worker), not API keys.
+(`msw_…`, Jobs → Workers → Add worker), not API keys.
+
+## Download links
+
+The iPhone / iPad home screen app opens downloads (recordings, archives, clips, the
+training-set export) in Safari, which does not share the app's sign-in. So the app asks for
+a link first (`POST /api/download-links` with the file's path): it carries a `dl=` signature
+for the signed-in user, that one file and 10 minutes, and acts as that user for that GET
+only, so the camera access checks still apply. Links of a disabled account stop working.
 
 ## Who may create an account
 
@@ -111,13 +119,13 @@ cameras is admin-only, since the Tapo account is the server's.
 
 ## Sharing
 
-On the Cameras page, **Share** on a camera you own:
+On the Cameras page, **Settings → Share** on a camera you own:
 
 - **With an existing account**: enter its e-mail and pick a role.
 - **With anyone else: an invite link.** It works once, for 7 days, and lets the recipient
   create an account (even with `registration: invite`) or accept with an existing one; it
   grants the chosen role on the camera. Anyone with the link can use it, so send it
-  privately. Open links are listed in the dialog and can be revoked.
+  privately. Open links are listed there and can be revoked.
 
 Admins also create account-only invite links (optionally making the new account an admin)
 under Settings → Users. Users can stop seeing a shared camera from their account page.

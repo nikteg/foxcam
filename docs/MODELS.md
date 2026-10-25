@@ -40,7 +40,7 @@ detector and model: detections and targets, your feedback from Events → Detect
 as precision), average processing time, jobs done, given up and skipped, and the agreement
 rate: of the recordings where a detector found a target and another detector of the profile
 also looked, how often that one found one too. Admins also see each run's raw worker
-result on the recording (Recordings → a recording → Detection runs).
+result on the recording (Recordings → Segments → a recording → Detection runs).
 
 **Give YOLO-World one word per thing.** Distinct targets are fine together, but synonyms of the
 same thing compete for the same object and pull every score down, often below the threshold.
@@ -95,7 +95,7 @@ Takeaways:
 - **SpeciesNet is the most reliable fox detector** here, including the night-camera clip.
 - **MegaDetector almost always finds the animal** (75–100 % of frames), even when the species
   classifier is unsure and answers "animal", "canine family" or "canis species". Adding
-  `canine family` to `detection.target_labels` would raise recall at the cost of also matching dogs.
+  `canine family` to a profile's targets would raise recall at the cost of also matching dogs.
 - **Never give YOLO-World distractor classes** for this use case.
 - Night/IR footage is clearly harder for every model; collect your own night clips and
   ✅/❌ feedback early.

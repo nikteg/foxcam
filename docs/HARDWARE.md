@@ -15,7 +15,11 @@ must start on a keyframe in the hourly file (so it can be cut back out without
 re-encoding): compaction forces keyframes there and checks them, and joins the hour
 without re-encoding if the encoder did not comply.
 
-Each of these decodes the camera stream and encodes it again. On the CPU that is fine for a
+The censored copy each worker gets is made on the CPU (libx264, small and low frame
+rate); where a VAAPI render node exists (`mediamtx.hw_device`, default
+`/dev/dri/renderD128`), the GPU decodes and scales it first, with a CPU fallback.
+
+Each of the three decodes the camera stream and encodes it again. On the CPU that is fine for a
 camera or two; with a GPU's video engine it costs almost nothing, even for many cameras.
 
 ## Backends

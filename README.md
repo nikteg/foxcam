@@ -36,22 +36,29 @@ anything else, and keep the clips.
   Private cameras are never sent anywhere.
 - **Recording profiles and hourly files.** Short segments while recording (fast detection),
   joined into one file per camera and hour afterwards: far fewer files on disk and in S3.
-  Per camera, keep the original stream or re-encode the hour smaller (1080p, 720p, 480p,
-  1080p H.265 or your own), with its own retention.
+  Per camera, or as the default recording quality for all, keep the original stream or
+  re-encode the hour smaller (1080p, 720p, 480p, 1080p H.265 or your own), with its own
+  retention.
 - **Hardware video encoding.** Re-encoding uses Intel Quick Sync, NVIDIA NVENC, AMD (VAAPI /
   AMF) or Apple VideoToolbox when available, also in Docker, with automatic CPU fallback
   ([docs/HARDWARE.md](docs/HARDWARE.md)).
 - **Events with clips.** Sightings close in time become one event with a clip cut from the
   original footage (with pre/post roll), a thumbnail with the box drawn, a day/night tag and
-  ✅/❌ feedback for building a training set.
+  ✅/❌ feedback for building a training set. A detection marked wrong is no match anywhere
+  (counts, events, notifications, archives), and something that stands still (a parked
+  car, ten minutes by default) stops making events.
 - **A UI for every screen.** Live view (WebRTC/HLS, with a ~480p *low data* mode for
-  mobile connections), events, detections, recordings, worker queue and camera
-  management, on phone, tablet and desktop, light or dark, in English and Swedish.
+  mobile connections), events, detections, recordings, worker queue, camera management and
+  settings, on phone, tablet and desktop, light or dark, in English and Swedish. On an
+  iPhone or iPad, add it to the home screen and it runs full screen like an app, with a
+  bottom tab bar, a refresh button and downloads handed to Safari.
+- **Accounts and sharing.** E-mail and password or OAuth sign-in, cameras shared per user
+  as viewer, editor or owner, and API keys with scopes for scripts and Home Assistant.
 - **Tapo cloud cameras.** Stream cameras you can't reach on the LAN (say, at the summer
   house) through the TP-Link cloud, kept alive with the same heartbeats the Tapo app sends.
 - **Notifications and webhooks.** Push to your phone with ntfy, call Home Assistant or any
   webhook (HMAC-signed JSON), or notify Telegram, Discord, Pushover and ~100 more via
-  Apprise — with an image of the detection, quiet hours and per-camera cooldown.
+  Apprise, with an image of the detection, quiet hours and per-camera cooldown.
 - **Optional S3.** Copy clips and recordings to AWS S3, Cloudflare R2, Backblaze B2,
   MinIO…, served through short-lived signed links.
 
@@ -71,8 +78,8 @@ anything else, and keep the clips.
     <td><img src="docs/screenshots/mask-editor.jpg" alt="Censor-area editor"></td>
   </tr>
   <tr>
-    <td><b>Recordings</b> – every segment with day/night tag and match, kept segments pinned</td>
-    <td><b>Censor areas</b> – drawn on a snapshot, blacked out before detection</td>
+    <td><b>Recordings</b> – every segment with day/night tag and match; hourly archives under their own tab</td>
+    <td><b>Censor areas</b> – drawn on a snapshot (camera settings), blacked out before detection</td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/profiles.jpg" alt="Detection profiles"></td>
@@ -80,16 +87,26 @@ anything else, and keep the clips.
   </tr>
   <tr>
     <td><b>Detection profiles</b> – what to look for and which workers may do it (Cameras page)</td>
-    <td><b>Jobs</b> – the detection queue per profile, workers with their tags and tokens</td>
+    <td><b>Jobs</b> – the detection queue per profile; workers and archiving have their own tabs</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/settings.jpg" alt="Settings, Detection tab"></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td><b>Settings</b> – tunables without a restart (reset to config.yaml), and maintenance</td>
+    <td></td>
   </tr>
 </table>
 
 <p align="center">
+  <img src="docs/screenshots/mobile-status.jpg" width="250" alt="Status page on a phone">
+  &nbsp;
   <img src="docs/screenshots/mobile-events.jpg" width="250" alt="Events on a phone">
   &nbsp;
   <img src="docs/screenshots/mobile-detections.jpg" width="250" alt="Detection details on a phone">
   &nbsp;
-  <img src="docs/screenshots/add-worker.jpg" width="250" alt="Add worker dialog with setup commands">
+  <img src="docs/screenshots/add-worker.jpg" width="250" alt="Add worker drawer with setup commands">
 </p>
 
 ## How it works
@@ -115,8 +132,9 @@ flowchart LR
    creates one job per detection profile (and model) of the camera.
 3. **Workers** lease jobs, run their detector on the censored, down-sampled video and post
    the detections back.
-4. Target detections become **events**. Their clips are cut from the original footage and
-   the segments are kept until the event expires.
+4. Target detections become **events** (not those marked wrong, nor objects standing
+   still). Their clips are cut from the original footage and the segments are kept until
+   the event expires.
 5. **Compaction** (`foxcam compact`, its own process) joins each finished hour into
    one file per camera, re-encoding it when the camera's recording profile says so.
 
@@ -164,12 +182,13 @@ container can use with `docker compose exec mediamtx foxcam hwaccel`.
 ## Adding cameras
 
 Use **Cameras → Add camera** in the web UI; cameras start recording within seconds, no
-restart needed. Each camera card then has its own settings: **Censor areas**, **Detection**
-(which profiles run) and **Recording** (quality profile and retention).
+restart needed. A camera's **Settings** then has tabs for **General** (name, segment
+length, censor areas), **Detection** (which profiles run), **Recording** (quality profile
+and retention) and **Share**.
 
 - **RTSP** – the robust option when the server can reach the camera (same network, or a VPN
   such as Tailscale). In the Tapo app create a *Camera Account* (camera → Settings →
-  Advanced settings → Camera account); the dialog builds the `rtsp://…/stream1` URL and
+  Advanced settings → Camera account); the form builds the `rtsp://…/stream1` URL and
   tests it.
 - **Tapo cloud** – works from anywhere, like the Tapo app. Sign in with your Tapo account
   under **Cameras → Integrations** (two-step verification supported) and add cameras from
@@ -201,7 +220,7 @@ uv run foxcam tapo-logout     # delete the saved session
 ## Workers and models
 
 A worker runs wherever the GPU is and only needs to reach the server over HTTP. Create a
-token under **Jobs → Add worker**: the dialog shows ready-to-paste commands for
+token under **Jobs → Workers → Add worker**: it shows ready-to-paste commands for
 Windows + WSL 2, native Windows, Linux/macOS and Docker. For example:
 
 ```sh
@@ -222,15 +241,19 @@ Windows/WSL, Docker and Linux: [docs/WORKER_SETUP.md](docs/WORKER_SETUP.md).
 ## Configuration
 
 Everything lives in `config.yaml` (`${ENV_VAR}` references are expanded). Cameras,
-detection profiles, censor areas and worker tokens can also be managed in the UI.
+detection profiles, censor areas, notification channels and worker tokens can also be
+managed in the UI, and Settings changes timings, retention, the default recording quality
+and more without a restart; resetting a value brings back config.yaml's
+([details](docs/ARCHITECTURE.md#settings-changed-in-the-web-ui)).
 
 | Section | What it controls |
 |---|---|
 | `cameras` | sources, per-camera segment length, which profiles run, recording profile |
-| `profiles` | targets, aliases, confidence, required worker tags, detectors (several models per profile, cascades that confirm), frame rate, event retention |
+| `profiles` | targets, aliases, confidence, required worker tags, detectors (several models per profile, cascades that confirm), frame rate, standing-still minutes, event retention |
 | `recording_profiles` | extra recording qualities (resolution, fps, bitrate, H.264/H.265, `keep_days`) next to the built-in original, 1080p, 720p, 480p and 1080p H.265 |
+| `recording_profile_default` | the recording quality of cameras without their own (default `original`) |
 | `mediamtx` | addresses, low-data live view, hardware encoding (`hwaccel`, [guide](docs/HARDWARE.md)) |
-| `processing` | frames per second sent to workers, resolution, night detection threshold |
+| `processing` | frames per second sent to workers, resolution, night detection threshold, which non-matches to keep (`keep_non_targets_from`, default 0.25) |
 | `queue` | lease time, retries |
 | `events` | pre/post roll, merge gap |
 | `retention` | how long to keep footage, events and unprocessed segments; disk cap |
@@ -290,11 +313,11 @@ encoders work here), `worker-token`, `remove-cameras` and `reset`.
 ## Security
 
 Everything except the worker API needs a login (e-mail and password and/or Google,
-Microsoft, GitHub or any OpenID Connect provider). Users only see the cameras shared with
-them; live view is served through the server, and MediaMTX only accepts local processes.
-Workers need an access token, camera passwords are redacted in the API, and workers only
-ever receive censored footage. Put TLS in front (e.g. Caddy) before exposing it to the
-internet. Details: [docs/AUTH.md](docs/AUTH.md).
+Microsoft, GitHub or any OpenID Connect provider) or an API key. Users only see the
+cameras shared with them; live view is served through the server, and MediaMTX only
+accepts local processes. Workers need an access token, camera passwords are redacted in
+the API, and workers only ever receive censored footage. Put TLS in front (e.g. Caddy)
+before exposing it to the internet. Details: [docs/AUTH.md](docs/AUTH.md).
 
 ## Credits
 

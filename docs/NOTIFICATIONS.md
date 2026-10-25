@@ -22,7 +22,9 @@ and the latest deliveries) or in `config.yaml`. Each channel chooses:
 Delivery goes through an outbox: if a service is down, Foxcam retries with backoff
 (30 s, 1, 2, 4, 8 min) before giving up; the UI shows sent / waiting / failed / skipped.
 An event marked wrong (one of its detections marked wrong, none correct) sends nothing more:
-notifications still waiting for it are skipped.
+notifications still waiting for it are skipped. Detections marked wrong and objects standing
+still join no event, so they notify nobody, and neither do events made again by
+Settings → Detection → Maintenance → Rebuild events.
 
 Set `public_url` (how you open the UI, e.g. `http://192.168.1.10:8000`) so notifications
 can link to the event and its clip; `scripts/dev.sh` sets it to this machine's LAN address

@@ -22,6 +22,7 @@
 | MediaMTX | `foxcam mediamtx mediamtx/mediamtx.yml` (starts `mediamtx` with the internal login, see docs/AUTH.md) | Pulls RTSP cameras, accepts published streams, records segments, serves live view. Configured by the server through its API, including an on-demand `<camera>/low` path per camera (`foxcam transcode` to ~480p while someone watches it in low-data mode). |
 | server | `foxcam serve` | API, web UI and the background pipeline (single process, single SQLite writer). |
 | ingest | `foxcam ingest` | Publishes non-RTSP sources (Tapo cloud, file, test) into MediaMTX. Re-reads the camera list every 5 s. |
+| compaction | `foxcam compact` | Joins finished segments into hourly files, re-encoding them when the camera's recording profile says so ([below](#archiving-compaction-recording-profiles)). |
 | worker | `foxcam-worker` | Runs anywhere with HTTP access to the server. Leases jobs, runs a detector, posts results. |
 
 ## Pipeline (server background loops)
@@ -49,6 +50,15 @@
    `min_confidence`) are merged into events when within `merge_gap_seconds`. After
    `settle_seconds` (and once the post-roll footage exists) a clip is cut from the **original**
    recordings with pre/post roll, plus a thumbnail with the box drawn. Event segments are pinned.
+   Two kinds of target detection join no event:
+   - **marked wrong** (❌ on the Detections page): a wrong detection is no match anywhere,
+     not in counts, "with a match", the Status page, notifications or archives. An event
+     counts as wrong once one of its detections is marked wrong and none correct;
+   - **standing still**: with the profile's `ignore_stationary_minutes` (default 10, 0 =
+     off), a target seen in an overlapping box all that time (a parked car) is marked
+     `stationary`, so it neither keeps an event open forever nor pins its footage. It
+     counts again once it moves. The Detections page hides these unless *Show standing
+     still* is ticked.
 5. **Retention** (every 10 min): see below.
 6. **Upload** (every 30 s, only with `storage.s3.enabled`): see [Object storage](#object-storage-s3).
 7. **Notify** (every 5 s): new events and finished clips are queued per matching channel in
@@ -67,6 +77,7 @@ A profile (`profiles.py`) says **what** to look for and **which models** look fo
 | `requires` | worker tags every detector of the profile needs |
 | `detectors` | the models that look (below); none = one detector `default` needing just `requires` |
 | `fps` | frames per second to analyse (cheaper profiles for slow-moving things) |
+| `ignore_stationary_minutes` | a target in the same place this long makes no event (default 10, 0 = off) |
 | `default` | runs on cameras without their own selection |
 | `events_days` | per-profile event retention |
 
@@ -136,17 +147,21 @@ Events page can filter on "seen by ≥ N models", and notification channels can 
 
 | Table | Holds |
 |---|---|
-| `segment` | One recording file: camera, start (UTC), duration, status, light tags, mask version used, fox flag, pinned, `deleted_at`. |
+| `segment` | One recording file: camera, start (UTC), duration, status, light tags, mask version used, match flag, pinned, archive and offset in it, `deleted_at`. |
+| `archive` | One hourly file made by compaction: camera, start, size, recording profile and encoder used, S3 key. |
 | `job` | Work item per segment, profile and detector (with the worker's raw result, ≤ 256 kB, for debugging): state (`pending/leased/done/failed/dead`, `skipped` for cascade detectors that did not run), lease token and expiry, attempts, model, timing. |
-| `detection` | Worker result: profile, detector, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, event. |
-| `event` | Merged sighting of one label for one profile: time range, best detection, detectors that saw it and how many (`agreement`), clip and thumbnail paths. |
-| `worker` | Last-seen info and tags per worker id (shown in the queue tab). |
+| `detection` | Worker result: profile, detector, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, standing still, event. |
+| `event` | Merged sighting of one label for one profile: time range, best detection, detectors that saw it and how many (`agreement`), confirmed, quiet (rebuilt, notifies nobody), clip and thumbnail paths. |
+| `worker` | Last-seen info, tags and reported vocabulary per worker id (Jobs → Workers). |
+| `worker_token` | Worker access tokens (hashed) with their tags. |
 | `detection_profile` | Detection profiles added in the web UI. |
 | `notification_channel` | Notification channels added in the web UI. |
 | `notification` | Outbox: one row per channel, event and trigger; status, attempts, error. |
 | `mask_version` | Immutable censor-rectangle sets; segments reference the version they were censored with. |
 | `camera_state` | Per-camera private flag, current mask version and profile selection. |
 | `managed_camera` | Cameras added in the web UI (config.yaml cameras are not stored). |
+| `app_setting` | Settings changed in the web UI ([below](#settings-changed-in-the-web-ui)). |
+| `user_account`, `oauth_identity`, `user_session`, `api_key`, `camera_access`, `invite` | Accounts, their sign-ins, sessions, API keys, camera shares and invite links ([AUTH.md](AUTH.md)). |
 
 All timestamps are UTC. Recording file names carry their UTC offset
 (`2026-10-24_14-00-35-560256+0200.mp4`), so MediaMTX may run in any time zone; this matters on
@@ -170,14 +185,16 @@ The day counts and `max_disk_gb` can also be changed in the web UI (see below).
 ## Settings changed in the web UI
 
 Admins can change these on the Settings page (General, Detection and Retention tabs) without
-a restart: `public_url`, `segment_seconds`, `compaction.enabled` and `delay_minutes`,
-`processing.sample_fps`, `max_width`, `concurrency` and `night_saturation_threshold`, the
-low-data live view (`mediamtx.low_data`), the `events` timings,
+a restart: `public_url`, `segment_seconds`, the default recording quality
+(`recording_profile_default`), `compaction.enabled` and `delay_minutes`,
+`processing.sample_fps`, `max_width`, `concurrency`, `night_saturation_threshold` and
+`keep_non_targets_from`, the low-data live view (`mediamtx.low_data`), the `events` timings,
 the `queue` lease, attempts and backoff, and the `retention` days and disk cap
 (`runtime_settings.EDITABLE`). Each value set there is an `app_setting` row keyed by its
-config.yaml path, like `recording_profile_default`, and wins over config.yaml (and its
-environment variables) until it is reset, which brings config.yaml's value back. They are
-validated with the bounds of the models in `config.py`.
+config.yaml path and wins over config.yaml (and its environment variables) until it is
+reset, which brings config.yaml's value back. They are validated with the bounds of the
+models in `config.py`. Language and theme (Settings → General → Appearance, also on the
+Account page) are per browser, not server settings.
 
 Every process applies them onto its own settings object: the server right after a change
 (and every 5 s for changes from elsewhere), ingest and compaction on each round of their
@@ -189,6 +206,20 @@ transcoder would restart).
 
 `foxcam settings list | set KEY VALUE | reset [KEY...]` does the same from a shell,
 e.g. to undo an https `public_url` that broke signing in over plain http.
+
+**Maintenance** (Settings → Detection) applies changed rules to what is already there:
+
+- **Rebuild events** (`POST /api/admin/rebuild-events`, admins): deletes every event and
+  makes them again from the detections with the profiles' current rules (e.g. the
+  standing-still check, also for detections from before it existed). Rebuilt events are
+  `quiet`: they notify nobody. Their clips are cut again in the background; detections and
+  ✅/❌ marks stay.
+- **Detect again** (`POST /api/segments/reanalyse` with `start`, `end` and an optional
+  `camera`): runs detection again on every recording that starts in the range, with the
+  current censor areas and profiles, like *Analyse again* on one recording
+  (`POST /api/segments/{id}/reanalyse`). Their detections and ✅/❌ marks are replaced.
+  At most 500 recordings at once; recordings a worker is busy with or already waiting are
+  skipped. The API also lets editors do it for their own cameras.
 
 ## Object storage (S3)
 
@@ -227,14 +258,18 @@ server/src/foxcam/
   config.py          settings (config.yaml + ${ENV} expansion), camera list
   camera_store.py    cameras added from the UI
   profiles.py        detection profiles: camera selection, tag matching, UI profiles
+  recording.py       recording profiles, default recording quality, burned-in masks
+  runtime_settings.py  settings changed in the web UI (app_setting)
+  accounts.py, oauth.py, api_keys.py, download_links.py   users, sign-in, API keys, signed links
   mediamtx.py        MediaMTX API client (path sync, live status)
-  ffmpeg.py          probe, censored derivative, light stats, thumbnails, clips
-  pipeline/          scanner, preprocess, queue, events, retention, uploader, runner
+  ffmpeg.py, hwaccel.py  probe, censored derivative, thumbnails, clips; hardware encoders
+  pipeline/          scanner, preprocess, queue, events, retention, uploader, compaction,
+                     reanalyse, runner
   storage.py         S3-compatible object storage client (boto3)
   notify.py          notification channels, outbox and senders (ntfy, webhook, Apprise)
   ingest/            publishers for tapo_cloud / file / test sources
   tapo_account.py    Tapo cloud sign-in (MFA) and device discovery for the UI
-  web/               FastAPI app, worker API, public API, camera API
+  web/               FastAPI app: worker, camera, auth, user, notification and live APIs
 worker/src/foxcam_worker/
   cli.py             lease loop; `detect-file` for offline tests (local.py)
   detectors/         dummy, ultralytics (YOLO-World / YOLO), speciesnet
@@ -261,8 +296,8 @@ Segments are short (`segment_seconds`) so detection starts soon after something 
 but thousands of small files per camera and day are a burden on disk and in S3.
 `foxcam compact` (its own process; `compact` service in Docker) joins them into
 archive files. Jobs → Archiving shows whether it runs, what it is doing, which periods wait
-and what was archived last (`GET /api/archiving`); the files are under Recordings →
-Archives, and the Status page has a one-line summary.
+and what was archived last (`GET /api/archiving`); the files are under Recordings (Files
+on phones) → Archives (`GET /api/archives`), and the Status page has a one-line summary.
 
 - Once a period (`compaction.period_minutes`, default an hour) is over by
   `delay_minutes` and none of its segments is still being preprocessed, each camera's
@@ -283,7 +318,11 @@ Archives, and the Status page has a one-line summary.
   gone (an event's pinned segments keep their whole hour). With `storage.s3.recordings`,
   the hourly files are uploaded instead of every segment.
 
-Recording profiles may set `keep_days`, which replaces `retention.segments_days` for
-their cameras. The encode step is behind `compaction.Encoder`, so it could later run on
-another (trusted) machine with a better GPU.
+Each camera picks its recording profile under its Settings → Recording tab; cameras
+without a choice use the default recording quality (Settings → General, or
+`recording_profile_default` in config.yaml, default `original`). A change applies to
+periods joined from then on. Recording profiles may set `keep_days`, which replaces
+`retention.segments_days` for their cameras. The encode step is behind
+`compaction.Encoder`, so it could later run on another (trusted) machine with a better
+GPU.
 
