@@ -17,6 +17,7 @@ import {
   useSeveralDetectors,
 } from "./ProfileSelect";
 import { Fact, Facts, Light, QueryState, Tag, Time, useRouterHref } from "./ui";
+import { VideoPlayer } from "./VideoPlayer";
 
 /** The event's detections, with its best one open. */
 const detectionsHref = (e: DetectionEvent) =>
@@ -55,6 +56,21 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
             </Caption1>
           </span>
         </>
+      )}
+      {/* The event's clip (with pre- and post-roll); until it is cut, the recording from
+          just before the best detection. */}
+      {e.clip_url ? (
+        <VideoPlayer key={e.clip_url} title={e.label} src={e.clip_url} poster={e.thumb_url} />
+      ) : (
+        best && (
+          <VideoPlayer
+            key={best.id}
+            title={e.label}
+            src={`/api/segments/${best.segment_id}/play`}
+            startAt={Math.max(best.offset_ms / 1000 - 1, 0)}
+            thumbnails={`/api/segments/${best.segment_id}/thumbnails.vtt`}
+          />
+        )
       )}
       <Facts>
         <Fact label={t("common.camera")}>{cameraName(e.camera_id)}</Fact>
