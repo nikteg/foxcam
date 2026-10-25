@@ -74,7 +74,7 @@ auto -> qsv (h264_qsv)
 ```
 
 The MediaMTX log shows the choice for each transcode, e.g.
-`transcode grusgang -> low: qsv (h264_qsv)`.
+`transcode garden -> low: qsv (h264_qsv)`.
 
 ## Docker
 
