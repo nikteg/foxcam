@@ -246,6 +246,18 @@ h2.section > .section-link {
 .bottom-tabs {
   display: none;
 }
+/* Nav icons with a number on their corner (navBadges.ts). */
+.nav-icon {
+  position: relative;
+  display: inline-flex;
+}
+/* Doubled class: wins over Fluent's own position on the badge. */
+.nav-badge.nav-badge {
+  position: absolute;
+  top: -6px;
+  left: 14px;
+  pointer-events: none;
+}
 /* Top bar: theme and language on wider screens, a refresh button on phones. */
 /* Doubled class: wins over Fluent's own display on buttons. */
 .phone-only.phone-only {

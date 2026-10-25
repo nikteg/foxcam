@@ -1,6 +1,7 @@
 import {
   Button,
   Caption1,
+  CounterBadge,
   Menu,
   MenuDivider,
   MenuItem,
@@ -30,6 +31,7 @@ import { useLayoutEffect, useState, type ReactElement } from "react";
 import { Outlet, useLocation, useNavigate, useNavigationType } from "react-router";
 
 import { api } from "./api";
+import { useNavBadges } from "./navBadges";
 import { useAuth, useAuthChanged, useUnauthorizedRedirect } from "./auth";
 import { RouterLink, usePageTitle } from "./components/ui";
 import { AuthScreen } from "./pages/Login";
@@ -84,6 +86,18 @@ function currentTab(pathname: string): string {
 }
 
 /** Signed-in user: account page and sign out. */
+/** A nav icon with a number on it (new events, jobs in the queue); none at 0. */
+function NavIcon({ icon, count }: { icon: ReactElement; count: number }) {
+  return (
+    <span className="nav-icon">
+      {icon}
+      {count > 0 && (
+        <CounterBadge className="nav-badge" count={count} overflowCount={99} size="small" />
+      )}
+    </span>
+  );
+}
+
 /** Fetches everything on the page again (a home screen app has no pull to refresh). */
 function RefreshButton({ className }: { className?: string }) {
   const { t } = useI18n();
@@ -165,6 +179,8 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
   const { t } = useI18n();
   const tabs = TABS.filter((tab) => isAdmin || !tab.admin);
   const extraTabs = EXTRA_TABS.filter((tab) => isAdmin || !tab.admin);
+  const badges = useNavBadges(isAdmin, selected === "/events");
+  const icon = (tab: NavItem) => <NavIcon icon={tab.icon} count={badges[tab.to] ?? 0} />;
   // Pressing the open section scrolls back up, like a phone app's tab bar.
   const go = (to: string) => {
     if (to === pathname) window.scrollTo({ top: 0, behavior: "smooth" });
@@ -187,12 +203,12 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
           size="medium"
         >
           {tabs.map((tab) => (
-            <Tab key={tab.to} value={tab.to} icon={tab.icon}>
+            <Tab key={tab.to} value={tab.to} icon={icon(tab)}>
               {t(tab.label)}
             </Tab>
           ))}
           {extraTabs.map((tab) => (
-            <Tab key={tab.to} value={tab.to} icon={tab.icon}>
+            <Tab key={tab.to} value={tab.to} icon={icon(tab)}>
               {t(tab.label)}
             </Tab>
           ))}
@@ -223,7 +239,7 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
             aria-current={selected === tab.to ? "page" : undefined}
             onClick={() => go(tab.to)}
           >
-            {tab.icon}
+            {icon(tab)}
             <Caption1>{t(tab.short)}</Caption1>
           </button>
         ))}
