@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../api";
 import { useIsAdmin, useMe } from "../auth";
+import { AppearanceSection } from "../components/AppearanceSection";
 import { MaintenanceSection } from "../components/MaintenanceSection";
 import { Notifications } from "../components/Notifications";
 import {
@@ -189,6 +190,8 @@ export function Settings() {
         />
       )}
 
+      {/* This browser's own choices first: the banner below is about the server's settings. */}
+      {tab === "general" && <AppearanceSection />}
       {(tab === "general" || tab === "detection" || tab === "retention") && (
         <InfoBanner id="runtime-settings">
           {rich("runtime.intro", { file: <code>config.yaml</code> })}

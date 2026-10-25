@@ -32,6 +32,7 @@ import { useSearchParams } from "react-router";
 import { api, type ApiKeyScope } from "../api";
 import { AUTH_KEY, useMe } from "../auth";
 import { CopyBlock } from "../components/AddWorkerDialog";
+import { AppearanceSection } from "../components/AppearanceSection";
 import { ConfirmPopover } from "../components/ConfirmPopover";
 import {
   Dialog,
@@ -71,6 +72,7 @@ export function Account() {
           <ApiKeys />
         </>
       )}
+      <AppearanceSection />
     </>
   );
 }

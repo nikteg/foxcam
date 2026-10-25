@@ -142,7 +142,7 @@ export function DetectionList() {
         <Button as="a" icon={<ScanObject20Regular />} {...routerHref("/cameras/profiles")}>
           {t("profiles.title")}
         </Button>
-        <DownloadButton href="/api/detections/feedback-export">
+        <DownloadButton href="/api/detections/feedback-export" small>
           {t("detections.exportJson")}
         </DownloadButton>
       </Toolbar>

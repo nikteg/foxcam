@@ -246,6 +246,40 @@ h2.section > .section-link {
 .bottom-tabs {
   display: none;
 }
+/* Top bar: theme and language on wider screens, a refresh button on phones. */
+/* Doubled class: wins over Fluent's own display on buttons. */
+.phone-only.phone-only {
+  display: none;
+}
+.not-phone {
+  display: contents;
+}
+@media (max-width: 720px) {
+  .phone-only.phone-only {
+    display: inline-flex;
+  }
+  .not-phone {
+    display: none;
+  }
+}
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}
+/* Settings → General and Account: language and theme. */
+.appearance {
+  max-width: 620px;
+  margin-bottom: var(--spacingVerticalXXL);
+}
 main {
   padding: 20px max(20px, env(safe-area-inset-right)) 40px max(20px, env(safe-area-inset-left));
   max-width: 1500px;

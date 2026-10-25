@@ -52,28 +52,90 @@ const standalone =
   (navigator as { standalone?: boolean }).standalone === true ||
   window.matchMedia("(display-mode: standalone)").matches;
 
-/** A download link styled as a button. In a home screen app a file opened in the app's own
- * window has no way back (iOS shows it full screen, without a back button), so there it
- * opens in a new window: iOS shows that as a sheet with Done. */
+/** The file name in a Content-Disposition header, else the URL's last part. */
+function fileName(res: Response, href: string): string {
+  const cd = res.headers.get("content-disposition") ?? "";
+  const m = /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i.exec(cd);
+  if (m) return decodeURIComponent(m[1] ?? m[2]!);
+  return new URL(href, location.href).pathname.split("/").pop() || "download";
+}
+
+async function fetchFile(href: string): Promise<File> {
+  const res = await fetch(href, { credentials: "same-origin" });
+  if (!res.ok) throw new Error(String(res.status));
+  const blob = await res.blob();
+  return new File([blob], fileName(res, href), { type: blob.type });
+}
+
+/** Hand a file to the share sheet (Save Video / Save to Files), or download it from memory
+ * where there is no share sheet for files. "retry": iOS wants a fresh tap for the sheet
+ * (the fetch took too long after the first one). */
+async function saveFile(file: File): Promise<"done" | "retry"> {
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] });
+    } catch (e) {
+      const name = (e as Error).name;
+      if (name === "NotAllowedError") return "retry";
+      if (name !== "AbortError") throw e; // AbortError: closed the sheet, fine
+    }
+    return "done";
+  }
+  const url = URL.createObjectURL(file);
+  const a = Object.assign(document.createElement("a"), { href: url, download: file.name });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  return "done";
+}
+
+/** A download link styled as a button. In a home screen app iOS opens a file in a
+ * full-screen viewer with no way back, so there:
+ * - ``small`` files (clips, exports: a few MB) are fetched into memory and handed to the
+ *   share sheet (Save Video, Save to Files);
+ * - large ones (recordings, up to GBs: too big for memory) open in a new window, a sheet
+ *   with Done. */
 export function DownloadButton({
   href,
   appearance,
+  small = false,
   children,
 }: {
   href: string;
   appearance?: ButtonProps["appearance"];
+  small?: boolean;
   children: ReactNode;
 }) {
+  const { t } = useI18n();
+  const [busy, setBusy] = useState(false);
+  // Fetched, waiting for a second tap to open the share sheet.
+  const [ready, setReady] = useState<File | null>(null);
+  const save = async () => {
+    const file = ready ?? (await fetchFile(href));
+    setReady((await saveFile(file)) === "retry" ? file : null);
+  };
   return (
     <Button
       as="a"
       href={href}
       download
-      appearance={appearance}
-      icon={<ArrowDownload20Regular />}
+      appearance={ready ? "primary" : appearance}
+      disabled={busy}
+      icon={busy ? <Spinner size="extra-tiny" /> : <ArrowDownload20Regular />}
       {...(standalone ? { target: "_blank", rel: "noopener" } : {})}
+      onClick={
+        standalone && small
+          ? (e: MouseEvent) => {
+              e.preventDefault();
+              setBusy(true);
+              // Failed (e.g. a clip in S3 without CORS): the new window as before.
+              save()
+                .catch(() => window.open(href, "_blank", "noopener"))
+                .finally(() => setBusy(false));
+            }
+          : undefined
+      }
     >
-      {children}
+      {ready ? t("common.saveFile") : children}
     </Button>
   );
 }

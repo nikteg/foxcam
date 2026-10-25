@@ -14,6 +14,7 @@ import {
   Title2,
 } from "@fluentui/react-components";
 import {
+  ArrowClockwise20Regular,
   Camera24Regular,
   Person20Regular,
   Person24Regular,
@@ -24,7 +25,8 @@ import {
   Settings24Regular,
   Target24Regular,
 } from "@fluentui/react-icons";
-import { useLayoutEffect, type ReactElement } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLayoutEffect, useState, type ReactElement } from "react";
 import { Outlet, useLocation, useNavigate, useNavigationType } from "react-router";
 
 import { api } from "./api";
@@ -82,6 +84,26 @@ function currentTab(pathname: string): string {
 }
 
 /** Signed-in user: account page and sign out. */
+/** Fetches everything on the page again (a home screen app has no pull to refresh). */
+function RefreshButton({ className }: { className?: string }) {
+  const { t } = useI18n();
+  const client = useQueryClient();
+  // Spins until what is on screen has come back (not for background polling).
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button
+      className={className}
+      appearance="subtle"
+      aria-label={t("common.refresh")}
+      icon={<ArrowClockwise20Regular className={busy ? "spin" : undefined} />}
+      onClick={() => {
+        setBusy(true);
+        void client.invalidateQueries().finally(() => setBusy(false));
+      }}
+    />
+  );
+}
+
 function UserMenu() {
   const { t } = useI18n();
   const navigate = useNavigate();
@@ -177,8 +199,13 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
         </TabList>
         {/* Right-aligned header actions. */}
         <div className="topbar-actions">
-          <ThemeMenu />
-          <LanguageMenu className="language-menu" />
+          {/* Phones: no room (they are in Settings → General and on the Account page), and
+              a home screen app has no pull to refresh. */}
+          <span className="not-phone">
+            <ThemeMenu />
+            <LanguageMenu className="language-menu" />
+          </span>
+          <RefreshButton className="phone-only" />
           <UserMenu />
         </div>
       </header>
