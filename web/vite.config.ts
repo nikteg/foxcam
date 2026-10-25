@@ -2,8 +2,11 @@ import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 
 export default defineConfig(({ mode }) => {
-  // Where the Python server runs during `pnpm dev` (override in web/.env.local).
+  // Where the Python server runs during `pnpm dev` (override in web/.env.local, e.g.
+  // FOXCAM_API=https://cams.example.org to work on the UI against a real server).
   const api = loadEnv(mode, ".", "").FOXCAM_API ?? "http://localhost:8000";
+  const target = new URL(api);
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(target.hostname);
   return {
     plugins: [
       // `compiler: true` runs the Rust port of React Compiler (oxc-transform-react),
@@ -12,9 +15,15 @@ export default defineConfig(({ mode }) => {
     ],
     server: {
       port: 5173,
-      // Keep the browser's Host: the server refuses writes whose Origin (localhost:5173,
-      // or the LAN address) is not its own (web/deps.py `_same_origin`).
-      proxy: { "/api": { target: api, changeOrigin: false } },
+      // The server refuses writes whose Origin is not its own (web/deps.py `_same_origin`).
+      // Local server: keep the browser's Host (localhost:5173, or the LAN address), which
+      // it accepts. Real server: its own Host (the reverse proxy and TLS route by it) and
+      // Origin, so signing in and saving work from the dev UI too.
+      proxy: {
+        "/api": local
+          ? { target: api, changeOrigin: false }
+          : { target: api, changeOrigin: true, headers: { origin: target.origin } },
+      },
     },
     build: {
       outDir: "dist",

@@ -161,6 +161,13 @@ to watch the whole pipeline work. For real detection on your machine:
 mise run setup:yolo && mise run dev:yolo     # YOLO-World (uses CUDA when available)
 ```
 
+To work on the web UI against a real server instead (its data, your local UI code), point the
+dev server's API proxy at it; signing in and saving work as on the real site:
+
+```sh
+cd web && FOXCAM_API=https://cams.example.org pnpm dev
+```
+
 ### Docker
 
 ```sh
