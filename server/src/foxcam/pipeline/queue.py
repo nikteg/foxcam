@@ -38,6 +38,7 @@ from ..models import (
     utcnow,
 )
 from ..profiles import eligible_profiles
+from . import motion
 
 
 class LeaseError(Exception):
@@ -172,6 +173,13 @@ def complete(settings: Settings, job_id: int, token: str, detections: list[Detec
             bbox = d.bbox or [None] * 4
             is_target = bool(profile and profile.is_target(d.label, d.confidence,
                                                            job.detector_id))
+            # require_motion: a target whose box overlaps no motion is no match. Segments
+            # without a measurement count as moving.
+            moving = None
+            if is_target and profile.require_motion and seg.motion_score is not None:
+                moving = motion.overlaps(seg.motion_boxes, d.offset_ms, d.bbox,
+                                         settings.motion.window_seconds * 1000)
+                is_target = moving
             hit = hit or is_target
             if not is_target and d.confidence < settings.processing.keep_non_targets_from:
                 continue  # a weak non-match: nothing would ever use it
@@ -181,7 +189,7 @@ def complete(settings: Settings, job_id: int, token: str, detections: list[Detec
                 ts=seg.start_at + timedelta(milliseconds=d.offset_ms), offset_ms=d.offset_ms,
                 label=label, confidence=d.confidence,
                 bbox_x=bbox[0], bbox_y=bbox[1], bbox_w=bbox[2], bbox_h=bbox[3],
-                is_target=is_target,
+                is_target=is_target, moving=moving,
                 model=model, worker_id=job.leased_by, extra=extra,
             ))
         job.state = JobState.DONE
@@ -264,7 +272,7 @@ def settle_segment(settings: Settings, seg: Segment) -> None:
             seg.status = SegmentStatus.QUEUED
         return
     refresh_match(settings, seg)
-    if JobState.DONE in states or not states:
+    if JobState.DONE in states or JobState.DEAD not in states:  # ran, or all skipped
         seg.status = SegmentStatus.DONE
     else:
         seg.status = SegmentStatus.FAILED

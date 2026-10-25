@@ -18,7 +18,7 @@
   and Apple). Today the live transcodes and compaction use the GPU, and worker inputs are
   decoded and scaled with VAAPI where a render node exists ([HARDWARE.md](HARDWARE.md)).
 - Recording profiles editable in the UI (today: built-in ones plus `config.yaml`).
-- Motion pre-filter (skip segments without motion before queueing) to save GPU time.
+- Motion-only events (movement the models cannot name) and object tracking across frames.
 - Night-only schedule per camera (don't queue daylight segments).
 - Event timeline view (per camera, per day) and a "best of" gallery.
 - Swedish translations for server-side error messages.

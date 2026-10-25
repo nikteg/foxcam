@@ -768,6 +768,12 @@ div.thumb.placeholder {
   outline: 2px solid var(--colorBrandStroke1);
   cursor: move;
 }
+/* Motion-ignore areas: tinted, not blacked out (the picture stays visible). */
+.mrect.motion {
+  background: rgb(255 255 255 / 10%)
+    repeating-linear-gradient(-45deg, transparent 0 8px, rgb(74 163 255 / 35%) 8px 10px);
+  outline-color: #4aa3ff;
+}
 .mrect.selected {
   outline: 2px dashed #fff;
 }

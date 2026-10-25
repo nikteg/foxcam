@@ -4,6 +4,8 @@
 2. Make a thumbnail.
 3. Private camera (or no detection profile) => stop here. Otherwise burn the current
    censor rectangles into a low-fps derivative and enqueue one job per detection profile.
+4. Measure motion in the derivative (pipeline/motion.py). Profiles with
+   ``skip_without_motion`` get their jobs marked skipped when nothing moved.
 """
 
 from __future__ import annotations
@@ -17,9 +19,11 @@ from sqlalchemy import select
 from .. import ffmpeg, hwaccel, sprites
 from ..config import Settings
 from ..db import session_scope
-from ..models import CameraState, Job, MaskVersion, Segment, SegmentStatus
+from ..models import CameraState, Job, JobState, MaskVersion, Segment, SegmentStatus, utcnow
 from ..profiles import camera_profiles
+from . import motion
 from .compaction import playable_file
+from .queue import settle_segment
 
 log = logging.getLogger(__name__)
 
@@ -49,6 +53,14 @@ def current_mask(camera_id: str) -> tuple[bool, MaskVersion | None]:
             return False, None
         mask = s.get(MaskVersion, state.mask_version_id) if state.mask_version_id else None
         return state.private, mask
+
+
+def motion_settings(settings: Settings, camera_id: str) -> tuple[str, list]:
+    """The camera's motion sensitivity and motion-ignore areas."""
+    with session_scope() as s:
+        state = s.get(CameraState, camera_id)
+        sensitivity = (state and state.motion_sensitivity) or settings.motion.sensitivity
+        return sensitivity, list((state and state.motion_rects) or [])
 
 
 def pending_segment_ids(limit: int = 50) -> list[int]:
@@ -107,6 +119,15 @@ def preprocess_segment(settings: Settings, segment_id: int) -> None:
             updates.update(derived_path=str(derived.relative_to(settings.data_dir)),
                            derived_fps=fps, mask_version_id=mask.id if mask else None,
                            status=SegmentStatus.QUEUED)
+            try:
+                sensitivity, ignore = motion_settings(settings, camera_id)
+                found = motion.measure(derived, fps, sensitivity=sensitivity,
+                                       night=bool(updates.get("is_night")), ignore=ignore,
+                                       light_change_fraction=settings.motion.light_change_fraction)
+                updates.update(motion_score=found.score, motion_boxes=found.boxes)
+            except Exception as e:  # noqa: BLE001 - unmeasured counts as moving
+                log.warning("segment %s: no motion measured: %s", segment_id, e)
+                updates.update(motion_score=None, motion_boxes=None)
     except Exception as e:
         log.exception("preprocessing segment %s failed", rel)
         updates.update(status=SegmentStatus.FAILED, error=f"preprocess: {e}"[:500])
@@ -118,8 +139,15 @@ def preprocess_segment(settings: Settings, segment_id: int) -> None:
         for k, v in updates.items():
             setattr(seg, k, v)
         if seg.status == SegmentStatus.QUEUED:
+            still = seg.motion_score == 0  # measured, and nothing moved
             for p in profiles:
                 # Cascade detectors (run: on_hit) get theirs when the one before finds
                 # something (queue.complete).
                 for d in p.always:
-                    s.add(Job(segment_id=seg.id, profile_id=p.id, detector_id=d.id))
+                    job = Job(segment_id=seg.id, profile_id=p.id, detector_id=d.id)
+                    if still and p.skip_without_motion:
+                        job.state, job.finished_at = JobState.SKIPPED, utcnow()
+                        job.error = "skipped – no motion"
+                    s.add(job)
+            if still:
+                settle_segment(settings, seg)  # done already when every job was skipped

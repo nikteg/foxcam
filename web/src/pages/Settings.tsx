@@ -71,6 +71,10 @@ const DETECTION: SettingsGroup[] = [
     keys: ["processing.keep_non_targets_from"],
   },
   {
+    title: "motion.title",
+    keys: ["motion.sensitivity", "motion.light_change_fraction", "motion.window_seconds"],
+  },
+  {
     title: "runtime.group.events",
     keys: [
       "events.pre_roll_seconds",

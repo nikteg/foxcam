@@ -197,6 +197,19 @@ async def snapshot(camera_id: str, fresh: bool = False, source: bool = False,
     return FileResponse(dst, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
+def clean_rects(rects: list[list[float]]) -> list[list[float]]:
+    """Normalized [x, y, w, h] rectangles, clipped to the picture; tiny ones dropped."""
+    out = []
+    for r in rects:
+        if len(r) != 4:
+            raise ValueError("each rect must be [x, y, w, h]")
+        x, y, w, h = (min(max(v, 0.0), 1.0) for v in r)
+        w, h = min(w, 1 - x), min(h, 1 - y)
+        if w > 0.002 and h > 0.002:
+            out.append([round(x, 5), round(y, 5), round(w, 5), round(h, 5)])
+    return out
+
+
 class MaskBody(BaseModel):
     rects: list[list[float]] = Field(default_factory=list)
     private: bool = False
@@ -204,18 +217,7 @@ class MaskBody(BaseModel):
     # None = leave as is.
     burn_in: bool | None = None
 
-    @field_validator("rects")
-    @classmethod
-    def _validate(cls, rects: list[list[float]]) -> list[list[float]]:
-        out = []
-        for r in rects:
-            if len(r) != 4:
-                raise ValueError("each rect must be [x, y, w, h]")
-            x, y, w, h = (min(max(v, 0.0), 1.0) for v in r)
-            w, h = min(w, 1 - x), min(h, 1 - y)
-            if w > 0.002 and h > 0.002:
-                out.append([round(x, 5), round(y, 5), round(w, 5), round(h, 5)])
-        return out
+    _rects = field_validator("rects")(lambda rects: clean_rects(rects))
 
 
 @router.get("/cameras/{camera_id}/mask")
@@ -244,14 +246,34 @@ async def put_mask(camera_id: str, body: MaskBody, settings: Settings = Depends(
     return after
 
 
+class MotionBody(BaseModel):
+    # None = motion.sensitivity
+    sensitivity: Literal["low", "medium", "high"] | None = None
+    # Areas whose movement is ignored, normalized [x, y, w, h].
+    rects: list[list[float]] = Field(default_factory=list)
+
+    _rects = field_validator("rects")(lambda rects: clean_rects(rects))
+
+
+@router.put("/cameras/{camera_id}/motion")
+def put_motion(camera_id: str, body: MotionBody, settings: Settings = Depends(settings_dep),
+               p: Principal = Depends(principal)) -> dict[str, Any]:
+    """Applies to segments preprocessed from now on."""
+    camera_for(p, settings, camera_id, CameraRole.EDITOR)
+    queries.save_motion(camera_id, body.sensitivity, body.rects)
+    return queries.camera_state(camera_id)
+
+
 @router.get("/segments")
 def segments(camera: str | None = None, day: str | None = Query(None, description="YYYY-MM-DD"),
              only_targets: bool = False, include_deleted: bool = False,
              status: str | None = Query(None, description="new, queued, done, private, failed"),
+             motion: Literal["yes", "no"] | None = Query(
+                 None, description="yes: something moved; no: measured, nothing moved"),
              limit: int = Query(200, le=2000),
              p: Principal = Depends(principal)) -> list[dict[str, Any]]:
     return queries.segments(camera, day, only_targets, include_deleted, limit,
-                            _camera_filter(p, camera), status)
+                            _camera_filter(p, camera), status, motion)
 
 
 def _segment(p: Principal, segment_id: int) -> Segment:

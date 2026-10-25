@@ -256,6 +256,10 @@ class ProfileConfig(BaseModel):
     # A target that stays in the same place this long (a parked car) stops counting: it
     # neither makes nor extends events until it moves or leaves. 0 = off.
     ignore_stationary_minutes: float = Field(default=10, ge=0, le=1440)
+    # A target only counts when its box overlaps motion (pipeline/motion.py).
+    require_motion: bool = False
+    # Recordings without any motion get no jobs of this profile (marked skipped).
+    skip_without_motion: bool = False
     enabled: bool = True
     managed: Literal["config", "ui"] = "config"
 
@@ -329,6 +333,21 @@ class ProfileConfig(BaseModel):
     def is_target(self, label: str, confidence: float, detector_id: str | None = None) -> bool:
         return (confidence >= self.min_confidence_for(detector_id)
                 and self.canonical(label).lower() in {t.lower() for t in self.targets})
+
+
+MotionSensitivity = Literal["low", "medium", "high"]
+
+
+class MotionConfig(BaseModel):
+    """Motion detection on the derivative workers get (pipeline/motion.py)."""
+
+    # Cameras without their own (camera settings: Detection → Motion).
+    sensitivity: MotionSensitivity = "medium"
+    # More of the picture than this changing at once is light (IR switching, exposure),
+    # not motion.
+    light_change_fraction: float = Field(default=0.5, gt=0, le=1)
+    # A detection is moving when its box overlaps motion this close in time.
+    window_seconds: float = Field(default=1.0, ge=0, le=10)
 
 
 class EventsConfig(BaseModel):
@@ -554,6 +573,7 @@ class Settings(BaseModel):
     queue: QueueConfig = QueueConfig()
     detection: DetectionConfig = DetectionConfig()
     events: EventsConfig = EventsConfig()
+    motion: MotionConfig = MotionConfig()
     retention: RetentionConfig = RetentionConfig()
     compaction: CompactionConfig = CompactionConfig()
     location: LocationConfig = LocationConfig()

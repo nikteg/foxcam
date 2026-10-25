@@ -2,6 +2,8 @@ import {
   Button,
   Caption1,
   Card,
+  Field,
+  Select,
   Spinner,
   Switch,
   Toolbar,
@@ -19,7 +21,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
-import { api, snapshotUrl, type MaskState, type Rect } from "../api";
+import { api, snapshotUrl, type MaskState, type MotionSensitivity, type Rect } from "../api";
 import {
   Dialog,
   DialogBody,
@@ -51,9 +53,21 @@ const clamp = (v: number, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
 const toBox = ([x, y, w, h]: Rect): Box => ({ x, y, w, h });
 const toRect = (b: Box): Rect => [b.x, b.y, b.w, b.h];
 
-/** Censor areas of a camera, in a large drawer. Closing with unsaved changes asks
- * first, in a popover at the close button (also for Escape and the backdrop). */
-export function MaskDrawer({ cameraId, onClose }: { cameraId: string; onClose: () => void }) {
+/** What the editor edits: the censor areas (blacked out for the workers) or motion
+ * detection (its sensitivity and the areas whose movement is ignored). */
+export type MaskKind = "censor" | "motion";
+
+/** Censor areas or motion settings of a camera, in a large drawer. Closing with unsaved
+ * changes asks first, in a popover at the close button (also for Escape and the backdrop). */
+export function MaskDrawer({
+  cameraId,
+  kind = "censor",
+  onClose,
+}: {
+  cameraId: string;
+  kind?: MaskKind;
+  onClose: () => void;
+}) {
   const mask = useQuery({ queryKey: ["mask", cameraId], queryFn: () => api.mask(cameraId) });
   const cameras = useQuery({ queryKey: ["cameras"], queryFn: api.cameras });
   const name = cameras.data?.find((c) => c.id === cameraId)?.name ?? cameraId;
@@ -72,7 +86,7 @@ export function MaskDrawer({ cameraId, onClose }: { cameraId: string; onClose: (
           <DialogTitle
             action={
               <ConfirmPopover
-                title={t("mask.discard")}
+                title={t(kind === "censor" ? "mask.discard" : "motion.discard")}
                 confirmLabel={t("mask.discardConfirm")}
                 open={asking}
                 onOpenChange={(o) => (o ? close() : setAsking(false))}
@@ -86,20 +100,29 @@ export function MaskDrawer({ cameraId, onClose }: { cameraId: string; onClose: (
               </ConfirmPopover>
             }
           >
-            <DrawerTitle title={t("camera.censorAreas")} sub={name} />
+            <DrawerTitle
+              title={t(kind === "censor" ? "camera.censorAreas" : "motion.title")}
+              sub={name}
+            />
           </DialogTitle>
           <DialogContent className="form-stack">
             <Caption1 className="muted">
               <span className="only-mouse">
                 {rich("mask.helpMouse", { key: <kbd>Delete</kbd> })}
               </span>
-              <span className="only-touch">{t("mask.helpTouch")}</span> {t("mask.helpCommon")}
+              <span className="only-touch">{t("mask.helpTouch")}</span>{" "}
+              {t(kind === "censor" ? "mask.helpCommon" : "motion.help")}
             </Caption1>
             <QueryState error={mask.error} loading={mask.isPending} />
             {/* Remount when the saved state changes so the editor starts from it. */}
             {mask.data && (
               <Editor
-                key={mask.data.mask_version_id ?? "none"}
+                key={
+                  kind === "censor"
+                    ? (mask.data.mask_version_id ?? "none")
+                    : JSON.stringify([mask.data.motion_sensitivity, mask.data.motion_rects])
+                }
+                kind={kind}
                 cameraId={cameraId}
                 saved={mask.data}
                 onDirty={(d) => {
@@ -115,10 +138,12 @@ export function MaskDrawer({ cameraId, onClose }: { cameraId: string; onClose: (
 }
 
 function Editor({
+  kind,
   cameraId,
   saved,
   onDirty,
 }: {
+  kind: MaskKind;
   cameraId: string;
   saved: MaskState;
   /** Unsaved changes or not, for the drawer's close. */
@@ -128,9 +153,14 @@ function Editor({
   const { t } = useI18n();
   const overlay = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
-  const [boxes, setBoxes] = useState<Box[]>(() => saved.rects.map(toBox));
+  const savedRects = kind === "censor" ? saved.rects : saved.motion_rects;
+  const [boxes, setBoxes] = useState<Box[]>(() => savedRects.map(toBox));
   const [isPrivate, setPrivate] = useState(saved.private);
   const [burnIn, setBurnIn] = useState(saved.burn_masks);
+  // "" = the default (Settings → Detection).
+  const [sensitivity, setSensitivity] = useState<MotionSensitivity | "">(
+    saved.motion_sensitivity ?? "",
+  );
   const [selected, setSelected] = useState(-1);
   const [preview, setPreview] = useState(false);
   const [snapshot, setSnapshot] = useState(() => snapshotUrl(cameraId, false, true));
@@ -138,16 +168,19 @@ function Editor({
   const [justSaved, setJustSaved] = useState(false);
 
   const dirty =
-    JSON.stringify(boxes.map(toRect)) !== JSON.stringify(saved.rects) ||
-    isPrivate !== saved.private ||
-    burnIn !== saved.burn_masks;
+    JSON.stringify(boxes.map(toRect)) !== JSON.stringify(savedRects) ||
+    (kind === "censor"
+      ? isPrivate !== saved.private || burnIn !== saved.burn_masks
+      : sensitivity !== (saved.motion_sensitivity ?? ""));
   useEffect(() => {
     onDirty(dirty);
   });
 
   const save = useMutation({
     mutationFn: () =>
-      api.saveMask(cameraId, { rects: boxes.map(toRect), private: isPrivate, burn_in: burnIn }),
+      kind === "censor"
+        ? api.saveMask(cameraId, { rects: boxes.map(toRect), private: isPrivate, burn_in: burnIn })
+        : api.saveMotion(cameraId, { sensitivity: sensitivity || null, rects: boxes.map(toRect) }),
     onSuccess: (state) => {
       client.setQueryData(["mask", cameraId], state);
       void client.invalidateQueries({ queryKey: ["cameras"] });
@@ -263,7 +296,10 @@ function Editor({
   return (
     <>
       <Card className="mask-toolbar" appearance="filled-alternative" size="small">
-        <Toolbar aria-label={t("mask.actions")} className="wrap">
+        <Toolbar
+          aria-label={t(kind === "censor" ? "mask.actions" : "motion.actions")}
+          className="wrap"
+        >
           <ToolbarButton
             appearance="primary"
             icon={<Save20Regular />}
@@ -276,9 +312,10 @@ function Editor({
             icon={<ArrowUndo20Regular />}
             disabled={!dirty}
             onClick={() => {
-              setBoxes(saved.rects.map(toBox));
+              setBoxes(savedRects.map(toBox));
               setPrivate(saved.private);
               setBurnIn(saved.burn_masks);
+              setSensitivity(saved.motion_sensitivity ?? "");
               setSelected(-1);
             }}
           >
@@ -334,7 +371,7 @@ function Editor({
             <div
               // oxlint-disable-next-line react/no-array-index-key -- boxes have no identity beyond position
               key={i}
-              className={`mrect ${i === selected ? "selected" : ""}`}
+              className={`mrect ${kind} ${i === selected ? "selected" : ""}`}
               data-role="move"
               data-index={i}
               style={{
@@ -367,30 +404,74 @@ function Editor({
         </div>
       </div>
 
-      <div className="mask-options">
-        <Switch
-          checked={preview}
-          onChange={(_, d) => setPreview(d.checked)}
-          label={t("mask.preview")}
+      {kind === "motion" ? (
+        <div className="mask-options">
+          <Field label={t("motion.sensitivity")} hint={t("motion.sensitivityHint")}>
+            <Select
+              value={sensitivity}
+              onChange={(_, d) => setSensitivity(d.value as MotionSensitivity | "")}
+            >
+              <option value="">{t("camera.default")}</option>
+              <option value="low">{t("motion.low")}</option>
+              <option value="medium">{t("motion.medium")}</option>
+              <option value="high">{t("motion.high")}</option>
+            </Select>
+          </Field>
+        </div>
+      ) : (
+        <CensorOptions
+          preview={preview}
+          setPreview={setPreview}
+          isPrivate={isPrivate}
+          setPrivate={setPrivate}
+          burnIn={burnIn}
+          setBurnIn={setBurnIn}
         />
-        <Switch
-          checked={isPrivate}
-          onChange={(_, d) => setPrivate(d.checked)}
-          label={t("mask.private")}
-        />
-        <Switch
-          checked={burnIn}
-          onChange={(_, d) => setBurnIn(d.checked)}
-          label={
-            <>
-              {t("mask.burnIn")}
-              <Caption1 as="span" className="muted option-hint">
-                {t("mask.burnInHint")}
-              </Caption1>
-            </>
-          }
-        />
-      </div>
+      )}
     </>
+  );
+}
+
+function CensorOptions({
+  preview,
+  setPreview,
+  isPrivate,
+  setPrivate,
+  burnIn,
+  setBurnIn,
+}: {
+  preview: boolean;
+  setPreview: (v: boolean) => void;
+  isPrivate: boolean;
+  setPrivate: (v: boolean) => void;
+  burnIn: boolean;
+  setBurnIn: (v: boolean) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <div className="mask-options">
+      <Switch
+        checked={preview}
+        onChange={(_, d) => setPreview(d.checked)}
+        label={t("mask.preview")}
+      />
+      <Switch
+        checked={isPrivate}
+        onChange={(_, d) => setPrivate(d.checked)}
+        label={t("mask.private")}
+      />
+      <Switch
+        checked={burnIn}
+        onChange={(_, d) => setBurnIn(d.checked)}
+        label={
+          <>
+            {t("mask.burnIn")}
+            <Caption1 as="span" className="muted option-hint">
+              {t("mask.burnInHint")}
+            </Caption1>
+          </>
+        }
+      />
+    </div>
   );
 }

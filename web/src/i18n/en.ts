@@ -98,6 +98,20 @@ export const en = {
   "camera.default": "default",
   "camera.lastSegment": "Last segment",
   "camera.censorAreas": "Censor areas",
+  "motion.title": "Motion detection",
+  "motion.help":
+    "Movement in these areas is ignored, like trees in the wind or a busy road. Flickering lights and camera shake are left out already. Censor areas never count either. Changes apply to new recordings only.",
+  "motion.actions": "Motion area actions",
+  "motion.discard": "Discard the unsaved motion changes?",
+  "motion.sensitivity": "Sensitivity",
+  "motion.sensitivityHint":
+    "High also notices small or distant animals but reacts more to rain, insects and wind; low only to larger movement.",
+  "motion.low": "Low",
+  "motion.medium": "Medium",
+  "motion.high": "High",
+  "motion.summary":
+    "Sensitivity: {sensitivity} – {n} ignored {n:area|areas}. Used by profiles that require motion or skip recordings without it.",
+  "motion.edit": "Edit motion detection",
   "camera.viewers": "Viewers",
 
   // Status page
@@ -173,6 +187,9 @@ export const en = {
   "detections.stationary": "still",
   "detections.stationaryHint":
     'In the same place longer than the profile\'s "Ignore stationary after" (e.g. a parked car): no event or notification.',
+  "detections.noMotion": "no motion",
+  "detections.noMotionHint":
+    "The profile requires motion and nothing moved where this was seen: no match.",
   "detections.onlyTargets": "Only targets",
   "detections.none": "No detections yet.",
   "detections.frameAlt": "{label} detection frame",
@@ -187,6 +204,12 @@ export const en = {
   "recordings.anyDay": "Any day",
   "recordings.dayUtc": "Day (UTC)",
   "recordings.onlyWithMatch": "Only with a match",
+  "recordings.motion": "Motion",
+  "recordings.anyMotion": "With or without motion",
+  "recordings.withMotion": "With motion",
+  "recordings.withoutMotion": "Without motion",
+  "recordings.noMotion": "none",
+  "recordings.motionShare": "{value} of the picture",
   "recordings.none": "No recordings yet.",
   "recordings.pinnedTooltip": "Kept: part of an event",
   "recordings.deleted": "The video was deleted by retention; detections are kept.",
@@ -409,6 +432,14 @@ export const en = {
   "runtime.settle": "Wait before the clip",
   "runtime.settleHint":
     "An event's clip is made once nothing new has been added for this long. Shorter gives clips sooner; longer avoids rebuilding them.",
+  "runtime.motionSensitivityHint":
+    "For cameras without their own (camera settings, Detection tab). High also notices small or distant animals but reacts more to rain, insects and wind.",
+  "runtime.lightChange": "Light change above (share of the picture)",
+  "runtime.lightChangeHint":
+    "When more of the picture than this changes at once, it is light (night mode switching, exposure), not motion. 0.5 = half.",
+  "runtime.motionWindow": "Motion window",
+  "runtime.motionWindowHint":
+    "For profiles that require motion: how close in time the motion has to be to the detection. Longer keeps an animal that pauses for a moment.",
   "runtime.leaseSeconds": "Job time limit",
   "runtime.leaseSecondsHint":
     "A worker that has not finished a job in this time loses it and another worker can take it. Raise it for slow workers.",
@@ -680,6 +711,15 @@ export const en = {
   "profiles.stationaryHint":
     "A target that stays in the same place this long, like a parked car, stops counting: no new or longer events (and no kept footage) until it moves or leaves. Its arrival is still an event. 0 = off.",
   "profiles.stationaryOff": "Off",
+  "profiles.requireMotion": "Only moving targets",
+  "profiles.requireMotionHint":
+    "A target only counts when its box overlaps motion, so a fox-shaped stump or a statue never does. A target sitting still for long stops counting until it moves.",
+  "profiles.skipWithoutMotion": "Skip recordings without motion",
+  "profiles.skipWithoutMotionHint":
+    "Recordings where nothing moved are not sent to the workers. Saves a lot of work on quiet cameras.",
+  "profiles.motion": "Motion",
+  "profiles.motionRequired": "only moving targets",
+  "profiles.motionSkips": "skips still recordings",
   "profiles.defaultSwitch": "Run on cameras without their own selection",
   "profiles.enabled": "Enabled",
   "profiles.removeTitle": "Remove {name}?",
