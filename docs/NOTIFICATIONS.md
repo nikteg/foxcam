@@ -13,7 +13,10 @@ and the latest deliveries) or in `config.yaml`. Each channel chooses:
 
 - **When**: `event.new` (an event starts: fast) and/or `event.clip` (its clip is ready, with
   a link to it).
-- **Filters**: cameras, detection profiles, labels and a minimum confidence.
+- **Filters**: cameras, detection profiles, labels, and "Notify from" (`min_confidence`): only
+  events whose best match is at least this are sent. Events below it are still made, just
+  not sent to this channel. Which detections are matches at all is the profile's match
+  threshold ("Match from").
 - **Quiet hours** (e.g. `23:00-06:00`, in `notifications.timezone`) and a **cooldown**
   (at most one *event starts* per camera per N minutes).
 - **Image**: the frame of the best detection with its box, **censor areas blacked out**,
@@ -54,7 +57,7 @@ notifications:
     - id: telegram
       type: apprise
       url: tgram://${TELEGRAM_BOT_TOKEN}/${TELEGRAM_CHAT_ID}
-      min_confidence: 0.7
+      min_confidence: 0.7               # "Notify from": best match at least 70 %
       min_agreement: 2                  # only when two of the profile's models saw it
 ```
 

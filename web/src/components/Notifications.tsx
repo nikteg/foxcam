@@ -608,12 +608,13 @@ function ChannelDialog({
                   ariaLabel={t("notify.labels")}
                 />
               </Field>
-              <Field label={t("profiles.minConfidencePercent")}>
+              <Field label={t("notify.notifyFrom")} hint={t("notify.notifyFromHint")}>
                 <Input
                   type="number"
                   min={0}
                   max={100}
                   value={minConf}
+                  contentAfter="%"
                   onChange={(_, d) => setMinConf(d.value)}
                 />
               </Field>

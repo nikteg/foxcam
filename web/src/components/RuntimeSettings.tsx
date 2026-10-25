@@ -21,7 +21,8 @@ import { useI18n, type MessageKey } from "../i18n";
 import { useRecordingProfiles, useRecordingSummary } from "../recordingProfiles";
 import { Fact, Facts, QueryState, Tag } from "./ui";
 
-type Kind = "number" | "bool" | "url";
+/** "percent": stored 0–1, entered and shown as 0–100 %. */
+type Kind = "number" | "bool" | "url" | "percent";
 
 /** Not a runtime setting: the default recording profile (its own endpoint, saved with the
  * same Save button). Put this key in a group to show it there. */
@@ -62,6 +63,8 @@ const META: Record<
   "processing.keep_non_targets_from": {
     label: "runtime.keepNonTargets",
     hint: "runtime.keepNonTargetsHint",
+    unit: "runtime.unit.percent",
+    kind: "percent",
   },
   "mediamtx.low_data.enabled": {
     label: "runtime.lowDataEnabled",
@@ -146,7 +149,9 @@ export interface SettingsGroup {
 }
 
 /** The text in an input for a value (booleans use a switch). */
-const asText = (v: RuntimeSetting["value"]) => (v === null ? "" : String(v));
+const asText = (v: RuntimeSetting["value"], kind?: Kind) =>
+  v === null ? "" : kind === "percent" ? String(toPercent(v as number)) : String(v);
+const toPercent = (v: number) => Math.round(v * 10000) / 100;
 
 /** One tab's settings, in groups, with one Save button. */
 export function RuntimeSettingsSection({
@@ -184,7 +189,7 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
     Object.fromEntries(
       keys.map((k) => {
         const v = byKey.get(k)!.value;
-        return [k, typeof v === "boolean" ? v : asText(v)];
+        return [k, typeof v === "boolean" ? v : asText(v, META[k]?.kind)];
       }),
     ),
   );
@@ -203,14 +208,15 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
   });
   const original = (k: string) => {
     const v = byKey.get(k)!.value;
-    return typeof v === "boolean" ? v : asText(v);
+    return typeof v === "boolean" ? v : asText(v, META[k]?.kind);
   };
   const changed = keys.filter((k) => draft[k] !== original(k));
   const parse = (k: string): unknown => {
     const d = draft[k] ?? "";
     if (typeof d === "boolean") return d;
     if (d.trim() === "") return null;
-    return META[k]?.kind === "url" ? d.trim() : Number(d);
+    const kind = META[k]?.kind;
+    return kind === "url" ? d.trim() : kind === "percent" ? Number(d) / 100 : Number(d);
   };
 
   return (
@@ -279,8 +285,8 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
                     ) : (
                       <Input
                         type={meta.kind === "url" ? "url" : "number"}
-                        min={s.ge ?? s.gt}
-                        max={s.le ?? s.lt}
+                        min={scaled(s.ge ?? s.gt, meta.kind)}
+                        max={scaled(s.le ?? s.lt, meta.kind)}
                         step="any"
                         value={value}
                         placeholder={
@@ -413,8 +419,12 @@ function shown(
 ): string {
   if (v === null) return t(meta.kind === "url" ? "runtime.notSet" : "retention.noCap");
   if (typeof v === "boolean") return t(v ? "runtime.on" : "runtime.off");
+  if (meta.kind === "percent") return `${toPercent(v as number)} %`;
   return meta.unit ? `${v} ${t(meta.unit)}` : String(v);
 }
+
+const scaled = (bound: number | undefined, kind?: Kind) =>
+  bound !== undefined && kind === "percent" ? toPercent(bound) : bound;
 
 /** Retention tab: disk use above the settings. */
 function DiskUse({ data }: { data: RuntimeSettings }) {

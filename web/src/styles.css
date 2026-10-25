@@ -493,7 +493,9 @@ div.thumb.placeholder {
 /* Label / value rows (components/ui.tsx Facts). */
 .facts {
   display: grid;
-  grid-template-columns: auto 1fr;
+  /* Labels as wide as they need, up to 40 %: short ones stay on one line, long ones wrap
+     instead of pushing the values aside. */
+  grid-template-columns: fit-content(40%) minmax(0, 1fr);
   align-items: baseline;
   gap: var(--spacingVerticalS) var(--spacingHorizontalL);
   margin: 0;
@@ -501,8 +503,6 @@ div.thumb.placeholder {
 }
 .facts dt {
   color: var(--colorNeutralForeground3);
-  /* Labels are short: one line, the value column takes what is left. */
-  white-space: nowrap;
 }
 .facts dd {
   margin: 0;
@@ -1233,6 +1233,10 @@ Fluent's text styles would otherwise reset the margins. */
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--spacingHorizontalS);
+}
+/* Inputs shrink to their grid column (Fluent gives them a minimum width). */
+.detector-row .fui-Input {
+  min-width: 0;
 }
 .detector-list {
   margin: 0;

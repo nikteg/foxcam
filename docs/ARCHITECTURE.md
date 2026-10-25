@@ -41,13 +41,14 @@
    - one `job` row per profile and detector. The segment is `done` once all its jobs are
      done (or dead).
    Every detection a worker reports is stored, except non-matches below
-   `processing.keep_non_targets_from` (default 0.25): a profile's `min_confidence` only decides
-   what is a match (events, "with a match", pinned footage), and a worker reports far more
+   `processing.keep_non_targets_from` (default 0.25; Settings → Detection, "Store non-matches
+   from"). That setting only decides storage. What is a match (events, "with a match", pinned
+   footage) is decided by the match threshold (below), and a worker reports far more
    (YOLO-World from 15 %). Retention also drops stored ones below it, unless they were rated.
 3. **Queue**: workers lease jobs (see [WORKER_PROTOCOL.md](WORKER_PROTOCOL.md)). Expired leases are
    reclaimed every 15 s; failures retry with backoff up to `max_attempts`, then the job is `dead`.
-4. **Events** (every 10 s): segments with a target detection (`detection.target_labels` ≥
-   `min_confidence`) are merged into events when within `merge_gap_seconds`. After
+4. **Events** (every 10 s): segments with a match (a detection of a target label at or above
+   the match threshold) are merged into events when within `merge_gap_seconds`. After
    `settle_seconds` (and once the post-roll footage exists) a clip is cut from the **original**
    recordings with pre/post roll, plus a thumbnail with the box drawn. Event segments are pinned.
    Two kinds of target detection join no event:
@@ -73,7 +74,7 @@ A profile (`profiles.py`) says **what** to look for and **which models** look fo
 |---|---|
 | `targets` | labels that create events (`fox`, or `car, person`) |
 | `aliases` | map model labels to yours (`red fox: fox`), so different models agree |
-| `min_confidence` | threshold for a target |
+| `min_confidence` | the match threshold ("Match from" in the UI): a detection of a target label at or above it is a match, and matches make events, notifications and pinned footage |
 | `requires` | worker tags every detector of the profile needs |
 | `detectors` | the models that look (below); none = one detector `default` needing just `requires` |
 | `fps` | frames per second to analyse (cheaper profiles for slow-moving things) |
@@ -83,7 +84,9 @@ A profile (`profiles.py`) says **what** to look for and **which models** look fo
 
 Each **detector** has an `id` (unique in the profile), an optional `name`, its own
 `requires` tags (on top of the profile's), and optional `min_confidence` and `fps` that
-override the profile's. Every segment gets one job per profile and detector, so e.g. YOLO-World
+override the profile's. A detector's `min_confidence` is the same match threshold, used for
+that detector's detections instead of the profile's (`ProfileConfig.min_confidence_for`):
+models score differently, YOLO-World usually lower than SpeciesNet. Every segment gets one job per profile and detector, so e.g. YOLO-World
 and SpeciesNet both look at each recording of a `wildlife` profile; their detections merge
 into the same events (per camera, profile and label).
 

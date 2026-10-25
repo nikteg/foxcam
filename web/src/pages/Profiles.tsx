@@ -80,6 +80,7 @@ export function ProfilesSection() {
       <InfoBanner id="profiles">
         {rich("profiles.intro", { file: <code>config.yaml</code> })}
       </InfoBanner>
+      <InfoBanner id="profiles-match">{t("profiles.matchIntro")}</InfoBanner>
       <QueryState error={profiles.error} loading={profiles.isPending} />
       {profiles.data?.length === 0 && <Empty>{t("profiles.none")}</Empty>}
       <div className="cards">
@@ -154,7 +155,19 @@ function ProfileCard({
             </Fact>
           </>
         )}
-        <Fact label={t("profiles.minConfidence")}>{percent(p.min_confidence)}</Fact>
+        <Fact label={t("profiles.matchFromShort")}>
+          {percent(p.min_confidence)}
+          {p.detectors.some((d) => d.min_confidence !== null) && (
+            <span className="muted">
+              {" ("}
+              {p.detectors
+                .filter((d) => d.min_confidence !== null)
+                .map((d) => `${d.display_name} ${percent(d.min_confidence!)}`)
+                .join(", ")}
+              )
+            </span>
+          )}
+        </Fact>
         <Fact label={t("profiles.requires")}>
           {p.requires.length ? (
             <span className="row wrap tags">
@@ -181,7 +194,6 @@ function ProfileCard({
                         name:
                           p.detectors.find((o) => o.id === d.after)?.display_name ?? d.after ?? "",
                       }),
-                    d.min_confidence !== null && `≥ ${percent(d.min_confidence)}`,
                     d.fps !== null && `${d.fps} fps`,
                     d.workers_online.length
                       ? d.workers_online.join(", ")
@@ -422,12 +434,13 @@ export function ProfileDialog({
                   </Button>
                 </div>
               </Field>
-              <Field label={t("profiles.minConfidencePercent")}>
+              <Field label={t("profiles.matchFrom")} hint={t("profiles.matchFromHint")}>
                 <Input
                   type="number"
                   min={0}
                   max={100}
                   value={minConf}
+                  contentAfter="%"
                   onChange={(_, d) => setMinConf(d.value)}
                 />
               </Field>

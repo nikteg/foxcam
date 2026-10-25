@@ -146,8 +146,6 @@ export const en = {
     "Every object the workers reported. Select one to see the frame and video; mark it correct or wrong to build a training set (Export training set).",
   "detections.exportJson": "Export training set",
   "detections.labelPlaceholder": "Label, e.g. fox",
-  "detections.minConfidence": "Minimum confidence",
-  "detections.min": "min",
   "maintenance.title": "Maintenance",
   "maintenance.rebuild": "Events",
   "maintenance.rebuildHint":
@@ -381,9 +379,9 @@ export const en = {
   "runtime.recordingDefaultHint":
     "For every camera without its own choice (camera settings → Recording). Applies to archive files joined from now on.",
   "runtime.group.detections": "Detections",
-  "runtime.keepNonTargets": "Keep non-matches from",
+  "runtime.keepNonTargets": "Store non-matches from (%)",
   "runtime.keepNonTargetsHint":
-    "Confidence (0–1) from which detections that are no match (below the profile's threshold, or another label) are kept. Weaker ones are dropped, also those already stored; matches and the ones you marked correct or wrong always stay. 0 keeps everything the workers report.",
+    "Only decides what is stored: detections that are no match (below the match threshold, or another label) are kept from this confidence up, weaker ones are dropped, also those already stored. It does not change what counts as a match. Matches and the ones you marked correct or wrong always stay; 0 keeps everything the workers report.",
   "runtime.compactionEnabled": "Join segments into archive files",
   "runtime.compactionEnabledHint":
     "Fewer, larger files that are easier to browse and download, re-encoded per recording profile. Costs CPU (or GPU) once per period.",
@@ -642,8 +640,21 @@ export const en = {
   "profiles.defaultHint": "Runs on every camera without its own profile selection.",
   "profiles.disabled": "Disabled",
   "profiles.targets": "Looks for",
+  "profiles.matchFrom": "Match from (%)",
+  "profiles.matchFromShort": "Match from",
+  "profiles.matchFromHint":
+    "Detections of a target label at or above this are matches: they make events, notifications and pinned footage. Each detector can set its own.",
+  "detectors.matchFromHint":
+    "For this model's detections only. Empty uses the profile's ({value} %). Models score differently: YOLO-World usually lower than SpeciesNet.",
+  "notify.notifyFrom": "Notify from (%)",
+  "notify.notifyFromHint":
+    "Only events whose best match is at least this. Events below it are still made, just not sent here.",
+  "detections.showFrom": "Show from (%)",
+  "detections.showFromShort": "from",
+  "runtime.unit.percent": "%",
+  "profiles.matchIntro":
+    "A detection is a match when its label is a target and its confidence reaches the match threshold (Match from). Matches make events.",
   "profiles.aliases": "Label aliases",
-  "profiles.minConfidence": "Min. confidence",
   "profiles.requires": "Requires tags",
   "profiles.anyWorker": "any worker",
   "profiles.fps": "Frame rate",
@@ -666,7 +677,6 @@ export const en = {
     "Labels that create events, e.g. fox, badger: pick a suggestion or type and press Enter. Open-vocabulary workers (YOLO-World) are prompted with these: use one word per thing, since synonyms (person, man, woman) compete and lower every score. Map other names with aliases instead.",
   "profiles.aliasesHint":
     "Map a label a model reports to yours, e.g. red fox → fox, so different models agree on names.",
-  "profiles.minConfidencePercent": "Minimum confidence (%)",
   "profiles.requiresHint":
     "Tags every detector of this profile needs (e.g. gpu, or a machine's own tag to pin it); each detector can add its own. Empty = none.",
   "profiles.requiresAny": "Any worker can run it: {workers}.",

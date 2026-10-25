@@ -176,12 +176,16 @@ export function DetectionList() {
           type="number"
           className="narrow"
           min={0}
-          max={1}
-          step={0.05}
-          aria-label={t("detections.minConfidence")}
-          contentBefore={<Caption1 className="muted">{t("detections.min")}</Caption1>}
-          value={f.min_confidence || "0"}
-          onChange={(_, d) => setFilter("min_confidence", d.value === "0" ? "" : d.value)}
+          max={100}
+          step={5}
+          aria-label={t("detections.showFrom")}
+          contentBefore={<Caption1 className="muted">{t("detections.showFromShort")}</Caption1>}
+          contentAfter="%"
+          // In the URL as 0–1, like the API.
+          value={String(Math.round((Number(f.min_confidence) || 0) * 100))}
+          onChange={(_, d) =>
+            setFilter("min_confidence", Number(d.value) > 0 ? String(Number(d.value) / 100) : "")
+          }
         />
         {f.event && (
           <Button

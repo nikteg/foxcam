@@ -149,8 +149,6 @@ export const sv: Record<MessageKey, string> = {
     "Alla objekt som arbetarna har rapporterat. Välj ett för att se bildrutan och videon; markera det som rätt eller fel för att bygga upp en träningsmängd (Exportera träningsmängd).",
   "detections.exportJson": "Exportera träningsmängd",
   "detections.labelPlaceholder": "Etikett, t.ex. fox",
-  "detections.minConfidence": "Lägsta säkerhet",
-  "detections.min": "min",
   "maintenance.title": "Underhåll",
   "maintenance.rebuild": "Händelser",
   "maintenance.rebuildHint":
@@ -384,9 +382,9 @@ export const sv: Record<MessageKey, string> = {
   "runtime.recordingDefaultHint":
     "För alla kameror utan eget val (kamerans inställningar → Inspelning). Gäller arkivfiler som fogas ihop från och med nu.",
   "runtime.group.detections": "Detektioner",
-  "runtime.keepNonTargets": "Spara icke-träffar från",
+  "runtime.keepNonTargets": "Spara icke-träffar från (%)",
   "runtime.keepNonTargetsHint":
-    "Säkerhet (0–1) från vilken detektioner som inte är träffar (under profilens gräns, eller en annan etikett) sparas. Svagare tas bort, även de som redan finns; träffar och de du markerat rätt eller fel finns alltid kvar. 0 sparar allt arbetarna rapporterar.",
+    "Avgör bara vad som sparas: detektioner som inte är träffar (under träffgränsen eller en annan etikett) sparas från den här säkerheten och uppåt, svagare tas bort, även redan sparade. Det ändrar inte vad som räknas som träff. Träffar och de du markerat som rätt eller fel sparas alltid; 0 sparar allt som workers rapporterar.",
   "runtime.compactionEnabled": "Foga ihop segment till arkivfiler",
   "runtime.compactionEnabledHint":
     "Färre, större filer som är lättare att bläddra i och ladda ner, omkodade enligt inspelningsprofilen. Kostar CPU (eller GPU) en gång per period.",
@@ -736,8 +734,21 @@ export const sv: Record<MessageKey, string> = {
   "profiles.defaultHint": "Körs på alla kameror som inte har ett eget profilval.",
   "profiles.disabled": "Avstängd",
   "profiles.targets": "Letar efter",
+  "profiles.matchFrom": "Träff från (%)",
+  "profiles.matchFromShort": "Träff från",
+  "profiles.matchFromHint":
+    "Detektioner av en mål-etikett med minst så här hög säkerhet är träffar: de ger händelser, aviseringar och sparad film. Varje detektor kan ha en egen.",
+  "detectors.matchFromHint":
+    "Bara för den här modellens detektioner. Tomt använder profilens ({value} %). Modeller räknar olika: YOLO-World brukar ge lägre värden än SpeciesNet.",
+  "notify.notifyFrom": "Avisera från (%)",
+  "notify.notifyFromHint":
+    "Bara händelser vars bästa träff är minst så här säker. Händelser under gränsen skapas ändå, de skickas bara inte hit.",
+  "detections.showFrom": "Visa från (%)",
+  "detections.showFromShort": "från",
+  "runtime.unit.percent": "%",
+  "profiles.matchIntro":
+    "En detektion är en träff när dess etikett är ett mål och säkerheten når träffgränsen (Träff från). Träffar ger händelser.",
   "profiles.aliases": "Etikettalias",
-  "profiles.minConfidence": "Min. säkerhet",
   "profiles.requires": "Kräver taggar",
   "profiles.anyWorker": "valfri arbetare",
   "profiles.fps": "Bildfrekvens",
@@ -760,7 +771,6 @@ export const sv: Record<MessageKey, string> = {
     "Etiketter som skapar händelser, t.ex. fox, badger: välj ett förslag eller skriv och tryck Enter. Arbetare med öppen vokabulär (YOLO-World) får dessa som prompt: använd ett ord per sak, eftersom synonymer (person, man, woman) konkurrerar och sänker alla värden. Koppla andra namn med alias i stället.",
   "profiles.aliasesHint":
     "Koppla en etikett som en modell rapporterar till din, t.ex. red fox → fox, så att olika modeller använder samma namn.",
-  "profiles.minConfidencePercent": "Minsta säkerhet (%)",
   "profiles.requiresHint":
     "Taggar som varje detektor i profilen behöver (t.ex. gpu, eller en dators egen tagg för att låsa den); varje detektor kan lägga till egna. Tomt = inga.",
   "profiles.requiresAny": "Alla arbetare kan köra den: {workers}.",

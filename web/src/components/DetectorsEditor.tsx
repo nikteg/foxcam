@@ -133,14 +133,15 @@ export function DetectorsEditor({
               />
             </Field>
             <div className="detector-numbers">
-              <Field label={t("profiles.minConfidencePercent")} size="small">
+              <Field label={t("profiles.matchFrom")} size="small">
                 <Input
                   size="small"
                   type="number"
                   min={0}
                   max={100}
                   value={row.minConf}
-                  placeholder={t("detectors.profileValue", { value: profileMinConf })}
+                  contentAfter="%"
+                  placeholder={t("detectors.profileValue", { value: `${profileMinConf} %` })}
                   onChange={(_, d) => set(i, { minConf: d.value })}
                 />
               </Field>
@@ -157,6 +158,9 @@ export function DetectorsEditor({
                 />
               </Field>
             </div>
+            <Caption1 className="muted">
+              {t("detectors.matchFromHint", { value: profileMinConf })}
+            </Caption1>
             {rows.length > 1 && (
               <div className="detector-numbers">
                 <Field label={t("detectors.run")} size="small">
