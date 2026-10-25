@@ -223,3 +223,19 @@ def test_weak_non_matches_are_not_kept(settings):
     with session_scope() as s:
         assert sorted(d.id for d in s.query(Detection)) == sorted([rated, kept, match])
     assert weak not in (rated, kept, match)
+
+
+@needs_ffmpeg
+def test_scanner_drops_the_fragment_before_a_recorder_reset(settings):
+    settings.segment_seconds = 1800
+    start = utcnow().replace(microsecond=0) - timedelta(minutes=10)
+    fragment = make_video(recording_path(settings, "cam", start), seconds=2)
+    after = make_video(recording_path(settings, "cam", start + timedelta(seconds=4)), seconds=3)
+    # A short file after an outage (long gap) is a real recording.
+    lone = make_video(recording_path(settings, "cam", start + timedelta(minutes=2)), seconds=2)
+    make_video(recording_path(settings, "cam", start + timedelta(minutes=5)))  # recording
+    assert scanner.scan_once(settings) == 2
+    assert not fragment.exists() and after.exists() and lone.exists()
+    with session_scope() as s:
+        assert sorted(g.start_at for g in s.query(Segment)) == [
+            start + timedelta(seconds=4), start + timedelta(minutes=2)]
