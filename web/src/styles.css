@@ -251,6 +251,11 @@ h2.section > .section-link {
   position: relative;
   display: inline-flex;
 }
+/* Fluent's tab clips its icon slot: let the number stick out of the corner. */
+.top-tabs .fui-Tab.fui-Tab,
+.top-tabs .fui-Tab__icon.fui-Tab__icon {
+  overflow: visible;
+}
 /* Doubled class: wins over Fluent's own position on the badge. */
 .nav-badge.nav-badge {
   position: absolute;
