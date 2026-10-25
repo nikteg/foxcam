@@ -155,10 +155,20 @@ def _matches(ch: ChannelConfig, event: Event, kind: str) -> bool:
     return event.max_confidence >= ch.min_confidence
 
 
+def marked_wrong(s: Session, event_id: int) -> bool:
+    """One of the event's detections is marked wrong and none correct: no match, so no
+    notification (like the Status page's event list)."""
+    marks = set(s.scalars(select(Detection.feedback).where(
+        Detection.event_id == event_id, Detection.feedback.is_not(None))))
+    return False in marks and True not in marks
+
+
 def enqueue(s: Session, settings: Settings, event: Event, kind: str) -> int:
     """Queue `kind` for every matching channel (once per channel and event)."""
     now = utcnow()
     queued = 0
+    if event.id is not None and marked_wrong(s, event.id):
+        return 0
     for ch in all_channels(settings):
         if not _matches(ch, event, kind):
             continue
@@ -386,6 +396,12 @@ def deliver_pending(settings: Settings, client: httpx.Client | None = None,
     for note_id, channel_id, event_id, kind in due:
         ch = channel(settings, channel_id)
         error = None
+        with session_scope() as s:
+            # Marked wrong while it waited: not sent.
+            if event_id is not None and marked_wrong(s, event_id):
+                note = s.get(Notification, note_id)
+                note.status, note.error = NotificationStatus.SKIPPED, "marked wrong"
+                continue
         if ch is None or not ch.enabled:
             error = "channel removed or disabled"
         else:

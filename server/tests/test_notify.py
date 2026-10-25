@@ -14,7 +14,14 @@ import pytest
 from foxcam import notify
 from foxcam.config import ChannelConfig
 from foxcam.db import session_scope
-from foxcam.models import Event, Notification, NotificationStatus, SegmentStatus, utcnow
+from foxcam.models import (
+    Detection,
+    Event,
+    Notification,
+    NotificationStatus,
+    SegmentStatus,
+    utcnow,
+)
 from foxcam.pipeline import events
 from foxcam.web.queries import save_camera_state
 
@@ -240,3 +247,16 @@ def test_yaml_channel_triggers(tmp_path):
     cfg.write_text(cfg.read_text().replace("when:", "on:"))
     with pytest.raises(ValueError, match="use `when:`"):
         load_settings(cfg)
+
+
+def test_events_marked_wrong_do_not_notify(settings):
+    _channel(settings, id="hook", type="webhook", url="http://hook")
+    _channel(settings, id="clips", type="webhook", url="http://hook", when=["event.clip"])
+    event_id = _fox_event(settings)
+    with session_scope() as s:
+        s.query(Detection).filter_by(event_id=event_id).update({"feedback": False})
+        notify.enqueue(s, settings, s.get(Event, event_id), "event.clip")
+    rec = Recorder()
+    assert notify.deliver_pending(settings, rec.client()) == 0
+    assert rec.requests == []
+    assert _notes() == [("hook", "event.new", "skipped", "marked wrong")]

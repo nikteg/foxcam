@@ -26,6 +26,7 @@ from ..config import Settings
 from ..db import session_scope
 from ..models import Detection, Event, Segment, utcnow
 from .compaction import segment_source
+from .queue import counts_as_match
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ def assign_events(settings: Settings) -> int:
     changed = 0
     with session_scope() as s:
         pending = s.scalars(
-            select(Detection).where(Detection.is_target.is_(True), Detection.event_id.is_(None),
+            select(Detection).where(counts_as_match(), Detection.event_id.is_(None),
                                     Detection.stationary.is_not(True))
             .order_by(Detection.ts)
         ).all()
