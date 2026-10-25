@@ -190,7 +190,8 @@ class QueueConfig(BaseModel):
 
 
 class DetectionConfig(BaseModel):
-    """Used for the built-in `default` profile when `profiles:` is not configured."""
+    """A quick `default` profile: used only when config.yaml has this section and no
+    `profiles:`. Without either, profiles come from the web UI."""
 
     # Open-vocabulary workers are prompted with these: one word per thing (synonyms compete,
     # see docs/MODELS.md). Other models' names for it go in `aliases`.
@@ -579,7 +580,8 @@ class Settings(BaseModel):
     mediamtx: MediaMtxConfig = MediaMtxConfig()
     processing: ProcessingConfig = ProcessingConfig()
     queue: QueueConfig = QueueConfig()
-    detection: DetectionConfig = DetectionConfig()
+    # None (no `detection:` in config.yaml): no built-in profile.
+    detection: DetectionConfig | None = None
     events: EventsConfig = EventsConfig()
     motion: MotionConfig = MotionConfig()
     retention: RetentionConfig = RetentionConfig()
@@ -624,7 +626,7 @@ class Settings(BaseModel):
         ids = [c.id for c in self.cameras]
         if len(ids) != len(set(ids)):
             raise ValueError("camera ids must be unique")
-        if not self.profiles:
+        if not self.profiles and self.detection is not None:
             self.profiles = [ProfileConfig(
                 id=DEFAULT_PROFILE, name="Fox", targets=self.detection.target_labels,
                 aliases=self.detection.aliases, min_confidence=self.detection.min_confidence, default=True)]

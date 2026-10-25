@@ -86,14 +86,15 @@ queue:
   max_attempts: 3
   retry_backoff_seconds: 60
 
-# What to look for. Without `profiles:` there is one built-in `default` profile made from
-# this section, run on every camera by any worker.
-detection:
-  # YOLO-World is prompted with these: one word per thing, synonyms lower every score.
-  target_labels: [fox]
-  # Other models' names for a target (SpeciesNet says "red fox").
-  aliases: { red fox: fox, vulpes vulpes: fox }
-  min_confidence: 0.5
+# What to look for: add detection profiles in the web UI (Cameras → Detection profiles),
+# or under `profiles:` below. Uncomment this for a quick built-in `default` profile instead
+# (used only when there is no `profiles:`), run on every camera by any worker.
+# detection:
+#   # YOLO-World is prompted with these: one word per thing, synonyms lower every score.
+#   target_labels: [fox]
+#   # Other models' names for a target (SpeciesNet says "red fox").
+#   aliases: { red fox: fox, vulpes vulpes: fox }
+#   min_confidence: 0.5
 
 # Detection profiles (optional; can also be added in the web UI under Cameras). Each
 # recording is analysed once per profile its camera runs. A worker only gets a profile's
@@ -152,7 +153,7 @@ retention:
   # The Settings page (Retention) can change the first four; values set there win.
   segments_days: 7          # ordinary footage
   unprocessed_max_days: 14  # footage still waiting for a worker
-  events_days: 0            # fox events (clip + footage); 0 = keep forever
+  events_days: 0            # events (clip + footage); 0 = keep forever
   max_disk_gb: null         # e.g. 200 - oldest unpinned footage deleted first
   delete_derived_after_done: true
 

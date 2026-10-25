@@ -3,12 +3,19 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import { CameraSelect } from "../components/CameraSelect";
 import { EventsGrid } from "../components/EventsGrid";
-import { Select } from "@fluentui/react-components";
+import { MessageBar, MessageBarBody, Select } from "@fluentui/react-components";
 
 import { ModelsSection } from "../components/ModelsSection";
 import { MotionSection } from "../components/MotionSection";
 import { ProfileSelect, useProfiles, useSeveralDetectors } from "../components/ProfileSelect";
-import { InfoBanner, PageTabs, PageTitle, QueryState, useSubPage } from "../components/ui";
+import {
+  InfoBanner,
+  PageTabs,
+  PageTitle,
+  QueryState,
+  RouterLink,
+  useSubPage,
+} from "../components/ui";
 import { useIsAdmin } from "../auth";
 import { useI18n } from "../i18n";
 import { useFilters } from "../useFilters";
@@ -84,7 +91,16 @@ function EventList() {
 
   return (
     <>
-      {cfg && (
+      {profiles.data && targets.length === 0 && !profile && (
+        <MessageBar>
+          <MessageBarBody>
+            {rich("events.noProfiles", {
+              link: <RouterLink to="/cameras/profiles">{t("events.noProfilesLink")}</RouterLink>,
+            })}
+          </MessageBarBody>
+        </MessageBar>
+      )}
+      {cfg && targets.length > 0 && (
         <InfoBanner id="events">
           {rich("events.intro", {
             labels: <b>{targets.join(", ")}</b>,

@@ -151,6 +151,9 @@ export const sv: Record<MessageKey, string> = {
   "events.none": "Inga händelser än.",
   "events.intro":
     "Observationer av {labels} (från detektionsprofilerna) som ligger nära varandra i tid slås ihop till ett klipp, med {before} s före och {after} s efter. Klippen tas från originalfilmen, utan maskering.",
+  "events.noProfiles":
+    "Inga detekteringsprofiler än, så kamerorna spelar bara in. {link} för att säga vad som ska letas efter.",
+  "events.noProfilesLink": "Lägg till en profil",
   "events.thumbAlt": "{label} på {camera}",
   "events.buildingClip": "Skapar klipp…",
   "events.noThumbnail": "Ingen miniatyrbild",

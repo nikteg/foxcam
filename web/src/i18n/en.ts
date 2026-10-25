@@ -148,6 +148,9 @@ export const en = {
   "events.none": "No events yet.",
   "events.intro":
     "Sightings of {labels} (from the detection profiles) close in time are merged into one clip, with {before} s before and {after} s after. Clips are cut from the original, uncensored footage.",
+  "events.noProfiles":
+    "No detection profiles yet, so cameras only record. {link} to say what to look for.",
+  "events.noProfilesLink": "Add a profile",
   "events.thumbAlt": "{label} on {camera}",
   "events.buildingClip": "Building clip…",
   "events.noThumbnail": "No thumbnail",

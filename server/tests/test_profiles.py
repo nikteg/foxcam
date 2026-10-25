@@ -30,6 +30,11 @@ def _lease(settings, worker="w", tags=None):
     return (job.id, job.lease_token, job.profile_id) if job else None
 
 
+def test_without_detection_settings_there_is_no_built_in_profile(tmp_path):
+    s = Settings.model_validate({"data_dir": str(tmp_path)})
+    assert s.profiles == []
+
+
 def test_default_profile_comes_from_detection_settings(tmp_path):
     s = Settings.model_validate({"data_dir": str(tmp_path),
                                  "detection": {"target_labels": ["Fox"], "min_confidence": 0.7}})

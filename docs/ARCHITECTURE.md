@@ -130,8 +130,9 @@ circles, and at least one detector must run always.
 
 Profiles come from `config.yaml` or the web UI (Cameras → Detection profiles). A camera
 runs its UI selection, else its `profiles:` in config, else all `default` profiles; an empty
-selection means "record only". Without any configured profiles there is one built-in
-`default` profile made from the `detection:` section, so older configs behave as before.
+selection means "record only". With no profiles at all, cameras only record until one is
+added. A `detection:` section in `config.yaml` (and no `profiles:`) gives a quick built-in
+`default` profile instead.
 
 **Routing by tags, not by machine.** Workers send tags with each lease: the detector adds
 its own (`speciesnet`, `ultralytics`, `open-vocabulary`, `dummy`), `--tags` adds more, and
