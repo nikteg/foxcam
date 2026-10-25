@@ -1631,6 +1631,18 @@ h3.panel-heading {
   display: flex;
   width: fit-content;
   margin-top: var(--spacingVerticalS);
+  /* The brand tint, so it stands out from the hint text and the fields. */
+  color: var(--colorBrandForeground1);
+  border-color: var(--colorBrandStroke2);
+  background: var(--colorBrandBackground2);
+}
+.runtime-form .reset-setting:hover {
+  color: var(--colorBrandForeground2);
+  border-color: var(--colorBrandStroke1);
+  background: var(--colorBrandBackground2Hover);
+}
+.runtime-form .reset-setting:hover:active {
+  background: var(--colorBrandBackground2Pressed);
 }
 .runtime-facts {
   margin-bottom: var(--spacingVerticalXL);
