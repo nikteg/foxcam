@@ -156,11 +156,11 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Quick start
 
-Requirements: [mise](https://mise.jdx.dev), [uv](https://docs.astral.sh/uv/),
-[pnpm](https://pnpm.io) and `ffmpeg`.
+Requirements: [mise](https://mise.jdx.dev) and `ffmpeg`. mise installs the other tools
+(uv, Node, pnpm and MediaMTX, pinned in `mise.toml`).
 
 ```sh
-mise run setup      # Python + web deps, config.yaml, MediaMTX binary, fox sample clips
+mise run setup      # tools, Python + web deps, config.yaml, fox sample clips
 mise run dev        # MediaMTX, server, ingest, web UI and a dummy worker (live reload)
 mise run seed       # in another terminal: one fake camera per sample clip
 ```
@@ -291,7 +291,7 @@ and more without a restart; resetting a value brings back config.yaml's
 
 | Task | What it does |
 |---|---|
-| `setup`, `setup:yolo`, `setup:speciesnet` | install dependencies (plus a detector for a local worker) |
+| `setup`, `setup:yolo`, `setup:speciesnet` | install tools and dependencies (plus a detector for a local worker) |
 | `dev`, `dev:no-worker`, `dev:yolo` | whole stack with a dummy / no / YOLO-World worker, live reload |
 | `server`, `ingest`, `compact`, `mediamtx`, `web`, `worker*` | one part at a time |
 | `stop` | kill anything left on the dev ports |

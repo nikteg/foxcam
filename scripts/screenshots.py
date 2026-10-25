@@ -220,16 +220,16 @@ def run_stack(stack: Stack, min_events: int, timeout: float) -> set[str]:
     busy = [p for p in (PORT, 19997, 18554) if port_in_use(p)]
     if busy:
         raise SystemExit(f"port(s) {busy} in use: is an earlier screenshots run still going?")
-    mediamtx = ROOT / ".tools" / "mediamtx"
-    if not mediamtx.exists():
-        raise SystemExit("MediaMTX missing: mise run setup:mediamtx")
+    mediamtx = shutil.which("mediamtx")
+    if not mediamtx:
+        raise SystemExit("MediaMTX missing: mise run setup:tools")
     missing = [clip for _, _, clip in CAMERAS if not (ROOT / "samples" / clip).exists()]
     if missing:
         raise SystemExit(f"sample clips missing ({', '.join(missing)}): mise run setup:samples")
     if not (ROOT / "web" / "dist" / "index.html").exists():
         raise SystemExit("web UI not built: mise run build")
 
-    stack.start("mediamtx", [str(BIN / "foxcam"), "mediamtx", "--binary", str(mediamtx),
+    stack.start("mediamtx", [str(BIN / "foxcam"), "mediamtx", "--binary", mediamtx,
                              str(STACK / "mediamtx.yml")], cwd=STACK)
     stack.start("server", [str(BIN / "foxcam"), "serve", "--port", str(PORT)])
     wait_for("the server", server_up, 60, every=1, stack=stack)

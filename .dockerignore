@@ -3,6 +3,5 @@ node_modules
 web/dist
 data
 .venv
-.tools
 samples
 out

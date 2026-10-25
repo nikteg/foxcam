@@ -1,17 +1,30 @@
 # Developer tasks: `mise tasks` lists them, `mise run <task>` runs one.
 #
-#   mise run setup        # first time: Python + web deps, config.yaml, MediaMTX, sample clips
+#   mise run setup        # first time: tools, Python + web deps, config.yaml, sample clips
 #   mise run dev          # whole stack with a dummy worker
 #   mise run seed         # (stack running) add a fake camera per sample clip
 #   mise run check        # lint + typecheck + tests
 #   mise run reset        # wipe all data (asks first); reset:events, reset:queue, ... for parts
 
+# --- tools -------------------------------------------------------------------------
+# Installed by `mise install` (or on the first `mise run`) and put on PATH for every task.
+
+[tools]
+uv = "0.12"
+node = "26"
+pnpm = "12.3.4" # same as packageManager in web/package.json
+"github:bluenviron/mediamtx" = "1.21.2"
+
 # --- setup -------------------------------------------------------------------------
 
 [tasks.setup]
 description = "Install everything for local development"
-depends = ["setup:python", "setup:web", "setup:config", "setup:mediamtx", "setup:samples"]
+depends = ["setup:tools", "setup:python", "setup:web", "setup:config", "setup:samples"]
 run = "echo 'ready: mise run dev'"
+
+[tasks."setup:tools"]
+description = "Install the tools in [tools] (uv, Node, pnpm, MediaMTX)"
+run = "mise install"
 
 [tasks."setup:python"]
 description = "Python deps for server + worker (tapo-cloud and s3 extras)"
@@ -36,10 +49,6 @@ run = "pnpm --dir web install"
 description = "Create config.yaml from config.example.yaml if missing"
 run = "[ -f config.yaml ] && echo 'config.yaml exists' || { cp config.example.yaml config.yaml && echo 'created config.yaml'; }"
 
-[tasks."setup:mediamtx"]
-description = "Download MediaMTX into .tools/ (FORCE=1 to update)"
-run = "scripts/get_mediamtx.sh"
-
 [tasks."setup:samples"]
 description = "Download the fox test clips from Wikimedia Commons into samples/"
 run = "[ -n \"$(ls samples/*.mp4 2>/dev/null)\" ] && [ -z \"${FORCE:-}\" ] && echo 'samples present (FORCE=1 to refetch)' || uv run python scripts/fetch_samples.py"
@@ -48,18 +57,18 @@ run = "[ -n \"$(ls samples/*.mp4 2>/dev/null)\" ] && [ -z \"${FORCE:-}\" ] && ec
 
 [tasks.dev]
 description = "Whole stack: MediaMTX, server, ingest, web (hot reload), dummy worker"
-depends = ["setup:config", "setup:mediamtx"]
+depends = ["setup:config"]
 run = "scripts/dev.sh"
 
 [tasks."dev:no-worker"]
 description = "Whole stack without a worker (run your GPU worker elsewhere)"
-depends = ["setup:config", "setup:mediamtx"]
+depends = ["setup:config"]
 env = { WORKER_ARGS = "none" }
 run = "scripts/dev.sh"
 
 [tasks."dev:yolo"]
 description = "Whole stack with a local YOLO-World worker (needs setup:yolo)"
-depends = ["setup:config", "setup:mediamtx"]
+depends = ["setup:config"]
 env = { WORKER_ARGS = "--detector ultralytics --model yolov8s-worldv2.pt" }
 run = "scripts/dev.sh"
 
@@ -77,8 +86,7 @@ run = "uv run foxcam compact"
 
 [tasks.mediamtx]
 description = "MediaMTX only (recording names in UTC)"
-depends = ["setup:mediamtx"]
-run = "TZ=UTC uv run foxcam mediamtx --binary .tools/mediamtx mediamtx/mediamtx.yml"
+run = "TZ=UTC uv run foxcam mediamtx mediamtx/mediamtx.yml"
 
 [tasks.web]
 description = "Web dev server with hot reload on :5173"
@@ -135,7 +143,7 @@ run = "uv run python scripts/seed.py"
 
 [tasks.screenshots]
 description = "Regenerate docs/screenshots from a throwaway demo stack (sample clips, YOLO-World if installed)"
-depends = ["build", "setup:mediamtx", "setup:samples"]
+depends = ["build", "setup:samples"]
 run = "uv run --with playwright python scripts/screenshots.py"
 
 [tasks."s3:local"]
@@ -303,11 +311,11 @@ echo "data reset; config.yaml and samples/ kept"
 """
 
 [tasks."clean:all"]
-description = "Back to a fresh checkout: data, deps, models, MediaMTX, samples (keeps config.yaml)"
-confirm = "Delete data/, .venv, web/node_modules, out/ (models!), .tools/ and samples/?"
+description = "Back to a fresh checkout: data, deps, models, samples (keeps config.yaml)"
+confirm = "Delete data/, .venv, web/node_modules, out/ (models!) and samples/?"
 depends = ["clean"]
 run = """
-rm -rf data auto.key auto.crt .venv web/node_modules out .tools
+rm -rf data auto.key auto.crt .venv web/node_modules out
 find samples -mindepth 1 ! -name README.md -delete 2>/dev/null || true
 echo "everything removed; mise run setup to start again"
 """

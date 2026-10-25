@@ -13,9 +13,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 [ -f config.yaml ] || { cp config.example.yaml config.yaml; echo "created config.yaml"; }
-MEDIAMTX="${MEDIAMTX:-.tools/mediamtx}"
-command -v "$MEDIAMTX" >/dev/null || [ -x "$MEDIAMTX" ] || {
-  echo "MediaMTX not found at $MEDIAMTX (see README: download it to .tools/mediamtx)" >&2
+MEDIAMTX="${MEDIAMTX:-mediamtx}"
+command -v "$MEDIAMTX" >/dev/null || {
+  echo "MediaMTX not found ($MEDIAMTX): mise run setup:tools, or MEDIAMTX=/path/to/mediamtx" >&2
   exit 1
 }
 WORKER_ARGS="${WORKER_ARGS:---detector dummy --dummy-label fox}"
