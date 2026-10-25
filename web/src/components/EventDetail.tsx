@@ -5,7 +5,7 @@ import { Button, Caption1 } from "@fluentui/react-components";
 import { ScanObject20Regular } from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 
-import { api, detectionFrameUrl, type DetectionEvent } from "../api";
+import { api, type DetectionEvent } from "../api";
 import { duration, percent } from "../format";
 import { useI18n } from "../i18n";
 import { useCameraName } from "./CameraSelect";
@@ -41,24 +41,8 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
   return (
     <div className="detail-stack">
       <QueryState error={detections.error} loading={detections.isPending} />
-      {best && (
-        <>
-          <img
-            className="detail-media"
-            src={detectionFrameUrl(best.id)}
-            alt={t("detections.frameAlt", { label: best.label })}
-          />
-          <Caption1 className="muted">{t("detections.frameNote")}</Caption1>
-          <span className="row wrap">
-            <Feedback detection={best} withLabels />
-            <Caption1 className="muted">
-              {best.model ?? "–"} / {best.worker_id ?? "–"}
-            </Caption1>
-          </span>
-        </>
-      )}
-      {/* The event's clip (with pre- and post-roll); until it is cut, the recording from
-          just before the best detection. */}
+      {/* The event's clip (with pre- and post-roll; its poster is the best frame with the
+          box); until it is cut, the recording from just before the best detection. */}
       {e.clip_url ? (
         <VideoPlayer key={e.clip_url} title={e.label} src={e.clip_url} poster={e.thumb_url} />
       ) : (
@@ -71,6 +55,14 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
             thumbnails={`/api/segments/${best.segment_id}/thumbnails.vtt`}
           />
         )
+      )}
+      {best && (
+        <span className="row wrap">
+          <Feedback detection={best} withLabels />
+          <Caption1 className="muted">
+            {best.model ?? "–"} / {best.worker_id ?? "–"}
+          </Caption1>
+        </span>
       )}
       <Facts>
         <Fact label={t("common.camera")}>{cameraName(e.camera_id)}</Fact>
