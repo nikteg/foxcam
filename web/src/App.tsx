@@ -27,7 +27,7 @@ import {
   Target24Regular,
 } from "@fluentui/react-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLayoutEffect, useState, type ReactElement } from "react";
+import { useLayoutEffect, useRef, useState, type ReactElement } from "react";
 import { Outlet, useLocation, useNavigate, useNavigationType } from "react-router";
 
 import { api } from "./api";
@@ -172,8 +172,12 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
   const selected = currentTab(pathname);
   // Another page (or sub-page) starts at the top; the router keeps the scroll position
   // otherwise. Back/forward (POP) is left to the browser, and query changes (filters,
-  // drawers) do not count.
+  // drawers) do not count: opening a drawer after a reload turns the navigation type from
+  // POP into PUSH on the same path, which must not scroll.
+  const shownPath = useRef(pathname);
   useLayoutEffect(() => {
+    if (shownPath.current === pathname) return;
+    shownPath.current = pathname;
     if (navigationType !== "POP") window.scrollTo(0, 0);
   }, [pathname, navigationType]);
   const { t } = useI18n();
