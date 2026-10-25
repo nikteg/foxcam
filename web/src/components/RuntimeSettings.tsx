@@ -58,6 +58,10 @@ const META: Record<
     unit: "runtime.unit.px",
   },
   "processing.concurrency": { label: "runtime.concurrency", hint: "runtime.concurrencyHint" },
+  "processing.keep_non_targets_from": {
+    label: "runtime.keepNonTargets",
+    hint: "runtime.keepNonTargetsHint",
+  },
   "mediamtx.low_data.enabled": {
     label: "runtime.lowDataEnabled",
     hint: "runtime.lowDataEnabledHint",

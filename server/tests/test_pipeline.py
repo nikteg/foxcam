@@ -204,3 +204,22 @@ def test_reanalyse_a_time_range(settings):
             .status_code == 422
     with session_scope() as s:
         assert [s.get(Segment, i).status for i in segs] == ["done", "new", "new", "done"]
+
+
+def test_weak_non_matches_are_not_kept(settings):
+    from foxcam.models import Detection
+    from foxcam.pipeline import retention
+
+    seg = add_segment(settings)
+    job = add_job(seg, state="done")
+    weak = add_detection(seg, job, 0, label="cat", confidence=0.18, target=False)
+    rated = add_detection(seg, job, 100, label="cat", confidence=0.18, target=False)
+    kept = add_detection(seg, job, 200, label="cat", confidence=0.4, target=False)
+    match = add_detection(seg, job, 300, confidence=0.2)  # a match stays, however weak
+    with session_scope() as s:
+        s.get(Detection, rated).feedback = False
+    settings.processing.keep_non_targets_from = 0.25
+    assert retention.run_retention(settings)["weak_detections"] == 1
+    with session_scope() as s:
+        assert sorted(d.id for d in s.query(Detection)) == sorted([rated, kept, match])
+    assert weak not in (rated, kept, match)

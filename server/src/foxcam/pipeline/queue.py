@@ -173,6 +173,8 @@ def complete(settings: Settings, job_id: int, token: str, detections: list[Detec
             is_target = bool(profile and profile.is_target(d.label, d.confidence,
                                                            job.detector_id))
             hit = hit or is_target
+            if not is_target and d.confidence < settings.processing.keep_non_targets_from:
+                continue  # a weak non-match: nothing would ever use it
             s.add(Detection(
                 segment_id=seg.id, job_id=job.id, profile_id=job.profile_id,
                 detector_id=job.detector_id, camera_id=seg.camera_id,

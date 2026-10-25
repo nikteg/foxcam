@@ -39,6 +39,10 @@
      downscaled to `max_width`, no audio. This is the only thing a worker can download.
    - one `job` row per profile and detector. The segment is `done` once all its jobs are
      done (or dead).
+   Every detection a worker reports is stored, except non-matches below
+   `processing.keep_non_targets_from` (default 0.25): a profile's `min_confidence` only decides
+   what is a match (events, "with a match", pinned footage), and a worker reports far more
+   (YOLO-World from 15 %). Retention also drops stored ones below it, unless they were rated.
 3. **Queue**: workers lease jobs (see [WORKER_PROTOCOL.md](WORKER_PROTOCOL.md)). Expired leases are
    reclaimed every 15 s; failures retry with backoff up to `max_attempts`, then the job is `dead`.
 4. **Events** (every 10 s): segments with a target detection (`detection.target_labels` ≥

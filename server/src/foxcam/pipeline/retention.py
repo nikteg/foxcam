@@ -16,13 +16,14 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 
 from .. import notify, sprites
 from ..config import Settings
 from ..db import session_scope
 from ..models import (
     Archive,
+    Detection,
     Event,
     Job,
     JobState,
@@ -205,8 +206,21 @@ def _expire_remote_recordings(settings: Settings) -> int:
         return len(segs) + len(archives)
 
 
+def _drop_weak_non_targets(settings: Settings) -> int:
+    """Non-matches below processing.keep_non_targets_from (stored before it was set or
+    raised); ones rated on the Detections page stay."""
+    floor = settings.processing.keep_non_targets_from
+    if floor <= 0:
+        return 0
+    with session_scope() as s:
+        return s.execute(delete(Detection).where(
+            Detection.is_target.is_(False), Detection.feedback.is_(None),
+            Detection.confidence < floor)).rowcount or 0
+
+
 def run_retention(settings: Settings) -> dict[str, int]:
     result = {
+        "weak_detections": _drop_weak_non_targets(settings),
         "events": _expire_events(settings),
         "segments_age": _expire_by_age(settings),
         "segments_disk": _enforce_disk_cap(settings),

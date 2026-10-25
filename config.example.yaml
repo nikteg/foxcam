@@ -79,6 +79,7 @@ processing:
   max_width: 1280
   concurrency: 2
   night_saturation_threshold: 4.0   # IR night footage is grayscale
+  keep_non_targets_from: 0.25       # non-matches below this are not kept (0 = keep all)
 
 queue:
   lease_seconds: 300

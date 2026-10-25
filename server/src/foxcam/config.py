@@ -177,6 +177,10 @@ class ProcessingConfig(BaseModel):
     concurrency: int = Field(default=2, ge=1, le=16)
     # Mean saturation below this => frame considered grayscale (IR night mode).
     night_saturation_threshold: float = Field(default=4.0, ge=0, le=255)
+    # Detections that are no match (below the profile's min_confidence, or another label)
+    # are only kept from this confidence up; the ones rated on the Detections page always.
+    # Matches are always kept. 0 = keep everything the workers report.
+    keep_non_targets_from: float = Field(default=0.25, ge=0, le=1)
 
 
 class QueueConfig(BaseModel):

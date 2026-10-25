@@ -39,6 +39,7 @@ EDITABLE: tuple[str, ...] = (
     "processing.max_width",
     "processing.night_saturation_threshold",
     "processing.concurrency",
+    "processing.keep_non_targets_from",
     "mediamtx.low_data.enabled",
     "mediamtx.low_data.height",
     "mediamtx.low_data.fps",

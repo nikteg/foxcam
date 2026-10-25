@@ -66,6 +66,10 @@ const DETECTION: SettingsGroup[] = [
     ],
   },
   {
+    title: "runtime.group.detections",
+    keys: ["processing.keep_non_targets_from"],
+  },
+  {
     title: "runtime.group.events",
     keys: [
       "events.pre_roll_seconds",

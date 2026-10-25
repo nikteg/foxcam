@@ -383,6 +383,10 @@ export const en = {
   "runtime.recordingDefault": "Recording quality",
   "runtime.recordingDefaultHint":
     "For every camera without its own choice (camera settings → Recording). Applies to hourly files joined from now on.",
+  "runtime.group.detections": "Detections",
+  "runtime.keepNonTargets": "Keep non-matches from",
+  "runtime.keepNonTargetsHint":
+    "Confidence (0–1) from which detections that are no match (below the profile's threshold, or another label) are kept. Weaker ones are dropped, also those already stored; matches and the ones you marked correct or wrong always stay. 0 keeps everything the workers report.",
   "runtime.compactionEnabled": "Join segments into hourly files",
   "runtime.compactionEnabledHint":
     "Fewer, larger files that are easier to browse and download, re-encoded per recording profile. Costs CPU (or GPU) once an hour.",

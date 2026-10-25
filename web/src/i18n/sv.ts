@@ -385,6 +385,10 @@ export const sv: Record<MessageKey, string> = {
   "runtime.recordingDefault": "Inspelningskvalitet",
   "runtime.recordingDefaultHint":
     "För alla kameror utan eget val (kamerans inställningar → Inspelning). Gäller timfiler som slås ihop från och med nu.",
+  "runtime.group.detections": "Detektioner",
+  "runtime.keepNonTargets": "Spara icke-träffar från",
+  "runtime.keepNonTargetsHint":
+    "Säkerhet (0–1) från vilken detektioner som inte är träffar (under profilens gräns, eller en annan etikett) sparas. Svagare tas bort, även de som redan finns; träffar och de du markerat rätt eller fel finns alltid kvar. 0 sparar allt arbetarna rapporterar.",
   "runtime.compactionEnabled": "Slå ihop segment till timfiler",
   "runtime.compactionEnabledHint":
     "Färre, större filer som är lättare att bläddra i och ladda ner, omkodade per inspelningsprofil. Kostar CPU (eller GPU) en gång i timmen.",
