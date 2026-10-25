@@ -83,3 +83,27 @@ def test_zero_turns_it_off(settings):
     [(_, last)] = _events()
     assert last >= T0 + timedelta(minutes=19)
     assert _stationary() == 0
+
+
+def test_rebuilding_events_checks_older_detections_and_notifies_nobody(cars):
+    from foxcam.config import ChannelConfig
+    from foxcam.models import Notification
+
+    cars.profile("cars").ignore_stationary_minutes = 0  # as before the check existed
+    _seen(cars, range(30))
+    [(_, last)] = _events()
+    assert last >= T0 + timedelta(minutes=29) and _stationary() == 0
+
+    cars.profile("cars").ignore_stationary_minutes = 10
+    cars.notifications.channels.append(
+        ChannelConfig.model_validate({"id": "hook", "type": "webhook", "url": "http://hook"}))
+    with session_scope() as s:
+        s.query(Notification).delete()
+    result = events.rebuild_events(cars)
+    [(first, last)] = _events()
+    assert first == T0 and last < T0 + timedelta(minutes=11)
+    assert result == {"removed": 1, "created": 1, "stationary": _stationary()}
+    assert _stationary() > 30
+    with session_scope() as s:
+        assert s.query(Notification).count() == 0
+        assert all(e.quiet for e in s.scalars(select(Event)))

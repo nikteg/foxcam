@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../api";
 import { useIsAdmin, useMe } from "../auth";
+import { MaintenanceSection } from "../components/MaintenanceSection";
 import { Notifications } from "../components/Notifications";
 import {
   DEFAULT_RECORDING,
@@ -190,7 +191,12 @@ export function Settings() {
         </InfoBanner>
       )}
       {tab === "general" && <RuntimeSettingsSection groups={GENERAL} />}
-      {tab === "detection" && <RuntimeSettingsSection groups={DETECTION} />}
+      {tab === "detection" && (
+        <>
+          <RuntimeSettingsSection groups={DETECTION} />
+          <MaintenanceSection />
+        </>
+      )}
       {tab === "retention" && <RuntimeSettingsSection groups={RETENTION} showDisk />}
       {tab === "users" && <UsersSection />}
       {tab === "notifications" && <Notifications />}

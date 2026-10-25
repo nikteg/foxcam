@@ -143,6 +143,27 @@ export const en = {
   "detections.labelPlaceholder": "Label, e.g. fox",
   "detections.minConfidence": "Minimum confidence",
   "detections.min": "min",
+  "maintenance.title": "Maintenance",
+  "maintenance.rebuild": "Events",
+  "maintenance.rebuildHint":
+    "Builds every event again from the detections, with the profiles' current rules (such as ignoring objects standing still, also for detections from before that existed). Rebuilt events send no notifications; their clips are cut again in the background.",
+  "maintenance.rebuildButton": "Rebuild events",
+  "maintenance.rebuildConfirm": "Rebuild all events?",
+  "maintenance.rebuildBody":
+    "Current events, their clips and their notification history are replaced. Detections and your correct/wrong marks stay.",
+  "maintenance.rebuildDone":
+    "{removed} {removed:event|events} replaced by {created}; {stationary} {stationary:detection|detections} standing still.",
+  "maintenance.reanalyse": "Detect again",
+  "maintenance.reanalyseHint":
+    "Runs detection again on the recordings in these days, with the current censor areas and profiles. Their detections (and correct/wrong marks) are replaced. At most 500 recordings at once.",
+  "maintenance.reanalyseButton": "Detect again",
+  "maintenance.reanalyseConfirm": "Detect again in these days?",
+  "maintenance.reanalyseBody":
+    "The recordings' detections and correct/wrong marks are replaced, and the workers get the recordings again.",
+  "maintenance.reanalyseDone":
+    "{queued} {queued:recording|recordings} queued, {skipped} skipped (being analysed or already waiting); {detections_removed} detections removed.",
+  "maintenance.from": "From",
+  "maintenance.to": "To",
   "detections.showStationary": "Show standing still",
   "detections.stationary": "still",
   "detections.stationaryHint":

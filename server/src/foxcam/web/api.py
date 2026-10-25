@@ -8,13 +8,14 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import select
 
 from .. import ffmpeg, mediamtx_auth, model_stats, recording, runtime_settings, sprites
 from ..accounts import Principal
@@ -23,6 +24,7 @@ from ..db import session_scope
 from ..mediamtx import MediaMtx
 from ..models import Archive, CameraRole, Detection, Event, Segment, utcnow
 from ..pipeline import compaction, queue, uploader
+from ..pipeline.events import rebuild_events as rebuild_all_events
 from ..pipeline.reanalyse import ReanalyseError, reanalyse_segment
 from ..storage import StorageError, boto3_available, get_storage
 from . import queries
@@ -279,6 +281,58 @@ def reanalyse(segment_id: int, settings: Settings = Depends(settings_dep),
     except ReanalyseError as e:
         raise HTTPException(409, str(e)) from e
     return {"status": "queued", "detections_removed": removed}
+
+
+class ReanalyseRange(BaseModel):
+    # None = every camera the caller may edit.
+    camera: str | None = None
+    start: datetime
+    end: datetime
+
+
+# A time range is a batch of single re-runs: at most this many recordings at once.
+REANALYSE_MAX = 500
+
+
+@router.post("/segments/reanalyse")
+def reanalyse_range(body: ReanalyseRange, settings: Settings = Depends(settings_dep),
+                    p: Principal = Depends(principal)) -> dict[str, Any]:
+    """Run detection again on every recording that starts in [start, end) (current mask and
+    profiles), like /segments/{id}/reanalyse for each. Editors of the camera(s). Recordings
+    a worker is busy with, or already waiting, are skipped."""
+    def naive(dt: datetime) -> datetime:  # stored as naive UTC
+        return dt.astimezone(UTC).replace(tzinfo=None) if dt.tzinfo else dt
+
+    start, end = naive(body.start), naive(body.end)
+    if end <= start:
+        raise HTTPException(422, "end must be after start")
+    if body.camera:
+        camera_for(p, settings, body.camera, CameraRole.EDITOR)
+    with session_scope() as s:
+        q = select(Segment.id, Segment.camera_id).where(
+            Segment.deleted_at.is_(None), Segment.start_at >= start, Segment.start_at < end)
+        if body.camera:
+            q = q.where(Segment.camera_id == body.camera)
+        rows = [(i, c) for i, c in s.execute(q.order_by(Segment.start_at))
+                if p.can(c, CameraRole.EDITOR)]
+    if len(rows) > REANALYSE_MAX:
+        raise HTTPException(422, f"{len(rows)} recordings: at most {REANALYSE_MAX} at once")
+    queued = skipped = removed = 0
+    for seg_id, _ in rows:
+        try:
+            removed += reanalyse_segment(settings, seg_id)
+            queued += 1
+        except ReanalyseError:
+            skipped += 1
+    return {"queued": queued, "skipped": skipped, "detections_removed": removed}
+
+
+@router.post("/admin/rebuild-events", dependencies=[Depends(require_admin)])
+async def rebuild_events(settings: Settings = Depends(settings_dep)) -> dict[str, int]:
+    """Every event again from the detections, with the profiles' current rules (e.g. the
+    standing-still check, also for detections from before it existed). Rebuilt events
+    notify nobody; their clips are cut again in the background."""
+    return await asyncio.to_thread(rebuild_all_events, settings)
 
 
 @router.get("/archives")

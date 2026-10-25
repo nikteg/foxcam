@@ -15,23 +15,35 @@ original, unmasked recordings, and the underlying segments are pinned.
 from __future__ import annotations
 
 import logging
+import shutil
+import threading
 from collections import defaultdict
 from datetime import timedelta
 from pathlib import Path
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select, update
 
 from .. import ffmpeg, notify
 from ..config import Settings
 from ..db import session_scope
-from ..models import Detection, Event, Segment, utcnow
+from ..models import Detection, Event, Segment, event_segments, utcnow
 from .compaction import segment_source
 from .queue import counts_as_match
 
 log = logging.getLogger(__name__)
 
 
-def assign_events(settings: Settings) -> int:
+# Building events and clips, and rebuilding them all (rebuild_events), one at a time.
+_lock = threading.RLock()
+
+
+def assign_events(settings: Settings, quiet: bool = False) -> int:
+    """Group detections not in an event yet. ``quiet``: the new events notify nobody."""
+    with _lock:
+        return _assign_events(settings, quiet)
+
+
+def _assign_events(settings: Settings, quiet: bool) -> int:
     gap = timedelta(seconds=settings.events.merge_gap_seconds)
     changed = 0
     with session_scope() as s:
@@ -59,7 +71,7 @@ def assign_events(settings: Settings) -> int:
             if event is None:
                 event = Event(camera_id=camera_id, profile_id=profile_id, label=best.label,
                               first_ts=first, last_ts=last, max_confidence=best.confidence,
-                              detection_count=0, best_detection_id=best.id)
+                              detection_count=0, best_detection_id=best.id, quiet=quiet)
                 s.add(event)
                 s.flush()
             else:
@@ -149,7 +161,36 @@ def refresh_models(settings: Settings, s, event: Event) -> None:
     event.confirmed = not confirming or bool(confirming & set(event.detectors))
 
 
+def rebuild_events(settings: Settings) -> dict[str, int]:
+    """All events again from the detections, with the profiles' current rules (e.g. the
+    standing-still check, which then also covers detections from before it existed). The
+    rebuilt events notify nobody; their clips are cut again by the background loop."""
+    with _lock:
+        with session_scope() as s:
+            removed = s.scalar(select(func.count()).select_from(Event)) or 0
+            s.execute(delete(event_segments))
+            s.execute(delete(Event))
+            s.execute(update(Segment).values(pinned=False))
+            s.execute(update(Detection).values(event_id=None))
+        if settings.clips_dir.exists():
+            shutil.rmtree(settings.clips_dir)
+        settings.clips_dir.mkdir(parents=True, exist_ok=True)
+        _assign_events(settings, quiet=True)
+        with session_scope() as s:
+            created = s.scalar(select(func.count()).select_from(Event)) or 0
+            still = s.scalar(select(func.count()).select_from(Detection).where(
+                Detection.stationary.is_(True))) or 0
+    log.info("events rebuilt: %d removed, %d created, %d detections standing still",
+             removed, created, still)
+    return {"removed": removed, "created": created, "stationary": still}
+
+
 def build_clips(settings: Settings) -> int:
+    with _lock:
+        return _build_clips(settings)
+
+
+def _build_clips(settings: Settings) -> int:
     cfg = settings.events
     now = utcnow()
     with session_scope() as s:

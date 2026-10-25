@@ -1659,6 +1659,11 @@ h3.panel-heading {
 .runtime-form .reset-setting:hover:active {
   background: var(--colorBrandBackground2Pressed);
 }
+/* Settings → Detection: below the settings form and its Save button. */
+.maintenance {
+  max-width: 620px;
+  margin-top: var(--spacingVerticalXXXL);
+}
 .runtime-facts {
   margin-bottom: var(--spacingVerticalXL);
 }

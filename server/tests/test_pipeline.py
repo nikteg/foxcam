@@ -184,3 +184,23 @@ def test_detections_standing_still_can_be_left_out(settings):
     assert {d["id"]: d["stationary"] for d in queries.detections()} == {
         moving: False, still: True}
     assert [d["id"] for d in queries.detections(hide_stationary=True)] == [moving]
+
+
+def test_reanalyse_a_time_range(settings):
+    from .conftest import app_client
+
+    start = utcnow().replace(microsecond=0) - timedelta(hours=2)
+    segs = [add_segment(settings, start=start + timedelta(minutes=30 * i), status="done",
+                        with_file=False) for i in range(4)]
+    for seg in segs:
+        add_detection(seg, add_job(seg, state="done"), 500)
+    body = {"start": (start + timedelta(minutes=29)).isoformat() + "Z",
+            "end": (start + timedelta(minutes=89)).isoformat() + "Z"}
+    with app_client(settings) as c:
+        r = c.post("/api/segments/reanalyse", json=body)
+        assert r.status_code == 200, r.text
+        assert r.json() == {"queued": 2, "skipped": 0, "detections_removed": 2}
+        assert c.post("/api/segments/reanalyse", json={**body, "end": body["start"]}) \
+            .status_code == 422
+    with session_scope() as s:
+        assert [s.get(Segment, i).status for i in segs] == ["done", "new", "new", "done"]

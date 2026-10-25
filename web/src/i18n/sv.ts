@@ -145,6 +145,27 @@ export const sv: Record<MessageKey, string> = {
   "detections.labelPlaceholder": "Etikett, t.ex. fox",
   "detections.minConfidence": "Lägsta säkerhet",
   "detections.min": "min",
+  "maintenance.title": "Underhåll",
+  "maintenance.rebuild": "Händelser",
+  "maintenance.rebuildHint":
+    "Bygger om alla händelser från detektionerna, med profilernas nuvarande regler (som att ignorera stillastående, även för detektioner från innan det fanns). Ombyggda händelser skickar inga aviseringar; deras klipp klipps om i bakgrunden.",
+  "maintenance.rebuildButton": "Bygg om händelser",
+  "maintenance.rebuildConfirm": "Bygga om alla händelser?",
+  "maintenance.rebuildBody":
+    "Nuvarande händelser, deras klipp och aviseringshistorik ersätts. Detektioner och dina rätt/fel-markeringar finns kvar.",
+  "maintenance.rebuildDone":
+    "{removed} {removed:händelse|händelser} ersatta av {created}; {stationary} {stationary:detektion|detektioner} stillastående.",
+  "maintenance.reanalyse": "Detektera igen",
+  "maintenance.reanalyseHint":
+    "Kör detektion igen på inspelningarna under dessa dagar, med nuvarande censurområden och profiler. Deras detektioner (och rätt/fel-markeringar) ersätts. Högst 500 inspelningar åt gången.",
+  "maintenance.reanalyseButton": "Detektera igen",
+  "maintenance.reanalyseConfirm": "Detektera igen under dessa dagar?",
+  "maintenance.reanalyseBody":
+    "Inspelningarnas detektioner och rätt/fel-markeringar ersätts, och arbetarna får inspelningarna igen.",
+  "maintenance.reanalyseDone":
+    "{queued} {queued:inspelning|inspelningar} i kö, {skipped} hoppades över (analyseras eller väntar redan); {detections_removed} detektioner borttagna.",
+  "maintenance.from": "Från",
+  "maintenance.to": "Till",
   "detections.showStationary": "Visa stillastående",
   "detections.stationary": "stilla",
   "detections.stationaryHint":

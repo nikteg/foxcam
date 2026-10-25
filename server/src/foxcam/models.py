@@ -340,6 +340,9 @@ class Event(Base):
     thumb_remote_key: Mapped[str | None] = mapped_column(String)
     clip_dirty: Mapped[bool] = mapped_column(Boolean, default=True)
     clip_error: Mapped[str | None] = mapped_column(String)
+    # Rebuilt from detections that were already there (Settings → Rebuild events): no
+    # notifications, they went out (or not) when it happened.
+    quiet: Mapped[bool | None] = mapped_column(Boolean, default=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 

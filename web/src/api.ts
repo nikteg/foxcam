@@ -756,6 +756,19 @@ export const api = {
   }) => request<Segment[]>("GET", withQuery("/api/segments", q)),
   segment: (id: number) => request<Segment>("GET", `/api/segments/${id}`),
   segmentJobs: (id: number) => request<SegmentJob[]>("GET", `/api/segments/${id}/jobs`),
+  /** Detection again on every recording starting in [start, end) (ISO times). */
+  reanalyseRange: (body: { camera?: string; start: string; end: string }) =>
+    request<{ queued: number; skipped: number; detections_removed: number }>(
+      "POST",
+      "/api/segments/reanalyse",
+      body,
+    ),
+  /** Every event again from the detections (admins); rebuilt events notify nobody. */
+  rebuildEvents: () =>
+    request<{ removed: number; created: number; stationary: number }>(
+      "POST",
+      "/api/admin/rebuild-events",
+    ),
   reanalyse: (id: number) =>
     request<{ status: string; detections_removed: number }>(
       "POST",

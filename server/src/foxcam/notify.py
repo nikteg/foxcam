@@ -167,7 +167,7 @@ def enqueue(s: Session, settings: Settings, event: Event, kind: str) -> int:
     """Queue `kind` for every matching channel (once per channel and event)."""
     now = utcnow()
     queued = 0
-    if event.id is not None and marked_wrong(s, event.id):
+    if event.quiet or (event.id is not None and marked_wrong(s, event.id)):
         return 0
     for ch in all_channels(settings):
         if not _matches(ch, event, kind):
