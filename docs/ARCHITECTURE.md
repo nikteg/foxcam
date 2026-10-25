@@ -78,6 +78,7 @@ A profile (`profiles.py`) says **what** to look for and **which models** look fo
 | `targets` | labels that create events (`fox`, or `car, person`) |
 | `aliases` | map model labels to yours (`red fox: fox`), so different models agree |
 | `min_confidence` | the match threshold ("Match from" in the UI): a detection of a target label at or above it is a match, and matches make events, notifications and pinned footage |
+| `target_min_confidence` | a target's own match threshold, e.g. `{person: 0.8}` where false alarms are common; wins over the detector's and the profile's |
 | `requires` | worker tags every detector of the profile needs |
 | `detectors` | the models that look (below); none = one detector `default` needing just `requires` |
 | `fps` | frames per second to analyse (cheaper profiles for slow-moving things) |

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -36,6 +36,8 @@ class ProfileIn(BaseModel):
     targets: list[str] = Field(min_length=1, max_length=50)
     aliases: dict[str, str] = {}
     min_confidence: float = Field(default=0.5, ge=0, le=1)
+    # Per target: its own threshold (wins over the detector's and the profile's).
+    target_min_confidence: dict[str, Annotated[float, Field(ge=0, le=1)]] = {}
     requires: list[str] = Field(default=[], max_length=20)
     # Empty = one detector, `default` (needing only `requires`).
     detectors: list[DetectorIn] = Field(default=[], max_length=10)

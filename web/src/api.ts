@@ -76,6 +76,8 @@ export interface ProfileInput {
   targets: string[];
   aliases: Record<string, string>;
   min_confidence: number;
+  /** Targets with a match threshold of their own (wins over the detector's and the profile's). */
+  target_min_confidence: Record<string, number>;
   /** Tags every detector needs. */
   requires: string[];
   /** Empty = one detector, `default`. */

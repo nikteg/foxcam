@@ -79,6 +79,7 @@ so the same segment may come back for another profile or detector.
   "segment": {"id": 17, "camera_id": "garden", "start_at": "2026-10-24T10:00:00",
               "duration_s": 60.0, "width": 1920, "height": 1080, "is_night": true},
   "hints": {"target_labels": ["fox"], "min_confidence": 0.5,
+            "target_min_confidence": {},
             "profile": "default", "detector": "default", "country": "SWE",
             "latitude": null, "longitude": null}
 }
@@ -87,7 +88,8 @@ so the same segment may come back for another profile or detector.
 `sample_fps` is the frame rate the profile (or its detector) wants analysed (≤ `input_fps`;
 the input is shared by all profiles of the camera, so subsample to it). `detector` says which
 of the profile's detectors this job is for; `profile.min_confidence` is the detector's own
-threshold when it has one. `hints.target_labels` are what the profile
+threshold when it has one, and `hints.target_min_confidence` the targets with one of their
+own (e.g. `{"person": 0.8}`). `hints.target_labels` are what the profile
 looks for: open-vocabulary detectors should prompt with them. Report every label you see; the
 server applies the profile's aliases and threshold to decide what is a target.
 

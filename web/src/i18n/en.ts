@@ -701,6 +701,11 @@ export const en = {
   "profiles.matchFromShort": "Match from",
   "profiles.matchFromHint":
     "Detections of a target label at or above this are matches: they make events, notifications and pinned footage. Each detector can set its own.",
+  "profiles.targetMatchFrom": "Match from per target",
+  "profiles.targetMatchFromHint":
+    "A target that needs its own threshold, like a higher one for person where false alarms are common, or a lower one for an animal you don't want to miss. Wins over the profile's and each detector's.",
+  "profiles.target": "Target",
+  "profiles.addTargetMatchFrom": "Add a target",
   "detectors.matchFromHint":
     "For this model's detections only. Empty uses the profile's ({value} %). Models score differently: YOLO-World usually lower than SpeciesNet.",
   "notify.notifyFrom": "Notify from (%)",

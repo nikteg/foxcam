@@ -796,6 +796,11 @@ export const sv: Record<MessageKey, string> = {
   "profiles.matchFromShort": "Träff från",
   "profiles.matchFromHint":
     "Detektioner av en mål-etikett med minst så här hög säkerhet är träffar: de ger händelser, aviseringar och sparad film. Varje detektor kan ha en egen.",
+  "profiles.targetMatchFrom": "Träff från per mål",
+  "profiles.targetMatchFromHint":
+    "Ett mål som behöver en egen gräns, som en högre för person där falsklarm är vanliga, eller en lägre för ett djur du inte vill missa. Gäller före profilens och varje detektors.",
+  "profiles.target": "Mål",
+  "profiles.addTargetMatchFrom": "Lägg till ett mål",
   "detectors.matchFromHint":
     "Bara för den här modellens detektioner. Tomt använder profilens ({value} %). Modeller räknar olika: YOLO-World brukar ge lägre värden än SpeciesNet.",
   "notify.notifyFrom": "Avisera från (%)",

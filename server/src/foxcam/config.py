@@ -243,6 +243,9 @@ class ProfileConfig(BaseModel):
     # Map model labels to one name, e.g. {"red fox": "fox", "vulpes vulpes": "fox"}.
     aliases: dict[str, str] = {}
     min_confidence: float = Field(default=0.5, ge=0, le=1)
+    # Per target (its label), a threshold of its own: wins over the detector's and the
+    # profile's, e.g. {person: 0.8} where a false person is worse than a missed fox.
+    target_min_confidence: dict[str, Annotated[float, Field(ge=0, le=1)]] = {}
     # Tags every detector of the profile needs (with no `detectors`: the one detector's).
     requires: list[Annotated[str, Field(pattern=TAG)]] = []
     # The models that look; empty = one detector `default` (see the class docstring).
@@ -318,7 +321,12 @@ class ProfileConfig(BaseModel):
     def detector_requires(self, d: DetectorSpec) -> set[str]:
         return set(self.requires) | set(d.requires)
 
-    def min_confidence_for(self, detector_id: str | None) -> float:
+    def min_confidence_for(self, detector_id: str | None, label: str | None = None) -> float:
+        """The match threshold: the target's own, else the detector's, else the profile's."""
+        if label is not None:
+            own = {k.lower(): v for k, v in self.target_min_confidence.items()}
+            if (value := own.get(self.canonical(label).lower())) is not None:
+                return value
         d = self.detector(detector_id)
         return d.min_confidence if d and d.min_confidence is not None else self.min_confidence
 
@@ -331,7 +339,7 @@ class ProfileConfig(BaseModel):
         return aliases.get(label.lower(), label)
 
     def is_target(self, label: str, confidence: float, detector_id: str | None = None) -> bool:
-        return (confidence >= self.min_confidence_for(detector_id)
+        return (confidence >= self.min_confidence_for(detector_id, label)
                 and self.canonical(label).lower() in {t.lower() for t in self.targets})
 
 

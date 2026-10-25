@@ -106,6 +106,7 @@ detection:
 #     targets: [fox, badger]
 #     aliases: { red fox: fox, vulpes vulpes: fox, european badger: badger }
 #     min_confidence: 0.5
+#     target_min_confidence: { badger: 0.35 }   # a target's own threshold (wins over the rest)
 #     requires: [speciesnet]
 #     default: true            # cameras without their own selection run it
 #     # Several models instead (one job each; their detections merge into one event):

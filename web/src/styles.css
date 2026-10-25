@@ -173,6 +173,17 @@ a.tag-link:focus-visible {
 .alias-row .fui-Input {
   min-width: 0;
 }
+/* Profile: a target's own Match from (target, percent, remove). */
+.target-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 8rem) auto;
+  align-items: center;
+  gap: var(--spacingHorizontalS);
+}
+.target-row .fui-Select,
+.target-row .fui-Input {
+  min-width: 0;
+}
 .alias-add {
   align-self: flex-start;
 }

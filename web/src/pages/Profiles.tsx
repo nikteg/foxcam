@@ -8,6 +8,7 @@ import {
   Input,
   MessageBar,
   MessageBarBody,
+  Select,
   Switch,
   Text,
 } from "@fluentui/react-components";
@@ -53,6 +54,8 @@ import {
 import { CameraTag } from "../components/CameraSelect";
 
 type AliasRow = { from: string; to: string };
+/** A target's own Match from, in percent as typed. */
+type TargetRow = { label: string; percent: string };
 
 /** Complete rows only, as {"red fox": "fox"}. */
 const aliasMap = (rows: AliasRow[]): Record<string, string> =>
@@ -151,7 +154,7 @@ function ProfileCard({
             </Fact>
           </>
         )}
-        <Fact label={t("profiles.matchFromShort")}>
+        <Fact label={t("profiles.matchFromShort")} className="row wrap">
           {percent(p.min_confidence)}
           {p.detectors.some((d) => d.min_confidence !== null) && (
             <span className="muted">
@@ -161,6 +164,13 @@ function ProfileCard({
                 .map((d) => `${d.display_name} ${percent(d.min_confidence!)}`)
                 .join(", ")}
               )
+            </span>
+          )}
+          {Object.keys(p.target_min_confidence).length > 0 && (
+            <span className="chips">
+              {Object.entries(p.target_min_confidence).map(([label, value]) => (
+                <Tag key={label}>{`${label} ≥ ${percent(value)}`}</Tag>
+              ))}
             </span>
           )}
         </Fact>
@@ -301,6 +311,16 @@ export function ProfileDialog({
   const [minConf, setMinConf] = useState(
     String(Math.round((profile?.min_confidence ?? 0.5) * 100)),
   );
+  const [targetRows, setTargetRows] = useState<TargetRow[]>(() =>
+    Object.entries(profile?.target_min_confidence ?? {}).map(([label, value]) => ({
+      label,
+      percent: String(Math.round(value * 100)),
+    })),
+  );
+  const setTargetRow = (i: number, row: Partial<TargetRow>) =>
+    setTargetRows((rows) => rows.map((r, j) => (j === i ? { ...r, ...row } : r)));
+  // Targets without a threshold of their own yet (for a new row).
+  const freeTargets = targets.filter((x) => !targetRows.some((r) => r.label === x));
   const [requires, setRequires] = useState<string[]>(profile?.requires ?? []);
   const [detectors, setDetectors] = useState<DetectorRow[]>(() => toRows(profile?.detectors));
   const [fps, setFps] = useState(profile?.fps?.toString() ?? "");
@@ -319,6 +339,12 @@ export function ProfileDialog({
     targets: targets.map((s) => s.trim()).filter(Boolean),
     aliases: aliasMap(aliases),
     min_confidence: Math.min(Math.max(Number(minConf) / 100, 0), 1),
+    // Complete rows of targets still in the profile.
+    target_min_confidence: Object.fromEntries(
+      targetRows
+        .filter((r) => r.label && r.percent !== "" && targets.includes(r.label))
+        .map((r) => [r.label, Math.min(Math.max(Number(r.percent) / 100, 0), 1)]),
+    ),
     requires,
     detectors: fromRows(detectors),
     fps: fps ? Number(fps) : null,
@@ -453,6 +479,55 @@ export function ProfileDialog({
                   contentAfter="%"
                   onChange={(_, d) => setMinConf(d.value)}
                 />
+              </Field>
+              <Field label={t("profiles.targetMatchFrom")} hint={t("profiles.targetMatchFromHint")}>
+                <div className="alias-rows">
+                  {targetRows.map((row, i) => (
+                    // oxlint-disable-next-line react/no-array-index-key -- rows have no id
+                    <div key={i} className="target-row">
+                      <Select
+                        value={row.label}
+                        aria-label={t("profiles.target")}
+                        onChange={(_, d) => setTargetRow(i, { label: d.value })}
+                      >
+                        {[row.label, ...freeTargets].filter(Boolean).map((x) => (
+                          <option key={x} value={x}>
+                            {x}
+                          </option>
+                        ))}
+                      </Select>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={row.percent}
+                        contentAfter="%"
+                        aria-label={t("profiles.matchFromShort")}
+                        onChange={(_, d) => setTargetRow(i, { percent: d.value })}
+                      />
+                      <Button
+                        appearance="subtle"
+                        icon={<Dismiss20Regular />}
+                        aria-label={t("common.remove")}
+                        onClick={() => setTargetRows((rows) => rows.filter((_, j) => j !== i))}
+                      />
+                    </div>
+                  ))}
+                  <Button
+                    size="small"
+                    icon={<Add20Regular />}
+                    className="alias-add"
+                    disabled={freeTargets.length === 0}
+                    onClick={() =>
+                      setTargetRows((rows) => [
+                        ...rows,
+                        { label: freeTargets[0]!, percent: minConf },
+                      ])
+                    }
+                  >
+                    {t("profiles.addTargetMatchFrom")}
+                  </Button>
+                </div>
               </Field>
               <Field
                 label={t("profiles.requires")}

@@ -234,3 +234,47 @@ def test_fixed_class_workers_only_get_matching_profiles(two_profiles):
     assert eligible_profiles(two_profiles, [], ["fox"]) == [("default", "default")]
     assert eligible_profiles(two_profiles, [], ["automobile"]) == [("vehicles", "default")]
     assert eligible_profiles(two_profiles, [], ["cat"]) == []
+
+
+def test_a_target_can_have_its_own_match_threshold():
+    from foxcam.config import DetectorSpec
+
+    p = ProfileConfig(id="yard", targets=["fox", "person"], min_confidence=0.4,
+                      aliases={"human": "person"}, target_min_confidence={"Person": 0.8},
+                      detectors=[DetectorSpec(id="yolo", min_confidence=0.3),
+                                 DetectorSpec(id="sn")])
+    # The target's own wins over the detector's and the profile's (also for aliases).
+    assert p.min_confidence_for("yolo", "human") == 0.8
+    assert p.is_target("person", 0.79, "yolo") is False
+    assert p.is_target("person", 0.85, "sn") is True
+    # Targets without one keep the detector's, then the profile's.
+    assert p.is_target("fox", 0.35, "yolo") is True
+    assert p.is_target("fox", 0.35, "sn") is False
+
+
+def test_a_target_threshold_decides_new_matches(settings):
+    settings.profiles[:] = [ProfileConfig(id="yard", targets=["fox", "person"], default=True,
+                                          min_confidence=0.3,
+                                          target_min_confidence={"person": 0.8})]
+    seg = add_segment(settings, with_file=False, status=SegmentStatus.QUEUED)
+    add_job(seg, profile_id="yard")
+    job = queue.lease(settings, "w1")
+    queue.complete(settings, job.id, job.lease_token, [
+        DET(offset_ms=0, label="fox", confidence=0.4),
+        DET(offset_ms=0, label="person", confidence=0.6),
+    ], model="m", processing_ms=1)
+    with session_scope() as s:
+        assert [(d.label, d.is_target) for d in s.query(Detection).order_by(Detection.id)] == [
+            ("fox", True), ("person", False)]
+
+
+def test_target_thresholds_are_saved_from_the_ui(settings):
+    with app_client(settings) as c:
+        r = c.post("/api/profiles", json={"id": "yard", "targets": ["fox", "person"],
+                                           "target_min_confidence": {"person": 0.8}})
+        assert r.status_code == 201, r.text
+        saved = next(p for p in c.get("/api/profiles").json() if p["id"] == "yard")
+        assert saved["target_min_confidence"] == {"person": 0.8}
+        bad = c.post("/api/profiles", json={"id": "bad", "targets": ["fox"],
+                                             "target_min_confidence": {"fox": 1.5}})
+        assert bad.status_code == 422

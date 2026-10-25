@@ -141,6 +141,8 @@ def lease(body: LeaseRequest, settings: Settings = Depends(settings_dep),
                            duration_s=seg.duration_s, width=seg.width, height=seg.height,
                            is_night=seg.is_night),
         hints={"target_labels": targets, "min_confidence": min_conf,
+               # Targets with a threshold of their own (wins over min_confidence).
+               "target_min_confidence": profile.target_min_confidence if profile else {},
                "profile": job.profile_id, "detector": job.detector_id,
                "country": loc.country, "latitude": loc.latitude, "longitude": loc.longitude},
     )
