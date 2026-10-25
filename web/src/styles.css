@@ -631,7 +631,7 @@ table.table {
   overflow-wrap: anywhere;
 }
 
-/* Event cards: the thumbnail is a play button. */
+/* Event cards: the thumbnail opens the event's details. */
 .thumb-button {
   position: relative;
   display: block;
@@ -641,9 +641,9 @@ table.table {
   background: none;
   cursor: pointer;
 }
-/* Play button on clip and camera previews: always visible (touch screens have no hover),
+/* Button on a clip or camera preview: always visible (touch screens have no hover),
    stronger on hover / keyboard focus. */
-.play-overlay {
+.thumb-overlay {
   position: absolute;
   inset: 0;
   display: grid;
@@ -651,23 +651,27 @@ table.table {
   transition: background 0.15s;
   color: #fff;
 }
-.play-overlay svg {
+.thumb-overlay svg {
   box-sizing: content-box;
   width: 28px;
   height: 28px;
-  padding: 14px 13px 14px 15px; /* optically centre the triangle */
+  padding: 14px;
   border-radius: 50%;
   background: rgb(0 0 0 / 55%);
   transition:
     background 0.15s,
     transform 0.15s;
 }
-.thumb-button:hover .play-overlay,
-.thumb-button:focus-visible .play-overlay {
+/* A play triangle is optically centred a little to the right. */
+.thumb-overlay.play svg {
+  padding: 14px 13px 14px 15px;
+}
+.thumb-button:hover .thumb-overlay,
+.thumb-button:focus-visible .thumb-overlay {
   background: rgb(0 0 0 / 25%);
 }
-.thumb-button:hover .play-overlay svg,
-.thumb-button:focus-visible .play-overlay svg {
+.thumb-button:hover .thumb-overlay svg,
+.thumb-button:focus-visible .thumb-overlay svg {
   background: var(--colorBrandBackground);
   transform: scale(1.08);
 }
@@ -1684,10 +1688,6 @@ h3.panel-heading {
 .cards-day:first-child {
   margin-top: 0;
 }
-/* Last item of a row pushed to its far end (an event card's Detections link). */
-.push-end {
-  margin-inline-start: auto;
-}
 /* Settings page tunables (components/RuntimeSettings.tsx): a column, not page-wide inputs. */
 /* More room between settings than inside one, so a reset button clearly belongs to the
    setting above it. */
@@ -1757,13 +1757,23 @@ h3.panel-heading {
   vertical-align: -0.18em;
   margin-inline-end: 0.35em;
 }
-/* Event card title: opens the detection drawer. */
-a.event-title {
+/* Event card title: opens the details drawer. */
+.event-title {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
   color: inherit;
-  text-decoration: none;
+  text-align: start;
+  cursor: pointer;
 }
-a.event-title:hover {
+.event-title:hover {
   text-decoration: underline;
+}
+.event-title:focus-visible {
+  outline: 2px solid var(--colorStrokeFocus2);
+  outline-offset: 2px;
+  border-radius: var(--borderRadiusSmall);
 }
 
 /* Empty date/time inputs on iOS Safari: a blank box, and placeholder is ignored. Draw the

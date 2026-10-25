@@ -71,10 +71,12 @@ const ios =
 export function DownloadButton({
   href,
   appearance,
+  size,
   children,
 }: {
   href: string;
   appearance?: ButtonProps["appearance"];
+  size?: ButtonProps["size"];
   children: ReactNode;
 }) {
   const url = new URL(href, location.origin);
@@ -99,6 +101,7 @@ export function DownloadButton({
       href={target}
       download
       appearance={appearance}
+      size={size}
       icon={<ArrowDownload20Regular />}
       {...(standalone && !toSafari ? { target: "_blank", rel: "noopener" } : {})}
     >

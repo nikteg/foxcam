@@ -12,7 +12,9 @@ export default defineConfig(({ mode }) => {
     ],
     server: {
       port: 5173,
-      proxy: { "/api": api },
+      // Keep the browser's Host: the server refuses writes whose Origin (localhost:5173,
+      // or the LAN address) is not its own (web/deps.py `_same_origin`).
+      proxy: { "/api": { target: api, changeOrigin: false } },
     },
     build: {
       outDir: "dist",
