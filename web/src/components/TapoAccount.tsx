@@ -24,7 +24,7 @@ import { useState, type ReactNode } from "react";
 
 import { api } from "../api";
 import { useI18n } from "../i18n";
-import { ActionRow, Tag } from "./ui";
+import { ActionRow, PasswordInput, Tag } from "./ui";
 
 const INSTALL_COMMAND = "uv sync --all-packages --extra tapo-cloud";
 
@@ -175,8 +175,7 @@ export function TapoSignIn({
             />
           </Field>
           <Field label={t("tapo.password")} required>
-            <Input
-              type="password"
+            <PasswordInput
               autoComplete="current-password"
               value={password}
               onChange={(_, d) => setPassword(d.value)}

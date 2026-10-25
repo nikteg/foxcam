@@ -27,6 +27,8 @@ export const en = {
   "common.done": "Done",
   "common.download": "Download",
   "common.edit": "Edit",
+  "common.showPassword": "Show password",
+  "common.hidePassword": "Hide password",
   "common.refresh": "Refresh",
   "appearance.title": "Appearance",
   "appearance.hint": "Language and theme are saved in this browser only.",
@@ -339,6 +341,7 @@ export const en = {
   "theme.system": "System",
   "theme.light": "Light",
   "theme.dark": "Dark",
+  "settings.serverPart": "This server",
   "settings.general": "General",
   "settings.detection": "Detection",
   "runtime.intro":

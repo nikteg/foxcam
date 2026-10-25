@@ -21,7 +21,7 @@ import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "
 
 import { api, type AuthProvider, type AuthState } from "../api";
 import { useAuth, useAuthChanged } from "../auth";
-import { usePageTitle } from "../components/ui";
+import { PasswordInput, usePageTitle } from "../components/ui";
 import { LanguageMenu, useI18n } from "../i18n";
 import { ThemeMenu } from "../theme";
 
@@ -112,8 +112,7 @@ function LoginForm({ onDone }: { onDone: (s: AuthState) => void }) {
         />
       </Field>
       <Field label={t("login.password")} required>
-        <Input
-          type="password"
+        <PasswordInput
           autoComplete="current-password"
           value={password}
           onChange={(_, d) => setPassword(d.value)}
@@ -156,8 +155,7 @@ function RegisterForm({ invite, onDone }: { invite?: string; onDone: (s: AuthSta
         />
       </Field>
       <Field label={t("login.password")} hint={t("login.passwordHint")} required>
-        <Input
-          type="password"
+        <PasswordInput
           autoComplete="new-password"
           value={password}
           onChange={(_, d) => setPassword(d.value)}
@@ -201,8 +199,7 @@ function SetupForm({ onDone }: { onDone: (s: AuthState) => void }) {
         <Input type="email" value={form.email} onChange={set("email")} autoComplete="username" />
       </Field>
       <Field label={t("login.password")} hint={t("login.passwordHint")} required>
-        <Input
-          type="password"
+        <PasswordInput
           value={form.password}
           onChange={set("password")}
           autoComplete="new-password"

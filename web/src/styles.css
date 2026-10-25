@@ -263,18 +263,21 @@ h2.section > .section-link {
   left: 14px;
   pointer-events: none;
 }
-/* Top bar: theme and language on wider screens, a refresh button on phones. */
-/* Doubled class: wins over Fluent's own display on buttons. */
-.phone-only.phone-only {
+/* Top bar: a refresh button whenever the bottom tab bar shows (below 1280 px, as in the
+   media query further down); theme and language except on phones. Doubled class: wins
+   over Fluent's own display on buttons. */
+.with-tabbar.with-tabbar {
   display: none;
 }
 .not-phone {
   display: contents;
 }
-@media (max-width: 720px) {
-  .phone-only.phone-only {
+@media (max-width: 1279px) {
+  .with-tabbar.with-tabbar {
     display: inline-flex;
   }
+}
+@media (max-width: 720px) {
   .not-phone {
     display: none;
   }
@@ -291,6 +294,11 @@ h2.section > .section-link {
   .spin {
     animation: none;
   }
+}
+/* Settings → General: "Appearance" and "This server", above their own headings. */
+.settings-part {
+  display: block;
+  margin: var(--spacingVerticalM) 0 var(--spacingVerticalL);
 }
 /* Settings → General and Account: language and theme. */
 .appearance {

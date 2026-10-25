@@ -1,4 +1,4 @@
-import { Card, CardHeader, Text } from "@fluentui/react-components";
+import { Card, CardHeader, Text, Title3 } from "@fluentui/react-components";
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../api";
@@ -190,8 +190,16 @@ export function Settings() {
         />
       )}
 
-      {/* This browser's own choices first: the banner below is about the server's settings. */}
-      {tab === "general" && <AppearanceSection />}
+      {/* General has two parts: this browser's choices, then the server's settings (what the
+          banner below is about). */}
+      {tab === "general" && (
+        <>
+          <AppearanceSection part />
+          <Title3 as="h2" className="settings-part">
+            {t("settings.serverPart")}
+          </Title3>
+        </>
+      )}
       {(tab === "general" || tab === "detection" || tab === "retention") && (
         <InfoBanner id="runtime-settings">
           {rich("runtime.intro", { file: <code>config.yaml</code> })}

@@ -25,7 +25,18 @@ import { useMe } from "../auth";
 import { ConfirmPopover } from "./ConfirmPopover";
 import { useI18n } from "../i18n";
 import { InviteLink, useRoleName } from "./ShareDialog";
-import { Checkbox, Empty, Fact, Facts, InfoBanner, QueryState, Tag, Time, Toolbar } from "./ui";
+import {
+  Checkbox,
+  Empty,
+  Fact,
+  Facts,
+  InfoBanner,
+  PasswordInput,
+  QueryState,
+  Tag,
+  Time,
+  Toolbar,
+} from "./ui";
 import {
   Dialog,
   DialogActions,
@@ -268,8 +279,7 @@ function AddUserDialog({ onClose }: { onClose: () => void }) {
                 <Input value={form.name} onChange={(_, d) => setForm({ ...form, name: d.value })} />
               </Field>
               <Field label={t("login.password")} hint={t("users.passwordHint")}>
-                <Input
-                  type="password"
+                <PasswordInput
                   autoComplete="new-password"
                   value={form.password}
                   onChange={(_, d) => setForm({ ...form, password: d.value })}
@@ -374,8 +384,7 @@ function PasswordDialog({ user, onClose }: { user: User; onClose: () => void }) 
                 {t("users.passwordSignsOut", { name: user.display_name })}
               </Caption1>
               <Field label={t("account.newPassword")} hint={t("account.passwordHint")} required>
-                <Input
-                  type="password"
+                <PasswordInput
                   autoComplete="new-password"
                   value={password}
                   onChange={(_, d) => setPassword(d.value)}

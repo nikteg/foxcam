@@ -19,9 +19,12 @@ import {
   TabList,
   type ButtonProps,
   type CheckboxProps,
+  type InputProps,
 } from "@fluentui/react-components";
 import {
   ArrowDownload20Regular,
+  Eye20Regular,
+  EyeOff20Regular,
   ArrowRight20Regular,
   LockClosed16Regular,
   Checkmark16Filled,
@@ -101,6 +104,28 @@ export function DownloadButton({
     >
       {children}
     </Button>
+  );
+}
+
+/** A password (or token) field with a button at the end that shows what was typed. */
+export function PasswordInput(props: Omit<InputProps, "type" | "contentAfter">) {
+  const { t } = useI18n();
+  const [shown, setShown] = useState(false);
+  return (
+    <Input
+      {...props}
+      type={shown ? "text" : "password"}
+      contentAfter={
+        <Button
+          appearance="transparent"
+          size="small"
+          icon={shown ? <EyeOff20Regular /> : <Eye20Regular />}
+          aria-label={t(shown ? "common.hidePassword" : "common.showPassword")}
+          aria-pressed={shown}
+          onClick={() => setShown((v) => !v)}
+        />
+      }
+    />
   );
 }
 

@@ -28,6 +28,8 @@ export const sv: Record<MessageKey, string> = {
   "common.done": "Klar",
   "common.download": "Ladda ner",
   "common.edit": "Redigera",
+  "common.showPassword": "Visa lösenord",
+  "common.hidePassword": "Dölj lösenord",
   "common.refresh": "Uppdatera",
   "appearance.title": "Utseende",
   "appearance.hint": "Språk och tema sparas bara i den här webbläsaren.",
@@ -341,6 +343,7 @@ export const sv: Record<MessageKey, string> = {
   "theme.system": "System",
   "theme.light": "Ljust",
   "theme.dark": "Mörkt",
+  "settings.serverPart": "Den här servern",
   "settings.general": "Allmänt",
   "settings.detection": "Detektion",
   "runtime.intro":

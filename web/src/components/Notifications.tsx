@@ -51,6 +51,7 @@ import {
   Fact,
   Facts,
   InfoBanner,
+  PasswordInput,
   QueryState,
   RouterLink,
   Tag,
@@ -481,8 +482,7 @@ function ChannelDialog({
                     <Input value={topic} onChange={(_, d) => setTopic(d.value)} />
                   </Field>
                   <Field label={t("notify.token")} hint={keepHint ?? t("notify.tokenHint")}>
-                    <Input
-                      type="password"
+                    <PasswordInput
                       value={token}
                       placeholder={channel?.has_token ? "••••••" : ""}
                       onChange={(_, d) => setToken(d.value)}
@@ -512,8 +512,7 @@ function ChannelDialog({
                     />
                   </Field>
                   <Field label={t("notify.secret")} hint={keepHint ?? t("notify.secretHint")}>
-                    <Input
-                      type="password"
+                    <PasswordInput
                       value={secret}
                       placeholder={channel?.has_secret ? "••••••" : ""}
                       onChange={(_, d) => setSecret(d.value)}
@@ -541,8 +540,7 @@ function ChannelDialog({
                     hint={channel ? t("notify.keepSecret") : t("notify.appriseHint")}
                     required={!channel}
                   >
-                    <Input
-                      type="password"
+                    <PasswordInput
                       value={url}
                       placeholder={channel ? "••••••" : "tgram://bottoken/chatid"}
                       onChange={(_, d) => setUrl(d.value)}

@@ -42,7 +42,7 @@ import {
   DialogSurface,
   DialogTitle,
 } from "../components/Drawer";
-import { Checkbox, Empty, PageTitle, Tag, Time } from "../components/ui";
+import { Checkbox, Empty, PageTitle, PasswordInput, Tag, Time } from "../components/ui";
 import { useRoleName } from "../components/ShareDialog";
 import { useI18n } from "../i18n";
 
@@ -144,8 +144,7 @@ function PasswordForm() {
         {!hasPassword && <Caption1 className="muted">{t("account.noPassword")}</Caption1>}
         {hasPassword && (
           <Field label={t("account.currentPassword")} required>
-            <Input
-              type="password"
+            <PasswordInput
               autoComplete="current-password"
               value={current}
               onChange={(_, d) => setCurrent(d.value)}
@@ -153,8 +152,7 @@ function PasswordForm() {
           </Field>
         )}
         <Field label={t("account.newPassword")} hint={t("account.passwordHint")} required>
-          <Input
-            type="password"
+          <PasswordInput
             autoComplete="new-password"
             value={next}
             onChange={(_, d) => setNext(d.value)}

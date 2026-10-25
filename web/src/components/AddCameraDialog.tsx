@@ -26,7 +26,7 @@ import { api, type CameraSource, type ProbeResult } from "../api";
 import { useIsAdmin } from "../auth";
 import { useI18n, type MessageKey } from "../i18n";
 import { TapoCameraList, TapoNotInstalled, TapoSignIn } from "./TapoAccount";
-import { ActionRow } from "./ui";
+import { ActionRow, PasswordInput } from "./ui";
 import { Dialog, DialogBody, DialogContent, DialogSurface, DialogTitle } from "./Drawer";
 
 type Kind = "tapo" | "rtsp" | "file" | "test";
@@ -252,8 +252,7 @@ function RtspStep({ back, onDone }: StepProps) {
             <Input value={tapo.user} onChange={(_, d) => setTapo({ ...tapo, user: d.value })} />
           </Field>
           <Field label={t("addCamera.accountPassword")}>
-            <Input
-              type="password"
+            <PasswordInput
               value={tapo.password}
               onChange={(_, d) => setTapo({ ...tapo, password: d.value })}
             />

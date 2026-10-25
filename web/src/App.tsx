@@ -215,13 +215,13 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
         </TabList>
         {/* Right-aligned header actions. */}
         <div className="topbar-actions">
-          {/* Phones: no room (they are in Settings → General and on the Account page), and
-              a home screen app has no pull to refresh. */}
+          {/* Phones: no room (they are in Settings → General and on the Account page). With
+              the bottom tab bar (tablets, phones, home screen app): no pull to refresh. */}
           <span className="not-phone">
             <ThemeMenu />
             <LanguageMenu className="language-menu" />
           </span>
-          <RefreshButton className="phone-only" />
+          <RefreshButton className="with-tabbar" />
           <UserMenu />
         </div>
       </header>
