@@ -472,6 +472,7 @@ export const en = {
   "notify.recent": "Recent notifications",
   "notify.col.time": "Time",
   "notify.col.channel": "Channel",
+  "notify.col.when": "Sent for",
   "notify.col.event": "Event",
   "notify.status.sent": "sent",
   "notify.status.failed": "failed",

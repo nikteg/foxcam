@@ -10,12 +10,6 @@ import {
   MessageBarBody,
   Select,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableHeaderCell,
-  TableRow,
   Text,
   Textarea,
 } from "@fluentui/react-components";
@@ -34,11 +28,13 @@ import {
   type Channel,
   type ChannelInput,
   type ChannelType,
+  type Delivery,
   type NotifyTrigger,
   type ProbeResult,
 } from "../api";
 import { percent } from "../format";
 import { ConfirmPopover } from "./ConfirmPopover";
+import { DataTable, type Column } from "./DataTable";
 import { useI18n, type MessageKey } from "../i18n";
 import { LabelPicker, useLabelSuggestions, useSuggestionList } from "./LabelPicker";
 import { useCameraName } from "./CameraSelect";
@@ -299,42 +295,54 @@ function Deliveries({ channelName }: { channelName: (id: string) => string }) {
     queryFn: api.deliveries,
   });
   const statusKind = { sent: "done", failed: "failed", pending: "pending", skipped: "warn" };
+  const columns: Column<Delivery>[] = [
+    {
+      id: "time",
+      header: t("notify.col.time"),
+      width: 130,
+      cell: (d) => <Time iso={d.sent_at ?? d.created_at} relative />,
+    },
+    {
+      id: "channel",
+      header: t("notify.col.channel"),
+      width: 150,
+      cell: (d) => channelName(d.channel_id),
+    },
+    { id: "event", header: t("notify.col.event"), width: 110, cell: (d) => d.label ?? "–" },
+    {
+      id: "camera",
+      header: t("common.camera"),
+      width: 150,
+      cell: (d) => d.camera_id && <Tag>{cameraName(d.camera_id)}</Tag>,
+    },
+    {
+      id: "trigger",
+      header: t("notify.col.when"),
+      width: 140,
+      cell: (d) => t(TRIGGER_LABELS[d.kind]),
+    },
+    {
+      id: "state",
+      header: t("col.state"),
+      width: 110,
+      cell: (d) => (
+        <Tag kind={statusKind[d.status]} title={d.error ?? undefined}>
+          {t(`notify.status.${d.status}` as MessageKey)}
+        </Tag>
+      ),
+    },
+  ];
   return (
     <>
       <Text weight="semibold" className="section-sub">
         {t("notify.recent")}
       </Text>
-      <Table className="table responsive" aria-label={t("notify.recent")}>
-        <TableHeader>
-          <TableRow>
-            <TableHeaderCell>{t("notify.col.time")}</TableHeaderCell>
-            <TableHeaderCell>{t("notify.col.channel")}</TableHeaderCell>
-            <TableHeaderCell>{t("notify.col.event")}</TableHeaderCell>
-            <TableHeaderCell>{t("col.state")}</TableHeaderCell>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.map((d) => (
-            <TableRow key={d.id}>
-              <TableCell data-label={t("notify.col.time")}>
-                <Time iso={d.sent_at ?? d.created_at} relative />
-              </TableCell>
-              <TableCell data-label={t("notify.col.channel")}>
-                {channelName(d.channel_id)}
-              </TableCell>
-              <TableCell data-label={t("notify.col.event")}>
-                {d.label ?? "–"} – {cameraName(d.camera_id)} –{" "}
-                <span className="muted">{t(TRIGGER_LABELS[d.kind])}</span>
-              </TableCell>
-              <TableCell data-label={t("col.state")}>
-                <Tag kind={statusKind[d.status]} title={d.error ?? undefined}>
-                  {t(`notify.status.${d.status}` as MessageKey)}
-                </Tag>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <DataTable
+        ariaLabel={t("notify.recent")}
+        items={data}
+        getRowId={(d) => d.id}
+        columns={columns}
+      />
     </>
   );
 }

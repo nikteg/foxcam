@@ -11,12 +11,6 @@ import {
   MessageBarTitle,
   Select,
   Subtitle2,
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableHeaderCell,
-  TableRow,
   Text,
 } from "@fluentui/react-components";
 import {
@@ -29,11 +23,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 
-import { api, type ApiKeyScope } from "../api";
+import { api, type ApiKey, type ApiKeyScope } from "../api";
 import { AUTH_KEY, useMe } from "../auth";
 import { CopyBlock } from "../components/AddWorkerDialog";
 import { AppearanceSection } from "../components/AppearanceSection";
 import { ConfirmPopover } from "../components/ConfirmPopover";
+import { DataTable, type Column } from "../components/DataTable";
 import {
   Dialog,
   DialogActions,
@@ -300,6 +295,68 @@ function ApiKeys() {
     mutationFn: api.revokeApiKey,
     onSuccess: () => client.invalidateQueries({ queryKey: ["api-keys"] }),
   });
+  const columns: Column<ApiKey>[] = [
+    {
+      id: "name",
+      header: t("apiKeys.name"),
+      width: 160,
+      cell: (k) => <Text weight="semibold">{k.name}</Text>,
+    },
+    {
+      id: "scopes",
+      header: t("apiKeys.colScopes"),
+      width: 180,
+      cell: (k) => (
+        <span className="chips">
+          {k.scopes.map((sc) => (
+            <Tag key={sc} kind={sc === "admin" ? "target" : undefined}>
+              {t(`apiKeys.scope.${sc}`)}
+            </Tag>
+          ))}
+        </span>
+      ),
+    },
+    { id: "key", header: t("apiKeys.colKey"), width: 120, cell: (k) => <code>{k.prefix}…</code> },
+    {
+      id: "used",
+      header: t("apiKeys.colLastUsed"),
+      width: 140,
+      cell: (k) =>
+        k.last_used_at ? (
+          <Time iso={k.last_used_at} relative />
+        ) : (
+          <span className="muted">{t("apiKeys.never")}</span>
+        ),
+    },
+    {
+      id: "expiry",
+      header: t("apiKeys.expiry"),
+      width: 180,
+      cell: (k) =>
+        k.expires_at ? (
+          <Time iso={k.expires_at} />
+        ) : (
+          <span className="muted">{t("apiKeys.noExpiry")}</span>
+        ),
+    },
+    {
+      id: "actions",
+      header: "",
+      width: 120,
+      phone: "nolabel",
+      cell: (k) => (
+        <ConfirmPopover
+          title={t("apiKeys.revokeConfirm", { name: k.name })}
+          confirmLabel={t("apiKeys.revoke")}
+          onConfirm={() => revoke.mutateAsync(k.id)}
+        >
+          <Button size="small" icon={<Delete20Regular />}>
+            {t("apiKeys.revoke")}
+          </Button>
+        </ConfirmPopover>
+      ),
+    },
+  ];
   return (
     <>
       <Subtitle2 as="h2" className="section">
@@ -310,64 +367,12 @@ function ApiKeys() {
       </p>
       {keys.data?.length === 0 && <Empty>{t("apiKeys.none")}</Empty>}
       {!!keys.data?.length && (
-        <Table className="table responsive" aria-label={t("apiKeys.title")}>
-          <TableHeader>
-            <TableRow>
-              <TableHeaderCell>{t("apiKeys.name")}</TableHeaderCell>
-              <TableHeaderCell>{t("apiKeys.colScopes")}</TableHeaderCell>
-              <TableHeaderCell>{t("apiKeys.colKey")}</TableHeaderCell>
-              <TableHeaderCell>{t("apiKeys.colLastUsed")}</TableHeaderCell>
-              <TableHeaderCell>{t("apiKeys.expiry")}</TableHeaderCell>
-              <TableHeaderCell aria-label={t("col.actions")} className="col-actions" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {keys.data.map((k) => (
-              <TableRow key={k.id}>
-                <TableCell data-label={t("apiKeys.name")}>
-                  <Text weight="semibold">{k.name}</Text>
-                </TableCell>
-                <TableCell data-label={t("apiKeys.colScopes")}>
-                  <span className="chips">
-                    {k.scopes.map((s) => (
-                      <Tag key={s} kind={s === "admin" ? "target" : undefined}>
-                        {t(`apiKeys.scope.${s}`)}
-                      </Tag>
-                    ))}
-                  </span>
-                </TableCell>
-                <TableCell data-label={t("apiKeys.colKey")}>
-                  <code>{k.prefix}…</code>
-                </TableCell>
-                <TableCell data-label={t("apiKeys.colLastUsed")}>
-                  {k.last_used_at ? (
-                    <Time iso={k.last_used_at} relative />
-                  ) : (
-                    <span className="muted">{t("apiKeys.never")}</span>
-                  )}
-                </TableCell>
-                <TableCell data-label={t("apiKeys.expiry")}>
-                  {k.expires_at ? (
-                    <Time iso={k.expires_at} />
-                  ) : (
-                    <span className="muted">{t("apiKeys.noExpiry")}</span>
-                  )}
-                </TableCell>
-                <TableCell className="full">
-                  <ConfirmPopover
-                    title={t("apiKeys.revokeConfirm", { name: k.name })}
-                    confirmLabel={t("apiKeys.revoke")}
-                    onConfirm={() => revoke.mutateAsync(k.id)}
-                  >
-                    <Button size="small" icon={<Delete20Regular />}>
-                      {t("apiKeys.revoke")}
-                    </Button>
-                  </ConfirmPopover>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <DataTable
+          ariaLabel={t("apiKeys.title")}
+          items={keys.data}
+          getRowId={(k) => k.id}
+          columns={columns}
+        />
       )}
       <div className="section-actions">
         <Button icon={<Add20Regular />} onClick={() => setAdding(true)}>

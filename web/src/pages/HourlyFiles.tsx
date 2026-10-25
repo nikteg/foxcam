@@ -53,7 +53,7 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Archi
     id: "camera",
     header: t("common.camera"),
     width: 150,
-    cell: (r) => cameraName(r.camera_id),
+    cell: (r) => <Tag>{cameraName(r.camera_id)}</Tag>,
     compare: byString((r) => cameraName(r.camera_id)),
   },
   {

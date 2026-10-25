@@ -65,11 +65,17 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
         </span>
       )}
       <Facts>
-        <Fact label={t("common.camera")}>{cameraName(e.camera_id)}</Fact>
+        <Fact label={t("common.camera")}>
+          <Tag>{cameraName(e.camera_id)}</Tag>
+        </Fact>
         <Fact label={t("col.time")}>
           <Time iso={e.first_ts} />
         </Fact>
-        {manyProfiles && <Fact label={t("profiles.profile")}>{profileName(e.profile_id)}</Fact>}
+        {manyProfiles && (
+          <Fact label={t("profiles.profile")}>
+            <Tag>{profileName(e.profile_id)}</Tag>
+          </Fact>
+        )}
         <Fact label={t("col.confidence")}>
           <ConfidenceBar value={e.max_confidence} />
         </Fact>

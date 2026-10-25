@@ -501,6 +501,8 @@ div.thumb.placeholder {
 }
 .facts dt {
   color: var(--colorNeutralForeground3);
+  /* Labels are short: one line, the value column takes what is left. */
+  white-space: nowrap;
 }
 .facts dd {
   margin: 0;
@@ -511,9 +513,9 @@ div.thumb.placeholder {
   align-items: center;
   gap: 4px;
 }
-/* In a facts list (aligned on the text baseline) the icon would sit too high: centre the
-   value in its row instead. */
-.facts dd:has(> .light) {
+/* In a facts list (aligned on the text baseline) an icon or bar would sit too high: centre
+   the value in its row instead. */
+.facts dd:has(> .light, > .conf-cell) {
   display: flex;
   align-items: center;
   align-self: center;
@@ -532,32 +534,8 @@ div.thumb.placeholder {
 .data-table-scroll {
   overflow-x: auto;
 }
-/* Size columns to their content (Fluent's default is equal fixed widths). */
-table.table {
-  table-layout: auto;
-}
-.table th,
 .data-table .fui-DataGridHeaderCell {
   white-space: nowrap;
-}
-.table {
-  background: var(--colorNeutralBackground1);
-  border-radius: var(--borderRadiusLarge);
-  overflow: hidden;
-}
-/* Cells that wrap (chips, tags) keep clear of the row borders. */
-.table td.fui-TableCell {
-  padding-top: var(--spacingVerticalS);
-  padding-bottom: var(--spacingVerticalS);
-}
-.table .col-thumb {
-  width: 112px;
-}
-.table .col-actions {
-  width: 100px;
-}
-.table .col-actions.wide {
-  width: auto;
 }
 .nowrap-actions {
   flex-wrap: nowrap;
@@ -570,9 +548,6 @@ table.table {
   border-radius: var(--borderRadiusMedium);
   display: block;
   margin: 4px 0;
-}
-.table tr.target {
-  background: color-mix(in srgb, var(--colorBrandBackground) 12%, transparent);
 }
 .conf-cell {
   display: inline-flex;
@@ -614,6 +589,8 @@ table.table {
   white-space: nowrap;
 }
 .data-table div.dt-cell {
+  /* Cells that wrap (chips, tags) keep clear of the row borders. */
+  padding-block: var(--spacingVerticalS);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -967,108 +944,6 @@ table.table {
   }
   .filters > * {
     flex: 1 1 140px;
-  }
-
-  /* Tables: each row becomes a card with labelled fields. */
-  .table.responsive,
-  .table.responsive tbody {
-    display: block;
-    background: none;
-  }
-  .table.responsive thead {
-    display: none;
-  }
-  .table.responsive tr {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 12px;
-    background: var(--colorNeutralBackground1);
-    border: 1px solid var(--colorNeutralStroke2);
-    border-radius: var(--borderRadiusXLarge);
-    padding: 12px;
-    margin-bottom: 10px;
-    height: auto;
-  }
-  .table.responsive td {
-    display: block;
-    padding: 0;
-    height: auto;
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-  .table.responsive td[data-label]::before {
-    content: attr(data-label);
-    display: block;
-    color: var(--colorNeutralForeground3);
-    font-size: var(--fontSizeBase100);
-  }
-  .table.responsive td.full,
-  .table.responsive td.cell-thumb {
-    grid-column: 1 / -1;
-  }
-  .table.responsive td.hide-sm,
-  .table.responsive td:empty {
-    display: none;
-  }
-  .table.responsive .mini {
-    width: 100%;
-    margin: 0;
-  }
-  .table.responsive tr.target {
-    border-color: var(--colorBrandStroke1);
-  }
-
-  /* Data tables: each row becomes a card with labelled fields. */
-  .data-table .fui-DataGridHeader {
-    display: none;
-  }
-  .data-table,
-  .data-table .fui-DataGridBody {
-    background: none;
-  }
-  .data-table div.dt-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 12px;
-    background: var(--colorNeutralBackground1);
-    border: 1px solid var(--colorNeutralStroke2);
-    border-radius: var(--borderRadiusXLarge);
-    padding: 12px;
-    margin-bottom: 10px;
-  }
-  .data-table div.dt-row.target {
-    border-color: var(--colorBrandStroke1);
-    box-shadow: none;
-  }
-  .data-table div.dt-cell,
-  .data-table div.dt-cell * {
-    white-space: normal;
-  }
-  .data-table div.dt-cell {
-    padding: 0;
-    min-height: 0;
-    overflow-wrap: anywhere;
-    display: block;
-  }
-  .data-table div.dt-cell[data-label]::before {
-    content: attr(data-label);
-    display: block;
-    color: var(--colorNeutralForeground3);
-    font-size: var(--fontSizeBase100);
-  }
-  .data-table div.dt-cell.phone-full,
-  .data-table div.dt-cell.phone-thumb,
-  .data-table div.dt-cell.phone-nolabel {
-    grid-column: 1 / -1;
-  }
-  .data-table div.dt-cell.phone-hide,
-  .data-table div.dt-cell:empty {
-    display: none;
-  }
-  .data-table .phone-thumb .mini {
-    width: 100%;
-    aspect-ratio: 21 / 9;
-    margin: 0;
   }
 
   .mask-options {
@@ -1864,4 +1739,48 @@ h2.panel-heading {
     color: var(--colorNeutralForeground4);
     pointer-events: none;
   }
+}
+
+/* DataTable on phones (components/DataTable.tsx): one card per row, the columns as facts. */
+.dt-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dt-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalM);
+  background: var(--colorNeutralBackground1);
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: var(--borderRadiusXLarge);
+  padding: 12px;
+  min-width: 0;
+}
+.dt-card.clickable {
+  cursor: pointer;
+}
+.dt-card.target {
+  border-color: var(--colorBrandStroke1);
+}
+.dt-card.selected {
+  background: var(--colorNeutralBackground1Selected);
+  border-color: var(--colorNeutralForeground1);
+}
+.dt-card:focus-visible {
+  outline: 2px solid var(--colorStrokeFocus2);
+  outline-offset: 2px;
+}
+.dt-card-thumb .mini {
+  width: 100%;
+  aspect-ratio: 21 / 9;
+  margin: 0;
+}
+/* A column whose cell came out empty (e.g. no error): leave the fact out. */
+.dt-card .facts dd:empty,
+.dt-card .facts dt:has(+ dd:empty) {
+  display: none;
 }

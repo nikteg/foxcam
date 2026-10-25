@@ -47,7 +47,7 @@ const periodColumns = (t: I18n["t"], cameraName: (id: string) => string): Column
     id: "camera",
     header: t("common.camera"),
     width: 150,
-    cell: (r) => cameraName(r.camera),
+    cell: (r) => <Tag>{cameraName(r.camera)}</Tag>,
     compare: byString((r) => cameraName(r.camera)),
   },
   {

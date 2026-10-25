@@ -22,6 +22,7 @@ import {
 
 import { useI18n } from "../i18n";
 import { PHONE, useMediaQuery } from "../useMediaQuery";
+import { Fact, Facts } from "./ui";
 
 export interface Column<T> {
   id: string;
@@ -32,7 +33,8 @@ export interface Column<T> {
   /** Ideal width in px on desktop (columns can be resized by dragging the header edge). */
   width?: number;
   minWidth?: number;
-  /** How the cell behaves in the phone card layout. */
+  /** On phones each row is a card of facts (label: the header). "thumb": the picture on
+   * top; "nolabel": full width under the facts (e.g. buttons); "hide": left out. */
   phone?: "full" | "hide" | "thumb" | "nolabel";
 }
 
@@ -55,8 +57,8 @@ const MAX_FIT = 420;
 type SortState = { sortColumn: string | undefined; sortDirection: "ascending" | "descending" };
 
 /**
- * Fluent DataGrid with sortable, resizable columns on desktop. On phones the same markup
- * is restyled into stacked cards (see `.data-table` in styles.css).
+ * Fluent DataGrid with sortable, resizable columns on desktop. On phones a list of cards,
+ * one per row, with the columns as facts (the same `Facts` as in drawers).
  *
  * Built for long lists: rows are memoized (selecting a row re-renders two rows, not all
  * of them) and rendered a page at a time as the user scrolls. Sorting is done here, over
@@ -164,6 +166,38 @@ export function DataTable<T>({
     // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [more, shown]);
 
+  const showMore = more && (
+    <div ref={sentinel} className="data-table-more">
+      <Button appearance="subtle" onClick={() => setShown((n) => n + PAGE)}>
+        {t("table.showMore", { n: sorted.length - shown })}
+      </Button>
+    </div>
+  );
+
+  if (phone) {
+    return (
+      <ul className="dt-cards" aria-label={ariaLabel}>
+        {visible.map((item) => {
+          const id = getRowId(item);
+          return (
+            <PhoneCard<T>
+              key={id}
+              item={item}
+              columns={columns}
+              className={[rowClassName?.(item), id === selectedId ? "selected" : ""]
+                .filter(Boolean)
+                .join(" ")}
+              selected={id === selectedId}
+              clickable={!!onRowClick}
+              activate={activate}
+            />
+          );
+        })}
+        {showMore && <li>{showMore}</li>}
+      </ul>
+    );
+  }
+
   return (
     // Columns keep a readable minimum width; narrow screens scroll the table sideways.
     <div className="data-table-scroll" ref={box}>
@@ -175,8 +209,7 @@ export function DataTable<T>({
         sortable={columns.some((c) => c.compare)}
         sortState={sort}
         onSortChange={(_, s) => setSort(s as SortState)}
-        // Fixed pixel widths would break the phone card layout.
-        resizableColumns={!phone}
+        resizableColumns
         columnSizingOptions={sizing}
         focusMode="composite"
         aria-label={ariaLabel}
@@ -193,7 +226,6 @@ export function DataTable<T>({
             <Row<T>
               key={rowId}
               item={item}
-              columns={columns}
               className={["dt-row", rowClassName?.(item), rowId === selectedId ? "selected" : ""]
                 .filter(Boolean)
                 .join(" ")}
@@ -203,26 +235,19 @@ export function DataTable<T>({
           )}
         </DataGridBody>
       </DataGrid>
-      {more && (
-        <div ref={sentinel} className="data-table-more">
-          <Button appearance="subtle" onClick={() => setShown((n) => n + PAGE)}>
-            {t("table.showMore", { n: sorted.length - shown })}
-          </Button>
-        </div>
-      )}
+      {showMore}
     </div>
   );
 }
 
 interface RowProps<T> {
   item: T;
-  columns: Column<T>[];
   className: string;
   selected: boolean | undefined;
   activate: (e: MouseEvent | KeyboardEvent, item: T) => void;
 }
 
-function RowImpl<T>({ item, columns, className, selected, activate }: RowProps<T>) {
+function RowImpl<T>({ item, className, selected, activate }: RowProps<T>) {
   return (
     <DataGridRow<T>
       className={className}
@@ -231,14 +256,8 @@ function RowImpl<T>({ item, columns, className, selected, activate }: RowProps<T
       aria-selected={selected}
     >
       {({ renderCell, columnId }) => {
-        const col = columns.find((c) => c.id === String(columnId));
-        const mode = col?.phone;
         return (
-          <DataGridCell
-            className={`dt-cell ${mode ? `phone-${mode}` : ""}`}
-            data-col={String(columnId)}
-            data-label={mode === "nolabel" || mode === "thumb" ? undefined : col?.header}
-          >
+          <DataGridCell className="dt-cell" data-col={String(columnId)}>
             {renderCell(item)}
           </DataGridCell>
         );
@@ -250,6 +269,71 @@ function RowImpl<T>({ item, columns, className, selected, activate }: RowProps<T
 // Re-renders only when its item (react-query keeps unchanged ones), columns or selection
 // change.
 const Row = memo(RowImpl) as typeof RowImpl;
+
+const empty = (v: ReactNode) => v === null || v === undefined || v === false || v === "";
+
+interface PhoneCardProps<T> {
+  item: T;
+  columns: Column<T>[];
+  className: string;
+  selected: boolean;
+  clickable: boolean;
+  activate: (e: MouseEvent | KeyboardEvent, item: T) => void;
+}
+
+/** A row on phones: picture, then the columns as facts, then full-width extras. */
+function PhoneCardImpl<T>({
+  item,
+  columns,
+  className,
+  selected,
+  clickable,
+  activate,
+}: PhoneCardProps<T>) {
+  const values = columns
+    .filter((c) => c.phone !== "hide")
+    .map((c) => ({ c, v: c.cell(item) }))
+    .filter(({ v }) => !empty(v));
+  return (
+    // Opened like a table row: a tap, or Enter when focused (the row's own buttons and
+    // links keep working, see `activate`).
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+    <li
+      className={`dt-card ${clickable ? "clickable" : ""} ${className}`}
+      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={clickable ? 0 : undefined}
+      aria-current={selected || undefined}
+      onClick={(e) => activate(e, item)}
+      onKeyDown={(e) => e.key === "Enter" && activate(e, item)}
+    >
+      {values
+        .filter(({ c }) => c.phone === "thumb")
+        .map(({ c, v }) => (
+          <div key={c.id} className="dt-card-thumb">
+            {v}
+          </div>
+        ))}
+      <Facts>
+        {values
+          .filter(({ c }) => !c.phone || c.phone === "full")
+          .map(({ c, v }) => (
+            <Fact key={c.id} label={c.header}>
+              {v}
+            </Fact>
+          ))}
+      </Facts>
+      {values
+        .filter(({ c }) => c.phone === "nolabel")
+        .map(({ c, v }) => (
+          <div key={c.id} className="dt-card-extra">
+            {v}
+          </div>
+        ))}
+    </li>
+  );
+}
+
+const PhoneCard = memo(PhoneCardImpl) as typeof PhoneCardImpl;
 
 export const byString =
   <T,>(get: (item: T) => string | null | undefined) =>

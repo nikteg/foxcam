@@ -53,7 +53,7 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detec
     id: "camera",
     header: t("common.camera"),
     width: 150,
-    cell: (d) => cameraName(d.camera_id),
+    cell: (d) => <Tag>{cameraName(d.camera_id)}</Tag>,
     compare: byString((d) => cameraName(d.camera_id)),
   },
   {
@@ -257,7 +257,9 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
         <Fact label={t("col.time")}>
           <Time iso={d.ts} />
         </Fact>
-        <Fact label={t("common.camera")}>{cameraName(d.camera_id)}</Fact>
+        <Fact label={t("common.camera")}>
+          <Tag>{cameraName(d.camera_id)}</Tag>
+        </Fact>
         <Fact label={t("col.confidence")}>
           <ConfidenceBar value={d.confidence} />
         </Fact>

@@ -216,14 +216,14 @@ function makeJobColumns(
       id: "camera",
       header: t("common.camera"),
       width: 150,
-      cell: (j) => cameraName(j.camera_id),
+      cell: (j) => <Tag>{cameraName(j.camera_id)}</Tag>,
       compare: byString((j) => cameraName(j.camera_id)),
     },
     {
       id: "profile",
       header: t("profiles.profile"),
       width: 110,
-      cell: (j) => profileName(j.profile_id),
+      cell: (j) => (j.profile_id ? <Tag>{profileName(j.profile_id)}</Tag> : "–"),
       compare: byString((j) => j.profile_id),
     },
     {

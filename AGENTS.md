@@ -50,8 +50,10 @@ iPad and desktop, in light and dark theme, and as an iOS home screen app.
 - A page's add buttons (Add camera, Add profile, Add worker, Add channel, New API key…)
   sit in the same place on every page, under the tabs, never squeezed against the content
   next to them (`section-actions`, or spacing like it).
-- Lists of things with several columns are tables (`Table className="table responsive"`,
-  `data-label` on cells so phones get labelled rows), not stacks of cards.
+- Lists of things with several columns are a `DataTable` (`components/DataTable.tsx`): a
+  table on desktop, and on phones one card per row with the columns as `Facts` (the
+  column's `phone` option puts a picture on top or buttons under the facts). No hand-made
+  tables, and no CSS that restyles table cells to look like facts.
 - Label/value facts use the shared `Fact` component; groups of values (cameras, labels,
   tags) are `Tag`s in a `chips` wrapper, not comma-separated text.
 - Do a layout pass on every change: no values wrapped mid-word, no cropped tags, even

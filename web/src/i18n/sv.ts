@@ -475,6 +475,7 @@ export const sv: Record<MessageKey, string> = {
   "notify.recent": "Senaste aviseringar",
   "notify.col.time": "Tid",
   "notify.col.channel": "Kanal",
+  "notify.col.when": "Skickad för",
   "notify.col.event": "Händelse",
   "notify.status.sent": "skickad",
   "notify.status.failed": "misslyckad",
