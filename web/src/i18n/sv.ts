@@ -10,6 +10,7 @@ export const sv: Record<MessageKey, string> = {
   "nav.recordings": "Inspelningar",
   "nav.recordingsShort": "Filer",
   "nav.queue": "Jobb",
+  "nav.badgeServer": "{n} {n:inspelning|inspelningar} väntar på servern",
   "nav.queueShort": "Jobb",
   "nav.cameras": "Kameror",
   "nav.settings": "Inställningar",
@@ -302,10 +303,11 @@ export const sv: Record<MessageKey, string> = {
   "queue.noWorkers":
     "Ingen arbetare har anslutit än. Använd Lägg till arbetare för att få installationskommandot.",
   "queue.latestJobs": "Senaste jobben",
-  "queue.queueTab": "Kö",
+  "queue.queueTab": "Detektering",
+  "queue.workersTab": "Detekteringsarbetare",
   "prep.tab": "Förberedelse",
   "prep.intro":
-    "Innan en inspelning får detekteringsjobb förbereder servern den: en censurerad kopia till workers, rörelse och miniatyrer. Inspelningar som väntar här har inga jobb än, så de syns inte i kön. De nyaste går först.",
+    "Innan en inspelning får detekteringsjobb förbereder servern den: en censurerad kopia till arbetarna, rörelse och miniatyrer. Inspelningar som väntar här har inga jobb än, så de syns inte i kön. De nyaste går först.",
   "prep.waiting": "Väntar",
   "prep.preparing": "Förbereds nu",
   "prep.concurrencyHint": "Flest samtidigt (Inställningar)",

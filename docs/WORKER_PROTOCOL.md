@@ -9,7 +9,7 @@ All timestamps are UTC (ISO 8601). Interactive API docs: `http://<server>:8000/d
 ## Authentication
 
 Every worker request must send a token: one per worker, created in the web UI under
-**Jobs → Workers → Add worker** or with `foxcam worker-token <name>`, or the shared
+**Jobs → Detection workers → Add worker** or with `foxcam worker-token <name>`, or the shared
 `worker_token` from `config.yaml` / `FOXCAM_WORKER_TOKEN`:
 
 ```
@@ -58,7 +58,7 @@ every lease; leases without it keep the stored list. Workers that send only `lab
 those stored as their vocabulary. Open-vocabulary workers send neither: they can report
 anything (tag `open-vocabulary`).
 
-`info` is free-form and shown in the web UI under Jobs → Workers. `tags` are capabilities:
+`info` is free-form and shown in the web UI under Jobs → Detection workers. `tags` are capabilities:
 you only get jobs of [detection profile](ARCHITECTURE.md#detection-profiles) detectors
 whose tags (the profile's `requires` plus the detector's own) you all have (tags on the
 access token are added by the server). Each segment has one job per profile and detector,

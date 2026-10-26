@@ -141,7 +141,7 @@ def check_server(server: str, token: str | None) -> Check:
         return Check("server", FAIL, f"{server}: {e}", hint)
     if r.status_code == 401:
         return Check("server", FAIL, f"{server}: {r.json().get('detail', 'unauthorized')}",
-                     "Create a token under Worker queue → Add worker and pass --token.")
+                     "Create a token under Jobs → Detection workers → Add worker and pass --token.")
     if r.status_code != 200:
         return Check("server", FAIL, f"{server}: HTTP {r.status_code}",
                      "Is this the foxcam server URL?")

@@ -77,7 +77,7 @@ An admin's key without `admin` still sees every camera, but counts as a regular 
 everywhere else. Keys can also **expire**. Keys can't reach `/api/auth/`: no making more keys,
 changing the password or signing in. Only a SHA-256 of each key is stored, and the key
 itself is shown once; revoke it on the Account page. Workers use their own tokens
-(`msw_…`, Jobs → Workers → Add worker), not API keys.
+(`msw_…`, Jobs → Detection workers → Add worker), not API keys.
 
 ## Download links
 

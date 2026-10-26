@@ -81,7 +81,7 @@ export function Queue() {
   );
   const q = queue.data;
   const avgMs = q?.stats.avg_processing_ms_last_hour;
-  const tab = useSubPage("/jobs", ["queue", "preprocessing", "workers", "archiving"] as const);
+  const tab = useSubPage("/jobs", ["queue", "workers", "preprocessing", "archiving"] as const);
   const [addingWorker, setAddingWorker] = useState(false);
   const segmentId = Number(segment) || null;
 
@@ -96,10 +96,11 @@ export function Queue() {
             base="/jobs"
             current={tab}
             tabs={[
-              { id: "queue", label: t("queue.queueTab") },
-              { id: "preprocessing", label: t("prep.tab") },
-              { id: "workers", label: t("queue.workers") },
-              { id: "archiving", label: t("compaction.title") },
+              // Detection (the queue and the workers that empty it), then the server's own work.
+              { id: "queue", label: t("queue.queueTab"), group: "detection" },
+              { id: "workers", label: t("queue.workersTab"), group: "detection" },
+              { id: "preprocessing", label: t("prep.tab"), group: "server" },
+              { id: "archiving", label: t("compaction.title"), group: "server" },
             ]}
           />
 

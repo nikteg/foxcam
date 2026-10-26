@@ -210,7 +210,7 @@ or `foxcam motion-backfill --days 7`); that changes no detections or events.
 | `job` | Work item per segment, profile and detector (with the worker's raw result, ≤ 256 kB, for debugging): state (`pending/leased/done/failed/dead`, `skipped` for cascade detectors that did not run and profiles that skip recordings without motion), lease token and expiry, attempts, model, timing. |
 | `detection` | Worker result: profile, detector, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, standing still, event. |
 | `event` | Merged sighting of one label for one profile: time range, best detection, detectors that saw it and how many (`agreement`), confirmed, quiet (rebuilt, notifies nobody), clip and thumbnail paths. |
-| `worker` | Last-seen info, tags and reported vocabulary per worker id (Jobs → Workers). |
+| `worker` | Last-seen info, tags and reported vocabulary per worker id (Jobs → Detection workers). |
 | `worker_token` | Worker access tokens (hashed) with their tags. |
 | `detection_profile` | Detection profiles added in the web UI. |
 | `notification_channel` | Notification channels added in the web UI. |

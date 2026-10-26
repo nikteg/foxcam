@@ -1,5 +1,6 @@
-// Numbers on the Events and Jobs nav buttons: events since you last opened Events, and
-// jobs waiting for or running on a worker (admins).
+// Numbers on the Events and Jobs nav buttons: events since you last opened Events; on Jobs
+// (admins) two at once: detection jobs waiting for or running on a worker, and recordings
+// waiting for the server to prepare them (they have no jobs yet).
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
@@ -16,7 +17,13 @@ function seenAt(): number {
   return now;
 }
 
-export function useNavBadges(isAdmin: boolean, onEvents: boolean): Record<string, number> {
+/** One number on a nav button; ``server``: the server's own backlog (a second, neutral badge). */
+export interface NavBadge {
+  count: number;
+  kind: "main" | "server";
+}
+
+export function useNavBadges(isAdmin: boolean, onEvents: boolean): Record<string, NavBadge[]> {
   const events = useQuery({
     queryKey: ["events", "nav"],
     queryFn: () => api.events({ limit: 50, hide_wrong: true }),
@@ -41,8 +48,15 @@ export function useNavBadges(isAdmin: boolean, onEvents: boolean): Record<string
     ? 0
     : (events.data ?? []).filter((e) => Date.parse(e.first_ts) > seen).length;
   const counts = status.data?.queue.counts;
+  const preparing = status.data?.segments.new ?? 0;
   return {
-    "/events": newEvents,
-    "/jobs": isAdmin && counts ? (counts.pending ?? 0) + (counts.leased ?? 0) : 0,
+    "/events": [{ count: newEvents, kind: "main" }],
+    "/jobs":
+      isAdmin && counts
+        ? [
+            { count: (counts.pending ?? 0) + (counts.leased ?? 0), kind: "main" },
+            { count: preparing, kind: "server" },
+          ]
+        : [],
   };
 }

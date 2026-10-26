@@ -31,7 +31,7 @@ import { useLayoutEffect, useRef, useState, type ReactElement } from "react";
 import { Outlet, useLocation, useNavigate, useNavigationType } from "react-router";
 
 import { api } from "./api";
-import { useNavBadges } from "./navBadges";
+import { useNavBadges, type NavBadge } from "./navBadges";
 import { useAuth, useAuthChanged, useUnauthorizedRedirect } from "./auth";
 import { RouterLink, usePageTitle } from "./components/ui";
 import { AuthScreen } from "./pages/Login";
@@ -86,13 +86,26 @@ function currentTab(pathname: string): string {
 }
 
 /** Signed-in user: account page and sign out. */
-/** A nav icon with a number on it (new events, jobs in the queue); none at 0. */
-function NavIcon({ icon, count }: { icon: ReactElement; count: number }) {
+/** A nav icon with numbers on it (new events; detection jobs, and recordings waiting for
+ *  the server in the other corner, neutral); none at 0. */
+function NavIcon({ icon, badges }: { icon: ReactElement; badges: NavBadge[] }) {
+  const { t } = useI18n();
   return (
     <span className="nav-icon">
       {icon}
-      {count > 0 && (
-        <CounterBadge className="nav-badge" count={count} overflowCount={99} size="small" />
+      {badges.map(
+        (b) =>
+          b.count > 0 && (
+            <CounterBadge
+              key={b.kind}
+              className={`nav-badge nav-badge-${b.kind}`}
+              count={b.count}
+              overflowCount={99}
+              size="small"
+              color={b.kind === "server" ? "important" : "brand"}
+              aria-label={b.kind === "server" ? t("nav.badgeServer", { n: b.count }) : undefined}
+            />
+          ),
       )}
     </span>
   );
@@ -184,7 +197,7 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
   const tabs = TABS.filter((tab) => isAdmin || !tab.admin);
   const extraTabs = EXTRA_TABS.filter((tab) => isAdmin || !tab.admin);
   const badges = useNavBadges(isAdmin, selected === "/events");
-  const icon = (tab: NavItem) => <NavIcon icon={tab.icon} count={badges[tab.to] ?? 0} />;
+  const icon = (tab: NavItem) => <NavIcon icon={tab.icon} badges={badges[tab.to] ?? []} />;
   // Pressing the open section scrolls back up, like a phone app's tab bar.
   const go = (to: string) => {
     if (to === pathname) window.scrollTo({ top: 0, behavior: "smooth" });

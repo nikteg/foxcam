@@ -9,6 +9,7 @@ export const en = {
   "nav.recordings": "Recordings",
   "nav.recordingsShort": "Files",
   "nav.queue": "Jobs",
+  "nav.badgeServer": "{n} {n:recording|recordings} waiting for the server",
   "nav.queueShort": "Jobs",
   "nav.cameras": "Cameras",
   "nav.settings": "Settings",
@@ -297,7 +298,8 @@ export const en = {
   "queue.currentJob": "Current job",
   "queue.noWorkers": "No worker has connected yet. Use Add worker to get the setup command.",
   "queue.latestJobs": "Latest jobs",
-  "queue.queueTab": "Queue",
+  "queue.queueTab": "Detection",
+  "queue.workersTab": "Detection workers",
   "prep.tab": "Preparing",
   "prep.intro":
     "Before a recording gets detection jobs, the server prepares it: a censored copy for the workers, motion and thumbnails. Recordings waiting here have no jobs yet, so they do not show in the queue. The newest go first.",

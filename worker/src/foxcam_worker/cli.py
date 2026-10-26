@@ -192,7 +192,7 @@ def main() -> None:
                 if e.response.status_code in (401, 403):
                     detail = _detail(e.response)
                     hint = "" if "Add worker" in detail else (
-                        "; create one under Worker queue → Add worker")
+                        "; create one under Jobs → Detection workers → Add worker")
                     raise SystemExit(f"server rejected this worker: {detail}. Pass a valid "
                                      f"--token (or FOXCAM_WORKER_TOKEN){hint}.") from None
                 log.warning("server error (%s); retrying in %.0fs", e, backoff)

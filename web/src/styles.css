@@ -297,6 +297,12 @@ h2.section > .section-link {
   left: 14px;
   pointer-events: none;
 }
+/* Jobs: the recordings waiting for the server, in the other top corner (below the icon the
+   number would cover the tab's label). */
+.nav-badge-server.nav-badge-server {
+  left: auto;
+  right: 14px;
+}
 /* Top bar: a refresh button whenever the bottom tab bar shows (below 1280 px, as in the
    media query further down); theme and language except on phones. Doubled class: wins
    over Fluent's own display on buttons. */
@@ -1420,6 +1426,15 @@ Fluent's text styles would otherwise reset the margins. */
 .page-tabs > .fui-Tab,
 .drawer-column > .fui-TabList > .fui-Tab {
   flex-shrink: 0;
+}
+/* Between groups of sub-pages (Jobs: detection | the server's own work). */
+.page-tabs-divider {
+  flex-shrink: 0;
+  align-self: center;
+  width: 1px;
+  height: 20px;
+  margin-inline: var(--spacingHorizontalS);
+  background: var(--colorNeutralStroke1);
 }
 
 /* Recordings player (components/VideoPlayer.tsx, Vidstack): the app's brand colour. */

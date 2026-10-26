@@ -36,6 +36,7 @@ import {
   WeatherSunny20Regular,
 } from "@fluentui/react-icons";
 import {
+  Fragment,
   useEffect,
   useId,
   useRef,
@@ -587,7 +588,8 @@ export function useSubPage<T extends string>(base: string, ids: readonly T[]): T
 }
 
 /** Tabs that are sub-pages with their own URL (links and the back button work, and
- * nothing depends on scrolling to an anchor). The first tab is the base path. */
+ * nothing depends on scrolling to an anchor). The first tab is the base path. Tabs with
+ * a ``group`` are set apart from the ones before them by a divider. */
 export function PageTabs<T extends string>({
   base,
   current,
@@ -595,7 +597,7 @@ export function PageTabs<T extends string>({
 }: {
   base: string;
   current: T;
-  tabs: { id: T; label: string }[];
+  tabs: { id: T; label: string; group?: string }[];
 }) {
   const navigate = useNavigate();
   // Scrolls sideways on narrow screens: keep the open tab in view.
@@ -622,10 +624,13 @@ export function PageTabs<T extends string>({
         void navigate(d.value === tabs[0]?.id ? base : `${base}/${String(d.value)}`)
       }
     >
-      {tabs.map((tab) => (
-        <Tab key={tab.id} value={tab.id}>
-          {tab.label}
-        </Tab>
+      {tabs.map((tab, i) => (
+        <Fragment key={tab.id}>
+          {i > 0 && tab.group !== tabs[i - 1]!.group && (
+            <span className="page-tabs-divider" aria-hidden />
+          )}
+          <Tab value={tab.id}>{tab.label}</Tab>
+        </Fragment>
       ))}
     </TabList>
   );
