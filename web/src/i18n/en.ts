@@ -165,6 +165,42 @@ export const en = {
     "Every object the workers reported. Select one to see the frame and video; mark it correct or wrong to build a training set (Export training set).",
   "detections.exportJson": "Export training set",
   "detections.labelPlaceholder": "Label, e.g. fox",
+  "danger.title": "Danger zone",
+  "danger.intro":
+    "Each of these deletes one kind of data for good and keeps the rest, like foxcam reset on the server. The server pauses its own background work meanwhile.",
+  "danger.confirmBody": "This cannot be undone.",
+  "danger.done": "Done.",
+  "danger.downloadMarks": "Download marks first",
+  "danger.queue": "Clear the detection queue",
+  "danger.queueHint":
+    "Jobs waiting for or running on a worker. Their recordings count as analysed.",
+  "danger.queueConfirm": "Clear the detection queue?",
+  "danger.queueButton": "Clear queue",
+  "danger.detections": "Delete all detections and analyse again",
+  "danger.detectionsHint":
+    "Detections, events and their correct/wrong marks. Recordings still stored are analysed again with the current profiles.",
+  "danger.detectionsConfirm": "Delete all detections and events?",
+  "danger.detectionsButton": "Delete detections",
+  "danger.recordings": "Delete all recordings",
+  "danger.recordingsHint":
+    "Recordings, archive files, detections, events and marks: a clean start. Cameras, masks, profiles, workers and settings stay. Stop the archiving process first.",
+  "danger.recordingsConfirm": "Delete all recordings and what was found in them?",
+  "danger.recordingsButton": "Delete recordings",
+  "danger.workers": "Remove all workers",
+  "danger.workersHint":
+    "Workers and their access tokens. Each worker needs a new token to connect again.",
+  "danger.workersConfirm": "Remove all workers and tokens?",
+  "danger.workersButton": "Remove workers",
+  "danger.profiles": "Remove detection profiles",
+  "danger.profilesHint":
+    "Profiles added here (not the ones in config.yaml), and each camera's choice of profiles.",
+  "danger.profilesConfirm": "Remove the profiles added here?",
+  "danger.profilesButton": "Remove profiles",
+  "danger.cameras": "Remove cameras and camera settings",
+  "danger.camerasHint":
+    "Cameras added here (not the ones in config.yaml), every camera's masks, private flag and profile choice, and camera shares.",
+  "danger.camerasConfirm": "Remove the cameras added here and all camera settings?",
+  "danger.camerasButton": "Remove cameras",
   "maintenance.title": "Maintenance",
   "maintenance.rebuild": "Events",
   "maintenance.rebuildHint":

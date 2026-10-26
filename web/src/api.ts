@@ -493,6 +493,15 @@ export interface Job {
   processing_ms: number | null;
 }
 
+/** What Settings → Danger zone can delete (server: api.DangerScope). */
+export type DangerScope =
+  | "recordings"
+  | "detections"
+  | "queue"
+  | "workers"
+  | "profiles"
+  | "cameras";
+
 /** A recording waiting for (or in) preprocessing on the server. */
 export interface PreprocessingSegment {
   id: number;
@@ -868,6 +877,9 @@ export const api = {
       "/api/segments/reanalyse",
       body,
     ),
+  /** Settings → Danger zone: delete one kind of data, keep the rest (admins). */
+  dangerReset: (scope: DangerScope) =>
+    request<{ status: string; message: string }>("POST", `/api/admin/reset/${scope}`),
   /** Every event again from the detections (admins); rebuilt events notify nobody. */
   rebuildEvents: () =>
     request<{ removed: number; created: number; still: number }>(

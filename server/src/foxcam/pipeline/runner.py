@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Callable
+import threading
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 
 from .. import notify, profiles
 from ..config import Settings
@@ -13,10 +15,58 @@ from . import events, preprocess, queue, retention, scanner, uploader
 log = logging.getLogger(__name__)
 
 
+class Gate:
+    """The background loops' work runs inside ``work()``. ``exclusive()`` (a reset from
+    Settings → Danger zone) holds new work back and waits until none runs, so data is not
+    deleted while the pipeline writes it."""
+
+    def __init__(self) -> None:
+        self._cond = threading.Condition()
+        self._busy = 0
+        self._closed = False
+
+    @contextmanager
+    def work(self) -> Iterator[None]:
+        with self._cond:
+            self._cond.wait_for(lambda: not self._closed)
+            self._busy += 1
+        try:
+            yield
+        finally:
+            with self._cond:
+                self._busy -= 1
+                self._cond.notify_all()
+
+    @contextmanager
+    def exclusive(self, timeout: float = 120) -> Iterator[None]:
+        with self._cond:
+            if not self._cond.wait_for(lambda: not self._closed, timeout):
+                raise TimeoutError("another reset is running")
+            self._closed = True
+            if not self._cond.wait_for(lambda: self._busy == 0, timeout):
+                self._closed = False
+                self._cond.notify_all()
+                raise TimeoutError("the background work did not finish in time")
+        try:
+            yield
+        finally:
+            with self._cond:
+                self._closed = False
+                self._cond.notify_all()
+
+
+gate = Gate()
+
+
+def _gated(fn: Callable[..., object], *args: object) -> object:
+    with gate.work():
+        return fn(*args)
+
+
 async def _loop(name: str, interval: float, fn: Callable[[], object]) -> None:
     while True:
         try:
-            await asyncio.to_thread(fn)
+            await asyncio.to_thread(_gated, fn)
         except Exception:
             log.exception("background task %s failed", name)
         await asyncio.sleep(interval)
@@ -29,7 +79,7 @@ async def _preprocess_loop(settings: Settings) -> None:
 
     async def one(seg_id: int) -> None:
         try:
-            await asyncio.to_thread(preprocess.preprocess_segment, settings, seg_id)
+            await asyncio.to_thread(_gated, preprocess.preprocess_segment, settings, seg_id)
         finally:
             in_flight.discard(seg_id)
 

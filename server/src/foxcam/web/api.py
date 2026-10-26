@@ -23,6 +23,7 @@ from .. import (
     mediamtx_auth,
     model_stats,
     recording,
+    reset,
     runtime_settings,
     sprites,
 )
@@ -31,7 +32,7 @@ from ..config import Settings
 from ..db import session_scope
 from ..mediamtx import MediaMtx
 from ..models import Archive, CameraRole, Detection, Event, Segment, utcnow
-from ..pipeline import compaction, motion_report, preprocess, queue, uploader
+from ..pipeline import compaction, motion_report, preprocess, queue, runner, uploader
 from ..pipeline.events import rebuild_events as rebuild_all_events
 from ..pipeline.reanalyse import ReanalyseError, reanalyse_segment
 from ..storage import StorageError, boto3_available, get_storage
@@ -379,6 +380,28 @@ def reanalyse_range(body: ReanalyseRange, settings: Settings = Depends(settings_
         except ReanalyseError:
             skipped += 1
     return {"queued": queued, "skipped": skipped, "detections_removed": removed}
+
+
+# Settings → Danger zone: the `foxcam reset` scopes that make sense from the web (not
+# "users": that would lock everyone out).
+DangerScope = Literal["recordings", "detections", "queue", "workers", "profiles", "cameras"]
+
+
+@router.post("/admin/reset/{scope}", dependencies=[Depends(require_admin)])
+def danger_reset(scope: DangerScope, settings: Settings = Depends(settings_dep)) -> dict[str, str]:
+    """Delete one kind of data, keep the rest (like `foxcam reset`). The server's background
+    work is paused meanwhile; recordings are refused while the archiving process runs (it
+    reads and writes them on its own)."""
+    if scope == "recordings" and compaction.status(settings)["running"]:
+        raise HTTPException(409, "the archiving process is running: stop it (foxcam compact) "
+                                 "first, or it may archive files being deleted")
+    try:
+        with runner.gate.exclusive():
+            message = reset.SCOPES[scope](settings)
+    except TimeoutError as e:
+        raise HTTPException(409, f"the server is busy ({e}); try again") from e
+    log.warning("reset %s from the web: %s", scope, message)
+    return {"status": "ok", "message": message}
 
 
 @router.post("/admin/rebuild-events", dependencies=[Depends(require_admin)])

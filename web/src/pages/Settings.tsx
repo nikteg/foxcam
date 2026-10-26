@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import { useIsAdmin, useMe } from "../auth";
 import { AppearanceSection } from "../components/AppearanceSection";
+import { DangerZoneSection } from "../components/DangerZoneSection";
 import { MaintenanceSection } from "../components/MaintenanceSection";
 import { Notifications } from "../components/Notifications";
 import {
@@ -34,7 +35,8 @@ type SubPage =
   | "users"
   | "notifications"
   | "storage"
-  | "configuration";
+  | "configuration"
+  | "danger";
 
 // The tunables on each tab (server: runtime_settings.EDITABLE).
 const GENERAL: SettingsGroup[] = [
@@ -170,6 +172,7 @@ export function Settings() {
     "notifications",
     "storage",
     "configuration",
+    "danger",
   ];
   const tab = useSubPage("/settings", ids);
   const label: Record<SubPage, string> = {
@@ -180,6 +183,7 @@ export function Settings() {
     notifications: t("settings.notifications"),
     storage: t("settings.storage"),
     configuration: t("settings.configuration"),
+    danger: t("danger.title"),
   };
 
   if (!isAdmin) return <Navigate to="/" replace />;
@@ -221,6 +225,7 @@ export function Settings() {
       {tab === "users" && <UsersSection />}
       {tab === "notifications" && <Notifications />}
       {tab === "storage" && <StorageCard />}
+      {tab === "danger" && <DangerZoneSection />}
       {tab === "configuration" && (
         <>
           <InfoBanner id="configuration">

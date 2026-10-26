@@ -302,3 +302,41 @@ def test_status_has_workers_and_preparation_for_admins(settings, client):
     with app_client(settings, email="viewer@example.org", admin=False) as c:
         s = c.get("/api/status").json()
     assert s["workers"] is None and s["preprocessing"] is None
+
+
+def test_danger_zone_reset_deletes_one_kind_of_data(settings, client):
+    seg = add_segment(settings)
+    add_detection(seg, add_job(seg), 500)
+    r = client.post("/api/admin/reset/recordings")
+    assert r.status_code == 200 and "removed" in r.json()["message"]
+    with session_scope() as s:
+        assert s.query(Segment).count() == 0
+    assert client.post("/api/admin/reset/users").status_code == 422  # not from the web
+    with app_client(settings, email="viewer@example.org", admin=False) as c:
+        assert c.post("/api/admin/reset/queue").status_code == 403
+
+
+def test_danger_zone_keeps_recordings_while_archiving_runs(settings, client, monkeypatch):
+    from foxcam.pipeline import compaction
+
+    monkeypatch.setattr(compaction, "status", lambda _settings: {"running": True})
+    add_segment(settings)
+    assert client.post("/api/admin/reset/recordings").status_code == 409
+    with session_scope() as s:
+        assert s.query(Segment).count() == 1
+
+
+def test_gate_holds_background_work_during_a_reset():
+    import threading
+    import time
+
+    from foxcam.pipeline.runner import Gate
+
+    gate, order = Gate(), []
+    with gate.exclusive():
+        t = threading.Thread(target=lambda: gate.work().__enter__() or order.append("work"))
+        t.start()
+        time.sleep(0.1)
+        order.append("reset done")
+    t.join(2)
+    assert order == ["reset done", "work"]

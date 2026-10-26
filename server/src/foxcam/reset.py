@@ -1,8 +1,9 @@
 """Partial resets for development (`foxcam reset <what>`, `mise run reset:<what>`).
 
-Each scope removes one kind of data and keeps the rest. Stop the server first: the
-pipeline would otherwise keep writing while rows are deleted. Objects already uploaded to
-S3 are not touched.
+Each scope removes one kind of data and keeps the rest. From a shell, stop the server
+first: the pipeline would otherwise keep writing while rows are deleted. Settings → Danger
+zone runs the same scopes in the server, with its background work paused
+(``runner.gate``). Objects already uploaded to S3 are not touched.
 """
 
 from __future__ import annotations

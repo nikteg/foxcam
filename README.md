@@ -106,7 +106,7 @@ anything else, and keep the clips.
     <td></td>
   </tr>
   <tr>
-    <td><b>Settings</b> – tunables without a restart (reset to config.yaml), and maintenance</td>
+    <td><b>Settings</b> – tunables without a restart (reset to config.yaml), maintenance, and a danger zone for clean starts</td>
     <td></td>
   </tr>
 </table>

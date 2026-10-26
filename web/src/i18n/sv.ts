@@ -168,6 +168,42 @@ export const sv: Record<MessageKey, string> = {
     "Alla objekt som arbetarna har rapporterat. Välj ett för att se bildrutan och videon; markera det som rätt eller fel för att bygga upp en träningsmängd (Exportera träningsmängd).",
   "detections.exportJson": "Exportera träningsmängd",
   "detections.labelPlaceholder": "Etikett, t.ex. fox",
+  "danger.title": "Riskzon",
+  "danger.intro":
+    "Var och en av dessa raderar en sorts data för gott och behåller resten, som foxcam reset på servern. Servern pausar sitt eget bakgrundsarbete under tiden.",
+  "danger.confirmBody": "Det går inte att ångra.",
+  "danger.done": "Klart.",
+  "danger.downloadMarks": "Ladda ner markeringar först",
+  "danger.queue": "Töm detekteringskön",
+  "danger.queueHint":
+    "Jobb som väntar på eller körs hos en arbetare. Deras inspelningar räknas som analyserade.",
+  "danger.queueConfirm": "Tömma detekteringskön?",
+  "danger.queueButton": "Töm kön",
+  "danger.detections": "Radera alla detekteringar och analysera igen",
+  "danger.detectionsHint":
+    "Detekteringar, händelser och deras rätt/fel-markeringar. Inspelningar som finns kvar analyseras igen med de aktuella profilerna.",
+  "danger.detectionsConfirm": "Radera alla detekteringar och händelser?",
+  "danger.detectionsButton": "Radera detekteringar",
+  "danger.recordings": "Radera alla inspelningar",
+  "danger.recordingsHint":
+    "Inspelningar, arkivfiler, detekteringar, händelser och markeringar: en ren start. Kameror, masker, profiler, arbetare och inställningar finns kvar. Stoppa arkiveringsprocessen först.",
+  "danger.recordingsConfirm": "Radera alla inspelningar och det som hittats i dem?",
+  "danger.recordingsButton": "Radera inspelningar",
+  "danger.workers": "Ta bort alla arbetare",
+  "danger.workersHint":
+    "Arbetare och deras åtkomsttoken. Varje arbetare behöver en ny token för att ansluta igen.",
+  "danger.workersConfirm": "Ta bort alla arbetare och token?",
+  "danger.workersButton": "Ta bort arbetare",
+  "danger.profiles": "Ta bort detekteringsprofiler",
+  "danger.profilesHint":
+    "Profiler som lagts till här (inte de i config.yaml), och varje kameras val av profiler.",
+  "danger.profilesConfirm": "Ta bort profilerna som lagts till här?",
+  "danger.profilesButton": "Ta bort profiler",
+  "danger.cameras": "Ta bort kameror och kamerainställningar",
+  "danger.camerasHint":
+    "Kameror som lagts till här (inte de i config.yaml), varje kameras masker, privat-flagga och profilval, och delningar av kameror.",
+  "danger.camerasConfirm": "Ta bort kamerorna som lagts till här och alla kamerainställningar?",
+  "danger.camerasButton": "Ta bort kameror",
   "maintenance.title": "Underhåll",
   "maintenance.rebuild": "Händelser",
   "maintenance.rebuildHint":

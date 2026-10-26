@@ -280,6 +280,16 @@ e.g. to undo an https `public_url` that broke signing in over plain http.
   At most 500 recordings at once; recordings a worker is busy with or already waiting are
   skipped. The API also lets editors do it for their own cameras.
 
+**Danger zone** (Settings → Danger zone, `POST /api/admin/reset/{scope}`, admins) deletes
+one kind of data and keeps the rest, like `foxcam reset` on the server: the detection
+queue, detections (recordings are analysed again), recordings (a clean start: archives,
+detections, events and marks too), workers and tokens, profiles added in the UI, or cameras
+added in the UI with every camera's settings. Not accounts: that would lock everyone out
+(`foxcam reset users` from a shell). The server's background loops wait meanwhile
+(`runner.gate`); deleting recordings is refused while the archiving process runs, as it
+reads and writes them on its own. The ✅/❌ marks can be downloaded first
+(`GET /api/detections/feedback-export`).
+
 ## Object storage (S3)
 
 Optional copy in any S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2, MinIO, Garage,
