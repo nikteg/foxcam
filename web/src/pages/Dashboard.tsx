@@ -1,6 +1,7 @@
 import { MessageBar, MessageBarBody, Subtitle2 } from "@fluentui/react-components";
 import {
   Alert20Regular,
+  Archive20Regular,
   ArrowSync20Regular,
   DismissCircle20Regular,
   CheckmarkCircle20Regular,
@@ -127,6 +128,7 @@ export function Dashboard() {
         />
       )}
       {isAdmin && s && <JobsSummary stats={s.queue} />}
+      {isAdmin && <ServerSummary />}
     </>
   );
 }
@@ -141,7 +143,7 @@ function JobsSummary({ stats: q }: { stats: QueueStats }) {
   return (
     <>
       <Subtitle2 as="h2" className="section">
-        {t("nav.queue")}
+        {t("queue.queueTab")}
         <SectionLink to="/jobs" label={t("dashboard.allJobs")} />
       </Subtitle2>
       <section className="stats">
@@ -175,6 +177,82 @@ function JobsSummary({ stats: q }: { stats: QueueStats }) {
           value={q.counts.dead}
           onClick={() => open("dead")}
         />
+      </section>
+    </>
+  );
+}
+
+/** The server's own work (admins), like Jobs → Preparing and Archiving: recordings waiting
+ * to be prepared before they get detection jobs, and periods waiting to be archived. */
+function ServerSummary() {
+  const { t } = useI18n();
+  const navigate = useNavigate();
+  const prep = useQuery({
+    queryKey: ["preprocessing", "summary"],
+    queryFn: () => api.preprocessing(0),
+    refetchInterval: 10_000,
+  });
+  const archiving = useQuery({
+    queryKey: ["archiving"],
+    queryFn: api.archiving,
+    refetchInterval: 30_000,
+  });
+  const p = prep.data;
+  const a = archiving.data;
+  if (!p) return null;
+  const open = (tab: string) => void navigate(`/jobs/${tab}`);
+  return (
+    <>
+      <Subtitle2 as="h2" className="section">
+        {t("dashboard.server")}
+        <SectionLink to="/jobs/preprocessing" label={t("prep.tab")} />
+      </Subtitle2>
+      <section className="stats">
+        <Stat
+          icon={<Hourglass20Regular />}
+          label={t("dashboard.toPrepare")}
+          value={p.waiting}
+          hint={
+            p.oldest_waiting_age_s
+              ? t("dashboard.oldest", { age: duration(p.oldest_waiting_age_s) })
+              : undefined
+          }
+          onClick={() => open("preprocessing")}
+        />
+        <Stat
+          icon={<ArrowSync20Regular />}
+          label={t("prep.preparing")}
+          value={`${p.preparing} / ${p.concurrency}`}
+          onClick={() => open("preprocessing")}
+        />
+        <Stat
+          icon={<CheckmarkCircle20Regular />}
+          label={t("dashboard.preparedLastHour")}
+          value={p.done_last_hour}
+          hint={
+            p.avg_seconds_last_hour != null
+              ? t("dashboard.avgEach", { s: decimal(p.avg_seconds_last_hour, 1) })
+              : undefined
+          }
+          onClick={() => open("preprocessing")}
+        />
+        <Stat
+          icon={<DismissCircle20Regular />}
+          label={t("dashboard.prepareFailed")}
+          value={p.failed}
+          onClick={() => open("preprocessing")}
+        />
+        {a && (
+          <Stat
+            icon={<Archive20Regular />}
+            label={t("dashboard.toArchive")}
+            value={a.enabled ? a.waiting_periods : t("compaction.off")}
+            hint={
+              a.enabled ? t(a.running ? "compaction.running" : "compaction.stopped") : undefined
+            }
+            onClick={() => open("archiving")}
+          />
+        )}
       </section>
     </>
   );
