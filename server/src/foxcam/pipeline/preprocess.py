@@ -200,10 +200,11 @@ def _preprocess(settings: Settings, segment_id: int) -> bool | None:
                 found = motion.measure(derived, fps, sensitivity=sensitivity,
                                        night=bool(updates.get("is_night")), ignore=ignore,
                                        light_change_fraction=settings.motion.light_change_fraction)
-                updates.update(motion_score=found.score, motion_boxes=found.boxes)
+                updates.update(motion_score=found.score, motion_boxes=found.boxes,
+                               motion_faint=found.faint)
             except Exception as e:  # noqa: BLE001 - unmeasured counts as moving
                 log.warning("segment %s: no motion measured: %s", segment_id, e)
-                updates.update(motion_score=None, motion_boxes=None)
+                updates.update(motion_score=None, motion_boxes=None, motion_faint=None)
     except Exception as e:
         log.exception("preprocessing segment %s failed", rel)
         updates.update(status=SegmentStatus.FAILED, error=f"preprocess: {e}"[:500])

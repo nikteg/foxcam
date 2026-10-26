@@ -153,3 +153,51 @@ def test_older_standing_still_flags_are_carried_over(settings):
     with session_scope() as s:
         got = {d.id: (d.is_target, d.still) for d in s.scalars(select(Detection))}
     assert got == {1: (True, None), 2: (True, True), 3: (True, True)}
+
+
+def _now(settings, boxes: list[list[float]], faint=None, motion_boxes=None) -> list[bool]:
+    """A recording where a car is seen once a second at ``boxes`` with the profile wanting
+    it to be moving right now; what it decided for each look (True: standing still)."""
+    if settings.profile("now") is None:
+        settings.profiles.append(ProfileConfig(id="now", targets=["car"], still_minutes=0))
+    seg = add_segment(settings, start=T0, seconds=60, with_file=False,
+                      status=SegmentStatus.QUEUED, motion_score=0.01,
+                      motion_boxes=motion_boxes or [], motion_faint=faint or [])
+    add_job(seg, profile_id="now")
+    job = queue.lease(settings, "w1")
+    queue.complete(settings, job.id, job.lease_token, [
+        queue.DetectionIn(offset_ms=i * 1000, label="car", confidence=0.8, bbox=box)
+        for i, box in enumerate(boxes)], model="m", processing_ms=1)
+    with session_scope() as s:
+        return [d.still for d in s.scalars(select(Detection).order_by(Detection.ts))]
+
+
+def test_a_box_that_moves_is_moving_without_pixel_motion(settings):
+    # Walking away: the box shrinks and drifts, the picture barely changes.
+    boxes = [[0.80, 0.50, 0.08, 0.30], [0.80, 0.50, 0.07, 0.24], [0.80, 0.51, 0.06, 0.19]]
+    assert _now(settings, boxes) == [False, False, False]
+
+
+def test_a_box_that_jitters_is_still(settings):
+    boxes = [PARKED, [0.401, 0.501, 0.198, 0.152], [0.399, 0.499, 0.201, 0.149]]
+    assert _now(settings, boxes) == [True, True, True]
+
+
+def test_faint_motion_counts_only_inside_the_box(settings):
+    inside = [[1000, [[0.45, 0.55, 0.04, 0.04]]]]  # a small dog's nose
+    assert _now(settings, [PARKED] * 3, faint=inside) == [False, False, False]
+
+
+def test_faint_motion_beside_the_box_does_not_count(settings):
+    edge = [[1000, [[0.58, 0.55, 0.1, 0.04]]]]  # overlaps the box, centre outside it
+    assert _now(settings, [PARKED] * 3, faint=edge) == [True, True, True]
+
+
+def test_the_detections_moving_flag_uses_the_window(settings):
+    from foxcam.web import queries
+
+    seen = [[3000, [PARKED]]]
+    assert _now(settings, [PARKED], motion_boxes=seen) == [True]
+    assert [d["moving"] for d in queries.detections(settings)] == [False]
+    settings.motion.window_seconds = 3
+    assert [d["moving"] for d in queries.detections(settings)] == [True]

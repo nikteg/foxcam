@@ -220,7 +220,8 @@ def main() -> None:
     tc.add_argument("--audio", choices=["copy", "opus", "none"], default="copy")
     tc.add_argument("--archive", action="store_true", help="B-frames allowed (not for live)")
     mb = sub.add_parser("motion-backfill", help="measure motion on recordings from before "
-                        "motion detection (for the motion report; changes no detections)")
+                        "motion detection or faint motion (for the motion report; changes "
+                        "no detections)")
     mb.add_argument("--days", type=float, default=7, help="recordings of the last N days")
     hw = sub.add_parser("hwaccel", help="show which hardware encoders work on this machine")
     hw.add_argument("--ffmpeg", default="ffmpeg")

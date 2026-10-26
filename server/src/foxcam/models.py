@@ -184,9 +184,12 @@ class Segment(Base):
     mask_version_id: Mapped[int | None] = mapped_column(ForeignKey("mask_version.id"))
     # Motion in the derivative (pipeline/motion.py): the largest share of the picture that
     # moved in one frame (0 = none; None = not measured), and per frame with motion
-    # [offset_ms, [[x, y, w, h], ...]] (normalized boxes around what moved).
+    # [offset_ms, [[x, y, w, h], ...]] (normalized boxes around what moved), and the same
+    # for faint motion (counts only for a detection's box it lies in; None = measured
+    # before faint motion was kept).
     motion_score: Mapped[float | None] = mapped_column(Float)
     motion_boxes: Mapped[list[Any] | None] = mapped_column(JSON)
+    motion_faint: Mapped[list[Any] | None] = mapped_column(JSON(none_as_null=True))
 
     has_target: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     max_confidence: Mapped[float | None] = mapped_column(Float)

@@ -20,16 +20,18 @@ Python took several seconds, which on a small server starved preprocessing); onl
 changed cells are grouped into regions in Python.
 
 The result is stored on the segment: ``motion_score`` (the largest share of the picture's
-cells that moved in one frame, 0 = no motion) and ``motion_boxes`` (per frame with motion,
-the normalized boxes around its regions). Profiles use it to skip recordings without
-motion (``skip_without_motion``) and to require that a target's box overlaps motion
-(``require_motion``).
+cells that moved in one frame, 0 = no motion), ``motion_boxes`` (per frame with motion,
+the normalized boxes around its regions) and ``motion_faint`` (the same for regions that
+missed the size or the previous-and-next-frame test: a small dog sniffing around, a person
+walking away; they count only for a detection's box they lie in). Profiles use it to skip recordings without
+motion (``skip_without_motion``), and to tell a target standing still from one that moves
+(``still_minutes``, pipeline/still.py).
 """
 
 from __future__ import annotations
 
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -69,6 +71,11 @@ FLAT_STD = 5.0
 class Motion:
     score: float  # 0..1
     boxes: list[list[Any]]  # [[offset_ms, [box, ...]], ...], frames with motion only
+    # The same for faint motion: regions too small for the sensitivity, or that changed
+    # only since the last frame or only before the next one (something slow, small or
+    # walking straight towards the camera). Not motion on its own; it counts for a
+    # detection whose box it lies in (pipeline/still.py).
+    faint: list[list[Any]] = field(default_factory=list)
 
 
 def decode(video: Path, fps: float, start_s: float = 0.0,
@@ -108,6 +115,7 @@ def analyse(frames: list[bytes], fps: float, sensitivity: str = "medium", night:
               for f in frames]
     score = 0.0
     out: list[list[Any]] = []
+    faint: list[list[Any]] = []
     background: np.ndarray | None = None
     # Each frame's 3x3 spread serves twice: compared with the frame after it and before it.
     previous = following = _spread(images[0]) if images else None
@@ -118,25 +126,33 @@ def analyse(frames: list[bytes], fps: float, sensitivity: str = "medium", night:
             background, previous = frame, here
             continue
         changed = _changed(frame, _spread(background), threshold, skip)
-        since_last = _changed(frame, previous, threshold, skip)
-        if following is not None:  # also changed before the next frame
-            since_last &= _changed(frame, following, threshold, skip)
+        before = _changed(frame, previous, threshold, skip)
+        after = _changed(frame, following, threshold, skip) if following is not None else before
         previous = here
         if changed.sum() > light_change_fraction * counted:
             background = frame  # light change: start over
             continue
-        cells = _cells(changed)
-        moved_cells = _cell_any(since_last)
-        regions = [r for r in _regions(cells)
-                   if len(r) >= level.min_cells and any(moved_cells[cy, cx] for cx, cy in r)
-                   and not _lit(r, frame, background)]
+        moved_both = _cell_any(before & after)  # changed since the last frame and before the next
+        moved_either = _cell_any(before | after)
+        regions: list[list[tuple[int, int]]] = []
+        weak: list[list[tuple[int, int]]] = []
+        for r in _regions(_cells(changed)):
+            if not any(moved_either[cy, cx] for cx, cy in r) or _lit(r, frame, background):
+                continue
+            if len(r) >= level.min_cells and any(moved_both[cy, cx] for cx, cy in r):
+                regions.append(r)
+            else:
+                weak.append(r)
         background = background + ALPHA * (frame - background)
+        at = round(i * 1000 / fps)
+        if weak:
+            faint.append([at, [_box(r) for r in weak]])
         if not regions:
             continue
         moving = sum(len(r) for r in regions)
         score = max(score, moving / (COLS * ROWS))
-        out.append([round(i * 1000 / fps), [_box(r) for r in regions]])
-    return Motion(round(score, 4), out)
+        out.append([at, [_box(r) for r in regions]])
+    return Motion(round(score, 4), out, faint)
 
 
 def _changed(frame: np.ndarray, spread: tuple[np.ndarray, np.ndarray], threshold: float,
@@ -213,18 +229,3 @@ def _box(region: list[tuple[int, int]]) -> Box:
 def measure(video: Path, fps: float, **kwargs: Any) -> Motion:
     return analyse(decode(video, fps), fps, **kwargs)
 
-
-def overlaps(boxes: list[list[Any]] | None, offset_ms: int, bbox: Box | None,
-             window_ms: float) -> bool:
-    """Whether a detection at ``offset_ms`` with ``bbox`` (normalized; None = no box, any
-    motion counts) overlaps motion within ``window_ms``."""
-    for at, regions in boxes or []:
-        if abs(at - offset_ms) > window_ms:
-            continue
-        if bbox is None:
-            return True
-        x, y, w, h = bbox
-        for rx, ry, rw, rh in regions:
-            if x < rx + rw and rx < x + w and y < ry + rh and ry < y + h:
-                return True
-    return False

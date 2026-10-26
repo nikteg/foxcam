@@ -557,8 +557,9 @@ def detections(camera: str | None = None, label: str | None = None, only_targets
                hide_still: bool = Query(
                    False, description="leave out targets standing still (no match)"),
                limit: int = Query(200, le=2000),
+               settings: Settings = Depends(settings_dep),
                p: Principal = Depends(principal)) -> list[dict[str, Any]]:
-    return queries.detections(camera, label, only_targets, min_confidence, limit, segment,
+    return queries.detections(settings, camera, label, only_targets, min_confidence, limit, segment,
                               profile, _camera_filter(p, camera), detector, event,
                               hide_still)
 
@@ -612,8 +613,8 @@ def feedback(detection_id: int, body: FeedbackBody,
 
 
 @router.get("/detections/feedback-export", dependencies=[Depends(require_admin)])
-def feedback_export() -> list[dict[str, Any]]:
-    return queries.feedback_export()
+def feedback_export(settings: Settings = Depends(settings_dep)) -> list[dict[str, Any]]:
+    return queries.feedback_export(settings)
 
 
 @router.get("/events")

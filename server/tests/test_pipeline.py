@@ -133,8 +133,8 @@ def test_fox_segments_merge_into_one_event_with_clip(settings):
     add_detection(segs[3], segs[3], 100, label="cat")
     with session_scope() as s:
         ev_id = s.query(Event).one().id
-    assert len(queries.detections(event_id=ev_id)) == 2
-    assert len(queries.detections()) == 3
+    assert len(queries.detections(settings, event_id=ev_id)) == 2
+    assert len(queries.detections(settings)) == 3
 
 
 @needs_ffmpeg
@@ -224,8 +224,8 @@ def test_detections_standing_still_can_be_left_out(settings):
     moving, still = add_detection(seg, seg, 0), add_detection(seg, seg, 1000)
     with session_scope() as s:
         s.get(Detection, still).still = True
-    assert {d["id"]: d["still"] for d in queries.detections()} == {moving: False, still: True}
-    assert [d["id"] for d in queries.detections(hide_still=True)] == [moving]
+    assert {d["id"]: d["still"] for d in queries.detections(settings)} == {moving: False, still: True}
+    assert [d["id"] for d in queries.detections(settings, hide_still=True)] == [moving]
 
 
 def test_reanalyse_a_time_range(settings):

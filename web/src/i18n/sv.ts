@@ -315,7 +315,7 @@ export const sv: Record<MessageKey, string> = {
     "Efter {minutes} min stillastående skulle {correct} rätt, {wrong} fel och {unrated} omarkerade av {total} mål tas bort.",
   "motionReport.tried": "provat med {n} min",
   "motionReport.unmeasured":
-    "{n} {n:inspelning|inspelningar} under perioden saknar uppmätt rörelse (från före rörelsedetekteringen). Mät dem från den sparade filmen för att ta med dem; inget annat ändras.",
+    "{n} {n:inspelning|inspelningar} under perioden saknar uppmätt rörelse, eller mättes innan svag rörelse sparades. Mät dem från den sparade filmen för att ta med dem; inget annat ändras.",
   "motionReport.measure": "Mät rörelse",
   "motionReport.measuring": "Mäter rörelse: {done} av {total} inspelningar…",
   "motionReport.none": "Inga analyserade inspelningar under perioden.",

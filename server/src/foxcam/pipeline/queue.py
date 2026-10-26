@@ -184,9 +184,10 @@ def complete(settings: Settings, job_id: int, token: str, detections: list[Detec
                 is_target=is_target,
                 model=model, worker_id=job.leased_by, extra=extra,
             ))
-        # Targets standing still (the profile's still_minutes) are no match.
-        still.mark(settings, s, added)
+        # Targets standing still (the profile's still_minutes) are no match. Added first:
+        # their own boxes moving between looks counts as motion (pipeline/still.py).
         s.add_all(added)
+        still.mark(settings, s, added)
         hit = any(d.is_target and not d.still for d in added)
         job.state = JobState.DONE
         job.finished_at = utcnow()

@@ -26,6 +26,8 @@ def _target(seg_id: int, job_id: int, x: float, feedback: bool | None = None,
 
 
 def _segment(settings, minutes_ago: int, **fields) -> int:
+    if "motion_score" in fields:  # measured, faint motion included
+        fields.setdefault("motion_faint", [])
     return add_segment(settings, start=utcnow() - timedelta(minutes=minutes_ago),
                        with_file=False, **fields)
 
@@ -50,6 +52,12 @@ def test_report_counts_what_the_options_would_do(settings):
     # in the recording where nothing moved.
     assert row["standing_still"] == {"correct": 1, "wrong": 1, "unrated": 0}
     assert motion_report.pending(utcnow() - timedelta(days=1)) == [unmeasured]
+
+
+def test_recordings_measured_before_faint_motion_are_measured_again(settings):
+    old, _ = _recording(settings, 5, motion_score=0.1, motion_boxes=MOVED, motion_faint=None)
+    _recording(settings, 10, motion_score=0.1, motion_boxes=MOVED)
+    assert motion_report.pending(utcnow() - timedelta(days=1)) == [old]
 
 
 def test_report_has_a_row_per_profile(settings):

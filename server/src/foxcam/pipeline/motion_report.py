@@ -21,7 +21,7 @@ import threading
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from ..config import Settings
 from ..db import session_scope
@@ -154,11 +154,13 @@ backfill = Backfill()
 
 
 def pending(since: datetime) -> list[int]:
-    """Recordings without a motion measurement: the ones with targets first (they decide
-    the report's accuracy), then the rest, newest first."""
+    """Recordings without a motion measurement (or one from before faint motion was kept):
+    the ones with targets first (they decide the report's accuracy), then the rest, newest
+    first."""
     with session_scope() as s:
         base = select(Segment.id).where(Segment.start_at >= since,
-                                        Segment.motion_score.is_(None),
+                                        or_(Segment.motion_score.is_(None),
+                                            Segment.motion_faint.is_(None)),
                                         Segment.status == SegmentStatus.DONE)
         with_targets = set(s.scalars(base.where(Segment.id.in_(
             select(Detection.segment_id).where(Detection.is_target.is_(True))))))
@@ -190,4 +192,5 @@ def measure_segment(settings: Settings, segment_id: int) -> motion.Motion | None
         seg = s.get(Segment, segment_id)
         if seg is not None:
             seg.motion_score, seg.motion_boxes = found.score, found.boxes
+            seg.motion_faint = found.faint
     return found

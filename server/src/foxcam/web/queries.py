@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import shutil
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import case, exists, func, select
+from sqlalchemy.orm import object_session
 
 from .. import recording
 from ..accounts import Principal
@@ -24,7 +26,7 @@ from ..models import (
     Worker,
     utcnow,
 )
-from ..pipeline import motion, queue, still
+from ..pipeline import queue, still
 from ..profiles import camera_profiles
 from .live import live_url
 
@@ -293,15 +295,24 @@ def archives(camera_id: str | None = None, day: str | None = None, limit: int = 
         } for a in rows]
 
 
-def _moving(d: Detection) -> bool | None:
-    """Whether the box overlapped motion at that moment (None: not measured)."""
-    seg = d.segment
-    if seg is None or seg.motion_score is None:
-        return None
-    return motion.overlaps(seg.motion_boxes, d.offset_ms, still.bbox_of(d), 1000)
+def _moving(settings: Settings) -> Callable[[Detection], bool | None]:
+    """Whether a detection's box had motion at that moment, within ``motion.window_seconds``
+    (None: not measured), the same way standing still is decided (pipeline/still.py). Each
+    camera's motion history is loaded once for a list."""
+    window = settings.motion.window_seconds
+    cameras: dict[str, still.Frames] = {}
+
+    def moving(d: Detection) -> bool | None:
+        seg = d.segment
+        if seg is None or seg.motion_score is None:
+            return None
+        frames = cameras.setdefault(d.camera_id, still.Frames(object_session(d), d.camera_id))
+        return not frames.still(d.ts, still.bbox_of(d), 0, window)
+
+    return moving
 
 
-def detection_dict(d: Detection) -> dict[str, Any]:
+def detection_dict(d: Detection, moving: bool | None) -> dict[str, Any]:
     return {
         "id": d.id, "segment_id": d.segment_id, "camera_id": d.camera_id, "ts": iso(d.ts),
         "profile_id": d.profile_id, "detector_id": d.detector_id, "event_id": d.event_id,
@@ -311,13 +322,13 @@ def detection_dict(d: Detection) -> dict[str, Any]:
         # Standing still for the profile's still_minutes: no match.
         "still": bool(d.still),
         # The box overlapped motion at that moment (None: not measured).
-        "moving": _moving(d),
+        "moving": moving,
         # Detector specifics, e.g. SpeciesNet's box label and top guesses.
         "extra": d.extra or {},
     }
 
 
-def detections(camera_id: str | None = None, label: str | None = None,
+def detections(settings: Settings, camera_id: str | None = None, label: str | None = None,
                only_targets: bool = False, min_confidence: float = 0.0,
                limit: int = 200, segment_id: int | None = None,
                profile_id: str | None = None,
@@ -344,8 +355,9 @@ def detections(camera_id: str | None = None, label: str | None = None,
         q = q.where(Detection.is_target.is_(True))
     if hide_still:
         q = q.where(Detection.still.is_not(True))
+    moving = _moving(settings)
     with session_scope() as s:
-        return [detection_dict(d) for d in s.scalars(q)]
+        return [detection_dict(d, moving(d)) for d in s.scalars(q)]
 
 
 def set_feedback(settings: Settings, detection_id: int, correct: bool | None) -> bool:
@@ -434,12 +446,13 @@ def queue_view(limit: int = 100, state: str | None = None) -> dict[str, Any]:
     return {"stats": queue.stats(), "workers": workers, "jobs": jobs}
 
 
-def feedback_export() -> list[dict[str, Any]]:
+def feedback_export(settings: Settings) -> list[dict[str, Any]]:
     """Labelled detections, for building a fine-tuning dataset."""
+    moving = _moving(settings)
     with session_scope() as s:
         rows = s.scalars(select(Detection).where(Detection.feedback.is_not(None))
                          .order_by(Detection.ts)).all()
-        return [{**detection_dict(d), "segment_path": d.segment.path,
+        return [{**detection_dict(d, moving(d)), "segment_path": d.segment.path,
                  "segment_deleted": d.segment.deleted_at is not None} for d in rows]
 
 

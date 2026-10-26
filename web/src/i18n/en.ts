@@ -310,7 +310,7 @@ export const en = {
     "After {minutes} min standing still, of {total} targets {correct} correct, {wrong} wrong and {unrated} unrated would be dropped.",
   "motionReport.tried": "tried at {n} min",
   "motionReport.unmeasured":
-    "{n} {n:recording|recordings} in this period {n:has|have} no motion measured (from before motion detection). Measure them from the stored footage to include them; nothing else changes.",
+    "{n} {n:recording|recordings} in this period {n:has|have} no motion measured, or one from before faint motion was kept. Measure them from the stored footage to include them; nothing else changes.",
   "motionReport.measure": "Measure motion",
   "motionReport.measuring": "Measuring motion: {done} of {total} recordings…",
   "motionReport.none": "No analysed recordings in this period.",

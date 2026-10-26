@@ -176,21 +176,30 @@ areas whose movement never counts (trees in the wind, a road), for what the filt
 do not catch.
 
 Stored on the segment: `motion_score`, the largest share of the picture that moved in one
-frame (0 = nothing moved, null = not measured), and `motion_boxes`, per frame with motion
-the boxes around its regions. Profiles use it two ways:
+frame (0 = nothing moved, null = not measured), `motion_boxes`, per frame with motion
+the boxes around its regions, and `motion_faint`, the same for **faint motion**: regions
+the filters above dropped for being too small or for changing only since the last frame
+or only before the next one (a small dog sniffing around, a person walking straight away
+from the camera). Faint motion is never motion on its own and leaves the score alone; it
+counts only for a detection whose box it lies in (its centre inside the box). So does
+the detector's own box moving between two looks at the same target (same label, boxes
+overlapping, at most 5 s apart): its centre moving by more than a tenth of its size, or a
+side growing or shrinking by more than 15 % (`pipeline/still.py`). Profiles use it two
+ways:
 
 - `skip_without_motion` (opt-in): when nothing moved, the profile's jobs are created
   `skipped` and no worker sees the recording.
 - `still_minutes` (standing still, above): a target counts until its box has had no motion
-  box over it (within `motion.window_seconds`) for that long, looking back through the
-  camera's earlier recordings. Detections without a box need any motion. Recordings
+  box over it, faint motion in it or its own box moving (within `motion.window_seconds`)
+  for that long, looking back through the camera's earlier recordings. Detections without a box need any motion. Recordings
   without a measurement count as moving.
 
 They apply to recordings analysed from then on; *Detect again* re-evaluates one, and
 *Rebuild events* (Settings → Detection) decides standing still again for all detections.
 Where motion shows: the recording drawer (share of the picture, *Show motion* over the
 video), the Recordings list and filter, hourly files (recordings with motion), and the
-detection and event drawers (whether the box was moving, or counts as standing still).
+detection and event drawers (whether the box was moving within `motion.window_seconds`,
+the same test as standing still, or counts as standing still).
 
 **Whether it helps** (Events → Motion, admins; `pipeline/motion_report.py`): since motion is
 measured on every recording whatever the profiles say, the report shows per camera and
@@ -198,14 +207,14 @@ profile (ones that still exist) what each option *would* do with the period's re
 correct / wrong marks: how many recordings skipping would save and which targets it would
 miss, and which targets standing still would drop (with the profile's minutes, or 10 when
 it has the option off). Recordings from before motion
-detection can be measured afterwards from their stored footage (*Measure motion* there,
+detection, or measured before faint motion was kept, can be measured afterwards from their stored footage (*Measure motion* there,
 or `foxcam motion-backfill --days 7`); that changes no detections or events.
 
 ## Data model (SQLite)
 
 | Table | Holds |
 |---|---|
-| `segment` | One recording file: camera, start (UTC), duration, status, light tags, mask version used, motion (score and boxes), match flag, pinned, archive and offset in it, `deleted_at`. |
+| `segment` | One recording file: camera, start (UTC), duration, status, light tags, mask version used, motion (score, boxes and faint boxes), match flag, pinned, archive and offset in it, `deleted_at`. |
 | `archive` | One hourly file made by compaction: camera, start, size, recording profile and encoder used, S3 key. |
 | `job` | Work item per segment, profile and detector (with the worker's raw result, ≤ 256 kB, for debugging): state (`pending/leased/done/failed/dead`, `skipped` for cascade detectors that did not run and profiles that skip recordings without motion), lease token and expiry, attempts, model, timing. |
 | `detection` | Worker result: profile, detector, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, standing still, event. |

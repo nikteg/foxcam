@@ -95,13 +95,21 @@ def test_sensitivity_sets_the_smallest_thing_that_counts():
     assert motion.analyse(frames, fps=2, sensitivity="low").score == 0
 
 
-def test_overlap_is_in_space_and_time():
-    boxes = [[1000, [[0.5, 0.5, 0.1, 0.1]]]]
-    assert motion.overlaps(boxes, 1500, [0.55, 0.55, 0.2, 0.2], 1000)
-    assert not motion.overlaps(boxes, 1500, [0.1, 0.1, 0.2, 0.2], 1000)  # elsewhere
-    assert not motion.overlaps(boxes, 3000, [0.55, 0.55, 0.2, 0.2], 1000)  # later
-    assert motion.overlaps(boxes, 1200, None, 1000)  # no box: any motion counts
-    assert not motion.overlaps([], 1200, None, 1000)
+def test_what_misses_the_sensitivity_is_kept_as_faint_motion():
+    frames = [frame(square=(10 + 6 * i, 20, 2)) for i in range(6)]  # too small for "low"
+    found = motion.analyse(frames, fps=2, sensitivity="low")
+    assert found.score == 0 and found.boxes == []
+    assert found.faint  # counts for a detection's box it lies in (pipeline/still.py)
+    assert motion.analyse([frame()] * 10, fps=2).faint == []  # nothing moved at all
+
+
+def test_a_step_then_standing_is_faint_motion():
+    # Moves once and stays (a dog sniffing around): it differs from the frame before, not
+    # from the one after, like the place something just left.
+    frames = [frame(square=(10, 20, 6))] * 3 + [frame(square=(30, 20, 6))] * 5
+    found = motion.analyse(frames, fps=2)
+    assert found.score == 0
+    assert [at for at, _ in found.faint] == [1500]
 
 
 def _still_segment(settings) -> int:
