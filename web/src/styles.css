@@ -303,6 +303,11 @@ h2.section > .section-link {
   left: auto;
   right: 14px;
 }
+/* A white badge is too loud in the dark theme: a muted grey one there. */
+html[data-theme="dark"] .nav-badge-server.nav-badge-server {
+  background-color: var(--colorNeutralStroke1);
+  color: var(--colorNeutralForeground1);
+}
 /* Top bar: a refresh button whenever the bottom tab bar shows (below 1280 px, as in the
    media query further down); theme and language except on phones. Doubled class: wins
    over Fluent's own display on buttons. */
