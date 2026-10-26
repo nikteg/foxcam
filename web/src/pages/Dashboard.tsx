@@ -145,12 +145,12 @@ function DetectionSummary({ status: s }: { status: Status }) {
   const q = s.queue;
   const w = s.workers;
   const avg = q.avg_processing_ms_last_hour;
-  const open = (state: string) => void navigate(`/jobs?state=${state}`);
+  const open = (state: string) => void navigate(`/jobs/detection?state=${state}`);
   return (
     <>
       <Subtitle2 as="h2" className="section">
         {t("queue.queueTab")}
-        <SectionLink to="/jobs" label={t("dashboard.allJobs")} />
+        <SectionLink to="/jobs/detection" label={t("dashboard.allJobs")} />
       </Subtitle2>
       <section className="stats">
         <Stat
@@ -189,7 +189,7 @@ function DetectionSummary({ status: s }: { status: Status }) {
             label={t("dashboard.workersOnline")}
             value={`${w.online} / ${w.total}`}
             hint={w.online ? t("dashboard.workersBusy", { n: w.busy }) : undefined}
-            onClick={() => void navigate("/jobs/workers")}
+            onClick={() => void navigate("/jobs/detection-workers")}
           />
         )}
       </section>
@@ -202,12 +202,12 @@ function DetectionSummary({ status: s }: { status: Status }) {
 function PreparationSummary({ prep: p }: { prep: PreprocessingStatus }) {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const open = () => void navigate("/jobs/preprocessing");
+  const open = () => void navigate("/jobs/preparation");
   return (
     <>
       <Subtitle2 as="h2" className="section">
         {t("prep.tab")}
-        <SectionLink to="/jobs/preprocessing" label={t("prep.tab")} />
+        <SectionLink to="/jobs/preparation" label={t("prep.tab")} />
       </Subtitle2>
       <section className="stats">
         <Stat

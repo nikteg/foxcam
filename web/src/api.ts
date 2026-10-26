@@ -915,7 +915,7 @@ export const api = {
   queue: (q: { state?: string; limit?: number }) =>
     request<QueueView>("GET", withQuery("/api/queue", q)),
   preprocessing: (limit?: number) =>
-    request<PreprocessingStatus>("GET", withQuery("/api/preprocessing", { limit })),
+    request<PreprocessingStatus>("GET", withQuery("/api/preparation", { limit })),
   addCamera: (body: {
     name: string;
     id?: string;

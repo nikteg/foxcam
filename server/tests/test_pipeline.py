@@ -290,7 +290,7 @@ def test_preprocessing_status_shows_the_waiting_and_the_pace(settings, monkeypat
     older = add_segment(settings, start=start - timedelta(minutes=5), status=SegmentStatus.NEW)
     newer = add_segment(settings, start=start, status=SegmentStatus.NEW)
     with app_client(settings) as client:
-        p = client.get("/api/preprocessing").json()
+        p = client.get("/api/preparation").json()
     assert p["waiting"] == 2 and p["oldest_waiting_age_s"] >= 300
     # In the order they are prepared: the newest first.
     assert [g["id"] for g in p["segments"]] == [newer, older]
@@ -298,6 +298,6 @@ def test_preprocessing_status_shows_the_waiting_and_the_pace(settings, monkeypat
 
     preprocess.preprocess_segment(settings, newer)
     with app_client(settings) as client:
-        p = client.get("/api/preprocessing").json()
+        p = client.get("/api/preparation").json()
     assert p["waiting"] == 1 and [g["id"] for g in p["segments"]] == [older]
     assert p["done_last_hour"] == 1 and p["avg_seconds_last_hour"] is not None

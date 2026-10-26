@@ -652,8 +652,8 @@ def queue_status(state: str | None = None,
     return queries.queue_view(limit, state)
 
 
-@router.get("/preprocessing", dependencies=[Depends(require_admin)])
-def preprocessing_status(limit: int = Query(100, le=1000),
+@router.get("/preparation", dependencies=[Depends(require_admin)])
+def preparation_status(limit: int = Query(100, le=1000),
                          settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
     """Recordings waiting for the server to prepare them (censored copy, motion,
     thumbnails) before they get detection jobs, the ones being prepared, and the pace."""

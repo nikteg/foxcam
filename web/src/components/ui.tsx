@@ -588,16 +588,19 @@ export function useSubPage<T extends string>(base: string, ids: readonly T[]): T
 }
 
 /** Tabs that are sub-pages with their own URL (links and the back button work, and
- * nothing depends on scrolling to an anchor). The first tab is the base path. Tabs with
- * a ``group`` are set apart from the ones before them by a divider. */
+ * nothing depends on scrolling to an anchor). The first tab is the base path, unless
+ * ``ownPaths``: then every tab has its own (the base shows the first). Tabs with a ``group``
+ * are set apart from the ones before them by a divider. */
 export function PageTabs<T extends string>({
   base,
   current,
   tabs,
+  ownPaths = false,
 }: {
   base: string;
   current: T;
   tabs: { id: T; label: string; group?: string }[];
+  ownPaths?: boolean;
 }) {
   const navigate = useNavigate();
   // Scrolls sideways on narrow screens: keep the open tab in view.
@@ -621,7 +624,7 @@ export function PageTabs<T extends string>({
       className="block page-tabs"
       selectedValue={current}
       onTabSelect={(_, d) =>
-        void navigate(d.value === tabs[0]?.id ? base : `${base}/${String(d.value)}`)
+        void navigate(d.value === tabs[0]?.id && !ownPaths ? base : `${base}/${String(d.value)}`)
       }
     >
       {tabs.map((tab, i) => (

@@ -81,7 +81,12 @@ export function Queue() {
   );
   const q = queue.data;
   const avgMs = q?.stats.avg_processing_ms_last_hour;
-  const tab = useSubPage("/jobs", ["queue", "workers", "preprocessing", "archiving"] as const);
+  const tab = useSubPage("/jobs", [
+    "preparation",
+    "archiving",
+    "detection",
+    "detection-workers",
+  ] as const);
   const [addingWorker, setAddingWorker] = useState(false);
   const segmentId = Number(segment) || null;
 
@@ -94,17 +99,18 @@ export function Queue() {
         <>
           <PageTabs
             base="/jobs"
+            ownPaths
             current={tab}
             tabs={[
-              // Detection (the queue and the workers that empty it), then the server's own work.
-              { id: "queue", label: t("queue.queueTab"), group: "detection" },
-              { id: "workers", label: t("queue.workersTab"), group: "detection" },
-              { id: "preprocessing", label: t("prep.tab"), group: "server" },
+              // The server's own work, then detection (the queue and the workers emptying it).
+              { id: "preparation", label: t("prep.tab"), group: "server" },
               { id: "archiving", label: t("compaction.title"), group: "server" },
+              { id: "detection", label: t("queue.queueTab"), group: "detection" },
+              { id: "detection-workers", label: t("queue.workersTab"), group: "detection" },
             ]}
           />
 
-          {tab === "workers" && (
+          {tab === "detection-workers" && (
             <>
               <Toolbar>
                 <Button
@@ -118,10 +124,10 @@ export function Queue() {
               <WorkersSection workers={q.workers} />
             </>
           )}
-          {tab === "preprocessing" && <PreprocessingSection />}
+          {tab === "preparation" && <PreprocessingSection />}
           {tab === "archiving" && <ArchivingSection />}
 
-          {tab === "queue" && (
+          {tab === "detection" && (
             <>
               <Caption1 as="p" className="muted stats-caption">
                 {t("queue.filterByState")}

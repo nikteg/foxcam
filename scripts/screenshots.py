@@ -351,7 +351,7 @@ def capture(tmp: Path, paused: set[str]) -> list[str]:
         shot(page, "detections", detections)
         shot(page, "recordings", f"/recordings/segments?selected={det['segment_id']}")
         shot(page, "mask-editor", "/cameras", prepare=mask_editor)
-        shot(page, "queue", "/jobs")
+        shot(page, "queue", "/jobs/detection")
         shot(page, "settings", "/settings/detection")
         phone = browser.new_context(color_scheme="dark", **PHONE)
         phone.add_cookies(cookie)
@@ -360,7 +360,7 @@ def capture(tmp: Path, paused: set[str]) -> list[str]:
         shot(page, "mobile-status", "/")
         shot(page, "mobile-events", "/events")
         shot(page, "mobile-detections", detections)
-        shot(page, "add-worker", "/jobs/workers", prepare=add_worker)
+        shot(page, "add-worker", "/jobs/detection-workers", prepare=add_worker)
         # Detection stayed paused so no new event was half built in the shots above; the
         # cameras go back to the default profiles, which the profiles screenshot shows.
         for cam in paused:
