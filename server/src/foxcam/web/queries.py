@@ -400,6 +400,17 @@ def events(camera_id: str | None = None, limit: int = 100,
         } for e, is_wrong, is_correct in s.execute(q)]
 
 
+def worker_summary() -> dict[str, int]:
+    """Detection workers at a glance (Status page): connected lately, and busy with a job."""
+    now = utcnow()
+    with session_scope() as s:
+        workers = s.scalars(select(Worker)).all()
+        online = [w for w in workers
+                  if (now - w.last_seen).total_seconds() < WORKER_ONLINE_SECONDS]
+        return {"total": len(workers), "online": len(online),
+                "busy": sum(1 for w in online if w.current_job_id is not None)}
+
+
 def queue_view(limit: int = 100, state: str | None = None) -> dict[str, Any]:
     now = utcnow()
     q = select(Job).order_by(Job.created_at.desc(), Job.id.desc()).limit(limit)

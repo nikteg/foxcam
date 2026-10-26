@@ -2,22 +2,25 @@ import { MessageBar, MessageBarBody, Subtitle2 } from "@fluentui/react-component
 import {
   Alert20Regular,
   Archive20Regular,
+  Clock20Regular,
   ArrowSync20Regular,
   DismissCircle20Regular,
   CheckmarkCircle20Regular,
   Database20Regular,
   HardDrive20Regular,
   Hourglass20Regular,
+  PlugConnected20Regular,
   Video20Regular,
 } from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
-import { api, type QueueStats } from "../api";
+import { api, type CompactionStatus, type PreprocessingStatus, type Status } from "../api";
 import { useIsAdmin } from "../auth";
 
 import { CameraCard } from "../components/CameraCard";
+import { useCameraName } from "../components/CameraSelect";
 import { EventsGrid } from "../components/EventsGrid";
 import { InstallHint } from "../components/InstallHint";
 import { LiveDrawer } from "../components/LiveDrawer";
@@ -127,17 +130,20 @@ export function Dashboard() {
           onClose={() => setSettingsFor(null)}
         />
       )}
-      {isAdmin && s && <JobsSummary stats={s.queue} />}
-      {isAdmin && <ServerSummary />}
+      {isAdmin && s && <DetectionSummary status={s} />}
+      {isAdmin && s?.preprocessing && <PreparationSummary prep={s.preprocessing} />}
+      {isAdmin && s?.compaction && <ArchivingSummary archiving={s.compaction} />}
     </>
   );
 }
 
-/** The detection jobs at a glance (admins): what waits and runs, the last day's work
- * per hour, and the workers. Details on the Jobs page. */
-function JobsSummary({ stats: q }: { stats: QueueStats }) {
+/** Detection at a glance (admins): what waits and runs, the last hour's work, and the
+ * workers. Details on Jobs → Detection and Detection workers. */
+function DetectionSummary({ status: s }: { status: Status }) {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const q = s.queue;
+  const w = s.workers;
   const avg = q.avg_processing_ms_last_hour;
   const open = (state: string) => void navigate(`/jobs?state=${state}`);
   return (
@@ -177,82 +183,117 @@ function JobsSummary({ stats: q }: { stats: QueueStats }) {
           value={q.counts.dead}
           onClick={() => open("dead")}
         />
+        {w && (
+          <Stat
+            icon={<PlugConnected20Regular />}
+            label={t("dashboard.workersOnline")}
+            value={`${w.online} / ${w.total}`}
+            hint={w.online ? t("dashboard.workersBusy", { n: w.busy }) : undefined}
+            onClick={() => void navigate("/jobs/workers")}
+          />
+        )}
       </section>
     </>
   );
 }
 
-/** The server's own work (admins), like Jobs → Preparing and Archiving: recordings waiting
- * to be prepared before they get detection jobs, and periods waiting to be archived. */
-function ServerSummary() {
+/** The server preparing recordings before they get detection jobs (admins), like
+ * Jobs → Preparation. */
+function PreparationSummary({ prep: p }: { prep: PreprocessingStatus }) {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const prep = useQuery({
-    queryKey: ["preprocessing", "summary"],
-    queryFn: () => api.preprocessing(0),
-    refetchInterval: 10_000,
-  });
-  const archiving = useQuery({
-    queryKey: ["archiving"],
-    queryFn: api.archiving,
-    refetchInterval: 30_000,
-  });
-  const p = prep.data;
-  const a = archiving.data;
-  if (!p) return null;
-  const open = (tab: string) => void navigate(`/jobs/${tab}`);
+  const open = () => void navigate("/jobs/preprocessing");
   return (
     <>
       <Subtitle2 as="h2" className="section">
-        {t("dashboard.server")}
+        {t("prep.tab")}
         <SectionLink to="/jobs/preprocessing" label={t("prep.tab")} />
       </Subtitle2>
       <section className="stats">
         <Stat
           icon={<Hourglass20Regular />}
-          label={t("dashboard.toPrepare")}
+          label={t("prep.waiting")}
           value={p.waiting}
           hint={
             p.oldest_waiting_age_s
               ? t("dashboard.oldest", { age: duration(p.oldest_waiting_age_s) })
               : undefined
           }
-          onClick={() => open("preprocessing")}
+          onClick={open}
         />
         <Stat
           icon={<ArrowSync20Regular />}
           label={t("prep.preparing")}
           value={`${p.preparing} / ${p.concurrency}`}
-          onClick={() => open("preprocessing")}
+          onClick={open}
         />
         <Stat
           icon={<CheckmarkCircle20Regular />}
-          label={t("dashboard.preparedLastHour")}
+          label={t("queue.doneLastHour")}
           value={p.done_last_hour}
           hint={
             p.avg_seconds_last_hour != null
               ? t("dashboard.avgEach", { s: decimal(p.avg_seconds_last_hour, 1) })
               : undefined
           }
-          onClick={() => open("preprocessing")}
+          onClick={open}
         />
         <Stat
           icon={<DismissCircle20Regular />}
-          label={t("dashboard.prepareFailed")}
+          label={t("queue.failedCount")}
           value={p.failed}
-          onClick={() => open("preprocessing")}
+          onClick={open}
         />
-        {a && (
-          <Stat
-            icon={<Archive20Regular />}
-            label={t("dashboard.toArchive")}
-            value={a.enabled ? a.waiting_periods : t("compaction.off")}
-            hint={
-              a.enabled ? t(a.running ? "compaction.running" : "compaction.stopped") : undefined
-            }
-            onClick={() => open("archiving")}
-          />
-        )}
+      </section>
+    </>
+  );
+}
+
+/** The compact process joining finished periods into archive files (admins), like
+ * Jobs → Archiving. */
+function ArchivingSummary({ archiving: a }: { archiving: CompactionStatus }) {
+  const { t } = useI18n();
+  const navigate = useNavigate();
+  const cameraName = useCameraName();
+  const open = () => void navigate("/jobs/archiving");
+  return (
+    <>
+      <Subtitle2 as="h2" className="section">
+        {t("compaction.title")}
+        <SectionLink to="/jobs/archiving" label={t("compaction.title")} />
+      </Subtitle2>
+      <section className="stats">
+        <Stat
+          icon={<Clock20Regular />}
+          label={t("archiving.process")}
+          value={
+            !a.enabled
+              ? t("compaction.off")
+              : a.running
+                ? t("compaction.running")
+                : t("compaction.stopped")
+          }
+          onClick={open}
+        />
+        <Stat
+          icon={<ArrowSync20Regular />}
+          label={t("compaction.now")}
+          value={a.current ? cameraName(a.current.camera_id) : t("compaction.idle")}
+          onClick={open}
+        />
+        <Stat
+          icon={<Hourglass20Regular />}
+          label={t("compaction.waiting")}
+          value={a.waiting_periods}
+          hint={t("archiving.segmentsHint", { n: a.waiting_segments })}
+          onClick={open}
+        />
+        <Stat
+          icon={<Archive20Regular />}
+          label={t("archiving.files")}
+          value={a.archives}
+          onClick={open}
+        />
       </section>
     </>
   );

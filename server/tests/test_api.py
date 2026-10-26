@@ -292,3 +292,13 @@ def test_detection_frame_has_a_small_preview(settings, client):
                               "-of", "csv=p=0", str(settings.thumbs_dir / "detections" / name)],
                              capture_output=True, text=True, check=True).stdout
         assert int(out.strip()) == width
+
+
+def test_status_has_workers_and_preparation_for_admins(settings, client):
+    add_segment(settings, status=SegmentStatus.NEW)
+    s = client.get("/api/status").json()
+    assert s["workers"] == {"total": 0, "online": 0, "busy": 0}
+    assert s["preprocessing"]["waiting"] == 1 and s["preprocessing"]["segments"] == []
+    with app_client(settings, email="viewer@example.org", admin=False) as c:
+        s = c.get("/api/status").json()
+    assert s["workers"] is None and s["preprocessing"] is None

@@ -192,6 +192,10 @@ export interface Status {
   queue: QueueStats;
   /** The compact process (hourly files); admins only, null for others. */
   compaction: CompactionStatus | null;
+  /** Detection workers; admins only. */
+  workers: { total: number; online: number; busy: number } | null;
+  /** Recordings waiting for the server to prepare them; admins only (no list). */
+  preprocessing: PreprocessingStatus | null;
 }
 
 export interface CompactionRun {

@@ -85,6 +85,10 @@ async def status(settings: Settings = Depends(settings_dep),
         # Admins: the compact process (hourly files), see pipeline/compaction.py.
         "compaction": await asyncio.to_thread(compaction.status, settings)
         if p.is_admin else None,
+        # Admins: the detection workers, and the server's preparation of recordings.
+        "workers": await asyncio.to_thread(queries.worker_summary) if p.is_admin else None,
+        "preprocessing": await asyncio.to_thread(preprocess.status, settings, 0)
+        if p.is_admin else None,
     }
 
 

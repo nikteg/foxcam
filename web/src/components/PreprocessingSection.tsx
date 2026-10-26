@@ -1,4 +1,4 @@
-// Jobs → Preparing: recordings the server prepares before they get detection jobs (a
+// Jobs → Preparation: recordings the server prepares before they get detection jobs (a
 // censored copy for the workers, motion, thumbnails; pipeline/preprocess.py). A backlog
 // here is invisible in the job queue: those recordings have no jobs yet.
 import { Subtitle2 } from "@fluentui/react-components";
