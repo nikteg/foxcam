@@ -38,9 +38,7 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detec
     width: 120,
     phone: "thumb",
     // The frame with the box drawn in; made on first view (lazy: rows in sight only).
-    cell: (d) => (
-      <img className="mini" loading="lazy" src={detectionFrameUrl(d.id, "small")} alt="" />
-    ),
+    cell: (d) => <img className="mini" loading="lazy" src={detectionFrameUrl(d, "small")} alt="" />,
   },
   {
     id: "ts",
@@ -250,7 +248,7 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
     <div className="detail-stack">
       <img
         className="detail-media"
-        src={detectionFrameUrl(d.id)}
+        src={detectionFrameUrl(d)}
         alt={t("detections.frameAlt", { label: d.label })}
       />
       <Caption1 className="muted">{t("detections.frameNote")}</Caption1>

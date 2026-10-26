@@ -535,9 +535,9 @@ async def detection_frame(detection_id: int,
     if not dst.exists():
         await asyncio.to_thread(ffmpeg.thumbnail, src.path, dst, src.offset_s + offset_s,
                                 240 if small else 960, bbox)
-    # Browsers ask again each time (a cheap 304): the id can come back for another detection.
+    # Never changes for a URL: the web app puts the recording and moment in it (``at``).
     return FileResponse(dst, media_type="image/jpeg",
-                        headers={"Cache-Control": "private, no-cache"})
+                        headers={"Cache-Control": "private, max-age=86400"})
 
 
 class FeedbackBody(BaseModel):

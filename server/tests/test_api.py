@@ -286,7 +286,7 @@ def test_detection_frame_has_a_small_preview(settings, client):
     for size, width in (("", 960), ("?size=small", 240)):
         r = client.get(f"/api/detections/{det}/frame.jpg{size}")
         assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg"
-        assert "no-cache" in r.headers["cache-control"]
+        assert "max-age" in r.headers["cache-control"]
         name = f"{det}-{seg}-500-small.jpg" if size else f"{det}-{seg}-500.jpg"
         out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=width",
                               "-of", "csv=p=0", str(settings.thumbs_dir / "detections" / name)],

@@ -994,5 +994,11 @@ export const snapshotUrl = (cameraId: string, fresh = false, source = false) => 
   return `/api/cameras/${encodeURIComponent(cameraId)}/snapshot.jpg${qs ? `?${qs}` : ""}`;
 };
 
-export const detectionFrameUrl = (detectionId: number, size: "full" | "small" = "full") =>
-  `/api/detections/${detectionId}/frame.jpg${size === "small" ? "?size=small" : ""}`;
+/** The frame with its box. The recording and moment are in the URL: a re-analysed
+ *  recording's detections can reuse the ids of the ones they replaced. */
+export const detectionFrameUrl = (
+  d: Pick<Detection, "id" | "segment_id" | "offset_ms">,
+  size: "full" | "small" = "full",
+) =>
+  `/api/detections/${d.id}/frame.jpg?at=${d.segment_id}-${d.offset_ms}` +
+  (size === "small" ? "&size=small" : "");

@@ -46,7 +46,7 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
               key={best.id}
               title={e.label}
               src={`/api/segments/${best.segment_id}/play`}
-              poster={detectionFrameUrl(best.id)}
+              poster={detectionFrameUrl(best)}
               startAt={Math.max(best.offset_ms / 1000 - 1, 0)}
               thumbnails={`/api/segments/${best.segment_id}/thumbnails.vtt`}
             />
