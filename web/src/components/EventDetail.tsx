@@ -70,7 +70,11 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
           title={e.label}
           motion={motion}
           {...(e.clip_url || !best
-            ? { src: e.clip_url!, poster: e.thumb_url }
+            ? {
+                src: e.clip_url!,
+                poster: e.thumb_url,
+                thumbnails: `/api/events/${e.id}/thumbnails.vtt`,
+              }
             : {
                 src: `/api/segments/${best.segment_id}/play`,
                 poster: detectionFrameUrl(best),

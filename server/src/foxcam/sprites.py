@@ -93,22 +93,33 @@ def build(src: Path, image: Path, meta: Path, *, duration: float, interval: floa
     return sprite
 
 
-def vtt(sprite: Sprite, image_url: str) -> str:
-    """WebVTT thumbnails track: each tile's time range and place in the image."""
-    def ts(t: float) -> str:
-        ms = round(t * 1000)
-        return f"{ms // 3_600_000:02d}:{ms // 60_000 % 60:02d}:{ms // 1000 % 60:02d}.{ms % 1000:03d}"
+def _ts(t: float) -> str:
+    ms = round(t * 1000)
+    return f"{ms // 3_600_000:02d}:{ms // 60_000 % 60:02d}:{ms // 1000 % 60:02d}.{ms % 1000:03d}"
 
-    lines = ["WEBVTT", ""]
+
+def cues(sprite: Sprite, image_url: str, shift: float = 0.0,
+         until: float = math.inf) -> list[str]:
+    """Each tile's time range and place in the image, as WebVTT cue lines; with ``shift``
+    seconds added to the times and only what lies in [0, ``until``) (a clip's part)."""
+    lines = []
     for i in range(sprite.tiles):
         start = i * sprite.interval
         end = min((i + 1) * sprite.interval, sprite.duration)
         if end <= start:
             break
+        start, end = max(start + shift, 0.0), min(end + shift, until)
+        if end <= start:
+            continue
         x, y = i % sprite.columns * sprite.tile_w, i // sprite.columns * sprite.tile_h
-        lines += [f"{ts(start)} --> {ts(end)}",
+        lines += [f"{_ts(start)} --> {_ts(end)}",
                   f"{image_url}#xywh={x},{y},{sprite.tile_w},{sprite.tile_h}", ""]
-    return "\n".join(lines)
+    return lines
+
+
+def vtt(sprite: Sprite, image_url: str) -> str:
+    """WebVTT thumbnails track: each tile's time range and place in the image."""
+    return "\n".join(["WEBVTT", "", *cues(sprite, image_url)])
 
 
 def archive_sprite(settings: Settings, archive_id: int) -> Sprite | None:

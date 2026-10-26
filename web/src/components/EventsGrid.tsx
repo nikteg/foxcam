@@ -216,6 +216,7 @@ export function EventsGrid({
                       title={`${playing.label} – ${cameraName(playing.camera_id)}`}
                       src={playing.clip_url}
                       poster={playing.thumb_url}
+                      thumbnails={`/api/events/${playing.id}/thumbnails.vtt`}
                       motion={playingMotion}
                       autoPlay
                     />

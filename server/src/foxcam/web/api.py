@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -510,6 +511,30 @@ async def segment_thumbnails(segment_id: int, settings: Settings = Depends(setti
     _segment(p, segment_id)
     return await _thumbnails(lambda i: sprites.segment_sprite(settings, i), segment_id,
                              f"/api/segments/{segment_id}/sprite.jpg")
+
+
+@router.get("/events/{event_id}/thumbnails.vtt")
+async def event_thumbnails(event_id: int, settings: Settings = Depends(settings_dep),
+                           p: Principal = Depends(principal)) -> Response:
+    """Timeline previews for an event's clip: its recordings' sprites, their times moved to
+    the clip's clock (it starts with the pre-roll) and cut to the clip."""
+    ev = _event(p, event_id)
+    if ev.clip_start is None:
+        raise HTTPException(404, "no clip")
+    with session_scope() as s:
+        segs = [(g.id, (g.start_at - ev.clip_start).total_seconds()) for g in
+                sorted(s.get(Event, event_id).segments, key=lambda g: g.start_at)]
+    lines = ["WEBVTT", ""]
+    for seg_id, shift in segs:
+        try:
+            sprite = await asyncio.to_thread(sprites.segment_sprite, settings, seg_id)
+        except RuntimeError:
+            sprite = None
+        if sprite is not None:  # footage gone: no previews for that part
+            lines += sprites.cues(sprite, f"/api/segments/{seg_id}/sprite.jpg", shift,
+                                  ev.clip_duration_s or math.inf)
+    return Response("\n".join(lines), media_type="text/vtt",
+                    headers={"Cache-Control": "private, max-age=3600"})
 
 
 @router.get("/segments/{segment_id}/sprite.jpg")
