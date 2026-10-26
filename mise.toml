@@ -247,6 +247,12 @@ depends = ["server-stopped"]
 confirm = "Delete the test cameras with their recordings and events?"
 run = "uv run foxcam remove-cameras --test --orphaned --yes"
 
+[tasks."reset:footage"]
+description = "The video files only (recordings, archives, clips); detections, events and marks stay"
+depends = ["server-stopped"]
+confirm = "Delete all footage?"
+run = "uv run foxcam reset footage --yes"
+
 [tasks."reset:recordings"]
 description = "All footage plus segments, jobs, detections and events (keeps cameras, masks, profiles, workers)"
 depends = ["server-stopped"]

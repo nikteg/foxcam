@@ -68,6 +68,36 @@ def recordings(settings: Settings) -> str:
     return f"{n} recordings removed (cameras, masks, profiles and workers kept)"
 
 
+def footage(settings: Settings) -> str:
+    """The video files (recordings, archives, event clips), like retention does it for all of
+    them at once: recordings stay listed as deleted, and detections, events, their marks and
+    the reports stay. Recordings not analysed yet are given up."""
+    from . import sprites
+    from .models import utcnow
+    from .pipeline.retention import _remove_files
+
+    with session_scope() as s:
+        n = 0
+        for seg in s.scalars(select(Segment).where(Segment.deleted_at.is_(None))):
+            _remove_files(settings, seg)
+            if seg.status in (SegmentStatus.NEW, SegmentStatus.QUEUED):
+                seg.status = SegmentStatus.DONE  # nothing left to analyse
+            seg.pinned = False
+            n += 1
+        s.execute(delete(Job).where(
+            Job.state.in_([JobState.PENDING, JobState.FAILED, JobState.LEASED])))
+        s.execute(update(Worker).values(current_job_id=None))
+        for arc in s.scalars(select(Archive).where(Archive.deleted_at.is_(None))):
+            (settings.recordings_dir / arc.path).unlink(missing_ok=True)
+            sprites.remove_archive(settings, arc.id)
+            arc.deleted_at = utcnow()
+        for ev in s.scalars(select(Event).where(Event.clip_path.is_not(None))):
+            (settings.data_dir / ev.clip_path).unlink(missing_ok=True)
+            ev.clip_path = None
+        s.execute(update(Event).values(clip_dirty=False))  # nothing to cut them from
+    return f"footage of {n} recordings removed (detections, events and marks kept)"
+
+
 def events(settings: Settings) -> str:
     """Events and clips; the running server rebuilds them from the detections."""
     n = _drop_events(settings)
@@ -164,7 +194,7 @@ def tapo(settings: Settings) -> str:
 
 
 SCOPES: dict[str, Callable[[Settings], str]] = {
-    "recordings": recordings, "events": events, "detections": detections, "queue": queue,
+    "recordings": recordings, "footage": footage, "events": events, "detections": detections, "queue": queue,
     "workers": workers, "cameras": cameras, "profiles": profiles, "users": users,
     "tapo": tapo,
 }

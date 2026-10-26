@@ -165,6 +165,19 @@ export const en = {
     "Every object the workers reported. Select one to see the frame and video; mark it correct or wrong to build a training set (Export training set).",
   "detections.exportJson": "Export training set",
   "detections.labelPlaceholder": "Label, e.g. fox",
+  "confirm.typeToConfirm": "Type {word} to confirm",
+  "danger.footage": "Delete all footage",
+  "danger.footageHint":
+    "The video files: recordings, archive files and event clips, freeing the disk. Detections, events, their marks and the reports stay; recordings show as deleted, as after retention. Stop the archiving process first.",
+  "danger.footageConfirm": "Delete all video files?",
+  "danger.footageButton": "Delete footage",
+  "danger.queueWord": "queue",
+  "danger.detectionsWord": "detections",
+  "danger.footageWord": "footage",
+  "danger.recordingsWord": "recordings",
+  "danger.workersWord": "workers",
+  "danger.profilesWord": "profiles",
+  "danger.camerasWord": "cameras",
   "danger.title": "Danger zone",
   "danger.intro":
     "Each of these deletes one kind of data for good and keeps the rest, like foxcam reset on the server. The server pauses its own background work meanwhile.",
@@ -183,7 +196,7 @@ export const en = {
   "danger.detectionsButton": "Delete detections",
   "danger.recordings": "Delete all recordings",
   "danger.recordingsHint":
-    "Recordings, archive files, detections, events and marks: a clean start. Cameras, masks, profiles, workers and settings stay. Stop the archiving process first.",
+    "Recordings, archive files, detections, events and marks: a clean start (Delete all footage keeps what was found). Cameras, masks, profiles, workers and settings stay. Stop the archiving process first.",
   "danger.recordingsConfirm": "Delete all recordings and what was found in them?",
   "danger.recordingsButton": "Delete recordings",
   "danger.workers": "Remove all workers",

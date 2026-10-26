@@ -35,7 +35,8 @@ iPad and desktop, in light and dark theme, and as an iOS home screen app.
 - Drawers: clicking the backdrop closes them, also on desktop; the same backdrop
   everywhere; no slide animation on phones (they cover the screen).
 - Confirmations for removing things are a `ConfirmPopover` at the button, never a drawer
-  and never `window.confirm`. Destructive actions always ask.
+  and never `window.confirm`. Destructive actions always ask. Wiping a whole kind of data
+  (Settings → Danger zone) also wants a word typed (`typeToConfirm`).
 - Drawer footers: back / other-option buttons left aligned, the main action right aligned;
   a danger "Remove" is a flat button on the left. The footer's buttons fit on one row at
   phone width: there the danger button is icon only (with an `aria-label`).

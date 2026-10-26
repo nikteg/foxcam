@@ -384,7 +384,8 @@ def reanalyse_range(body: ReanalyseRange, settings: Settings = Depends(settings_
 
 # Settings → Danger zone: the `foxcam reset` scopes that make sense from the web (not
 # "users": that would lock everyone out).
-DangerScope = Literal["recordings", "detections", "queue", "workers", "profiles", "cameras"]
+DangerScope = Literal["recordings", "footage", "detections", "queue", "workers", "profiles",
+                      "cameras"]
 
 
 @router.post("/admin/reset/{scope}", dependencies=[Depends(require_admin)])
@@ -392,7 +393,7 @@ def danger_reset(scope: DangerScope, settings: Settings = Depends(settings_dep))
     """Delete one kind of data, keep the rest (like `foxcam reset`). The server's background
     work is paused meanwhile; recordings are refused while the archiving process runs (it
     reads and writes them on its own)."""
-    if scope == "recordings" and compaction.status(settings)["running"]:
+    if scope in ("recordings", "footage") and compaction.status(settings)["running"]:
         raise HTTPException(409, "the archiving process is running: stop it (foxcam compact) "
                                  "first, or it may archive files being deleted")
     try:

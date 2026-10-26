@@ -13,6 +13,7 @@ import { InfoBanner } from "./ui";
 const ACTIONS: { scope: DangerScope; marks?: boolean }[] = [
   { scope: "queue" },
   { scope: "detections", marks: true },
+  { scope: "footage" },
   { scope: "recordings", marks: true },
   { scope: "workers" },
   { scope: "profiles" },
@@ -34,6 +35,7 @@ function DangerAction({ scope, marks }: { scope: DangerScope; marks?: boolean })
             title={t(`danger.${scope}Confirm`)}
             body={t("danger.confirmBody")}
             confirmLabel={t(`danger.${scope}Button`)}
+            typeToConfirm={t(`danger.${scope}Word`)}
             align="start"
             onConfirm={() => reset.mutateAsync()}
           >

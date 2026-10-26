@@ -1,6 +1,8 @@
 // "Are you sure?" for removing things: a small popover at the button, not a drawer.
 import {
   Button,
+  Field,
+  Input,
   MessageBar,
   MessageBarBody,
   Popover,
@@ -15,7 +17,9 @@ import { useI18n } from "../i18n";
 
 /** Wraps the button that asks; ``onConfirm`` runs on the red button and the popover closes
  * when it succeeds (an error is shown in it). With ``open`` / ``onOpenChange`` the caller
- * decides when it shows (e.g. also when a drawer is closed another way). */
+ * decides when it shows (e.g. also when a drawer is closed another way). With
+ * ``typeToConfirm`` the red button waits until that word is typed (Settings → Danger zone:
+ * whole kinds of data, like deleting a repository on GitHub). */
 export function ConfirmPopover({
   title,
   body,
@@ -25,6 +29,7 @@ export function ConfirmPopover({
   align = "end",
   open: openProp,
   onOpenChange,
+  typeToConfirm,
   children,
 }: {
   title: string;
@@ -38,16 +43,21 @@ export function ConfirmPopover({
   align?: "start" | "end";
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** A word to type before the red button works. */
+  typeToConfirm?: string;
   /** The trigger button. */
   children: ReactElement;
 }) {
-  const { t } = useI18n();
+  const { t, rich } = useI18n();
   const [ownOpen, setOwnOpen] = useState(false);
   const open = openProp ?? ownOpen;
+  const [typed, setTyped] = useState("");
   const setOpen = (o: boolean) => {
     setOwnOpen(o);
+    setTyped("");
     onOpenChange?.(o);
   };
+  const typedOk = !typeToConfirm || typed.trim().toLowerCase() === typeToConfirm.toLowerCase();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   return (
@@ -71,6 +81,21 @@ export function ConfirmPopover({
             {body}
           </Text>
         )}
+        {typeToConfirm && (
+          <Field
+            label={{
+              children: rich("confirm.typeToConfirm", { word: <strong>{typeToConfirm}</strong> }),
+            }}
+          >
+            <Input
+              value={typed}
+              onChange={(_, d) => setTyped(d.value)}
+              autoComplete="off"
+              autoCapitalize="off"
+              spellCheck={false}
+            />
+          </Field>
+        )}
         {error && (
           <MessageBar intent="error">
             <MessageBarBody>{error}</MessageBarBody>
@@ -85,7 +110,7 @@ export function ConfirmPopover({
             appearance="primary"
             className="danger-primary"
             icon={icon ?? <Delete20Regular />}
-            disabled={pending}
+            disabled={pending || !typedOk}
             onClick={() => {
               setPending(true);
               setError(null);

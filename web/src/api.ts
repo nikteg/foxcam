@@ -496,6 +496,7 @@ export interface Job {
 /** What Settings → Danger zone can delete (server: api.DangerScope). */
 export type DangerScope =
   | "recordings"
+  | "footage"
   | "detections"
   | "queue"
   | "workers"

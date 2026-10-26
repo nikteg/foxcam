@@ -2,7 +2,7 @@
 
 import pytest
 from foxcam.db import session_scope
-from foxcam.models import JobState, Segment, SegmentStatus
+from foxcam.models import Detection, JobState, Segment, SegmentStatus
 
 from .conftest import add_detection, add_job, add_segment, app_client, make_video, needs_ffmpeg
 
@@ -340,3 +340,17 @@ def test_gate_holds_background_work_during_a_reset():
         order.append("reset done")
     t.join(2)
     assert order == ["reset done", "work"]
+
+
+def test_danger_zone_footage_keeps_what_was_found(settings, client):
+    seg = add_segment(settings)
+    det = add_detection(seg, add_job(seg, JobState.DONE), 500)
+    with session_scope() as s:
+        path = settings.recordings_dir / s.get(Segment, seg).path
+    assert path.exists()
+    assert client.post("/api/admin/reset/footage").status_code == 200
+    assert not path.exists()
+    with session_scope() as s:
+        assert s.get(Segment, seg).deleted_at is not None
+    with session_scope() as s:
+        assert s.get(Detection, det) is not None

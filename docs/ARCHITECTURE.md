@@ -282,13 +282,15 @@ e.g. to undo an https `public_url` that broke signing in over plain http.
 
 **Danger zone** (Settings → Danger zone, `POST /api/admin/reset/{scope}`, admins) deletes
 one kind of data and keeps the rest, like `foxcam reset` on the server: the detection
-queue, detections (recordings are analysed again), recordings (a clean start: archives,
-detections, events and marks too), workers and tokens, profiles added in the UI, or cameras
+queue, detections (recordings are analysed again), footage (the video files only, like
+retention for everything: detections, events, marks and reports stay), recordings (a clean
+start: archives, detections, events and marks too), workers and tokens, profiles added in the UI, or cameras
 added in the UI with every camera's settings. Not accounts: that would lock everyone out
 (`foxcam reset users` from a shell). The server's background loops wait meanwhile
 (`runner.gate`); deleting recordings is refused while the archiving process runs, as it
 reads and writes them on its own. The ✅/❌ marks can be downloaded first
-(`GET /api/detections/feedback-export`).
+(`GET /api/detections/feedback-export`). Each action asks at its button and wants a word
+typed first (`ConfirmPopover` with `typeToConfirm`).
 
 ## Object storage (S3)
 

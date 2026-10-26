@@ -188,10 +188,10 @@ def main() -> None:
     reset = sub.add_parser("reset", help="delete one kind of data, keep the rest "
                                          "(stop the server first)")
     reset.add_argument("scopes", nargs="+", metavar="SCOPE",
-                       choices=["recordings", "events", "detections", "queue", "workers",
-                                "cameras", "profiles", "users", "tapo"],
-                       help="recordings | events | detections | queue | workers | cameras | "
-                            "profiles | users | tapo")
+                       choices=["recordings", "footage", "events", "detections", "queue",
+                                "workers", "cameras", "profiles", "users", "tapo"],
+                       help="recordings | footage | events | detections | queue | workers | "
+                            "cameras | profiles | users | tapo")
     reset.add_argument("-y", "--yes", action="store_true", help="don't ask")
     rm = sub.add_parser("remove-cameras",
                         help="remove cameras and their recordings, events and settings "
