@@ -174,7 +174,7 @@ export const sv: Record<MessageKey, string> = {
     "Videofilerna: inspelningar, arkivfiler och händelseklipp, så att disken blir ledig. Detekteringar, händelser, deras markeringar och rapporterna finns kvar; inspelningarna visas som raderade, som efter gallring. Stoppa arkiveringsprocessen först.",
   "danger.footageConfirm": "Radera alla videofiler?",
   "danger.footageButton": "Radera videofiler",
-  "danger.queueWord": "kön",
+  "danger.queueWord": "arbetskö",
   "danger.detectionsWord": "detekteringar",
   "danger.footageWord": "videofiler",
   "danger.recordingsWord": "inspelningar",
