@@ -38,6 +38,8 @@ import {
   useMediaRemote,
   useMediaState,
   useThumbnails,
+  MEDIA_KEY_SHORTCUTS,
+  type MediaKeyShortcuts,
   type MediaPlayerInstance,
 } from "@vidstack/react";
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
@@ -113,6 +115,7 @@ export function VideoPlayer({
       // metadata is fetched up front.
       load="eager"
       posterLoad="eager"
+      keyShortcuts={keyShortcuts(allMarkers)}
       onLoadedMetadata={() => {
         if (startAt && ref.current) ref.current.currentTime = startAt;
       }}
@@ -122,6 +125,7 @@ export function VideoPlayer({
       </MediaProvider>
       {overlay}
       {motionOn && <MotionOverlay frames={motion} />}
+      <FrameClock />
       <PictureTaps markers={allMarkers} />
       <PlayerControls
         thumbnails={thumbnails}
@@ -136,6 +140,102 @@ export function VideoPlayer({
   );
 }
 
+/** The arrow keys' step when there is no marker to jump to (Vidstack's own: 5 s). */
+const KEY_SEEK_S = 5;
+/** Frame step before a frame interval was measured (s): the cameras' usual 15 fps. */
+const DEFAULT_FRAME_S = 1 / 15;
+
+/** How long a frame lasts in each player's video (s), as `FrameClock` measured it. */
+const frameSeconds = new WeakMap<MediaPlayerInstance, number>();
+
+/** The video's own clock: the player's lags behind a seek while paused. */
+function videoTime(player: MediaPlayerInstance): number {
+  return player.el?.querySelector("video")?.currentTime ?? player.currentTime;
+}
+
+/** To the previous / next marker's start, or `fallback` seconds when there is none.
+ * Backwards skips the marker playing now (pressed again, it goes one further). */
+function jumpToMarker(
+  player: MediaPlayerInstance,
+  markers: Marker[] | undefined,
+  direction: -1 | 1,
+  fallback: number,
+) {
+  const now = videoTime(player);
+  const starts = (markers ?? []).map((m) => m.from);
+  const marker =
+    direction > 0 ? starts.find((t) => t > now + 0.5) : starts.findLast((t) => t < now - 1);
+  const end = player.state.duration || Infinity;
+  player.remoteControl.seek(Math.min(Math.max(marker ?? now + direction * fallback, 0), end));
+}
+
+/** One frame back or forward, paused (the , and . keys). */
+const stepFrame =
+  (direction: -1 | 1) =>
+  ({ player }: { player: MediaPlayerInstance }) => {
+    player.remoteControl.pause();
+    const end = player.state.duration || Infinity;
+    const at = videoTime(player) + direction * (frameSeconds.get(player) ?? DEFAULT_FRAME_S);
+    player.remoteControl.seek(Math.min(Math.max(at, 0), end));
+  };
+
+/** Keyboard on the player: Vidstack's shortcuts, with the arrows jumping between markers
+ * (Shift: 5 s) and , / . stepping one frame. */
+function keyShortcuts(markers: Marker[] | undefined): MediaKeyShortcuts {
+  return {
+    ...MEDIA_KEY_SHORTCUTS,
+    togglePictureInPicture: null,
+    toggleCaptions: null,
+    seekBackward: "j J Shift+ArrowLeft",
+    seekForward: "l L Shift+ArrowRight",
+    previousMarker: {
+      keys: "ArrowLeft",
+      onKeyDown: ({ player }) => jumpToMarker(player, markers, -1, KEY_SEEK_S),
+    },
+    nextMarker: {
+      keys: "ArrowRight",
+      onKeyDown: ({ player }) => jumpToMarker(player, markers, 1, KEY_SEEK_S),
+    },
+    previousFrame: { keys: ",", onKeyDown: stepFrame(-1) },
+    nextFrame: { keys: ".", onKeyDown: stepFrame(1) },
+  };
+}
+
+/** Measures how long a frame lasts in the playing video, into `seconds` (cameras' frame
+ * rates vary and are not in the file's metadata here), into `frameSeconds`. Inside a
+ * `MediaPlayer`. */
+function FrameClock() {
+  const player = useMediaPlayer();
+  const canPlay = useMediaState("canPlay");
+  const src = useMediaState("source").src;
+  useEffect(() => {
+    const video = player?.el?.querySelector("video");
+    // Measured again for each video, once it can play.
+    if (!player || !canPlay || !src || !video || !("requestVideoFrameCallback" in video)) return;
+    frameSeconds.delete(player);
+    let last: number | null = null;
+    const gaps: number[] = [];
+    let id = 0;
+    const onFrame = (_: number, meta: VideoFrameCallbackMetadata) => {
+      if (!video.paused && last !== null) {
+        const gap = meta.mediaTime - last;
+        if (gap > 0.005 && gap < 1) {
+          gaps.push(gap);
+          if (gaps.length > 30) gaps.shift();
+          // The median: one late frame or a burst does not move it.
+          const median = gaps.toSorted((a, b) => a - b)[Math.floor(gaps.length / 2)];
+          if (median) frameSeconds.set(player, median);
+        }
+      }
+      last = video.paused ? null : meta.mediaTime;
+      id = video.requestVideoFrameCallback(onFrame);
+    };
+    id = video.requestVideoFrameCallback(onFrame);
+    return () => video.cancelVideoFrameCallback(id);
+  }, [player, canPlay, src]);
+  return null;
+}
+
 /** How soon a second tap counts as a double tap (ms). */
 const DOUBLE_TAP_MS = 300;
 
@@ -146,17 +246,7 @@ function PictureTaps({ markers }: { markers?: Marker[] }) {
   const player = useMediaPlayer();
   const remote = useMediaRemote();
   const lastTap = useRef(0);
-  const jump = (direction: -1 | 1) => {
-    if (!player) return;
-    // The video's own clock: the player's lags behind a seek while paused.
-    const now = player.el?.querySelector("video")?.currentTime ?? player.currentTime;
-    const starts = (markers ?? []).map((m) => m.from);
-    // Backwards skips the marker playing now (another double tap goes one further).
-    const marker =
-      direction > 0 ? starts.find((t) => t > now + 0.5) : starts.findLast((t) => t < now - 1);
-    const end = player.state.duration || Infinity;
-    remote.seek(Math.min(Math.max(marker ?? now + direction * SEEK_S, 0), end));
-  };
+  const jump = (direction: -1 | 1) => player && jumpToMarker(player, markers, direction, SEEK_S);
   return (
     // Pointer events only; the keyboard works on the player (Vidstack's shortcuts).
     // oxlint-disable-next-line jsx-a11y/no-static-element-interactions

@@ -99,7 +99,8 @@ iPad and desktop, in light and dark theme, and as an iOS home screen app.
   controls are our own Fluent parts (speed in the bar, no settings or PiP buttons). Add to
   it by changing our controls, not by patching Vidstack's markup; anything that pops up
   inside it (menus) is `inline` so it shows in fullscreen. Timeline `markers` (e.g. motion)
-  are what a double tap at the sides jumps between. Clicks and taps act at once (no
+  are what a double tap at the sides and the arrow keys jump between (Shift+arrow: 5 s);
+  `,` and `.` step one frame. Clicks and taps act at once (no
   waiting to tell them from a double click; a double click is not fullscreen).
 - Keep it fast: no full-page spinners for filter changes, no refetching what is cached.
 
