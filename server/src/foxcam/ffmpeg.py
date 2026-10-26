@@ -115,6 +115,10 @@ def light_stats(src: Path, duration_s: float, samples: int = 6) -> LightStats | 
     return LightStats(sum(sat) / len(sat), sum(luma) / len(luma) if luma else 0.0)
 
 
+#: How far before the moment a thumbnail decodes to find the frame on screen then.
+THUMB_WINDOW_S = 1.0
+
+
 def thumbnail(src: Path, dst: Path, at_s: float = 0.0, width: int = 480,
               box: Rect | None = None, masks: list[Rect] | None = None) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -127,8 +131,19 @@ def thumbnail(src: Path, dst: Path, at_s: float = 0.0, width: int = 480,
         vf.append(f"drawbox=x=iw*{x:.5f}:y=ih*{y:.5f}:w=iw*{w:.5f}:h=ih*{h:.5f}"
                   ":color=red@0.9:t=4")
     vf.append(f"scale={width}:-2")
-    _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{max(at_s, 0):.3f}", "-i", str(src),
-          "-frames:v", "1", "-vf", ",".join(vf), "-q:v", "4", str(dst)], timeout=60)
+    # The picture on screen at ``at_s``: the last frame at or before it, as sampling picks
+    # (``sample``). A seek gives the first frame at or after it, and cameras that send
+    # frames in bursts can have a quarter second between the two (a falling leaf the
+    # detector saw, gone in the image).
+    at_s = max(at_s, 0)
+    start = max(at_s - THUMB_WINDOW_S, 0)
+    dst.unlink(missing_ok=True)
+    _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{start:.6f}", "-i", str(src),
+          "-t", f"{at_s - start + 0.0005:.6f}", "-vf", ",".join(vf), "-update", "1",
+          "-q:v", "4", str(dst)], timeout=60)
+    if not dst.exists():  # no frame in the window (a gap in the recording): the next one
+        _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{at_s:.3f}", "-i", str(src),
+              "-frames:v", "1", "-vf", ",".join(vf), "-q:v", "4", str(dst)], timeout=60)
 
 
 def snapshot_from_url(url: str, dst: Path, timeout: float = 10) -> None:

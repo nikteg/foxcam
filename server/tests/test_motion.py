@@ -220,3 +220,7 @@ def test_sampled_frames_show_their_moment(tmp_path):
     ffmpeg.make_masked_derivative(src, derived, [], 2, 1280)
     assert source_frames(derived, 2) == [0, 5, 10, 15, 20, 25]
     assert source_frames(derived, 1) == [0, 10, 20]
+    # A detection's image is the same picture: the last frame at or before the moment.
+    thumb = tmp_path / "thumb.jpg"
+    ffmpeg.thumbnail(src, thumb, 0.55, 96)
+    assert source_frames(thumb, 1) == [5]

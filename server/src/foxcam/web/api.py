@@ -524,17 +524,20 @@ async def detection_frame(detection_id: int,
         if det is None or not p.can(det.camera_id):
             raise HTTPException(404, "unknown detection")
         src = compaction.segment_source(settings, det.segment)
-        offset_s, bbox = det.offset_ms / 1000, det.bbox
+        offset_s, bbox, segment_id = det.offset_ms / 1000, det.bbox, det.segment_id
     if src is None:
         raise HTTPException(410, "recording deleted by retention")
     small = size == "small"
-    dst = settings.thumbs_dir / "detections" / f"{detection_id}{'-small' if small else ''}.jpg"
+    # Keyed by the moment too: a re-analysed recording's detections can get the ids of
+    # the ones they replaced.
+    name = f"{detection_id}-{segment_id}-{round(offset_s * 1000)}{'-small' if small else ''}"
+    dst = settings.thumbs_dir / "detections" / f"{name}.jpg"
     if not dst.exists():
         await asyncio.to_thread(ffmpeg.thumbnail, src.path, dst, src.offset_s + offset_s,
                                 240 if small else 960, bbox)
-    # Never changes once made (the box is from the detection, the frame from the file).
+    # Browsers ask again each time (a cheap 304): the id can come back for another detection.
     return FileResponse(dst, media_type="image/jpeg",
-                        headers={"Cache-Control": "private, max-age=86400"})
+                        headers={"Cache-Control": "private, no-cache"})
 
 
 class FeedbackBody(BaseModel):
