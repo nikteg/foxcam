@@ -23,6 +23,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from . import ffmpeg
 from .config import Settings
 from .db import session_scope
 from .models import Archive
@@ -74,7 +75,7 @@ def build(src: Path, image: Path, meta: Path, *, duration: float, interval: floa
     if offset:
         args += ["-ss", f"{offset:.3f}"]
     args += ["-t", f"{duration:.3f}", "-i", str(src),
-             "-vf", f"fps=1/{interval},scale={TILE_WIDTH}:-2,tile={columns}x{rows}",
+             "-vf", f"{ffmpeg.sample(f'1/{interval}')},scale={TILE_WIDTH}:-2,tile={columns}x{rows}",
              "-frames:v", "1", "-q:v", "5", str(part)]
     proc = subprocess.run(args, capture_output=True, text=True, timeout=600, check=False)
     if proc.returncode != 0 or not part.exists():

@@ -7,6 +7,7 @@ import subprocess
 from datetime import timedelta
 
 import pytest
+from foxcam import ffmpeg
 from foxcam.config import ProfileConfig
 from foxcam.db import session_scope
 from foxcam.models import Detection, Job, JobState, Segment, SegmentStatus, utcnow
@@ -200,3 +201,22 @@ def test_motion_settings_are_saved_per_camera(settings):
         r = c.put("/api/cameras/cam/motion", json={"sensitivity": None, "rects": []})
         assert r.json()["motion_sensitivity"] is None and r.json()["motion_rects"] == []
         assert c.put("/api/cameras/cam/motion", json={"sensitivity": "max"}).status_code == 422
+
+
+@needs_ffmpeg
+def test_sampled_frames_show_their_moment(tmp_path):
+    """Frame n of a sampled video is the picture at n / fps, the moment a seek there shows
+    (ffmpeg's default rounding took one up to half an interval later: boxes trailed targets)."""
+    src, derived = tmp_path / "src.mp4", tmp_path / "derived.mp4"
+    # 10 fps, frame k a flat grey of 16 + 6k: the level tells which source frame it is.
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i",
+                    "nullsrc=size=96x54:rate=10:duration=3,format=gray,geq=lum=16+N*6",
+                    "-c:v", "libx264", "-qp", "0", "-pix_fmt", "yuv420p", str(src)], check=True)
+
+    def source_frames(path, fps):
+        return [round((sum(f) / len(f) - 16) / 6) for f in motion.decode(path, fps)]
+
+    assert source_frames(src, 2) == [0, 5, 10, 15, 20, 25]
+    ffmpeg.make_masked_derivative(src, derived, [], 2, 1280)
+    assert source_frames(derived, 2) == [0, 5, 10, 15, 20, 25]
+    assert source_frames(derived, 1) == [0, 10, 20]

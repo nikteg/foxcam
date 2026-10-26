@@ -48,6 +48,13 @@ def probe(path: Path) -> ProbeInfo:
     return ProbeInfo(duration, stream.get("width"), stream.get("height"), stream.get("codec_name"))
 
 
+def sample(fps: float | str) -> str:
+    """Frame ``n`` shows the picture at ``n / fps``, as a seek there does. ffmpeg's default
+    (round=near) takes the last frame before ``(n + 0.5) / fps`` instead: detection boxes
+    then trailed a moving target by up to half a frame interval."""
+    return f"fps={fps}:round=up"
+
+
 def _mask_filters(rects: list[Rect]) -> list[str]:
     filters = []
     for x, y, w, h in rects:
@@ -69,7 +76,7 @@ def make_masked_derivative(src: Path, dst: Path, rects: list[Rect], fps: float,
     out = ["-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
            "-movflags", "+faststart", str(dst)]
     if vaapi_device and Path(vaapi_device).exists():
-        vf = [f"fps={fps}", f"scale_vaapi=w='min({max_width},iw)':h=-2:format=nv12",
+        vf = [sample(fps), f"scale_vaapi=w='min({max_width},iw)':h=-2:format=nv12",
               "hwdownload", "format=nv12", *_mask_filters(rects), "format=yuv420p"]
         try:
             _run(["ffmpeg", "-y", "-v", "error", "-init_hw_device", f"vaapi=hw:{vaapi_device}",
@@ -78,7 +85,7 @@ def make_masked_derivative(src: Path, dst: Path, rects: list[Rect], fps: float,
             return
         except FfmpegError as e:
             log.warning("GPU preprocessing failed, using the CPU: %s", e)
-    vf = [f"fps={fps}", *_mask_filters(rects),
+    vf = [sample(fps), *_mask_filters(rects),
           f"scale='min({max_width},iw)':-2", "format=yuv420p"]
     _run(["ffmpeg", "-y", "-v", "error", "-i", str(src), "-vf", ",".join(vf), *out])
 

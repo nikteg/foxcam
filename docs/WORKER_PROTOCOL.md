@@ -86,7 +86,10 @@ so the same segment may come back for another profile or detector.
 ```
 
 `sample_fps` is the frame rate the profile (or its detector) wants analysed (≤ `input_fps`;
-the input is shared by all profiles of the camera, so subsample to it). `detector` says which
+the input is shared by all profiles of the camera, so subsample to it). Subsample so that
+frame `i` is the picture at `i / sample_fps` seconds: with ffmpeg, `fps=N:round=up` (the
+default rounding takes a frame up to half an interval later, and boxes then trail moving
+targets). `detector` says which
 of the profile's detectors this job is for; `profile.min_confidence` is the detector's own
 threshold when it has one, and `hints.target_min_confidence` the targets with one of their
 own (e.g. `{"person": 0.8}`). `hints.target_labels` are what the profile

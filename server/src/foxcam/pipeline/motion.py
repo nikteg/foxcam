@@ -32,6 +32,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .. import ffmpeg
+
 WIDTH, HEIGHT = 96, 54
 CELL = 2  # pixels per cell side
 COLS, ROWS = WIDTH // CELL, HEIGHT // CELL
@@ -73,7 +75,7 @@ def decode(video: Path, fps: float, start_s: float = 0.0,
     part = ["-t", f"{duration_s:.3f}"] if duration_s else []
     proc = subprocess.run(
         ["ffmpeg", "-v", "error", "-ss", f"{start_s:.3f}", "-i", str(video), *part, "-an",
-         "-vf", f"fps={fps},scale={WIDTH}:{HEIGHT}:flags=area,format=gray",
+         "-vf", f"{ffmpeg.sample(fps)},scale={WIDTH}:{HEIGHT}:flags=area,format=gray",
          "-f", "rawvideo", "-"],
         capture_output=True, timeout=600, check=False)
     if proc.returncode != 0:

@@ -15,6 +15,12 @@ class Frame:
     image: Any = None  # BGR numpy array (height x width x 3) when decoded into memory
 
 
+def _sample(fps: float) -> str:
+    """Frame ``i`` is the picture at ``i / fps`` (its ``offset_ms``). ffmpeg's default
+    (round=near) takes a frame up to half an interval later, so boxes trailed moving targets."""
+    return f"fps={fps}:round=up"
+
+
 def extract_frames(video: Path, out_dir: Path, fps: float, *, filters: Sequence[str] = (),
                    start_s: float | None = None, duration_s: float | None = None) -> list[Frame]:
     """Decode ``video`` to JPEGs at ``fps``. The server already sampled the video, so
@@ -30,7 +36,7 @@ def extract_frames(video: Path, out_dir: Path, fps: float, *, filters: Sequence[
     args += ["-i", str(video)]
     if duration_s:
         args += ["-t", f"{duration_s:.3f}"]
-    args += ["-vf", ",".join([f"fps={fps}", *filters]), "-q:v", "2", str(out_dir / "%06d.jpg")]
+    args += ["-vf", ",".join([_sample(fps), *filters]), "-q:v", "2", str(out_dir / "%06d.jpg")]
     proc = subprocess.run(args, capture_output=True, text=True, check=False)
     if proc.returncode != 0:
         raise RuntimeError(f"ffmpeg frame extraction failed: {proc.stderr.strip()[-500:]}")
@@ -56,7 +62,7 @@ def frame_batches(video: Path, fps: float, batch: int) -> Iterator[list[Frame]]:
     width, height = _size(video)
     size = width * height * 3
     proc = subprocess.Popen(
-        ["ffmpeg", "-v", "error", "-i", str(video), "-an", "-vf", f"fps={fps}",
+        ["ffmpeg", "-v", "error", "-i", str(video), "-an", "-vf", _sample(fps),
          "-f", "rawvideo", "-pix_fmt", "bgr24", "-"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     assert proc.stdout is not None and proc.stderr is not None
