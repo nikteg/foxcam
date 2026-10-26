@@ -51,7 +51,9 @@ def test_round_trip_restores_what_has_no_secrets(settings):
     data = backup.export(settings)
     _wipe()
     report = backup.import_(settings, data)
-    assert report["imported"]["profiles"] == 1 and report["imported"]["settings"] == 1
+    assert report["imported"]["profiles"] == 1
+    # Only the value that differs from config.yaml / the default is stored again.
+    assert runtime_settings.stored() == {"processing.concurrency": 3}
     # The camera with a login cannot come back without it; the other one does.
     assert [s["id"] for s in report["skipped"] if s["reason"] == "login"] == ["yard"]
     assert {c.id for c in camera_store.ui_cameras()} == {"shed"}
@@ -66,11 +68,29 @@ def test_round_trip_restores_what_has_no_secrets(settings):
 def test_import_over_existing_keeps_their_secrets(settings):
     _set_up(settings)
     data = backup.export(settings)
-    data["cameras"][0]["name"] = "Front yard"
+    next(c for c in data["cameras"] if c["id"] == "yard")["name"] = "Front yard"
     backup.import_(settings, data)
     assert settings.camera("yard").name == "Front yard"
     assert "user:pw@" in settings.camera("yard").source.url  # the stream login stays
     assert notify.channel(settings, "phone").token == "tk_secret"
+
+
+def test_export_has_everything_an_import_reads(settings):
+    _set_up(settings)
+    data = backup.export(settings)
+    # Every tunable with the value the server runs with, not only the ones changed in the UI.
+    assert set(data["settings"]) == set(runtime_settings.EDITABLE)
+    assert data["settings"]["processing.concurrency"] == 3
+    assert data["settings"]["processing.sample_fps"] == settings.processing.sample_fps
+    assert data["recording_profile_default"] == settings.recording_profile_default
+    # config.yaml's profiles, cameras and channels too, and settings for every camera.
+    assert {p["id"] for p in data["profiles"]} == {
+        p.id for p in settings.all_profiles(include_disabled=True)}
+    assert {c["id"] for c in data["cameras"]} == {
+        c.id for c in settings.all_cameras(include_disabled=True)}
+    assert [c["camera_id"] for c in data["camera_settings"]] == [c["id"] for c in data["cameras"]]
+    # Imported back here, config.yaml's own items are left alone without a word.
+    assert backup.import_(settings, data)["skipped"] == []
 
 
 def test_newer_formats_are_refused_and_older_ones_upgraded(settings, monkeypatch):

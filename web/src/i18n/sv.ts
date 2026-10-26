@@ -220,7 +220,7 @@ export const sv: Record<MessageKey, string> = {
   "backup.title": "Säkerhetskopiera inställningar",
   "backup.export": "Exportera inställningar",
   "backup.exportHint":
-    "Inställningar, detekteringsprofiler, kameror (med masker och rörelseområden) och aviseringskanaler som ställts in här, som en fil. Lösenord och token tas inte med.",
+    "Allt som en import kan ställa in, som en fil: alla inställningar (även de från config.yaml), detekteringsprofiler, kameror (med masker och rörelseområden) och aviseringskanaler. Lösenord och token tas inte med.",
   "backup.import": "Importera inställningar",
   "backup.importHint":
     "Från en exporterad fil: samma id uppdateras och nya läggs till; inget tas bort. Det som redan finns här behåller sina lösenord och token.",

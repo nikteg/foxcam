@@ -1,5 +1,9 @@
-"""Settings export and import (Settings → Configuration): what was set up in the web UI, as
-one JSON file, without passwords and tokens.
+"""Settings export and import (Settings → Configuration): everything an import can set,
+as one JSON file, without passwords and tokens. The export holds what the server runs with,
+including config.yaml's values and the defaults; an import leaves a value that matches this
+server's config.yaml (or default) to it, so only real differences end up in the database.
+Profiles, cameras and channels from config.yaml are exported too: an import adds them
+where they are missing, and leaves them alone where config.yaml defines them.
 
 The file has a ``config_format_version``. An import upgrades older formats one step at a
 time (``MIGRATIONS``) and refuses newer ones. Change the format only together with a
@@ -19,14 +23,11 @@ from typing import Any
 from sqlalchemy import select
 
 from . import camera_store, notify, profiles, recording, runtime_settings
-from .config import Settings
+from .config import CameraConfig, ChannelConfig, Settings
 from .db import session_scope
 from .models import (
     CameraState,
-    DetectionProfile,
-    ManagedCamera,
     MaskVersion,
-    NotificationChannel,
     utcnow,
 )
 from .web.queries import _redact_url, save_camera_state, save_motion
@@ -46,19 +47,19 @@ class BackupError(ValueError):
 # --- export --------------------------------------------------------------------------
 
 
-def _camera(row: ManagedCamera) -> dict[str, Any]:
-    source = dict(row.source)
+def _camera(cam: CameraConfig) -> dict[str, Any]:
+    source = cam.source.model_dump(mode="json")
     url = source.get("url")
     login_removed = bool(url) and _redact_url(url) != url
     if login_removed:
         source["url"] = _redact_url(url)
-    return {"id": row.id, "name": row.name, "source": source,
-            "segment_seconds": row.segment_seconds, "enabled": row.enabled,
+    return {"id": cam.id, "name": cam.name, "source": source,
+            "segment_seconds": cam.segment_seconds, "enabled": cam.enabled,
             "login_removed": login_removed}
 
 
-def _channel(row: NotificationChannel) -> dict[str, Any]:
-    cfg = dict(row.config)
+def _channel(channel: ChannelConfig) -> dict[str, Any]:
+    cfg = channel.model_dump(mode="json", exclude={"id", "managed"})
     removed = [k for k in notify.SECRET_FIELDS if cfg.get(k)]
     for key in notify.SECRET_FIELDS:
         cfg.pop(key, None)
@@ -70,30 +71,42 @@ def _channel(row: NotificationChannel) -> dict[str, Any]:
         cfg.pop("url")
     elif cfg.get("url") and "@" in cfg["url"]:
         cfg["url"] = _redact_url(cfg["url"])
-    return {"id": row.id, **cfg, "secrets_removed": removed}
+    return {"id": channel.id, **cfg, "secrets_removed": removed}
+
+
+def _camera_state(cam: CameraConfig, st: CameraState | None,
+                     masks: dict[int, Any]) -> dict[str, Any]:
+    """What the camera runs with: the web UI's choices, else config.yaml's."""
+    return {
+        "camera_id": cam.id, "private": bool(st and st.private),
+        "mask": masks.get(st.mask_version_id, []) if st and st.mask_version_id else [],
+        "profiles": st.profiles if st and st.profiles is not None else cam.profiles,
+        "recording_profile": (st.recording_profile if st and st.recording_profile
+                              else cam.recording_profile),
+        "burn_masks": bool(st and st.burn_masks),
+        "motion_sensitivity": st.motion_sensitivity if st else None,
+        "motion_rects": (st.motion_rects if st else None) or [],
+    }
 
 
 def export(settings: Settings) -> dict[str, Any]:
+    """Everything an import reads, as this server runs now: values from config.yaml and
+    the built-in defaults too, not only what was changed in the web UI."""
+    cameras = settings.all_cameras(include_disabled=True)
     with session_scope() as s:
         masks = {m.id: m.rects for m in s.scalars(select(MaskVersion))}
+        states = {st.camera_id: st for st in s.scalars(select(CameraState))}
         return {
             "config_format_version": CONFIG_FORMAT_VERSION,
             "exported_at": utcnow().isoformat() + "Z",
-            "settings": runtime_settings.stored(),
-            "profiles": [{"id": r.id, **r.config} for r in s.scalars(
-                select(DetectionProfile).order_by(DetectionProfile.created_at))],
-            "cameras": [_camera(r) for r in s.scalars(
-                select(ManagedCamera).order_by(ManagedCamera.created_at))],
-            "camera_settings": [{
-                "camera_id": st.camera_id, "private": st.private,
-                "mask": masks.get(st.mask_version_id, []) if st.mask_version_id else [],
-                "profiles": st.profiles, "recording_profile": st.recording_profile,
-                "burn_masks": bool(st.burn_masks),
-                "motion_sensitivity": st.motion_sensitivity,
-                "motion_rects": st.motion_rects or [],
-            } for st in s.scalars(select(CameraState).order_by(CameraState.camera_id))],
-            "notifications": [_channel(r) for r in s.scalars(
-                select(NotificationChannel).order_by(NotificationChannel.created_at))],
+            "settings": {d["key"]: d["value"] for d in runtime_settings.describe(settings)},
+            "recording_profile_default": recording.default_recording_profile(settings)[0].id,
+            "profiles": [p.model_dump(mode="json", exclude={"managed"})
+                         for p in settings.all_profiles(include_disabled=True)],
+            "cameras": [_camera(c) for c in cameras],
+            "camera_settings": [_camera_state(c, states.get(c.id), masks)
+                                for c in cameras],
+            "notifications": [_channel(c) for c in notify.all_channels(settings, True)],
         }
 
 
@@ -136,12 +149,26 @@ class Report:
 
 
 def _settings(settings: Settings, values: dict[str, Any], report: Report) -> None:
+    config = {d["key"]: d["config_value"] for d in runtime_settings.describe(settings)}
     for key, value in values.items():
         try:
-            runtime_settings.update(settings, {key: value}, [])
+            if key in config and value == config[key]:
+                # What config.yaml (or the default) says here: follow it, don't pin it.
+                runtime_settings.update(settings, {}, [key])
+            else:
+                runtime_settings.update(settings, {key: value}, [])
             report.imported["settings"] += 1
         except runtime_settings.SettingError as e:
             report.skip("settings", key, "invalid", str(e))
+
+
+def _recording_default(settings: Settings, value: Any, report: Report) -> None:
+    try:
+        recording.set_default_recording_profile(
+            settings, None if value == settings.recording_profile_default else value)
+        report.imported["settings"] += 1
+    except recording.RecordingError as e:
+        report.skip("settings", "recording_profile_default", "invalid", str(e))
 
 
 def _profiles(settings: Settings, items: list[dict[str, Any]], report: Report) -> None:
@@ -150,7 +177,8 @@ def _profiles(settings: Settings, items: list[dict[str, Any]], report: Report) -
         pid = str(item.get("id", ""))
         existing = settings.profile(pid)
         if existing is not None and pid not in ui:
-            report.skip("profiles", pid, "config")
+            if item != existing.model_dump(mode="json", exclude={"managed"}):
+                report.skip("profiles", pid, "config")
             continue
         try:
             profiles.save_profile(settings, dict(item), create=existing is None)
@@ -166,7 +194,8 @@ def _cameras(settings: Settings, items: list[dict[str, Any]], report: Report) ->
         try:
             if settings.camera(cid) is not None:
                 if cid not in ui:
-                    report.skip("cameras", cid, "config")
+                    if item != _camera(settings.camera(cid)):
+                        report.skip("cameras", cid, "config")
                     continue
                 # Here already: name and options from the file, its stream (and login) kept.
                 camera_store.update_camera(cid, name=item.get("name"),
@@ -190,13 +219,20 @@ def _camera_settings(settings: Settings, items: list[dict[str, Any]],
                      report: Report) -> None:
     for item in items:
         cid = str(item.get("camera_id", ""))
+        cam = settings.camera(cid)
+        if cam is None:  # skipped above (e.g. its login was left out)
+            continue
+        # Same as the camera's config.yaml: follow that rather than pin it in the database.
+        chosen = item.get("profiles")
+        chosen = None if chosen == cam.profiles else chosen
+        rec = item.get("recording_profile")
+        rec = None if rec == cam.recording_profile else rec
         try:
             save_camera_state(cid, item.get("mask") or [], bool(item.get("private")))
             save_motion(cid, item.get("motion_sensitivity"), item.get("motion_rects") or [])
             recording.set_burn_masks(cid, bool(item.get("burn_masks")))
-            recording.set_camera_recording_profile(settings, cid,
-                                                   item.get("recording_profile"))
-            profiles.set_camera_profiles(settings, cid, item.get("profiles"))
+            recording.set_camera_recording_profile(settings, cid, rec)
+            profiles.set_camera_profiles(settings, cid, chosen)
             report.imported["camera_settings"] += 1
         except (recording.RecordingError, profiles.ProfileError) as e:
             report.skip("camera_settings", cid, "invalid", str(e))
@@ -209,7 +245,8 @@ def _notifications(settings: Settings, items: list[dict[str, Any]], report: Repo
         cid = str(data.get("id", ""))
         existing = notify.channel(settings, cid)
         if existing is not None and existing.managed == "config":
-            report.skip("notifications", cid, "config")
+            if item != _channel(existing):
+                report.skip("notifications", cid, "config")
             continue
         if data.get("headers") and REDACTED in data["headers"].values():
             # Header values were left out: keep this server's, or drop them.
@@ -231,6 +268,8 @@ def import_(settings: Settings, data: Any) -> dict[str, Any]:
     data = upgrade(data)
     report = Report()
     _settings(settings, data.get("settings") or {}, report)
+    if "recording_profile_default" in data:
+        _recording_default(settings, data["recording_profile_default"], report)
     _profiles(settings, data.get("profiles") or [], report)
     _cameras(settings, data.get("cameras") or [], report)
     _camera_settings(settings, data.get("camera_settings") or [], report)

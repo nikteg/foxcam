@@ -217,7 +217,7 @@ export const en = {
   "backup.title": "Back up settings",
   "backup.export": "Export settings",
   "backup.exportHint":
-    "Settings, detection profiles, cameras (with masks and motion areas) and notification channels set up here, as one file. Passwords and tokens are left out.",
+    "Everything an import can set, as one file: all settings (also the ones from config.yaml), detection profiles, cameras (with masks and motion areas) and notification channels. Passwords and tokens are left out.",
   "backup.import": "Import settings",
   "backup.importHint":
     "From an exported file: the same ids are updated and new ones added; nothing is removed. Things already here keep their passwords and tokens.",

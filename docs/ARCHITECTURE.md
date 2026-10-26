@@ -290,10 +290,14 @@ e.g. to undo an https `public_url` that broke signing in over plain http.
   skipped. The API also lets editors do it for their own cameras.
 
 **Settings export and import** (Settings → Configuration, `GET /api/admin/settings-export`,
-`POST /api/admin/settings-import`, admins; `backup.py`): what was set up in the web UI as
-one JSON file: settings, detection profiles, cameras, each camera's masks, motion areas,
-privacy, profile and recording choices, and notification channels. Passwords and tokens are
-left out (a stream URL's login, channel tokens, passwords, signing secrets, header values,
+`POST /api/admin/settings-import`, admins; `backup.py`): everything an import can set, as
+one JSON file, with the values the server runs with (config.yaml's and the defaults too, not
+only what was changed in the web UI): every Settings tunable, the default recording profile,
+detection profiles, cameras, each camera's masks, motion areas, privacy, profile and
+recording choices, and notification channels. An imported value that matches this server's
+config.yaml (or default) is left to it rather than stored, and profiles, cameras and
+channels that config.yaml defines here are left alone (listed only when the file's differ).
+Passwords and tokens are left out (a stream URL's login, channel tokens, passwords, signing secrets, header values,
 Apprise URLs). An import updates the same ids and adds new ones, and removes nothing;
 things already here keep their secrets. A new camera whose URL had a login is not added
 (the file lacks the password), and new channels may need their token again: the import
