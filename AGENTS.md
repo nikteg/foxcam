@@ -95,7 +95,11 @@ iPad and desktop, in light and dark theme, and as an iOS home screen app.
 - Pressable cards show it (chevron, hover state, a checkmark when a filter is on).
 - Checkboxes come from `components/ui.tsx` (`Checkbox`), so each label toggles its own box.
 - Date and time inputs use `DateTimeInput` (iOS Safari shows them blank otherwise).
-- One video player component everywhere (speed menu shown, no settings or PiP buttons).
+- One video player component everywhere (`VideoPlayer`): Vidstack plays the video, the
+  controls are our own Fluent parts (speed in the bar, no settings or PiP buttons). Add to
+  it by changing our controls, not by patching Vidstack's markup; anything that pops up
+  inside it (menus) is `inline` so it shows in fullscreen. Timeline `markers` (e.g. motion)
+  are what a double tap at the sides jumps between.
 - Keep it fast: no full-page spinners for filter changes, no refetching what is cached.
 
 ## Detection results

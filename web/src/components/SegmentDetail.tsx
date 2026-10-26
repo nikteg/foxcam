@@ -24,7 +24,7 @@ import {
   Time,
   useStateLabel,
 } from "./ui";
-import { MotionOverlay, VideoPlayer, type PlayerHandle } from "./VideoPlayer";
+import { MotionOverlay, motionMarkers, VideoPlayer, type PlayerHandle } from "./VideoPlayer";
 import { MotionShare } from "./Motion";
 
 /**
@@ -136,6 +136,7 @@ function SegmentDetail({
             poster={s.thumb_url}
             thumbnails={`/api/segments/${s.id}/thumbnails.vtt`}
             overlay={showMotion && <MotionOverlay frames={motionFrames} />}
+            markers={showMotion ? motionMarkers(motionFrames) : undefined}
           />
         </div>
       )}

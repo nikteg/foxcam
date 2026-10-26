@@ -772,7 +772,6 @@ div.thumb.placeholder {
   outline: 2px solid #4aa3ff;
   background: rgb(74 163 255 / 15%);
 }
-
 /* Mask editor */
 .mask-toolbar {
   margin-bottom: var(--spacingVerticalM);
@@ -1449,11 +1448,247 @@ Fluent's text styles would otherwise reset the margins. */
   background: var(--colorNeutralStroke1);
 }
 
-/* Recordings player (components/VideoPlayer.tsx, Vidstack): the app's brand colour. */
+/* The video player (components/VideoPlayer.tsx): Vidstack plays, the controls are ours
+   (Fluent, dark theme, over the picture). */
 .video-player {
-  --video-brand: var(--colorBrandBackground);
-  --video-border-radius: var(--borderRadiusMedium);
-  --video-focus-ring-color: var(--colorStrokeFocus2);
+  /* The controls adapt to the player's width (@container below), not the screen's. */
+  container-type: inline-size;
+  border-radius: var(--borderRadiusMedium);
+  overflow: hidden;
+  background: #000;
+  color: white;
+  font-family: var(--fontFamilyBase);
+}
+.video-player[data-fullscreen] {
+  border-radius: 0;
+}
+.video-player video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.player-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  opacity: 0;
+}
+.player-poster[data-visible] {
+  opacity: 1;
+}
+.player-gesture {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+/* Touch: double taps on the outer thirds seek (above the whole-picture tap). */
+.player-gesture-side {
+  width: 33%;
+  z-index: 1;
+}
+.player-gesture-side.start {
+  right: auto;
+}
+.player-gesture-side.end {
+  left: auto;
+}
+/* The Fluent provider of the controls: a layer over the picture, clicks go through it. */
+.video-player .player-ui {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: transparent;
+  color: white;
+  pointer-events: none;
+}
+.video-player .player-ui > * {
+  pointer-events: auto;
+}
+.player-spinner,
+.player-start {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+}
+.player-spinner {
+  pointer-events: none;
+}
+.player-controls {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--spacingHorizontalS) var(--spacingVerticalXS);
+  background: linear-gradient(to top, rgb(0 0 0 / 0.75), rgb(0 0 0 / 0));
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s ease-out,
+    visibility 0.2s;
+}
+.player-controls[data-visible] {
+  opacity: 1;
+  visibility: visible;
+}
+.player-timeline-row {
+  padding: 0 var(--spacingHorizontalXS);
+}
+.player-timeline {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 24px;
+  cursor: pointer;
+  touch-action: none;
+  outline: none;
+}
+.player-track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.25);
+  transition: height 0.1s;
+}
+.player-timeline[data-pointing] .player-track,
+.player-timeline[data-dragging] .player-track {
+  height: 6px;
+}
+.player-track-progress,
+.player-track-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+}
+.player-track-progress {
+  width: var(--slider-progress);
+  background: rgb(255 255 255 / 0.35);
+}
+.player-track-fill {
+  width: var(--slider-fill);
+  background: var(--colorBrandBackground);
+}
+/* Markers (e.g. where things moved): over the played part too, so they stay visible. */
+.player-markers {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.player-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 3px;
+  border-radius: 2px;
+  background: #4aa3ff;
+  opacity: 0.9;
+}
+.player-thumb {
+  position: absolute;
+  top: 50%;
+  left: var(--slider-fill);
+  z-index: 2;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  translate: -50% -50%;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.player-timeline[data-pointing] .player-thumb,
+.player-timeline[data-dragging] .player-thumb,
+.player-timeline:focus-visible .player-thumb {
+  opacity: 1;
+}
+.player-timeline:focus-visible .player-thumb {
+  outline: 2px solid var(--colorStrokeFocus2);
+}
+.player-preview {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.player-preview[data-visible] {
+  opacity: 1;
+}
+.player-preview-image {
+  display: block;
+  width: var(--thumbnail-width, 160px);
+  height: var(--thumbnail-height, 90px);
+  max-width: 180px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 0.3);
+  border-radius: var(--borderRadiusMedium);
+  background: #000;
+}
+.player-preview-time {
+  padding: 1px 6px;
+  border-radius: var(--borderRadiusSmall);
+  background: rgb(0 0 0 / 0.7);
+  font-size: var(--fontSizeBase200);
+  font-variant-numeric: tabular-nums;
+}
+.player-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.player-bar .fui-Button {
+  color: white;
+}
+.player-bar .player-volume {
+  flex: 0 0 auto;
+  width: 90px;
+  min-width: 0;
+}
+.player-time {
+  flex: 0 0 auto;
+  margin-inline-start: var(--spacingHorizontalS);
+  font-size: var(--fontSizeBase200);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* Vidstack's <Time> is a div. */
+.player-time > * {
+  display: inline;
+}
+.player-bar-end {
+  display: flex;
+  align-items: center;
+  margin-inline-start: auto;
+}
+.player-speed {
+  min-width: 44px;
+  font-variant-numeric: tabular-nums;
+}
+.player-speed-menu {
+  min-width: 0;
+}
+@container (max-width: 380px) {
+  .player-bar .player-volume {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .player-controls,
+  .player-track,
+  .player-thumb,
+  .player-preview {
+    transition: none;
+  }
 }
 
 /* Destructive action in a drawer's button row (Remove camera): left, red, flat. */
@@ -1632,81 +1867,6 @@ h2.panel-heading {
   margin-inline-start: var(--spacingHorizontalL);
   font-size: var(--fontSizeBase300);
   font-weight: var(--fontWeightRegular);
-}
-/* The drawer's heading already names the recording: no title (and "•") in the controls. */
-.video-player .vds-chapter-title {
-  display: none;
-}
-/* The speed menu (VideoPlayer SpeedMenu): the rate as the button, a small list above it. */
-.video-player .speed-button {
-  /* As wide as it is tall, so the round hover highlight stays a circle. */
-  aspect-ratio: 1;
-  width: auto;
-  padding: 0;
-  font-size: 13px;
-  font-weight: var(--fontWeightSemibold);
-  font-variant-numeric: tabular-nums;
-}
-/* Above the timeline's controls group (z-index 11). */
-.video-player .vds-controls .vds-controls-group:has(.speed-menu) {
-  z-index: 12;
-}
-/* Anchored to its button by CSS: Vidstack's own coordinates measure from the drawer (it
-   has a transform), so in fullscreen the menu landed far to the side. Centred above the
-   button; in the small layout (button in the top bar) below it. */
-.video-player .speed-menu {
-  /* Vidstack makes menus display: contents (inline); this one is the box its list
-     hangs from. */
-  display: inline-flex !important;
-  position: relative;
-}
-.video-player .speed-items.vds-menu-items {
-  top: auto !important;
-  bottom: calc(100% + 8px);
-  left: 50% !important;
-  translate: -50% 0;
-}
-.video-player .vds-video-layout[data-sm] .speed-items.vds-menu-items {
-  top: calc(100% + 8px) !important;
-  bottom: auto;
-  /* The button is in the top right corner: line up with its right edge. */
-  left: auto !important;
-  right: 0;
-  translate: none;
-}
-.video-player .speed-items.vds-menu-items {
-  min-width: 0;
-  max-height: none;
-  padding: 4px;
-  border: 1px solid rgb(255 255 255 / 0.12);
-  border-radius: var(--borderRadiusLarge);
-  background: rgb(20 20 20 / 0.92);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
-}
-.video-player .speed-options {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.video-player .speed-option {
-  min-width: 64px;
-  padding: 6px 14px;
-  border-radius: var(--borderRadiusMedium);
-  color: rgb(255 255 255 / 0.85);
-  font-size: 14px;
-  font-weight: var(--fontWeightSemibold);
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-  cursor: pointer;
-}
-.video-player .speed-option:hover,
-.video-player .speed-option[data-focus] {
-  background: rgb(255 255 255 / 0.1);
-}
-.video-player .speed-option[aria-checked="true"] {
-  background: var(--colorBrandBackground);
-  color: white;
 }
 /* Events grid: a heading per day across the whole row. */
 .cards-day {
