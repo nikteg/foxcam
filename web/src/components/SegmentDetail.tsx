@@ -1,7 +1,7 @@
-import { Button, Caption1, Link, Switch, Text } from "@fluentui/react-components";
+import { Button, Caption1, Link, Text } from "@fluentui/react-components";
 import { ArrowClockwise20Regular } from "@fluentui/react-icons";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { useNavigate } from "react-router";
 
 import { api, type Segment, type SegmentJob } from "../api";
@@ -24,7 +24,7 @@ import {
   Time,
   useStateLabel,
 } from "./ui";
-import { MotionOverlay, motionMarkers, VideoPlayer, type PlayerHandle } from "./VideoPlayer";
+import { VideoPlayer, type PlayerHandle } from "./VideoPlayer";
 import { MotionShare } from "./Motion";
 
 /**
@@ -113,7 +113,6 @@ function SegmentDetail({
     placeholderData: keepPreviousData,
   });
   const motionFrames = (!detail.isPlaceholderData && detail.data?.motion_boxes) || [];
-  const [showMotion, setShowMotion] = useState(false);
   const seek = (ms: number) => {
     if (!player.current) return;
     player.current.currentTime = ms / 1000;
@@ -135,17 +134,9 @@ function SegmentDetail({
             src={`/api/segments/${s.id}/play`}
             poster={s.thumb_url}
             thumbnails={`/api/segments/${s.id}/thumbnails.vtt`}
-            overlay={showMotion && <MotionOverlay frames={motionFrames} />}
-            markers={showMotion ? motionMarkers(motionFrames) : undefined}
+            motion={motionFrames}
           />
         </div>
-      )}
-      {!s.deleted && motionFrames.length > 0 && (
-        <Switch
-          checked={showMotion}
-          onChange={(_, d) => setShowMotion(d.checked)}
-          label={t("recordings.showMotion")}
-        />
       )}
       <div className="row wrap">
         {s.download_url && (

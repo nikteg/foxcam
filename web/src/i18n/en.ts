@@ -340,6 +340,7 @@ export const en = {
   "hourly.deleted": "deleted by retention",
   "player.play": "Play",
   "player.pause": "Pause",
+  "player.loop": "Loop",
   "player.mute": "Mute",
   "player.unmute": "Unmute",
   "player.volume": "Volume",

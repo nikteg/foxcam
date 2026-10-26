@@ -345,6 +345,7 @@ export const sv: Record<MessageKey, string> = {
   "hourly.deleted": "gallrad",
   "player.play": "Spela",
   "player.pause": "Pausa",
+  "player.loop": "Upprepa",
   "player.mute": "Ljud av",
   "player.unmute": "Ljud på",
   "player.volume": "Volym",
