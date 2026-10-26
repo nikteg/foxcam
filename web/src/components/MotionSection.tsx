@@ -179,7 +179,7 @@ export function MotionSection() {
         </Select>
       </div>
       {running ? (
-        <MessageBar>
+        <MessageBar className="block">
           <MessageBarBody className="row">
             <Spinner size="tiny" />
             {t("motionReport.measuring", { done: data.backfill.done, total: data.backfill.total })}
@@ -187,7 +187,7 @@ export function MotionSection() {
         </MessageBar>
       ) : (
         !!data?.unmeasured && (
-          <MessageBar>
+          <MessageBar className="block">
             <MessageBarBody>{t("motionReport.unmeasured", { n: data.unmeasured })}</MessageBarBody>
             <MessageBarActions>
               <Button

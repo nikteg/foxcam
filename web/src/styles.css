@@ -56,6 +56,13 @@ code,
   font-family: var(--fontFamilyMonospace);
   font-size: var(--fontSizeBase200);
 }
+/* Chips of key=value text (workers' info) wrap as units; one longer than the whole line
+   (a model file name on a phone) may break rather than stick out. */
+.chips.mono > span {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 kbd {
   font-family: var(--fontFamilyMonospace);
   font-size: var(--fontSizeBase200);
@@ -1463,9 +1470,13 @@ Fluent's text styles would otherwise reset the margins. */
 h3.panel-heading {
   margin: var(--spacingVerticalS) 0 0;
 }
-/* Group headings in Settings ("Recording", "Archives"…): no browser heading margins (the
-   section's gap spaces them). */
+/* Group headings in Settings ("Recording", "Archives"…): space below by default, so one
+   placed outside a gap column never touches what follows; inside a .form-stack the
+   column's gap spaces them instead. Page-level headings are h2.section. */
 h2.panel-heading {
+  margin: 0 0 var(--spacingVerticalM);
+}
+.form-stack > h2.panel-heading {
   margin: 0;
 }
 /* Divider between the groups of a settings form (components/RuntimeSettings.tsx) and
@@ -1475,12 +1486,9 @@ h2.panel-heading {
   margin: 0;
 }
 /* Settings → Configuration: between backing up and the read-only config.yaml cards (the
-   page is not a flex column here, so the divider and heading space themselves). */
+   heading after it is an h2.section, which spaces itself). */
 .config-divider.config-divider {
-  margin: var(--spacingVerticalXXL) 0 var(--spacingVerticalL);
-}
-h2.config-heading {
-  margin-bottom: var(--spacingVerticalM);
+  margin-top: var(--spacingVerticalXXL);
 }
 
 /* Tags (components/ui.tsx Tag): a neutral pill with a coloured dot for the state. */

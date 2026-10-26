@@ -141,6 +141,10 @@ if [ -n "$pids" ]; then kill $pids && echo "stopped: $(echo $pids | tr '\\n' ' '
 description = "Running server: a fake camera per sample clip and a fox profile (+ --profiles for more)"
 run = "uv run python scripts/seed.py"
 
+[tasks."layout-check"]
+description = "Open every page at phone and desktop width and report blocks too close together or wider than the screen (FOXCAM_SERVER, FOXCAM_LAYOUT_EMAIL/PASSWORD)"
+run = "uv run --with playwright python scripts/layout_check.py"
+
 [tasks.screenshots]
 description = "Regenerate docs/screenshots from a throwaway demo stack (sample clips, YOLO-World if installed)"
 depends = ["build", "setup:samples"]

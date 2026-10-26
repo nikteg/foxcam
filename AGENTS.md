@@ -70,6 +70,12 @@ iPad and desktop, in light and dark theme, and as an iOS home screen app.
 - Do a layout pass on every change: no values wrapped mid-word, no cropped tags, even
   vertical gaps between wrapped buttons, nothing that jumps when its content changes (status
   dots, day/night tags), spinners with room around them.
+- Vertical spacing comes from the container, not from luck: put stacked blocks (headings,
+  banners, fields, cards) in a `.form-stack` (its gap spaces them), or use the classes that
+  space themselves: `h2.section` for a page-level heading, `className="block"` on a
+  `MessageBar` above content. `h2.panel-heading` is for headings inside a `.form-stack`.
+  A block touching the next one is the most common mistake here: `mise run layout-check`
+  finds it.
 - Secondary actions are secondary: small or subtle buttons (e.g. "Reset to default"), smaller
   buttons in cards. Links that act as buttons look like buttons.
 - Icons are one colour, without backgrounds.
@@ -107,5 +113,10 @@ iPad and desktop, in light and dark theme, and as an iOS home screen app.
 ## Checks before committing
 
 - `mise run check` (lint, types, format, tests) and `mise run build`.
+- UI changes: `mise run layout-check` against a running server (FOXCAM_SERVER,
+  FOXCAM_LAYOUT_EMAIL/PASSWORD). It opens every page at phone and desktop width and reports
+  blocks closer than 8 px and anything wider than the screen; fix what it reports. Where
+  Playwright cannot start a browser, run `scripts/layout_check.js` in the page with a browser
+  tool instead.
 - Look at UI changes in a browser at phone and desktop widths when possible, and say so when
   you could not.

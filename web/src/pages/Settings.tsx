@@ -231,7 +231,7 @@ export function Settings() {
         <>
           <BackupSection />
           <Divider className="settings-divider config-divider" />
-          <Subtitle2 as="h2" className="panel-heading config-heading">
+          <Subtitle2 as="h2" className="section">
             {t("settings.configFile")}
           </Subtitle2>
           <InfoBanner id="configuration">
