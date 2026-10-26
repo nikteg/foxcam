@@ -646,6 +646,13 @@ def event_clip(event_id: int, download: bool = False,
                   name if download else None)
 
 
+@router.get("/events/{event_id}/motion")
+def event_motion(event_id: int, p: Principal = Depends(principal)) -> list[list[Any]]:
+    """Where things moved in the event's clip, in clip time (``[ms, boxes]`` frames)."""
+    _event(p, event_id)
+    return queries.event_motion(event_id)
+
+
 @router.get("/events/{event_id}/thumb")
 def event_thumb(event_id: int, settings: Settings = Depends(settings_dep),
                 p: Principal = Depends(principal)) -> Response:

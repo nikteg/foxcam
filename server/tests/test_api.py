@@ -1,8 +1,10 @@
 """HTTP API: worker protocol, masks, camera management."""
 
+from datetime import timedelta
+
 import pytest
 from foxcam.db import session_scope
-from foxcam.models import Detection, JobState, Segment, SegmentStatus
+from foxcam.models import Detection, Event, JobState, Segment, SegmentStatus, utcnow
 
 from .conftest import add_detection, add_job, add_segment, app_client, make_video, needs_ffmpeg
 
@@ -179,7 +181,6 @@ def test_worker_tokens_lock_the_api_and_fix_identity(settings, client):
 
 
 def test_offline_workers_can_be_removed(client):
-    from datetime import timedelta
 
     from foxcam.models import Worker, utcnow
 
@@ -368,3 +369,27 @@ def test_danger_zone_footage_keeps_what_was_found(settings, client):
         assert s.get(Segment, seg).deleted_at is not None
     with session_scope() as s:
         assert s.get(Detection, det) is not None
+
+
+def test_event_motion_is_in_clip_time(settings):
+    """Motion of the event's recordings, shifted to the clip's clock (it starts with the
+    pre-roll, in the middle of the first recording)."""
+    start = utcnow().replace(microsecond=0)
+    first = add_segment(settings, start=start, seconds=10, with_file=False,
+                        motion_boxes=[[1000, [[0.1, 0.1, 0.2, 0.2]]],
+                                      [8000, [[0.5, 0.5, 0.1, 0.1]]]])
+    second = add_segment(settings, start=start + timedelta(seconds=10), seconds=10,
+                         with_file=False, motion_boxes=[[500, [[0.2, 0.2, 0.1, 0.1]]]])
+    with session_scope() as s:
+        ev = Event(camera_id="cam", label="fox", first_ts=start, last_ts=start,
+                   max_confidence=0.9, clip_dirty=False, clip_path="clips/cam/ev.mp4",
+                   clip_start=start + timedelta(seconds=5), clip_duration_s=10)
+        ev.segments = [s.get(Segment, first), s.get(Segment, second)]
+        s.add(ev)
+        s.flush()
+        ev_id = ev.id
+    with app_client(settings) as c:
+        r = c.get(f"/api/events/{ev_id}/motion")
+    assert r.status_code == 200
+    # 1000 ms is before the clip; 8000 -> 3000; the second recording's 500 -> 5500.
+    assert r.json() == [[3000, [[0.5, 0.5, 0.1, 0.1]]], [5500, [[0.2, 0.2, 0.1, 0.1]]]]

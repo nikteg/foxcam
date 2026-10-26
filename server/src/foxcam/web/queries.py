@@ -413,6 +413,24 @@ def events(camera_id: str | None = None, limit: int = 100,
         } for e, is_wrong, is_correct in s.execute(q)]
 
 
+def event_motion(event_id: int) -> list[list[Any]]:
+    """Where things moved in an event's clip: each recording's motion frames, with their
+    times (ms) counted from the start of the clip instead of the recording."""
+    with session_scope() as s:
+        ev = s.get(Event, event_id)
+        if ev is None or ev.clip_start is None:
+            return []
+        length_ms = (ev.clip_duration_s or 0) * 1000
+        frames = []
+        for seg in sorted(ev.segments, key=lambda g: g.start_at):
+            shift = (seg.start_at - ev.clip_start).total_seconds() * 1000
+            for at, boxes in seg.motion_boxes or []:
+                t = round(at + shift)
+                if 0 <= t <= length_ms:
+                    frames.append([t, boxes])
+        return frames
+
+
 def worker_summary() -> dict[str, int]:
     """Detection workers at a glance (Status page): connected lately, and busy with a job."""
     now = utcnow()

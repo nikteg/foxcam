@@ -145,3 +145,4 @@ def test_upload_error_is_reported(settings, s3):
     _event_with_clip(settings)
     assert uploader.upload_pending(settings) == 0
     assert "missing-bucket" in uploader.stats(settings)["last_error"]
+
