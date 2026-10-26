@@ -42,6 +42,7 @@ def init_db(settings: Settings) -> Engine:
         Base.metadata.create_all(engine)
         added = _add_missing_columns(engine)
         _backfill(engine, added)
+        _optimize(engine)
     _engine = engine
     _SessionLocal = sessionmaker(engine, expire_on_commit=False)
     # Tunables changed in the web UI win over config.yaml from the start.
@@ -98,7 +99,22 @@ def _add_missing_columns(engine: Engine) -> set[str]:
                 conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {ddl}'))
                 log.info("database: added column %s.%s", table.name, col.name)
                 added.add(f"{table.name}.{col.name}")
+            # Indexes of added columns (and indexes added to old columns) too.
+            existing_ix = {ix["name"] for ix in insp.get_indexes(table.name)}
+            for ix in table.indexes:
+                if ix.name not in existing_ix:
+                    ix.create(conn)
+                    log.info("database: added index %s", ix.name)
     return added
+
+
+def _optimize(engine: Engine) -> None:
+    """Table statistics for the query planner: without them SQLite picks an index on a
+    column with few values (camera, is_target) over the one that matches the query. A
+    bounded sample, and only for tables whose statistics are missing or out of date."""
+    with engine.begin() as conn:
+        conn.exec_driver_sql("PRAGMA analysis_limit=1000")
+        conn.exec_driver_sql("PRAGMA optimize=0x10002")
 
 
 def _backfill(engine: Engine, added: set[str]) -> None:

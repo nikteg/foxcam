@@ -46,13 +46,15 @@ BOX_RESIZE = 0.15
 def history(s, camera_id: str, start: datetime, end: datetime) -> History:
     """The camera's frames with motion between ``start`` and ``end``."""
     frames: History = []
-    for g in s.scalars(select(Segment).where(
+    # Columns, not Segment rows: no ORM objects for what can be thousands of recordings.
+    for start_at, motion_boxes, motion_faint in s.execute(select(
+            Segment.start_at, Segment.motion_boxes, Segment.motion_faint).where(
             Segment.camera_id == camera_id, Segment.motion_boxes.is_not(None),
             Segment.start_at <= end,
             Segment.start_at >= start - timedelta(hours=1))):  # segments are shorter
-        for faint, found in ((False, g.motion_boxes), (True, g.motion_faint)):
+        for faint, found in ((False, motion_boxes), (True, motion_faint)):
             for at, boxes in found or []:
-                t = g.start_at + timedelta(milliseconds=at)
+                t = start_at + timedelta(milliseconds=at)
                 if start <= t <= end:
                     frames.append((t, boxes, faint))
     frames += [f for f in detector_motion(s, camera_id, start, end) if start <= f[0] <= end]

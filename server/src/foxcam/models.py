@@ -12,6 +12,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Table,
@@ -128,6 +129,7 @@ event_segments = Table(
     Base.metadata,
     Column("event_id", ForeignKey("event.id", ondelete="CASCADE"), primary_key=True),
     Column("segment_id", ForeignKey("segment.id", ondelete="CASCADE"), primary_key=True),
+    Index("ix_event_segment_segment_id", "segment_id"),
 )
 
 
@@ -158,6 +160,8 @@ class Archive(Base):
 
 class Segment(Base):
     __tablename__ = "segment"
+    # A camera's recordings by time (lists, motion history).
+    __table_args__ = (Index("ix_segment_camera_start", "camera_id", "start_at"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     camera_id: Mapped[str] = mapped_column(String, index=True)
@@ -229,6 +233,9 @@ class JobState:
 
 class Job(Base):
     __tablename__ = "job"
+    # The queue page (newest first) and its counts of jobs finished lately.
+    __table_args__ = (Index("ix_job_created_at", "created_at"),
+                      Index("ix_job_state_finished", "state", "finished_at"))
 
     id: Mapped[int] = mapped_column(primary_key=True)
     segment_id: Mapped[int] = mapped_column(ForeignKey("segment.id", ondelete="CASCADE"),
@@ -281,11 +288,14 @@ class Worker(Base):
 
 class Detection(Base):
     __tablename__ = "detection"
+    # A camera's detections by time (lists, the standing-still decision).
+    __table_args__ = (Index("ix_detection_camera_ts", "camera_id", "ts"),
+                      Index("ix_detection_target_ts", "is_target", "ts"))
 
     id: Mapped[int] = mapped_column(primary_key=True)
     segment_id: Mapped[int] = mapped_column(ForeignKey("segment.id", ondelete="CASCADE"),
                                             index=True)
-    job_id: Mapped[int] = mapped_column(ForeignKey("job.id", ondelete="CASCADE"))
+    job_id: Mapped[int] = mapped_column(ForeignKey("job.id", ondelete="CASCADE"), index=True)
     profile_id: Mapped[str | None] = mapped_column(String, index=True)
     # The profile's detector that reported it (its job's), next to the worker's `model`.
     detector_id: Mapped[str | None] = mapped_column(String, index=True)
@@ -326,6 +336,7 @@ class Event(Base):
     """A merged run of target detections (one camera, profile and label), plus its clip."""
 
     __tablename__ = "event"
+    __table_args__ = (Index("ix_event_camera_first_ts", "camera_id", "first_ts"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     camera_id: Mapped[str] = mapped_column(String, index=True)

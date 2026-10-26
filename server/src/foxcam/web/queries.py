@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import case, exists, func, select
-from sqlalchemy.orm import object_session
+from sqlalchemy.orm import load_only, object_session, selectinload
 
 from .. import recording
 from ..accounts import Principal
@@ -149,13 +149,13 @@ def _feedback():
 def overview(settings: Settings, camera_ids: set[str] | None = None) -> dict[str, Any]:
     now = utcnow()
     with session_scope() as s:
-        seg_counts = dict(s.execute(_only(select(Segment.status, func.count())
-                                          .where(Segment.deleted_at.is_(None)),
-                                          Segment.camera_id, camera_ids)
-                                    .group_by(Segment.status)).all())
-        stored = s.scalar(_only(select(func.coalesce(func.sum(Segment.size_bytes), 0))
-                                .where(Segment.deleted_at.is_(None)), Segment.camera_id,
-                                camera_ids))
+        by_status = s.execute(_only(select(Segment.status, func.count(),
+                                           func.coalesce(func.sum(Segment.size_bytes), 0))
+                                    .where(Segment.deleted_at.is_(None)),
+                                    Segment.camera_id, camera_ids)
+                              .group_by(Segment.status)).all()
+        seg_counts = {status: n for status, n, _ in by_status}
+        stored = sum(size for _, _, size in by_status)
         # Like the Status page's event list: events marked wrong are left out.
         wrong, correct = _feedback()
         events_24h = s.scalar(_only(select(func.count()).select_from(Event)
@@ -337,7 +337,10 @@ def detections(settings: Settings, camera_id: str | None = None, label: str | No
                detector_id: str | None = None,
                event_id: int | None = None,
                hide_still: bool = False) -> list[dict[str, Any]]:
+    # The recordings' few columns used here, in one query (not their motion data).
     q = _only(select(Detection), Detection.camera_id, camera_ids) \
+        .options(selectinload(Detection.segment).options(
+            load_only(Segment.is_night, Segment.motion_score))) \
         .where(Detection.confidence >= min_confidence) \
         .order_by(Detection.ts.desc()).limit(limit)
     if segment_id is not None:
@@ -444,7 +447,9 @@ def worker_summary() -> dict[str, int]:
 
 def queue_view(limit: int = 100, state: str | None = None) -> dict[str, Any]:
     now = utcnow()
-    q = select(Job).order_by(Job.created_at.desc(), Job.id.desc()).limit(limit)
+    q = select(Job).options(selectinload(Job.segment).options(
+        load_only(Segment.camera_id, Segment.start_at, Segment.motion_score))) \
+        .order_by(Job.created_at.desc(), Job.id.desc()).limit(limit)
     if state:
         q = q.where(Job.state == state)
     with session_scope() as s:
