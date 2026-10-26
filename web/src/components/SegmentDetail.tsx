@@ -1,6 +1,6 @@
 import { Button, Caption1, Link, Switch, Text } from "@fluentui/react-components";
 import { ArrowClockwise20Regular } from "@fluentui/react-icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -46,6 +46,9 @@ export function SegmentPanel({
     queryKey: ["segment", segmentId],
     queryFn: () => api.segment(segmentId!),
     enabled: segmentId !== null && !segment,
+    // Picking another row keeps this one on screen until it arrives: the drawer stays open
+    // (and scrolled where it was) instead of closing and opening again.
+    placeholderData: keepPreviousData,
   });
   const selected = segmentId === null ? undefined : (segment ?? single.data);
   return (
@@ -94,14 +97,22 @@ function SegmentDetail({
   const detections = useQuery({
     queryKey: ["detections", { segment: s.id }],
     queryFn: () => api.detections({ segment: s.id, limit: 500 }),
+    // Another recording's lists stay until the new ones arrive, so the drawer keeps its
+    // height and scroll position (comparing recordings).
+    placeholderData: keepPreviousData,
   });
   const jobs = useQuery({
     queryKey: ["segment-jobs", s.id],
     queryFn: () => api.segmentJobs(s.id),
+    placeholderData: keepPreviousData,
   });
   // Where things moved: only the single recording carries it (lists stay small).
-  const detail = useQuery({ queryKey: ["segment", s.id], queryFn: () => api.segment(s.id) });
-  const motionFrames = detail.data?.motion_boxes ?? [];
+  const detail = useQuery({
+    queryKey: ["segment", s.id],
+    queryFn: () => api.segment(s.id),
+    placeholderData: keepPreviousData,
+  });
+  const motionFrames = (!detail.isPlaceholderData && detail.data?.motion_boxes) || [];
   const [showMotion, setShowMotion] = useState(false);
   const seek = (ms: number) => {
     if (!player.current) return;
@@ -119,7 +130,6 @@ function SegmentDetail({
       ) : (
         <div ref={playerBox} className="detail-media">
           <VideoPlayer
-            key={s.id}
             playerRef={player}
             title={t("recordings.playerTitle", { id: s.id })}
             src={`/api/segments/${s.id}/play`}

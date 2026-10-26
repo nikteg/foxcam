@@ -20,8 +20,9 @@ const KEEP_OPEN =
 
 /**
  * Detail view for the selected list item: a drawer from the right, like every dialog. Not
- * modal, so another row of the list can be picked while it is open; a click anywhere else
- * outside it closes it.
+ * modal and without a backdrop, so another row of the list can be picked while it is
+ * open (the drawer stays, scrolled where it was); a click anywhere else outside it closes
+ * it.
  */
 export function DetailPanel({
   open,
@@ -37,8 +38,7 @@ export function DetailPanel({
   const phone = useMediaQuery(PHONE);
   const { t } = useI18n();
   const panel = useRef<HTMLDivElement>(null);
-  // Where the drawer is mounted: after the backdrop in the same portal. Every portal stacks
-  // on its own, so in separate ones a backdrop opened later would cover the drawer.
+  // Where the drawer is mounted: a layer above the page that lets clicks through to it.
   const [host, setHost] = useState<HTMLDivElement | null>(null);
   const closeRef = useRef(onClose);
   useEffect(() => {
@@ -56,11 +56,9 @@ export function DetailPanel({
   }, [open]);
   return (
     <>
-      {/* The same dimmed page as behind the modal drawers, but clicks go through it:
-          rows stay clickable (they pick another item). */}
-      {/* Fluent's Portal: inside the theme (its colours), like the drawers. */}
+      {/* No backdrop: the page stays as it is, since its rows can still be picked.
+          Fluent's Portal: inside the theme (its colours), like the drawers. */}
       <Portal>
-        {open && <div className="detail-backdrop" aria-hidden="true" />}
         <div ref={setHost} className="detail-host" />
       </Portal>
       <OverlayDrawer

@@ -1602,23 +1602,8 @@ h2.panel-heading {
   }
 }
 
-/* Detail drawer (components/DetailPanel.tsx): dims the page like the modal drawers'
-   backdrop, without catching clicks. */
-.detail-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 999;
-  background: var(--colorBackgroundOverlay);
-  pointer-events: none;
-  animation: detail-backdrop-in 0.2s ease-out;
-}
-@keyframes detail-backdrop-in {
-  from {
-    opacity: 0;
-  }
-}
-/* Where the detail drawer is mounted, after its backdrop: the drawer sits inside it like on
-   the page, and clicks go through it everywhere else. */
+/* Where the detail drawer is mounted (no backdrop): the drawer sits inside it like on the
+   page, and clicks go through it everywhere else. */
 .detail-host {
   position: fixed;
   inset: 0;
@@ -1630,11 +1615,6 @@ h2.panel-heading {
 }
 .fui-OverlayDrawer.app-drawer {
   z-index: 1000;
-}
-@media (prefers-reduced-motion: reduce) {
-  .detail-backdrop {
-    animation: none;
-  }
 }
 
 /* Live drawer title: name and LIVE, then the stream controls. */

@@ -73,6 +73,12 @@ export function VideoPlayer({
 }) {
   const own = useRef<MediaPlayerInstance>(null);
   const ref = playerRef ?? own;
+  // One player for every item a drawer shows (remounting it made the drawer jump): another
+  // moment in the same video seeks here; a new video seeks once loaded (below).
+  useEffect(() => {
+    const player = ref.current;
+    if (startAt !== undefined && player?.state.canPlay) player.currentTime = startAt;
+  }, [ref, startAt]);
   return (
     <MediaPlayer
       ref={ref}

@@ -3,7 +3,7 @@
 // facts. "All detections" opens the Detections tab filtered to the event.
 import { Button } from "@fluentui/react-components";
 import { ScanObject20Regular } from "@fluentui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { api, detectionFrameUrl, type DetectionEvent } from "../api";
 import { duration } from "../format";
@@ -29,6 +29,9 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
   const detections = useQuery({
     queryKey: ["detections", "event", e.id],
     queryFn: () => api.detections({ event: e.id, only_targets: true, limit: 500 }),
+    // Another event's list stays until the new one arrives: the drawer keeps its height
+    // and scroll position (comparing events).
+    placeholderData: keepPreviousData,
   });
   const best = detections.data?.find((d) => d.id === e.best_detection_id) ?? detections.data?.[0];
 
@@ -37,21 +40,19 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
       <QueryState error={detections.error} loading={detections.isPending} />
       {/* The event's clip (with pre- and post-roll; its poster is the best frame with the
           box); until it is cut, the recording from just before the best detection. */}
-      {e.clip_url ? (
-        <VideoPlayer key={e.clip_url} title={e.label} src={e.clip_url} poster={e.thumb_url} />
-      ) : (
-        best && (
-          <>
-            <VideoPlayer
-              key={best.id}
-              title={e.label}
-              src={`/api/segments/${best.segment_id}/play`}
-              poster={detectionFrameUrl(best)}
-              startAt={Math.max(best.offset_ms / 1000 - 1, 0)}
-              thumbnails={`/api/segments/${best.segment_id}/thumbnails.vtt`}
-            />
-          </>
-        )
+      {/* One player in both cases: switching events keeps it (and the drawer's scroll). */}
+      {(e.clip_url || best) && (
+        <VideoPlayer
+          title={e.label}
+          {...(e.clip_url || !best
+            ? { src: e.clip_url!, poster: e.thumb_url }
+            : {
+                src: `/api/segments/${best.segment_id}/play`,
+                poster: detectionFrameUrl(best),
+                startAt: Math.max(best.offset_ms / 1000 - 1, 0),
+                thumbnails: `/api/segments/${best.segment_id}/thumbnails.vtt`,
+              })}
+        />
       )}
       {best && (
         <span className="row wrap">

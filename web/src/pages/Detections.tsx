@@ -293,10 +293,8 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
           ))}
         <Fact label={t("col.worker")}>{d.worker_id ?? "–"}</Fact>
       </Facts>
-      {/* key: reload the player when switching detections */}
       <div className="detail-media">
         <VideoPlayer
-          key={d.id}
           title={d.label}
           src={`/api/segments/${d.segment_id}/play`}
           startAt={Math.max(d.offset_ms / 1000 - 1, 0)}

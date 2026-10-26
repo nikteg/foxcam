@@ -176,7 +176,6 @@ export function ArchivePanel({
           {archive.play_url ? (
             <div className="detail-media">
               <VideoPlayer
-                key={archive.id}
                 title={`${cameraName(archive.camera_id)} – ${localTime(archive.start_at)}`}
                 src={archive.play_url}
                 poster={archive.thumb_url}

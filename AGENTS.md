@@ -34,6 +34,10 @@ iPad and desktop, in light and dark theme, and as an iOS home screen app.
   `@fluentui/react-components`.
 - Drawers: clicking the backdrop closes them, also on desktop; the same backdrop
   everywhere; no slide animation on phones (they cover the screen).
+- A list item's detail drawer (`DetailPanel`) has no backdrop: the list stays usable, and
+  picking another row switches the drawer in place (open, same scroll position). Don't
+  remount what's in it per item (no `key={id}` on the video player); keep the previous
+  item's data on screen until the new one arrives (`keepPreviousData`).
 - Confirmations for removing things are a `ConfirmPopover` at the button, never a drawer
   and never `window.confirm`. Destructive actions always ask. Wiping a whole kind of data
   (Settings → Danger zone) also wants a word typed (`typeToConfirm`).
