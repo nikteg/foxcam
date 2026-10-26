@@ -14,6 +14,8 @@ import { useNavigate } from "react-router";
 import { api } from "../api";
 import { duration, fileSize, localTime } from "../format";
 import { useI18n, type I18n } from "../i18n";
+import { ArchivePanel } from "../pages/HourlyFiles";
+import { useFilters } from "../useFilters";
 import { byNumber, byString, DataTable, type Column } from "./DataTable";
 import { CameraTag, useCameraName } from "./CameraSelect";
 import { Empty, InfoBanner, QueryState, Stat, Tag, Time } from "./ui";
@@ -84,6 +86,7 @@ export function ArchivingSection() {
   const { t, rich } = useI18n();
   const cameraName = useCameraName();
   const navigate = useNavigate();
+  const [{ file }, setFilter] = useFilters(["file"] as const);
   const status = useQuery({
     queryKey: ["archiving"],
     queryFn: api.archiving,
@@ -123,6 +126,7 @@ export function ArchivingSection() {
       size: a.size_bytes,
     })),
   ];
+  const selected = recent.data?.find((a) => a.id === Number(file));
   const last = c.last_built;
   const errorIsNewer = c.last_error && (!last || (c.last_error_at ?? "") > last.at);
 
@@ -190,18 +194,32 @@ export function ArchivingSection() {
       <Subtitle2 as="h2" className="section">
         {t("archiving.periodsTitle")}
       </Subtitle2>
-      {rows.length ? (
-        <DataTable
-          ariaLabel={t("archiving.periodsTitle")}
-          items={rows}
-          columns={periodColumns(t, cameraName)}
-          getRowId={(r) => r.key}
-          defaultSort={{ column: "status", direction: "ascending" }}
-          onRowClick={(r) => r.archiveId && navigate(`/recordings?file=${r.archiveId}`)}
+      <div className="master-detail">
+        <div className="master">
+          {rows.length ? (
+            <DataTable
+              ariaLabel={t("archiving.periodsTitle")}
+              items={rows}
+              columns={periodColumns(t, cameraName)}
+              getRowId={(r) => r.key}
+              defaultSort={{ column: "status", direction: "ascending" }}
+              selectedId={selected && `a/${selected.id}`}
+              onRowClick={(r) => r.archiveId && setFilter("file", String(r.archiveId))}
+            />
+          ) : (
+            <Empty>{t("hourly.none")}</Empty>
+          )}
+        </div>
+        <ArchivePanel
+          archive={selected}
+          onClose={() => setFilter("file", "")}
+          onShowSegments={(a) =>
+            void navigate(
+              `/recordings/segments?camera=${a.camera_id}&day=${a.start_at.slice(0, 10)}`,
+            )
+          }
         />
-      ) : (
-        <Empty>{t("hourly.none")}</Empty>
-      )}
+      </div>
     </>
   );
 }

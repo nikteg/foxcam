@@ -108,7 +108,6 @@ export function HourlyFiles({
 }) {
   const { t } = useI18n();
   const cameraName = useCameraName();
-  const howMade = useHowMade();
   const archives = useQuery({
     queryKey: ["archives", camera, day],
     // A new filter keeps the current list on screen until its own data arrives.
@@ -138,66 +137,86 @@ export function HourlyFiles({
           )}
           {archives.data?.length === 0 && <Empty>{t("hourly.none")}</Empty>}
         </div>
-        <DetailPanel
-          open={!!selected}
-          title={
-            selected && (
-              <DrawerTitle
-                title={cameraName(selected.camera_id)}
-                sub={localTime(selected.start_at)}
-              />
-            )
-          }
+        <ArchivePanel
+          archive={selected}
           onClose={() => onSelect(null)}
-        >
-          {selected && (
-            <div className="detail-stack">
-              {selected.play_url ? (
-                <div className="detail-media">
-                  <VideoPlayer
-                    key={selected.id}
-                    title={`${cameraName(selected.camera_id)} – ${localTime(selected.start_at)}`}
-                    src={selected.play_url}
-                    poster={selected.thumb_url}
-                    thumbnails={`/api/archives/${selected.id}/thumbnails.vtt`}
-                  />
-                </div>
-              ) : (
-                <Empty>{t("hourly.deleted")}</Empty>
-              )}
-              <div className="row wrap">
-                {selected.download_url && (
-                  <DownloadButton href={selected.download_url} appearance="primary">
-                    {t("common.download")}
-                  </DownloadButton>
-                )}
-                <Button icon={<Folder20Regular />} onClick={() => onShowSegments(selected)}>
-                  {t("hourly.showSegments")}
-                </Button>
-              </div>
-              <Facts>
-                <Fact label={t("col.start")}>
-                  <Time iso={selected.start_at} />
-                </Fact>
-                <Fact label={t("col.length")}>{duration(selected.duration_s)}</Fact>
-                <Fact label={t("col.size")}>{fileSize(selected.size_bytes)}</Fact>
-                <Fact label={t("hourly.segments")}>
-                  {selected.segments_with_match > 0
-                    ? t("hourly.segmentsWithMatch", {
-                        n: selected.segments,
-                        matches: selected.segments_with_match,
-                      })
-                    : selected.segments}
-                </Fact>
-                <Fact label={t("recordings.motion")}>
-                  {t("hourly.withMotion", { n: selected.segments_with_motion })}
-                </Fact>
-                <Fact label={t("hourly.reencoded")}>{howMade(selected)}</Fact>
-              </Facts>
-            </div>
-          )}
-        </DetailPanel>
+          onShowSegments={onShowSegments}
+        />
       </div>
     </>
+  );
+}
+
+/** The drawer of one archive file (Recordings → Archives, Jobs → Archiving). */
+export function ArchivePanel({
+  archive,
+  onClose,
+  onShowSegments,
+}: {
+  archive: ArchiveFile | undefined;
+  onClose: () => void;
+  /** Switch to the segments view for this file's camera and day. */
+  onShowSegments: (a: ArchiveFile) => void;
+}) {
+  const { t } = useI18n();
+  const cameraName = useCameraName();
+  const howMade = useHowMade();
+  return (
+    <DetailPanel
+      open={!!archive}
+      title={
+        archive && (
+          <DrawerTitle title={cameraName(archive.camera_id)} sub={localTime(archive.start_at)} />
+        )
+      }
+      onClose={onClose}
+    >
+      {archive && (
+        <div className="detail-stack">
+          {archive.play_url ? (
+            <div className="detail-media">
+              <VideoPlayer
+                key={archive.id}
+                title={`${cameraName(archive.camera_id)} – ${localTime(archive.start_at)}`}
+                src={archive.play_url}
+                poster={archive.thumb_url}
+                thumbnails={`/api/archives/${archive.id}/thumbnails.vtt`}
+              />
+            </div>
+          ) : (
+            <Empty>{t("hourly.deleted")}</Empty>
+          )}
+          <div className="row wrap">
+            {archive.download_url && (
+              <DownloadButton href={archive.download_url} appearance="primary">
+                {t("common.download")}
+              </DownloadButton>
+            )}
+            <Button icon={<Folder20Regular />} onClick={() => onShowSegments(archive)}>
+              {t("hourly.showSegments")}
+            </Button>
+          </div>
+          <Facts>
+            <Fact label={t("col.start")}>
+              <Time iso={archive.start_at} />
+            </Fact>
+            <Fact label={t("col.length")}>{duration(archive.duration_s)}</Fact>
+            <Fact label={t("col.size")}>{fileSize(archive.size_bytes)}</Fact>
+            <Fact label={t("hourly.segments")}>
+              {archive.segments_with_match > 0
+                ? t("hourly.segmentsWithMatch", {
+                    n: archive.segments,
+                    matches: archive.segments_with_match,
+                  })
+                : archive.segments}
+            </Fact>
+            <Fact label={t("recordings.motion")}>
+              {t("hourly.withMotion", { n: archive.segments_with_motion })}
+            </Fact>
+            <Fact label={t("hourly.reencoded")}>{howMade(archive)}</Fact>
+          </Facts>
+        </div>
+      )}
+    </DetailPanel>
   );
 }
