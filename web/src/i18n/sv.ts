@@ -171,7 +171,7 @@ export const sv: Record<MessageKey, string> = {
   "confirm.typeToConfirm": "Skriv {word} för att bekräfta",
   "danger.footage": "Radera alla videofiler",
   "danger.footageHint":
-    "Videofilerna: inspelningar, arkivfiler och händelseklipp, så att disken blir ledig. Detekteringar, händelser, deras markeringar och rapporterna finns kvar; inspelningarna visas som raderade, som efter gallring. Stoppa arkiveringsprocessen först.",
+    "Videofilerna: inspelningar, arkivfiler och händelseklipp, så att disken blir ledig. Detekteringar, händelser, deras markeringar och rapporterna finns kvar; inspelningarna visas som raderade, som efter gallring.",
   "danger.footageConfirm": "Radera alla videofiler?",
   "danger.footageButton": "Radera videofiler",
   "danger.queueWord": "arbetskö",
@@ -199,7 +199,7 @@ export const sv: Record<MessageKey, string> = {
   "danger.detectionsButton": "Radera detekteringar",
   "danger.recordings": "Radera alla inspelningar",
   "danger.recordingsHint":
-    "Inspelningar, arkivfiler, detekteringar, händelser och markeringar: en ren start (Radera alla videofiler behåller det som hittats). Kameror, masker, profiler, arbetare och inställningar finns kvar. Stoppa arkiveringsprocessen först.",
+    "Inspelningar, arkivfiler, detekteringar, händelser och markeringar: en ren start (Radera alla videofiler behåller det som hittats). Kameror, masker, profiler, arbetare och inställningar finns kvar.",
   "danger.recordingsConfirm": "Radera alla inspelningar och det som hittats i dem?",
   "danger.recordingsButton": "Radera inspelningar",
   "danger.workers": "Ta bort alla arbetare",

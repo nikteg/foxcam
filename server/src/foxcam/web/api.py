@@ -417,11 +417,8 @@ DangerScope = Literal["recordings", "footage", "detections", "queue", "workers",
 @router.post("/admin/reset/{scope}", dependencies=[Depends(require_admin)])
 def danger_reset(scope: DangerScope, settings: Settings = Depends(settings_dep)) -> dict[str, str]:
     """Delete one kind of data, keep the rest (like `foxcam reset`). The server's background
-    work is paused meanwhile; recordings are refused while the archiving process runs (it
-    reads and writes them on its own)."""
-    if scope in ("recordings", "footage") and compaction.status(settings)["running"]:
-        raise HTTPException(409, "the archiving process is running: stop it (foxcam compact) "
-                                 "first, or it may archive files being deleted")
+    work is paused meanwhile. The archiving process (a process of its own) need not be
+    stopped: an archive whose recordings are deleted while it is built is dropped."""
     try:
         with runner.gate.exclusive():
             message = reset.SCOPES[scope](settings)

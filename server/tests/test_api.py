@@ -316,14 +316,28 @@ def test_danger_zone_reset_deletes_one_kind_of_data(settings, client):
         assert c.post("/api/admin/reset/queue").status_code == 403
 
 
-def test_danger_zone_keeps_recordings_while_archiving_runs(settings, client, monkeypatch):
+def test_archive_of_recordings_deleted_meanwhile_is_dropped(settings, client, monkeypatch):
+    """Deleting recordings while the archiving process builds an archive of them: the
+    archive is thrown away instead of kept without recordings."""
+    from foxcam import recording
+    from foxcam.models import Archive
     from foxcam.pipeline import compaction
 
-    monkeypatch.setattr(compaction, "status", lambda _settings: {"running": True})
-    add_segment(settings)
-    assert client.post("/api/admin/reset/recordings").status_code == 409
+    seg = add_segment(settings)
+    plan = compaction.Plan(camera_id="cam", segment_ids=[seg], files=[], durations=[2.0],
+                           profile=recording.default_recording_profile(settings)[0])
+
+    def encode_then_delete(_settings, _plan, part):
+        part.write_bytes(b"x")
+        assert client.post("/api/admin/reset/recordings").status_code == 200
+        return "copy"
+
+    monkeypatch.setattr(compaction.ffmpeg, "probe",
+                        lambda _p: type("Info", (), {"duration_s": 2.0})())
+    assert compaction.build(settings, plan, encode_then_delete) is None
     with session_scope() as s:
-        assert s.query(Segment).count() == 1
+        assert s.query(Archive).count() == 0
+    assert not list(settings.recordings_dir.rglob("*.mp4"))
 
 
 def test_gate_holds_background_work_during_a_reset():

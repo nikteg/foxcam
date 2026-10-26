@@ -299,8 +299,8 @@ retention for everything: detections, events, marks and reports stay), recording
 start: archives, detections, events and marks too), workers and tokens, profiles added in the UI, or cameras
 added in the UI with every camera's settings. Not accounts: that would lock everyone out
 (`foxcam reset users` from a shell). The server's background loops wait meanwhile
-(`runner.gate`); deleting recordings is refused while the archiving process runs, as it
-reads and writes them on its own. The ✅/❌ marks can be downloaded first
+(`runner.gate`). The archiving process need not be stopped: an archive whose
+recordings are deleted while it is being built is dropped (`compaction.build`). The ✅/❌ marks can be downloaded first
 (`GET /api/detections/feedback-export`). Each action asks at its button and wants a word
 typed first (`ConfirmPopover` with `typeToConfirm`).
 

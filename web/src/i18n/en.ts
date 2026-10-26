@@ -168,7 +168,7 @@ export const en = {
   "confirm.typeToConfirm": "Type {word} to confirm",
   "danger.footage": "Delete all footage",
   "danger.footageHint":
-    "The video files: recordings, archive files and event clips, freeing the disk. Detections, events, their marks and the reports stay; recordings show as deleted, as after retention. Stop the archiving process first.",
+    "The video files: recordings, archive files and event clips, freeing the disk. Detections, events, their marks and the reports stay; recordings show as deleted, as after retention.",
   "danger.footageConfirm": "Delete all video files?",
   "danger.footageButton": "Delete footage",
   "danger.queueWord": "queue",
@@ -196,7 +196,7 @@ export const en = {
   "danger.detectionsButton": "Delete detections",
   "danger.recordings": "Delete all recordings",
   "danger.recordingsHint":
-    "Recordings, archive files, detections, events and marks: a clean start (Delete all footage keeps what was found). Cameras, masks, profiles, workers and settings stay. Stop the archiving process first.",
+    "Recordings, archive files, detections, events and marks: a clean start (Delete all footage keeps what was found). Cameras, masks, profiles, workers and settings stay.",
   "danger.recordingsConfirm": "Delete all recordings and what was found in them?",
   "danger.recordingsButton": "Delete recordings",
   "danger.workers": "Remove all workers",

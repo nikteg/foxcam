@@ -337,6 +337,8 @@ def build(settings: Settings, plan: Plan, encoder: Encoder = local_encoder) -> i
     """Build one archive and point its segments at it. Returns the archive id."""
     with session_scope() as s:
         first = s.get(Segment, plan.segment_ids[0])
+        if first is None:  # deleted meanwhile (Settings → Danger zone)
+            return None
         start = first.start_at
     rel = Path(plan.camera_id) / ARCHIVE_DIR / f"{start:%Y-%m-%d_%H-%M-%S}Z.mp4"
     dst = settings.recordings_dir / rel
@@ -364,6 +366,15 @@ def build(settings: Settings, plan: Plan, encoder: Encoder = local_encoder) -> i
         _write_state(settings, current=None, last_error_at=_now_iso(),
                      last_error=f"{plan.camera_id} {start:%Y-%m-%d %H:%M}: {e}"[:500])
         return None
+    with session_scope() as s:
+        if not s.scalar(select(func.count()).select_from(Segment).where(
+                Segment.id.in_(plan.segment_ids), Segment.deleted_at.is_(None))):
+            # Its recordings were deleted while it was being built: nothing to keep.
+            part.unlink(missing_ok=True)
+            _write_state(settings, current=None)
+            log.info("[%s] recordings from %s deleted meanwhile; archive dropped",
+                     plan.camera_id, start)
+            return None
     part.rename(dst)
     size = dst.stat().st_size
     with session_scope() as s:
