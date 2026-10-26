@@ -173,10 +173,15 @@ function jumpToMarker(
 const stepFrame =
   (direction: -1 | 1) =>
   ({ player }: { player: MediaPlayerInstance }) => {
-    player.remoteControl.pause();
-    const end = player.state.duration || Infinity;
-    const at = videoTime(player) + direction * (frameSeconds.get(player) ?? DEFAULT_FRAME_S);
-    player.remoteControl.seek(Math.min(Math.max(at, 0), end));
+    // On the video element itself, which Vidstack follows through its events: a pause
+    // request while already paused left Vidstack waiting for a pause that never came,
+    // and play / pause stuck behind it.
+    const video = player.el?.querySelector("video");
+    if (!video) return;
+    if (!video.paused) video.pause();
+    const end = Number.isFinite(video.duration) ? video.duration : Infinity;
+    const at = video.currentTime + direction * (frameSeconds.get(player) ?? DEFAULT_FRAME_S);
+    video.currentTime = Math.min(Math.max(at, 0), end);
   };
 
 /** Keyboard on the player: Vidstack's shortcuts, with the arrows jumping between markers
