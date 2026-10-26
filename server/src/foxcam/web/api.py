@@ -6,18 +6,20 @@ Non-admins only see the cameras shared with them, and everything recorded by the
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 
 from .. import (
+    backup,
     download_links,
     ffmpeg,
     mediamtx_auth,
@@ -380,6 +382,30 @@ def reanalyse_range(body: ReanalyseRange, settings: Settings = Depends(settings_
         except ReanalyseError:
             skipped += 1
     return {"queued": queued, "skipped": skipped, "detections_removed": removed}
+
+
+@router.get("/admin/settings-export", dependencies=[Depends(require_admin)])
+def settings_export(settings: Settings = Depends(settings_dep)) -> Response:
+    """What was set up in the web UI as one file, without passwords and tokens (backup.py)."""
+    data = backup.export(settings)
+    day = data["exported_at"][:10]
+    return Response(json.dumps(data, indent=2, ensure_ascii=False), media_type="application/json",
+                    headers={"Content-Disposition":
+                             f'attachment; filename="foxcam-settings-{day}.json"'})
+
+
+@router.post("/admin/settings-import", dependencies=[Depends(require_admin)])
+async def settings_import(data: dict[str, Any] = Body(...),
+                          settings: Settings = Depends(settings_dep),
+                          mtx: MediaMtx = Depends(mediamtx_dep)) -> dict[str, Any]:
+    """A settings file over what is here: same ids updated, new ones added, nothing
+    removed. Older formats are upgraded; a newer one is refused."""
+    try:
+        report = await asyncio.to_thread(backup.import_, settings, data)
+    except backup.BackupError as e:
+        raise HTTPException(400, str(e)) from e
+    await resync(mtx)  # cameras added or changed
+    return report
 
 
 # Settings → Danger zone: the `foxcam reset` scopes that make sense from the web (not

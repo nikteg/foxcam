@@ -70,7 +70,7 @@ function DangerAction({ scope, marks }: { scope: DangerScope; marks?: boolean })
 export function DangerZoneSection() {
   const { t } = useI18n();
   return (
-    <section className="form-stack maintenance">
+    <section className="form-stack settings-section">
       <InfoBanner id="danger-zone">{t("danger.intro")}</InfoBanner>
       <Subtitle2 as="h2" className="panel-heading">
         {t("danger.title")}

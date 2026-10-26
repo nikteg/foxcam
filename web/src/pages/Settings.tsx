@@ -1,9 +1,10 @@
-import { Card, CardHeader, Divider, Text, Title3 } from "@fluentui/react-components";
+import { Card, CardHeader, Divider, Subtitle2, Text, Title3 } from "@fluentui/react-components";
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../api";
 import { useIsAdmin, useMe } from "../auth";
 import { AppearanceSection } from "../components/AppearanceSection";
+import { BackupSection } from "../components/BackupSection";
 import { DangerZoneSection } from "../components/DangerZoneSection";
 import { MaintenanceSection } from "../components/MaintenanceSection";
 import { Notifications } from "../components/Notifications";
@@ -228,6 +229,11 @@ export function Settings() {
       {tab === "danger" && <DangerZoneSection />}
       {tab === "configuration" && (
         <>
+          <BackupSection />
+          <Divider className="settings-divider config-divider" />
+          <Subtitle2 as="h2" className="panel-heading config-heading">
+            {t("settings.configFile")}
+          </Subtitle2>
           <InfoBanner id="configuration">
             {rich("settings.configIntro", { file: <code>config.yaml</code> })}
           </InfoBanner>

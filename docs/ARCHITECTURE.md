@@ -280,6 +280,18 @@ e.g. to undo an https `public_url` that broke signing in over plain http.
   At most 500 recordings at once; recordings a worker is busy with or already waiting are
   skipped. The API also lets editors do it for their own cameras.
 
+**Settings export and import** (Settings → Configuration, `GET /api/admin/settings-export`,
+`POST /api/admin/settings-import`, admins; `backup.py`): what was set up in the web UI as
+one JSON file: settings, detection profiles, cameras, each camera's masks, motion areas,
+privacy, profile and recording choices, and notification channels. Passwords and tokens are
+left out (a stream URL's login, channel tokens, passwords, signing secrets, header values,
+Apprise URLs). An import updates the same ids and adds new ones, and removes nothing;
+things already here keep their secrets. A new camera whose URL had a login is not added
+(the file lacks the password), and new channels may need their token again: the import
+lists both. The file starts with `config_format_version`: imports upgrade older formats one
+step at a time (`backup.MIGRATIONS`) and refuse newer ones, so a change to the format comes
+with a migration from the version before.
+
 **Danger zone** (Settings → Danger zone, `POST /api/admin/reset/{scope}`, admins) deletes
 one kind of data and keeps the rest, like `foxcam reset` on the server: the detection
 queue, detections (recordings are analysed again), footage (the video files only, like

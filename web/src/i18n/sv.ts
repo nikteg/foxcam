@@ -217,6 +217,31 @@ export const sv: Record<MessageKey, string> = {
     "Kameror som lagts till här (inte de i config.yaml), varje kameras masker, privat-flagga och profilval, och delningar av kameror.",
   "danger.camerasConfirm": "Ta bort kamerorna som lagts till här och alla kamerainställningar?",
   "danger.camerasButton": "Ta bort kameror",
+  "backup.title": "Säkerhetskopiera inställningar",
+  "backup.export": "Exportera inställningar",
+  "backup.exportHint":
+    "Inställningar, detekteringsprofiler, kameror (med masker och rörelseområden) och aviseringskanaler som ställts in här, som en fil. Lösenord och token tas inte med.",
+  "backup.import": "Importera inställningar",
+  "backup.importHint":
+    "Från en exporterad fil: samma id uppdateras och nya läggs till; inget tas bort. Det som redan finns här behåller sina lösenord och token.",
+  "backup.chooseFile": "Välj fil",
+  "backup.importConfirm": "Importera {file}?",
+  "backup.importBody": "Värden i filen ersätter de som finns här.",
+  "backup.imported":
+    "Importerade {settings} {settings:inställning|inställningar}, {profiles} {profiles:profil|profiler}, {cameras} {cameras:kamera|kameror}, inställningar för {camera_settings} {camera_settings:kamera|kameror} och {notifications} {notifications:aviseringskanal|aviseringskanaler}.",
+  "backup.skippedTitle": "Inte importerat",
+  "backup.attentionTitle": "Behöver ses över",
+  "backup.badFile": "Inte en inställningsfil.",
+  "backup.reason.config": "finns i config.yaml",
+  "backup.reason.login": "lösenordet till strömmen finns inte i filen: lägg till kameran igen",
+  "backup.reason.secret":
+    "dess token eller URL finns inte i filen: lägg till den under Aviseringar",
+  "backup.reason.invalid": "inte giltigt här",
+  "backup.kind.settings": "Inställning",
+  "backup.kind.profiles": "Profil",
+  "backup.kind.cameras": "Kamera",
+  "backup.kind.camera_settings": "Kamerainställningar",
+  "backup.kind.notifications": "Kanal",
   "maintenance.title": "Underhåll",
   "maintenance.rebuild": "Händelser",
   "maintenance.rebuildHint":
@@ -675,6 +700,7 @@ export const sv: Record<MessageKey, string> = {
   "storage.testing": "Testar…",
   "storage.testOk": "Anslutningen fungerar",
   "storage.testFailed": "Anslutningen misslyckades",
+  "settings.configFile": "Konfigurationsfil",
   "settings.configIntro":
     "Skrivskyddad vy av {file}. Ändra i filen och starta om för att ändra något. Hemligheter visas inte.",
 

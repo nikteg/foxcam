@@ -214,6 +214,30 @@ export const en = {
     "Cameras added here (not the ones in config.yaml), every camera's masks, private flag and profile choice, and camera shares.",
   "danger.camerasConfirm": "Remove the cameras added here and all camera settings?",
   "danger.camerasButton": "Remove cameras",
+  "backup.title": "Back up settings",
+  "backup.export": "Export settings",
+  "backup.exportHint":
+    "Settings, detection profiles, cameras (with masks and motion areas) and notification channels set up here, as one file. Passwords and tokens are left out.",
+  "backup.import": "Import settings",
+  "backup.importHint":
+    "From an exported file: the same ids are updated and new ones added; nothing is removed. Things already here keep their passwords and tokens.",
+  "backup.chooseFile": "Choose file",
+  "backup.importConfirm": "Import {file}?",
+  "backup.importBody": "Values in the file replace the ones here.",
+  "backup.imported":
+    "Imported {settings} {settings:setting|settings}, {profiles} {profiles:profile|profiles}, {cameras} {cameras:camera|cameras}, settings for {camera_settings} {camera_settings:camera|cameras} and {notifications} notification {notifications:channel|channels}.",
+  "backup.skippedTitle": "Not imported",
+  "backup.attentionTitle": "Needs a look",
+  "backup.badFile": "Not a settings file.",
+  "backup.reason.config": "set in config.yaml",
+  "backup.reason.login": "its stream password is not in the file: add the camera again",
+  "backup.reason.secret": "its token or URL is not in the file: add it under Notifications",
+  "backup.reason.invalid": "not valid here",
+  "backup.kind.settings": "Setting",
+  "backup.kind.profiles": "Profile",
+  "backup.kind.cameras": "Camera",
+  "backup.kind.camera_settings": "Camera settings",
+  "backup.kind.notifications": "Channel",
   "maintenance.title": "Maintenance",
   "maintenance.rebuild": "Events",
   "maintenance.rebuildHint":
@@ -671,6 +695,7 @@ export const en = {
   "storage.testing": "Testing…",
   "storage.testOk": "Connection works",
   "storage.testFailed": "Connection failed",
+  "settings.configFile": "Configuration file",
   "settings.configIntro":
     "Read-only view of {file}. Edit the file and restart to change it. Secrets are hidden.",
 

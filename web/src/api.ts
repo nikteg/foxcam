@@ -493,6 +493,17 @@ export interface Job {
   processing_ms: number | null;
 }
 
+/** What a settings file holds (server: backup.py). */
+export type ImportKind = "settings" | "profiles" | "cameras" | "camera_settings" | "notifications";
+
+/** What a settings import did. ``reason``: config (from config.yaml), login (a camera's
+ *  stream password is not in the file), secret (a channel's token or URL is not), invalid. */
+export interface ImportReport {
+  imported: Record<ImportKind, number>;
+  skipped: { kind: ImportKind; id: string; reason: string; detail: string }[];
+  attention: { kind: ImportKind; id: string; reason: string }[];
+}
+
 /** What Settings → Danger zone can delete (server: api.DangerScope). */
 export type DangerScope =
   | "recordings"
@@ -878,6 +889,9 @@ export const api = {
       "/api/segments/reanalyse",
       body,
     ),
+  /** A settings file (Settings → Configuration) over what is here (admins). */
+  importSettings: (data: unknown) =>
+    request<ImportReport>("POST", "/api/admin/settings-import", data),
   /** Settings → Danger zone: delete one kind of data, keep the rest (admins). */
   dangerReset: (scope: DangerScope) =>
     request<{ status: string; message: string }>("POST", `/api/admin/reset/${scope}`),

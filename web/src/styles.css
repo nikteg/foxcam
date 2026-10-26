@@ -1474,6 +1474,14 @@ h2.panel-heading {
   flex-grow: 0;
   margin: 0;
 }
+/* Settings → Configuration: between backing up and the read-only config.yaml cards (the
+   page is not a flex column here, so the divider and heading space themselves). */
+.config-divider.config-divider {
+  margin: var(--spacingVerticalXXL) 0 var(--spacingVerticalL);
+}
+h2.config-heading {
+  margin-bottom: var(--spacingVerticalM);
+}
 
 /* Tags (components/ui.tsx Tag): a neutral pill with a coloured dot for the state. */
 .app-tag {
@@ -1731,8 +1739,15 @@ h2.panel-heading {
   gap: var(--spacingVerticalXXL);
 }
 .runtime-form > :not(.settings-divider),
-.maintenance > :not(.settings-divider) {
+.maintenance > :not(.settings-divider),
+.settings-section > * {
   max-width: 620px;
+}
+/* A settings tab of actions (Settings → Configuration: back up; Danger zone): each one
+   clearly apart from the next, as the settings are. */
+.settings-section > .fui-Field + .fui-Field,
+.settings-section > .fui-MessageBar + .fui-Field {
+  margin-top: var(--spacingVerticalL);
 }
 /* Each setting clearly apart from the next, so its hint and reset button read as its own
    (the gap between fields, plus this). */
