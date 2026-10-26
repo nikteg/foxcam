@@ -23,6 +23,7 @@ import {
 } from "@fluentui/react-components";
 import {
   ArrowDownload20Regular,
+  ArrowClockwise16Regular,
   Eye20Regular,
   EyeOff20Regular,
   ArrowRight20Regular,
@@ -46,10 +47,10 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router";
 
-import { api } from "../api";
+import { api, ApiError } from "../api";
 import { localTime, percent, relativeTime } from "../format";
 import { useI18n } from "../i18n";
 
@@ -559,21 +560,59 @@ export function QueryState({
   loading: boolean;
   skeleton?: ReactNode;
 }) {
-  const { t } = useI18n();
-  if (error) {
-    return (
-      <MessageBar intent="error" className="block">
-        <MessageBarBody>
-          <MessageBarTitle>{t("common.loadFailed")}</MessageBarTitle>
-          {String((error as Error).message ?? error)}
-        </MessageBarBody>
-      </MessageBar>
-    );
-  }
-  if (loading) {
-    return skeleton ?? <Spinner size="small" label={t("common.loading")} className="block" />;
-  }
+  if (error) return <LoadError error={error} />;
+  if (loading) return skeleton ?? <LoadingSpinner />;
   return null;
+}
+
+function LoadingSpinner() {
+  const { t } = useI18n();
+  return <Spinner size="small" label={t("common.loading")} className="block" />;
+}
+
+/** What went wrong in words (no connection, the server failed, no access…), the server's
+ *  own message under it, and a button to try again. */
+export function LoadError({ error }: { error: unknown }) {
+  const { t } = useI18n();
+  const client = useQueryClient();
+  const [retrying, setRetrying] = useState(false);
+  const status = error instanceof ApiError ? error.status : null;
+  const reason =
+    status === null
+      ? t("error.offline")
+      : status === 403
+        ? t("error.forbidden")
+        : status === 404
+          ? t("error.notFound")
+          : status >= 500
+            ? t("error.server")
+            : t("error.other");
+  const detail = error instanceof Error ? error.message : String(error);
+  // Every query that failed, not only this one: one outage usually fails several.
+  const retry = () => {
+    setRetrying(true);
+    void client
+      .refetchQueries({ type: "active", predicate: (q) => q.state.status === "error" })
+      .finally(() => setRetrying(false));
+  };
+  return (
+    <MessageBar intent="error" layout="multiline" className="block load-error">
+      <MessageBarBody>
+        <MessageBarTitle>{t("common.loadFailed")}</MessageBarTitle>
+        <span className="load-error-reason">{reason}</span>
+        {detail && detail !== reason && <span className="load-error-detail">{detail}</span>}
+        <Button
+          size="small"
+          className="load-error-retry"
+          icon={<ArrowClockwise16Regular />}
+          disabled={retrying}
+          onClick={retry}
+        >
+          {t("error.retry")}
+        </Button>
+      </MessageBarBody>
+    </MessageBar>
+  );
 }
 
 /** A value that isn't there (a table cell, a fact): a subtle dash. */

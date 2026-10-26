@@ -19,7 +19,7 @@ import { useFilters } from "../useFilters";
 import { byNumber, byString, DataTable, type Column } from "./DataTable";
 import { CameraTag, useCameraName } from "./CameraSelect";
 import { Empty, InfoBanner, QueryState, Stat, Tag, Time } from "./ui";
-import { StatsSkeleton, TableSkeleton } from "./Skeletons";
+import { StatsSkeleton, TableSkeleton, TextSkeleton } from "./Skeletons";
 
 interface PeriodRow {
   key: string;
@@ -106,6 +106,10 @@ export function ArchivingSection() {
         loading={status.isPending}
         skeleton={
           <>
+            {/* Its wording needs the period: its place is kept meanwhile. */}
+            <InfoBanner id="archiving">
+              <TextSkeleton />
+            </InfoBanner>
             <StatsSkeleton />
             <Subtitle2 as="h2" className="section">
               {t("archiving.periodsTitle")}

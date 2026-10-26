@@ -2133,3 +2133,30 @@ h2.panel-heading {
   display: flex;
   gap: var(--spacingHorizontalL);
 }
+.skeleton-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalS);
+}
+.runtime-form section > .skeleton-field + .skeleton-field {
+  margin-top: var(--spacingVerticalL);
+}
+/* A load error (components/ui.tsx LoadError): the server's own message, small, under it. */
+.load-error-detail {
+  display: block;
+  margin-top: var(--spacingVerticalXS);
+  font-size: var(--fontSizeBase200);
+  color: var(--colorNeutralForeground3);
+  overflow-wrap: anywhere;
+}
+.load-error .fui-MessageBarTitle,
+.load-error-reason {
+  display: block;
+}
+.load-error .fui-MessageBarBody {
+  padding-bottom: var(--spacingVerticalS);
+}
+.load-error .load-error-retry {
+  display: flex;
+  margin-top: var(--spacingVerticalM);
+}

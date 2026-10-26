@@ -50,29 +50,18 @@ export function Dashboard() {
     <>
       <PageTitle title={t("nav.status")} />
       <InstallHint />
-      <QueryState
-        error={status.error}
-        loading={status.isPending}
-        skeleton={
-          <>
-            <Subtitle2 as="h2" className="section first">
-              {t("dashboard.overview")}
-            </Subtitle2>
-            <StatsSkeleton />
-          </>
-        }
-      />
       {s && !s.mediamtx_reachable && (
         <MessageBar intent="warning" className="block">
           <MessageBarBody>{t("dashboard.mediamtxDown")}</MessageBarBody>
         </MessageBar>
       )}
 
+      <Subtitle2 as="h2" className="section first">
+        {t("dashboard.overview")}
+      </Subtitle2>
+      <QueryState error={status.error} loading={status.isPending} skeleton={<StatsSkeleton />} />
       {s && (
         <>
-          <Subtitle2 as="h2" className="section first">
-            {t("dashboard.overview")}
-          </Subtitle2>
           <section className="stats">
             <Stat
               icon={<Video20Regular />}
@@ -131,7 +120,8 @@ export function Dashboard() {
         {t("dashboard.latestEvents")}
         <SectionLink to="/events" label={t("dashboard.all")} />
       </Subtitle2>
-      {events.isPending ? <CardsSkeleton /> : <EventsGrid events={events.data ?? []} />}
+      <QueryState error={events.error} loading={events.isPending} skeleton={<CardsSkeleton />} />
+      {events.data && <EventsGrid events={events.data} />}
 
       {liveFor && s && (
         <LiveDrawer cameras={s.cameras} cameraId={liveFor} onClose={() => setLiveFor(null)} />
@@ -143,28 +133,44 @@ export function Dashboard() {
           onClose={() => setSettingsFor(null)}
         />
       )}
-      {isAdmin && s && <DetectionSummary status={s} />}
-      {isAdmin && s?.preprocessing && <PreparationSummary prep={s.preprocessing} />}
-      {isAdmin && s?.compaction && <ArchivingSummary archiving={s.compaction} />}
+      {/* Skeletons with their headings while the status loads. */}
+      {isAdmin && (s || status.isPending) && <DetectionSummary status={s} />}
+      {isAdmin && (s?.preprocessing || status.isPending) && (
+        <PreparationSummary prep={s?.preprocessing ?? undefined} />
+      )}
+      {isAdmin && (s?.compaction || status.isPending) && (
+        <ArchivingSummary archiving={s?.compaction ?? undefined} />
+      )}
     </>
   );
 }
 
 /** Detection at a glance (admins): what waits and runs, the last hour's work, and the
  * workers. Details on Jobs → Detection and Detection workers. */
-function DetectionSummary({ status: s }: { status: Status }) {
+function DetectionSummary({ status: s }: { status?: Status }) {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const heading = (
+    <Subtitle2 as="h2" className="section">
+      {t("queue.queueTab")}
+      <SectionLink to="/jobs/detection" label={t("dashboard.allJobs")} />
+    </Subtitle2>
+  );
+  if (!s) {
+    return (
+      <>
+        {heading}
+        <StatsSkeleton count={5} />
+      </>
+    );
+  }
   const q = s.queue;
   const w = s.workers;
   const avg = q.avg_processing_ms_last_hour;
   const open = (state: string) => void navigate(`/jobs/detection?state=${state}`);
   return (
     <>
-      <Subtitle2 as="h2" className="section">
-        {t("queue.queueTab")}
-        <SectionLink to="/jobs/detection" label={t("dashboard.allJobs")} />
-      </Subtitle2>
+      {heading}
       <section className="stats">
         <Stat
           icon={<Hourglass20Regular />}
@@ -212,16 +218,27 @@ function DetectionSummary({ status: s }: { status: Status }) {
 
 /** The server preparing recordings before they get detection jobs (admins), like
  * Jobs → Preparation. */
-function PreparationSummary({ prep: p }: { prep: PreprocessingStatus }) {
+function PreparationSummary({ prep: p }: { prep?: PreprocessingStatus }) {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const heading = (
+    <Subtitle2 as="h2" className="section">
+      {t("prep.tab")}
+      <SectionLink to="/jobs/preparation" label={t("prep.tab")} />
+    </Subtitle2>
+  );
+  if (!p) {
+    return (
+      <>
+        {heading}
+        <StatsSkeleton />
+      </>
+    );
+  }
   const open = () => void navigate("/jobs/preparation");
   return (
     <>
-      <Subtitle2 as="h2" className="section">
-        {t("prep.tab")}
-        <SectionLink to="/jobs/preparation" label={t("prep.tab")} />
-      </Subtitle2>
+      {heading}
       <section className="stats">
         <Stat
           icon={<Hourglass20Regular />}
@@ -264,17 +281,28 @@ function PreparationSummary({ prep: p }: { prep: PreprocessingStatus }) {
 
 /** The compact process joining finished periods into archive files (admins), like
  * Jobs → Archiving. */
-function ArchivingSummary({ archiving: a }: { archiving: CompactionStatus }) {
+function ArchivingSummary({ archiving: a }: { archiving?: CompactionStatus }) {
   const { t } = useI18n();
   const navigate = useNavigate();
   const cameraName = useCameraName();
+  const heading = (
+    <Subtitle2 as="h2" className="section">
+      {t("compaction.title")}
+      <SectionLink to="/jobs/archiving" label={t("compaction.title")} />
+    </Subtitle2>
+  );
+  if (!a) {
+    return (
+      <>
+        {heading}
+        <StatsSkeleton />
+      </>
+    );
+  }
   const open = () => void navigate("/jobs/archiving");
   return (
     <>
-      <Subtitle2 as="h2" className="section">
-        {t("compaction.title")}
-        <SectionLink to="/jobs/archiving" label={t("compaction.title")} />
-      </Subtitle2>
+      {heading}
       <section className="stats">
         <Stat
           icon={<Clock20Regular />}

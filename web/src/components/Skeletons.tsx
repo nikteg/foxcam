@@ -111,3 +111,25 @@ export function StatsSkeleton({ count = 4 }: { count?: number }) {
     </Skeleton>
   );
 }
+
+/** Text that is still loading, e.g. inside a banner whose wording depends on the data. */
+export function TextSkeleton({ lines = 2 }: { lines?: number }) {
+  const { t } = useI18n();
+  return (
+    <Skeleton aria-label={t("common.loading")}>
+      <Lines widths={["90%", "60%", "75%"].slice(0, lines)} />
+    </Skeleton>
+  );
+}
+
+/** A form field while it loads: its label, the input and the hint under it. */
+export function FieldSkeleton() {
+  const { t } = useI18n();
+  return (
+    <Skeleton aria-label={t("common.loading")} className="skeleton-field">
+      <SkeletonItem size={12} style={{ width: "35%" }} />
+      <SkeletonItem size={32} />
+      <SkeletonItem size={12} style={{ width: "70%" }} />
+    </Skeleton>
+  );
+}

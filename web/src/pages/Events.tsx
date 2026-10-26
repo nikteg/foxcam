@@ -20,7 +20,7 @@ import { useIsAdmin } from "../auth";
 import { useI18n } from "../i18n";
 import { useFilters } from "../useFilters";
 import { DetectionList } from "./Detections";
-import { CardsSkeleton } from "../components/Skeletons";
+import { CardsSkeleton, TextSkeleton } from "../components/Skeletons";
 
 /** Events (what happened, as clips), the detections behind them and, for admins, how the
  * models did. */
@@ -108,6 +108,12 @@ function EventList() {
             before: cfg.events.pre_roll_seconds,
             after: cfg.events.post_roll_seconds,
           })}
+        </InfoBanner>
+      )}
+      {/* Its wording needs the profiles and settings: its place is kept meanwhile. */}
+      {(settings.isPending || profiles.isPending) && (
+        <InfoBanner id="events">
+          <TextSkeleton />
         </InfoBanner>
       )}
       <div className="filters">

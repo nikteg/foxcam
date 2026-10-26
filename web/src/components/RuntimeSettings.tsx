@@ -19,6 +19,7 @@ import { api, type RuntimeSetting, type RuntimeSettings } from "../api";
 import { fileSize } from "../format";
 import { useI18n, type MessageKey } from "../i18n";
 import { useRecordingProfiles, useRecordingSummary } from "../recordingProfiles";
+import { FieldSkeleton } from "./Skeletons";
 import { Fact, Facts, QueryState, Tag } from "./ui";
 
 /** "percent": stored 0–1, entered and shown as 0–100 %. "choice": one of `options`. */
@@ -193,7 +194,11 @@ export function RuntimeSettingsSection({
   const query = useQuery({ queryKey: ["runtimeSettings"], queryFn: api.runtimeSettings });
   return (
     <>
-      <QueryState error={query.error} loading={query.isPending} />
+      <QueryState
+        error={query.error}
+        loading={query.isPending}
+        skeleton={<SettingsFormSkeleton groups={groups} />}
+      />
       {query.data && showDisk && <DiskUse data={query.data} />}
       {query.data && (
         <SettingsForm
@@ -204,6 +209,30 @@ export function RuntimeSettingsSection({
         />
       )}
     </>
+  );
+}
+
+/** The form's groups and fields (their headings already in place) while it loads. */
+function SettingsFormSkeleton({ groups }: { groups: SettingsGroup[] }) {
+  const { t } = useI18n();
+  return (
+    <div className="form-stack runtime-form">
+      {groups.map((g, i) => (
+        <Fragment key={g.keys.join()}>
+          {i > 0 && <Divider className="settings-divider" />}
+          <section className="form-stack">
+            {g.title && (
+              <Subtitle2 as="h2" className="panel-heading">
+                {t(g.title)}
+              </Subtitle2>
+            )}
+            {g.keys.map((k) => (
+              <FieldSkeleton key={k} />
+            ))}
+          </section>
+        </Fragment>
+      ))}
+    </div>
   );
 }
 
