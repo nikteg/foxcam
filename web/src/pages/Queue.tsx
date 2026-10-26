@@ -37,6 +37,7 @@ import { decimal, duration } from "../format";
 import { ProfileTag } from "../components/ProfileSelect";
 import { AddWorkerDialog } from "../components/AddWorkerDialog";
 import { ArchivingSection } from "../components/ArchivingSection";
+import { PreprocessingSection } from "../components/PreprocessingSection";
 import { SegmentPanel } from "../components/SegmentDetail";
 
 import { WorkersSection } from "../components/WorkersSection";
@@ -80,7 +81,7 @@ export function Queue() {
   );
   const q = queue.data;
   const avgMs = q?.stats.avg_processing_ms_last_hour;
-  const tab = useSubPage("/jobs", ["queue", "workers", "archiving"] as const);
+  const tab = useSubPage("/jobs", ["queue", "preprocessing", "workers", "archiving"] as const);
   const [addingWorker, setAddingWorker] = useState(false);
   const segmentId = Number(segment) || null;
 
@@ -96,6 +97,7 @@ export function Queue() {
             current={tab}
             tabs={[
               { id: "queue", label: t("queue.queueTab") },
+              { id: "preprocessing", label: t("prep.tab") },
               { id: "workers", label: t("queue.workers") },
               { id: "archiving", label: t("compaction.title") },
             ]}
@@ -115,6 +117,7 @@ export function Queue() {
               <WorkersSection workers={q.workers} />
             </>
           )}
+          {tab === "preprocessing" && <PreprocessingSection />}
           {tab === "archiving" && <ArchivingSection />}
 
           {tab === "queue" && (

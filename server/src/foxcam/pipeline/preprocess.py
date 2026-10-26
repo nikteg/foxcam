@@ -11,10 +11,14 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC
+import threading
+import time
+from collections import deque
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from .. import ffmpeg, hwaccel, sprites
 from ..config import Settings
@@ -71,11 +75,83 @@ def pending_segment_ids(limit: int = 50) -> list[int]:
         ))
 
 
+class Activity:
+    """What preprocessing is doing and has done lately (in memory, since the server started):
+    for the Jobs page, where recordings wait before they get any job."""
+
+    def __init__(self) -> None:
+        self.lock = threading.Lock()
+        self.running: dict[int, datetime] = {}
+        # (finished at, seconds, prepared without an error)
+        self.recent: deque[tuple[datetime, float, bool]] = deque(maxlen=2000)
+
+    def started(self, segment_id: int) -> None:
+        with self.lock:
+            self.running[segment_id] = utcnow()
+
+    def finished(self, segment_id: int, seconds: float, ok: bool | None) -> None:
+        with self.lock:
+            self.running.pop(segment_id, None)
+            if ok is not None:  # None: nothing to do (no longer new)
+                self.recent.append((utcnow(), seconds, ok))
+
+
+activity = Activity()
+
+
+def _iso(dt: datetime) -> str:
+    return dt.isoformat() + "Z"  # stored as naive UTC
+
+
+def status(settings: Settings, limit: int = 100) -> dict[str, Any]:
+    """Recordings waiting for preprocessing, the ones being prepared, and the pace."""
+    now = utcnow()
+    with activity.lock:
+        running = dict(activity.running)
+        recent = [r for r in activity.recent if r[0] >= now - timedelta(hours=1)]
+    waiting = (Segment.status == SegmentStatus.NEW) & Segment.deleted_at.is_(None)
+    with session_scope() as s:
+        count = s.scalar(select(func.count()).select_from(Segment).where(waiting)) or 0
+        oldest = s.scalar(select(func.min(Segment.start_at)).where(waiting))
+        failed = s.scalar(select(func.count()).select_from(Segment).where(
+            Segment.status == SegmentStatus.FAILED, Segment.deleted_at.is_(None))) or 0
+        # In the order they are prepared (pending_segment_ids): the newest first.
+        rows = s.execute(select(Segment.id, Segment.camera_id, Segment.start_at)
+                         .where(waiting | Segment.id.in_(running))
+                         .order_by(Segment.start_at.desc()).limit(limit + len(running))).all()
+    segments = [{"id": i, "camera_id": c, "start_at": _iso(t),
+                 "started_at": _iso(running[i]) if i in running else None} for i, c, t in rows]
+    segments.sort(key=lambda g: g["started_at"] is None)  # the ones being prepared first
+    took = [sec for _, sec, ok in recent if ok]
+    return {
+        "waiting": count,
+        "oldest_waiting_age_s": (now - oldest).total_seconds() if oldest else None,
+        "preparing": len(running),
+        "concurrency": settings.processing.concurrency,
+        "done_last_hour": len(took),
+        "failed_last_hour": len(recent) - len(took),
+        "failed": failed,
+        "avg_seconds_last_hour": round(sum(took) / len(took), 1) if took else None,
+        "segments": segments[:limit],
+    }
+
+
 def preprocess_segment(settings: Settings, segment_id: int) -> None:
+    activity.started(segment_id)
+    t0 = time.monotonic()
+    ok = None
+    try:
+        ok = _preprocess(settings, segment_id)
+    finally:
+        activity.finished(segment_id, time.monotonic() - t0, ok)
+
+
+def _preprocess(settings: Settings, segment_id: int) -> bool | None:
+    """Prepare the recording; whether that went without an error (None: not new)."""
     with session_scope() as s:
         seg = s.get(Segment, segment_id)
         if seg is None or seg.status != SegmentStatus.NEW:
-            return
+            return None
         camera_id, rel = seg.camera_id, seg.path
     updates: dict = {}
     try:
@@ -135,7 +211,7 @@ def preprocess_segment(settings: Settings, segment_id: int) -> None:
     with session_scope() as s:
         seg = s.get(Segment, segment_id)
         if seg is None:
-            return
+            return None
         for k, v in updates.items():
             setattr(seg, k, v)
         if seg.status == SegmentStatus.QUEUED:
@@ -151,3 +227,4 @@ def preprocess_segment(settings: Settings, segment_id: int) -> None:
                     s.add(job)
             if still:
                 settle_segment(settings, seg)  # done already when every job was skipped
+    return updates.get("status") != SegmentStatus.FAILED

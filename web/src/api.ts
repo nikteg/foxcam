@@ -489,6 +489,31 @@ export interface Job {
   processing_ms: number | null;
 }
 
+/** A recording waiting for (or in) preprocessing on the server. */
+export interface PreprocessingSegment {
+  id: number;
+  camera_id: string;
+  start_at: string;
+  /** Set while it is being prepared. */
+  started_at: string | null;
+}
+
+/** Recordings the server prepares before they get detection jobs. */
+export interface PreprocessingStatus {
+  waiting: number;
+  oldest_waiting_age_s: number | null;
+  preparing: number;
+  /** At most this many at once (Settings: processing.concurrency). */
+  concurrency: number;
+  done_last_hour: number;
+  failed_last_hour: number;
+  /** Recordings whose preparation failed (all time). */
+  failed: number;
+  avg_seconds_last_hour: number | null;
+  /** The ones being prepared, then the waiting ones in the order they are prepared. */
+  segments: PreprocessingSegment[];
+}
+
 export interface QueueView {
   stats: QueueStats;
   workers: Worker[];
@@ -885,6 +910,7 @@ export const api = {
     request<ModelStats[]>("GET", withQuery("/api/models/stats", { days })),
   queue: (q: { state?: string; limit?: number }) =>
     request<QueueView>("GET", withQuery("/api/queue", q)),
+  preprocessing: () => request<PreprocessingStatus>("GET", "/api/preprocessing"),
   addCamera: (body: {
     name: string;
     id?: string;

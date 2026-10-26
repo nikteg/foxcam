@@ -36,6 +36,7 @@ const router = createBrowserRouter([
       { path: "recordings", Component: Recordings },
       { path: "recordings/segments", Component: Recordings },
       { path: "jobs", Component: Queue },
+      { path: "jobs/preprocessing", Component: Queue },
       { path: "jobs/workers", Component: Queue },
       { path: "jobs/archiving", Component: Queue },
       { path: "settings", Component: Settings },

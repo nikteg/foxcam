@@ -11,7 +11,15 @@ from foxcam.models import Event, Job, Segment, SegmentStatus, utcnow
 from foxcam.pipeline import events, preprocess, scanner
 from foxcam.web.queries import save_camera_state
 
-from .conftest import add_detection, add_job, add_segment, make_video, needs_ffmpeg, recording_path
+from .conftest import (
+    add_detection,
+    add_job,
+    add_segment,
+    app_client,
+    make_video,
+    needs_ffmpeg,
+    recording_path,
+)
 
 
 def _age(path, seconds):
@@ -273,3 +281,23 @@ def test_scanner_drops_the_fragment_before_a_recorder_reset(settings):
     with session_scope() as s:
         assert sorted(g.start_at for g in s.query(Segment)) == [
             start + timedelta(seconds=4), start + timedelta(minutes=2)]
+
+
+@needs_ffmpeg
+def test_preprocessing_status_shows_the_waiting_and_the_pace(settings, monkeypatch):
+    monkeypatch.setattr(preprocess, "activity", preprocess.Activity())  # not other tests' runs
+    start = utcnow().replace(microsecond=0)
+    older = add_segment(settings, start=start - timedelta(minutes=5), status=SegmentStatus.NEW)
+    newer = add_segment(settings, start=start, status=SegmentStatus.NEW)
+    with app_client(settings) as client:
+        p = client.get("/api/preprocessing").json()
+    assert p["waiting"] == 2 and p["oldest_waiting_age_s"] >= 300
+    # In the order they are prepared: the newest first.
+    assert [g["id"] for g in p["segments"]] == [newer, older]
+    assert p["segments"][0]["started_at"] is None
+
+    preprocess.preprocess_segment(settings, newer)
+    with app_client(settings) as client:
+        p = client.get("/api/preprocessing").json()
+    assert p["waiting"] == 1 and [g["id"] for g in p["segments"]] == [older]
+    assert p["done_last_hour"] == 1 and p["avg_seconds_last_hour"] is not None

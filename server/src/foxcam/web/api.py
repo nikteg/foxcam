@@ -31,7 +31,7 @@ from ..config import Settings
 from ..db import session_scope
 from ..mediamtx import MediaMtx
 from ..models import Archive, CameraRole, Detection, Event, Segment, utcnow
-from ..pipeline import compaction, motion_report, queue, uploader
+from ..pipeline import compaction, motion_report, preprocess, queue, uploader
 from ..pipeline.events import rebuild_events as rebuild_all_events
 from ..pipeline.reanalyse import ReanalyseError, reanalyse_segment
 from ..storage import StorageError, boto3_available, get_storage
@@ -646,6 +646,14 @@ def motion_backfill(body: BackfillBody,
 def queue_status(state: str | None = None,
                  limit: int = Query(100, le=1000)) -> dict[str, Any]:
     return queries.queue_view(limit, state)
+
+
+@router.get("/preprocessing", dependencies=[Depends(require_admin)])
+def preprocessing_status(limit: int = Query(100, le=1000),
+                         settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
+    """Recordings waiting for the server to prepare them (censored copy, motion,
+    thumbnails) before they get detection jobs, the ones being prepared, and the pace."""
+    return preprocess.status(settings, limit)
 
 
 @router.post("/queue/jobs/{job_id}/requeue", dependencies=[Depends(require_admin)])
