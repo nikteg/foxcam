@@ -1,0 +1,113 @@
+import { Skeleton, SkeletonItem, Spinner } from "@fluentui/react-components";
+
+import { useI18n } from "../i18n";
+import { PHONE, useMediaQuery } from "../useMediaQuery";
+
+/** Before anything can be shown (signing in): a spinner in the middle of the screen. */
+export function PageSpinner() {
+  const { t } = useI18n();
+  return (
+    <div className="page-loading">
+      <Spinner label={t("common.loading")} />
+    </div>
+  );
+}
+
+/** Lines of text standing in for a value or a sentence; widths vary so it reads as text. */
+function Lines({ widths }: { widths: string[] }) {
+  return (
+    <div className="skeleton-lines">
+      {widths.map((w, i) => (
+        <SkeletonItem key={i} size={16} style={{ width: w }} />
+      ))}
+    </div>
+  );
+}
+
+const WIDTHS = ["70%", "45%", "85%", "55%", "65%", "40%"];
+
+/** A `DataTable` while it loads: rows of cells on desktop, cards of facts on phones (with
+ *  the picture on top for tables whose rows have one). */
+export function TableSkeleton({
+  rows = 6,
+  columns = 5,
+  thumb = false,
+}: {
+  rows?: number;
+  columns?: number;
+  thumb?: boolean;
+}) {
+  const { t } = useI18n();
+  const phone = useMediaQuery(PHONE);
+  if (phone) {
+    return (
+      <Skeleton aria-label={t("common.loading")} className="dt-cards">
+        {Array.from({ length: Math.min(rows, 4) }, (_, i) => (
+          <div key={i} className="dt-card">
+            {thumb && <SkeletonItem shape="rectangle" className="skeleton-wide-thumb" />}
+            <div className="skeleton-facts">
+              {Array.from({ length: Math.min(columns, 4) }, (_cell, j) => (
+                <div key={j} className="skeleton-fact">
+                  <SkeletonItem size={12} style={{ width: "30%" }} />
+                  <SkeletonItem size={12} style={{ width: WIDTHS[(i + j) % WIDTHS.length] }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </Skeleton>
+    );
+  }
+  return (
+    <Skeleton aria-label={t("common.loading")} className="skeleton-table">
+      <div className="skeleton-row skeleton-head">
+        {thumb && <span className="skeleton-mini-space" />}
+        {Array.from({ length: columns }, (_cell, j) => (
+          <span key={j} className="skeleton-cell">
+            <SkeletonItem size={12} style={{ width: "50%" }} />
+          </span>
+        ))}
+      </div>
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="skeleton-row">
+          {thumb && <SkeletonItem shape="rectangle" className="mini" />}
+          {Array.from({ length: columns }, (_cell, j) => (
+            <span key={j} className="skeleton-cell">
+              <SkeletonItem size={16} style={{ width: WIDTHS[(i + j) % WIDTHS.length] }} />
+            </span>
+          ))}
+        </div>
+      ))}
+    </Skeleton>
+  );
+}
+
+/** A grid of cards (cameras, events) while it loads: a picture and a few lines each. */
+export function CardsSkeleton({ count = 3, thumb = true }: { count?: number; thumb?: boolean }) {
+  const { t } = useI18n();
+  return (
+    <Skeleton aria-label={t("common.loading")} className="cards">
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="skeleton-card">
+          {!thumb && <Lines widths={["50%"]} />}
+          {thumb && <SkeletonItem shape="rectangle" className="skeleton-thumb" />}
+          <Lines widths={thumb ? ["60%", "35%"] : ["80%", "65%", "40%"]} />
+        </div>
+      ))}
+    </Skeleton>
+  );
+}
+
+/** The Status page's figures while they load. */
+export function StatsSkeleton({ count = 4 }: { count?: number }) {
+  const { t } = useI18n();
+  return (
+    <Skeleton aria-label={t("common.loading")} className="stats">
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="skeleton-card">
+          <Lines widths={["70%", "40%"]} />
+        </div>
+      ))}
+    </Skeleton>
+  );
+}

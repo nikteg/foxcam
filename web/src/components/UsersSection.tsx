@@ -46,6 +46,7 @@ import {
   DialogSurface,
   DialogTitle,
 } from "./Drawer";
+import { CardsSkeleton } from "./Skeletons";
 
 /** Settings → Users (admins): accounts and invite links. */
 export function UsersSection() {
@@ -74,7 +75,11 @@ export function UsersSection() {
             ? t("users.introClosed")
             : t("users.introInvite")}
       </InfoBanner>
-      <QueryState error={users.error} loading={users.isPending} />
+      <QueryState
+        error={users.error}
+        loading={users.isPending}
+        skeleton={<CardsSkeleton count={2} thumb={false} />}
+      />
       <div className="cards">
         {users.data?.map((u) => (
           <UserCard

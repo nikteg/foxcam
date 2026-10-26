@@ -548,7 +548,17 @@ export function ConfidenceBar({ value, compact = false }: { value: number; compa
   );
 }
 
-export function QueryState({ error, loading }: { error: unknown; loading: boolean }) {
+/** A query's error, or while it loads a spinner, or `skeleton` (the shape of what is
+ *  coming, components/Skeletons.tsx). */
+export function QueryState({
+  error,
+  loading,
+  skeleton,
+}: {
+  error: unknown;
+  loading: boolean;
+  skeleton?: ReactNode;
+}) {
   const { t } = useI18n();
   if (error) {
     return (
@@ -560,7 +570,9 @@ export function QueryState({ error, loading }: { error: unknown; loading: boolea
       </MessageBar>
     );
   }
-  if (loading) return <Spinner size="small" label={t("common.loading")} className="block" />;
+  if (loading) {
+    return skeleton ?? <Spinner size="small" label={t("common.loading")} className="block" />;
+  }
   return null;
 }
 

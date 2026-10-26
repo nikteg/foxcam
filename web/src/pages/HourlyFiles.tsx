@@ -20,6 +20,7 @@ import {
 import { duration, fileSize, localTime } from "../format";
 import { useI18n, type I18n } from "../i18n";
 import { VideoPlayer } from "../components/VideoPlayer";
+import { TableSkeleton } from "../components/Skeletons";
 
 /** Re-encoded when joined (a camera's recording profile) or kept as the camera sent it. */
 function useHowMade(): (a: ArchiveFile) => string {
@@ -120,7 +121,11 @@ export function HourlyFiles({
   return (
     <>
       <InfoBanner id="archives">{t("hourly.intro")}</InfoBanner>
-      <QueryState error={archives.error} loading={archives.isPending} />
+      <QueryState
+        error={archives.error}
+        loading={archives.isPending}
+        skeleton={<TableSkeleton thumb />}
+      />
       <div className="master-detail">
         <div className="master">
           {archives.data && archives.data.length > 0 && (

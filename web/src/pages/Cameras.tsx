@@ -57,6 +57,7 @@ import {
   DialogSurface,
   DialogTitle,
 } from "../components/Drawer";
+import { CardsSkeleton } from "../components/Skeletons";
 
 export function Cameras() {
   const { t, rich } = useI18n();
@@ -127,7 +128,11 @@ export function Cameras() {
               ? rich("cameras.intro", { file: <code>config.yaml</code> })
               : t("cameras.introUser")}
           </InfoBanner>
-          <QueryState error={cameras.error} loading={cameras.isPending} />
+          <QueryState
+            error={cameras.error}
+            loading={cameras.isPending}
+            skeleton={<CardsSkeleton count={2} />}
+          />
           {cameras.data?.length === 0 && <Empty>{t("cameras.none")}</Empty>}
           <div className="cards">
             {cameras.data?.map((c) => (

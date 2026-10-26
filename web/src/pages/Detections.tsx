@@ -30,6 +30,7 @@ import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
 import { VideoPlayer } from "../components/VideoPlayer";
 import { DetectionMotion } from "../components/Motion";
+import { TableSkeleton } from "../components/Skeletons";
 
 const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detection>[] => [
   {
@@ -205,7 +206,11 @@ export function DetectionList() {
           onChange={(_, d) => setFilter("still", d.checked === true)}
         />
       </div>
-      <QueryState error={detections.error} loading={detections.isPending} />
+      <QueryState
+        error={detections.error}
+        loading={detections.isPending}
+        skeleton={<TableSkeleton thumb />}
+      />
       <div className="master-detail">
         <div className="master">
           {detections.data && detections.data.length > 0 && (

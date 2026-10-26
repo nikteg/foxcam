@@ -21,6 +21,7 @@ import { CameraTag, useCameraName } from "./CameraSelect";
 import { byNumber, byString, DataTable, type Column } from "./DataTable";
 import { ProfileTag } from "./ProfileSelect";
 import { Empty, InfoBanner, QueryState, Tag } from "./ui";
+import { TableSkeleton } from "./Skeletons";
 
 const RANGES = [
   { value: "1", label: "models.last24h" },
@@ -202,7 +203,11 @@ export function MotionSection() {
           </MessageBar>
         )
       )}
-      <QueryState error={report.error ?? backfill.error} loading={report.isPending} />
+      <QueryState
+        error={report.error ?? backfill.error}
+        loading={report.isPending}
+        skeleton={<TableSkeleton />}
+      />
       {data && data.rows.length > 0 && (
         <DataTable
           ariaLabel={t("motion.title")}

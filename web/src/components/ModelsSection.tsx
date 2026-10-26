@@ -8,6 +8,7 @@ import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
 import { byNumber, byString, DataTable, type Column } from "./DataTable";
 import { Empty, InfoBanner, QueryState } from "./ui";
+import { TableSkeleton } from "./Skeletons";
 
 const RANGES = [
   { value: "1", label: "models.last24h" },
@@ -137,7 +138,7 @@ export function ModelsSection() {
           ))}
         </Select>
       </div>
-      <QueryState error={stats.error} loading={stats.isPending} />
+      <QueryState error={stats.error} loading={stats.isPending} skeleton={<TableSkeleton />} />
       {stats.data && stats.data.length > 0 && (
         <DataTable
           ariaLabel={t("models.tab")}

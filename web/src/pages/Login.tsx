@@ -24,6 +24,7 @@ import { useAuth, useAuthChanged } from "../auth";
 import { PasswordInput, usePageTitle } from "../components/ui";
 import { LanguageMenu, useI18n } from "../i18n";
 import { ThemeMenu } from "../theme";
+import { PageSpinner } from "../components/Skeletons";
 
 /** Centered card used by every page shown before signing in. */
 function AuthFrame({ title, children }: { title: string; children: ReactNode }) {
@@ -268,7 +269,7 @@ export function AuthScreen() {
 export function LoginPage() {
   const { data: state, isPending } = useAuth();
   const [params] = useSearchParams();
-  if (isPending) return <Spinner className="block" />;
+  if (isPending) return <PageSpinner />;
   if (state?.signed_in) return <Navigate to={params.get("next") ?? "/"} replace />;
   return <AuthScreen />;
 }

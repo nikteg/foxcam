@@ -8,7 +8,6 @@ import {
   MenuList,
   MenuPopover,
   MenuTrigger,
-  Spinner,
   Tab,
   TabList,
   Text,
@@ -37,6 +36,7 @@ import { RouterLink, usePageTitle } from "./components/ui";
 import { AuthScreen } from "./pages/Login";
 import { LanguageMenu, useI18n, type MessageKey } from "./i18n";
 import { ThemeMenu } from "./theme";
+import { PageSpinner } from "./components/Skeletons";
 
 interface NavItem {
   to: string;
@@ -167,10 +167,9 @@ function UserMenu() {
 }
 
 export function Layout() {
-  const { t } = useI18n();
   const auth = useAuth();
   useUnauthorizedRedirect();
-  if (auth.isPending) return <Spinner className="block" label={t("common.loading")} />;
+  if (auth.isPending) return <PageSpinner />;
   if (auth.error) {
     return <div className="auth-page">{String(auth.error.message ?? auth.error)}</div>;
   }

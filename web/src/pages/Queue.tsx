@@ -44,6 +44,7 @@ import { SegmentPanel } from "../components/SegmentDetail";
 import { WorkersSection } from "../components/WorkersSection";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
+import { TableSkeleton } from "../components/Skeletons";
 
 const STATES: JobState[] = ["pending", "leased", "done", "failed", "dead", "skipped"];
 
@@ -95,7 +96,7 @@ export function Queue() {
     <>
       <PageTitle title={t("nav.queue")} />
       <AddWorkerDialog open={addingWorker} onClose={() => setAddingWorker(false)} />
-      <QueryState error={queue.error} loading={queue.isPending} />
+      <QueryState error={queue.error} loading={queue.isPending} skeleton={<TableSkeleton />} />
       {q && (
         <>
           <PageTabs

@@ -20,6 +20,7 @@ import { CameraTag, useCameraName } from "./CameraSelect";
 import { byString, DataTable, type Column } from "./DataTable";
 import { SegmentPanel } from "./SegmentDetail";
 import { Empty, InfoBanner, QueryState, Stat, Tag, Time } from "./ui";
+import { TableSkeleton } from "./Skeletons";
 
 const columns = (
   t: I18n["t"],
@@ -69,7 +70,11 @@ export function PreprocessingSection() {
     refetchInterval: 5_000,
   });
   const p = status.data;
-  if (!p) return <QueryState error={status.error} loading={status.isPending} />;
+  if (!p) {
+    return (
+      <QueryState error={status.error} loading={status.isPending} skeleton={<TableSkeleton />} />
+    );
+  }
   const segmentId = Number(segment) || null;
 
   return (

@@ -20,6 +20,7 @@ import { useIsAdmin } from "../auth";
 import { useI18n } from "../i18n";
 import { useFilters } from "../useFilters";
 import { DetectionList } from "./Detections";
+import { CardsSkeleton } from "../components/Skeletons";
 
 /** Events (what happened, as clips), the detections behind them and, for admins, how the
  * models did. */
@@ -127,7 +128,7 @@ function EventList() {
           </Select>
         )}
       </div>
-      <QueryState error={events.error} loading={events.isPending} />
+      <QueryState error={events.error} loading={events.isPending} skeleton={<CardsSkeleton />} />
       {events.data && <EventsGrid events={events.data} byDay />}
     </>
   );

@@ -1573,14 +1573,16 @@ Fluent's text styles would otherwise reset the margins. */
   background: rgb(255 255 255 / 0.35);
 }
 .player-track-fill {
+  z-index: 1;
   width: var(--slider-fill);
   background: var(--colorBrandBackground);
 }
-/* Markers (e.g. where things moved): over the played part too, so they stay visible. */
+/* Markers (e.g. where things moved): behind the played part, but taller than the track,
+   so they show above and below it there and the progress stays readable. */
 .player-markers {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 0;
   pointer-events: none;
 }
 .player-marker {
@@ -1589,8 +1591,7 @@ Fluent's text styles would otherwise reset the margins. */
   bottom: -3px;
   min-width: 4px;
   border-radius: 3px;
-  background: #4cc9ff;
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.7);
+  background: rgb(76 201 255 / 0.85);
 }
 .player-thumb {
   position: absolute;
@@ -2069,4 +2070,66 @@ h2.panel-heading {
 .dt-card .facts dd:empty,
 .dt-card .facts dt:has(+ dd:empty) {
   display: none;
+}
+
+/* Loading (components/Skeletons.tsx). */
+.page-loading {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+}
+.skeleton-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalS);
+}
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalM);
+  padding: 12px;
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: var(--borderRadiusMedium);
+  background: var(--colorNeutralBackground1);
+}
+.skeleton-thumb.fui-SkeletonItem {
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+.skeleton-wide-thumb.fui-SkeletonItem {
+  height: auto;
+  aspect-ratio: 21 / 9;
+}
+.skeleton-table {
+  display: flex;
+  flex-direction: column;
+}
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacingHorizontalL);
+  min-height: 44px;
+  padding: var(--spacingVerticalXS) var(--spacingHorizontalS);
+  border-bottom: 1px solid var(--colorNeutralStroke2);
+}
+.skeleton-cell {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.skeleton-row > .mini,
+.skeleton-row > .skeleton-mini-space {
+  flex: 0 0 96px;
+  height: auto;
+}
+.skeleton-head {
+  min-height: 36px;
+}
+.skeleton-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalS);
+}
+.skeleton-fact {
+  display: flex;
+  gap: var(--spacingHorizontalL);
 }

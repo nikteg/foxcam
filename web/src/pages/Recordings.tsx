@@ -26,6 +26,7 @@ import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
 import { HourlyFiles } from "./HourlyFiles";
 import { MotionShare } from "../components/Motion";
+import { TableSkeleton } from "../components/Skeletons";
 
 const SEGMENT_STATES = ["new", "queued", "done", "private", "failed"] as const;
 
@@ -229,7 +230,11 @@ export function Recordings() {
               onChange={(_, d) => setFilter("only_targets", d.checked === true)}
             />
           </div>
-          <QueryState error={segments.error} loading={segments.isPending} />
+          <QueryState
+            error={segments.error}
+            loading={segments.isPending}
+            skeleton={<TableSkeleton thumb />}
+          />
           <div className="master-detail">
             <div className="master">
               {segments.data && segments.data.length > 0 && (

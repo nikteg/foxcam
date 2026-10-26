@@ -52,6 +52,7 @@ import {
   DialogTitle,
 } from "../components/Drawer";
 import { CameraTag } from "../components/CameraSelect";
+import { CardsSkeleton } from "../components/Skeletons";
 
 type AliasRow = { from: string; to: string };
 /** A target's own Match from, in percent as typed. */
@@ -83,7 +84,11 @@ export function ProfilesSection() {
         {rich("profiles.intro", { file: <code>config.yaml</code> })}
       </InfoBanner>
       <InfoBanner id="profiles-match">{t("profiles.matchIntro")}</InfoBanner>
-      <QueryState error={profiles.error} loading={profiles.isPending} />
+      <QueryState
+        error={profiles.error}
+        loading={profiles.isPending}
+        skeleton={<CardsSkeleton count={2} thumb={false} />}
+      />
       {profiles.data?.length === 0 && <Empty>{t("profiles.none")}</Empty>}
       <div className="cards">
         {profiles.data?.map((p) => (

@@ -28,6 +28,7 @@ import { SectionLink, Empty, PageTitle, QueryState, RouterLink, Stat } from "../
 import { useI18n } from "../i18n";
 import { CameraSettingsDialog } from "./Cameras";
 import { decimal, duration, fileSize } from "../format";
+import { CardsSkeleton, StatsSkeleton } from "../components/Skeletons";
 
 export function Dashboard() {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status, refetchInterval: 10_000 });
@@ -49,7 +50,18 @@ export function Dashboard() {
     <>
       <PageTitle title={t("nav.status")} />
       <InstallHint />
-      <QueryState error={status.error} loading={status.isPending} />
+      <QueryState
+        error={status.error}
+        loading={status.isPending}
+        skeleton={
+          <>
+            <Subtitle2 as="h2" className="section first">
+              {t("dashboard.overview")}
+            </Subtitle2>
+            <StatsSkeleton />
+          </>
+        }
+      />
       {s && !s.mediamtx_reachable && (
         <MessageBar intent="warning" className="block">
           <MessageBarBody>{t("dashboard.mediamtxDown")}</MessageBarBody>
@@ -95,6 +107,7 @@ export function Dashboard() {
         {t("nav.cameras")}
         <SectionLink to="/cameras" label={t("dashboard.manage")} />
       </Subtitle2>
+      {status.isPending && <CardsSkeleton count={2} />}
       <div className="cards">
         {s?.cameras.map((c) => (
           <CameraCard
@@ -118,7 +131,7 @@ export function Dashboard() {
         {t("dashboard.latestEvents")}
         <SectionLink to="/events" label={t("dashboard.all")} />
       </Subtitle2>
-      <EventsGrid events={events.data ?? []} />
+      {events.isPending ? <CardsSkeleton /> : <EventsGrid events={events.data ?? []} />}
 
       {liveFor && s && (
         <LiveDrawer cameras={s.cameras} cameraId={liveFor} onClose={() => setLiveFor(null)} />
