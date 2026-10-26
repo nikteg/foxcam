@@ -44,7 +44,7 @@ import { SegmentPanel } from "../components/SegmentDetail";
 import { WorkersSection } from "../components/WorkersSection";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
-import { TableSkeleton } from "../components/Skeletons";
+import { StatsSkeleton, TableSkeleton } from "../components/Skeletons";
 
 const STATES: JobState[] = ["pending", "leased", "done", "failed", "dead", "skipped"];
 
@@ -91,115 +91,124 @@ export function Queue() {
   ] as const);
   const [addingWorker, setAddingWorker] = useState(false);
   const segmentId = Number(segment) || null;
+  // The tabs and their buttons show at once; what needs the queue waits for it.
+  const queueState = (
+    <QueryState
+      error={queue.error}
+      loading={queue.isPending}
+      skeleton={
+        <div className="form-stack">
+          {tab === "detection" && <StatsSkeleton count={3} />}
+          <TableSkeleton />
+        </div>
+      }
+    />
+  );
 
   return (
     <>
       <PageTitle title={t("nav.queue")} />
       <AddWorkerDialog open={addingWorker} onClose={() => setAddingWorker(false)} />
-      <QueryState error={queue.error} loading={queue.isPending} skeleton={<TableSkeleton />} />
-      {q && (
+      <PageTabs
+        base="/jobs"
+        ownPaths
+        current={tab}
+        tabs={[
+          // The server's own work, then detection (the queue and the workers emptying it).
+          { id: "preparation", label: t("prep.tab"), group: "server" },
+          { id: "archiving", label: t("compaction.title"), group: "server" },
+          { id: "detection", label: t("queue.queueTab"), group: "detection" },
+          { id: "detection-workers", label: t("queue.workersTab"), group: "detection" },
+        ]}
+      />
+
+      {tab === "detection-workers" && (
         <>
-          <PageTabs
-            base="/jobs"
-            ownPaths
-            current={tab}
-            tabs={[
-              // The server's own work, then detection (the queue and the workers emptying it).
-              { id: "preparation", label: t("prep.tab"), group: "server" },
-              { id: "archiving", label: t("compaction.title"), group: "server" },
-              { id: "detection", label: t("queue.queueTab"), group: "detection" },
-              { id: "detection-workers", label: t("queue.workersTab"), group: "detection" },
-            ]}
-          />
+          <Toolbar>
+            <Button
+              appearance="primary"
+              icon={<Add20Regular />}
+              onClick={() => setAddingWorker(true)}
+            >
+              {t("workers.add")}
+            </Button>
+          </Toolbar>
+          {q ? <WorkersSection workers={q.workers} /> : queueState}
+        </>
+      )}
+      {tab === "preparation" && <PreprocessingSection />}
+      {tab === "archiving" && <ArchivingSection />}
 
-          {tab === "detection-workers" && (
-            <>
-              <Toolbar>
+      {tab === "detection" && !q && queueState}
+      {tab === "detection" && q && (
+        <>
+          <Caption1 as="p" className="muted stats-caption">
+            {t("queue.filterByState")}
+          </Caption1>
+          <section className="stats">
+            {STATES.map((st) => (
+              <Stat
+                key={st}
+                icon={STATE_ICON[st]}
+                label={stateLabel(st)}
+                value={q.stats.counts[st]}
+                selected={state === st}
+                // The counters filter the job list, so they bring you to it.
+                onClick={() => setFilter("state", state === st ? "" : st)}
+              />
+            ))}
+          </section>
+          <Caption1 as="p" className="muted stats-caption stats-caption-next">
+            {t("queue.stats")}
+          </Caption1>
+          <section className="stats">
+            <Stat
+              icon={<Timer20Regular />}
+              label={t("queue.oldestWaiting")}
+              value={duration(q.stats.oldest_pending_age_s)}
+            />
+            <Stat
+              icon={<ArrowTrending20Regular />}
+              label={t("queue.doneLastHour")}
+              value={q.stats.done_last_hour}
+            />
+            <Stat
+              icon={<Gauge20Regular />}
+              label={t("queue.avgProcessing")}
+              value={avgMs ? `${decimal(avgMs / 1000, 1)} s` : "–"}
+            />
+          </section>
+
+          <Subtitle2 as="h2" className="section row">
+            {t("queue.latestJobs")}
+            {state && (
+              <>
+                <Tag kind={state}>{stateLabel(state)}</Tag>
                 <Button
-                  appearance="primary"
-                  icon={<Add20Regular />}
-                  onClick={() => setAddingWorker(true)}
+                  size="small"
+                  appearance="subtle"
+                  icon={<Dismiss16Regular />}
+                  onClick={() => setFilter("state", "")}
                 >
-                  {t("workers.add")}
+                  {t("queue.clearFilter")}
                 </Button>
-              </Toolbar>
-              <WorkersSection workers={q.workers} />
-            </>
+              </>
+            )}
+          </Subtitle2>
+          {q.jobs.length > 0 && (
+            <DataTable
+              ariaLabel={t("nav.queue")}
+              items={q.jobs}
+              columns={jobColumns}
+              getRowId={(j) => j.id}
+              defaultSort={{ column: "id", direction: "descending" }}
+              // Every job of the open recording is marked, not only the one pressed.
+              rowClassName={(j) => (j.segment_id === segmentId ? "selected" : undefined)}
+              onRowClick={(j) => setFilter("segment", String(j.segment_id))}
+            />
           )}
-          {tab === "preparation" && <PreprocessingSection />}
-          {tab === "archiving" && <ArchivingSection />}
-
-          {tab === "detection" && (
-            <>
-              <Caption1 as="p" className="muted stats-caption">
-                {t("queue.filterByState")}
-              </Caption1>
-              <section className="stats">
-                {STATES.map((st) => (
-                  <Stat
-                    key={st}
-                    icon={STATE_ICON[st]}
-                    label={stateLabel(st)}
-                    value={q.stats.counts[st]}
-                    selected={state === st}
-                    // The counters filter the job list, so they bring you to it.
-                    onClick={() => setFilter("state", state === st ? "" : st)}
-                  />
-                ))}
-              </section>
-              <Caption1 as="p" className="muted stats-caption stats-caption-next">
-                {t("queue.stats")}
-              </Caption1>
-              <section className="stats">
-                <Stat
-                  icon={<Timer20Regular />}
-                  label={t("queue.oldestWaiting")}
-                  value={duration(q.stats.oldest_pending_age_s)}
-                />
-                <Stat
-                  icon={<ArrowTrending20Regular />}
-                  label={t("queue.doneLastHour")}
-                  value={q.stats.done_last_hour}
-                />
-                <Stat
-                  icon={<Gauge20Regular />}
-                  label={t("queue.avgProcessing")}
-                  value={avgMs ? `${decimal(avgMs / 1000, 1)} s` : "–"}
-                />
-              </section>
-
-              <Subtitle2 as="h2" className="section row">
-                {t("queue.latestJobs")}
-                {state && (
-                  <>
-                    <Tag kind={state}>{stateLabel(state)}</Tag>
-                    <Button
-                      size="small"
-                      appearance="subtle"
-                      icon={<Dismiss16Regular />}
-                      onClick={() => setFilter("state", "")}
-                    >
-                      {t("queue.clearFilter")}
-                    </Button>
-                  </>
-                )}
-              </Subtitle2>
-              {q.jobs.length > 0 && (
-                <DataTable
-                  ariaLabel={t("nav.queue")}
-                  items={q.jobs}
-                  columns={jobColumns}
-                  getRowId={(j) => j.id}
-                  defaultSort={{ column: "id", direction: "descending" }}
-                  // Every job of the open recording is marked, not only the one pressed.
-                  rowClassName={(j) => (j.segment_id === segmentId ? "selected" : undefined)}
-                  onRowClick={(j) => setFilter("segment", String(j.segment_id))}
-                />
-              )}
-              {q.jobs.length === 0 && <Empty>{t("queue.noJobs")}</Empty>}
-              <SegmentPanel segmentId={segmentId} onClose={() => setFilter("segment", "")} />
-            </>
-          )}
+          {q.jobs.length === 0 && <Empty>{t("queue.noJobs")}</Empty>}
+          <SegmentPanel segmentId={segmentId} onClose={() => setFilter("segment", "")} />
         </>
       )}
     </>
