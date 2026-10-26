@@ -168,7 +168,7 @@ background. A region with the same pattern as before, only brighter or
 darker, is light (a flickering lamp, headlights, a cloud's shadow) and dropped too. When
 more than `motion.light_change_fraction` of the picture changes at once, the frame is a
 light change (night mode switching, exposure) and the average starts over. Night pictures
-get a higher threshold. Plain Python, no numpy: about half a second for a 20 s segment.
+get a higher threshold. The per-pixel work is numpy: well under a second for a 5-minute segment.
 
 Per camera (the camera's settings → Detection → *Edit motion detection*): the sensitivity (low, medium,
 high; else `motion.sensitivity`) and **motion-ignore areas**, rectangles drawn like censor

@@ -15,8 +15,9 @@ shadow) and dropped too. When more than ``motion.light_change_fraction`` of the 
 changes at once, the frame is a light change (IR switching on, exposure), not motion, and
 the average starts over from it. The camera's motion-ignore areas never count.
 
-Pure Python on purpose: at this size it takes well under a second per segment, and the
-server needs no numpy or OpenCV.
+The per-pixel work is numpy (a 5-minute recording at 2 fps in a fraction of a second; pure
+Python took several seconds, which on a small server starved preprocessing); only the few
+changed cells are grouped into regions in Python.
 
 The result is stored on the segment: ``motion_score`` (the largest share of the picture's
 cells that moved in one frame, 0 = no motion) and ``motion_boxes`` (per frame with motion,
@@ -31,6 +32,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+import numpy as np
 
 from .. import ffmpeg
 
@@ -85,16 +88,13 @@ def decode(video: Path, fps: float, start_s: float = 0.0,
     return [data[i:i + size] for i in range(0, len(data) - size + 1, size)]
 
 
-def ignore_mask(rects: list[Box] | None) -> list[bool]:
-    """Per pixel: inside one of the motion-ignore areas."""
-    mask = [False] * (WIDTH * HEIGHT)
+def ignore_mask(rects: list[Box] | None) -> np.ndarray:
+    """Per pixel (``HEIGHT`` x ``WIDTH``): inside one of the motion-ignore areas."""
+    mask = np.zeros((HEIGHT, WIDTH), dtype=bool)
     for x, y, w, h in rects or []:
         x0, y0 = int(x * WIDTH), int(y * HEIGHT)
         x1, y1 = min(WIDTH, int((x + w) * WIDTH + 0.999)), min(HEIGHT, int((y + h) * HEIGHT + 0.999))
-        for yy in range(y0, y1):
-            row = yy * WIDTH
-            for xx in range(x0, x1):
-                mask[row + xx] = True
+        mask[y0:y1, x0:x1] = True
     return mask
 
 
@@ -103,30 +103,34 @@ def analyse(frames: list[bytes], fps: float, sensitivity: str = "medium", night:
     level = LEVELS.get(sensitivity, LEVELS["medium"])
     threshold = level.threshold * (NIGHT_FACTOR if night else 1.0)
     skip = ignore_mask(ignore)
-    counted = sum(1 for v in skip if not v) or 1
+    counted = int((~skip).sum()) or 1
+    images = [np.frombuffer(f, dtype=np.uint8).reshape(HEIGHT, WIDTH).astype(np.float64)
+              for f in frames]
     score = 0.0
     out: list[list[Any]] = []
-    background: list[float] | None = None
-    previous: list[float] = []
-    for i, frame in enumerate(frames):
+    background: np.ndarray | None = None
+    # Each frame's 3x3 spread serves twice: compared with the frame after it and before it.
+    previous = following = _spread(images[0]) if images else None
+    for i, frame in enumerate(images):
+        here = following
+        following = _spread(images[i + 1]) if i + 1 < len(images) else None
         if background is None:
-            background = previous = [float(v) for v in frame]
+            background, previous = frame, here
             continue
-        changed = _changed(frame, background, threshold, skip)
+        changed = _changed(frame, _spread(background), threshold, skip)
         since_last = _changed(frame, previous, threshold, skip)
-        following = frames[i + 1] if i + 1 < len(frames) else None
         if following is not None:  # also changed before the next frame
-            to_next = _changed(frame, [float(v) for v in following], threshold, skip)
-            since_last = [a and b for a, b in zip(since_last, to_next, strict=True)]
-        previous = [float(v) for v in frame]
-        if sum(changed) > light_change_fraction * counted:
-            background = list(previous)  # light change: start over
+            since_last &= _changed(frame, following, threshold, skip)
+        previous = here
+        if changed.sum() > light_change_fraction * counted:
+            background = frame  # light change: start over
             continue
         cells = _cells(changed)
+        moved_cells = _cell_any(since_last)
         regions = [r for r in _regions(cells)
-                   if len(r) >= level.min_cells and _moved(r, since_last)
+                   if len(r) >= level.min_cells and any(moved_cells[cy, cx] for cx, cy in r)
                    and not _lit(r, frame, background)]
-        background = [b + ALPHA * (v - b) for b, v in zip(background, frame, strict=True)]
+        background = background + ALPHA * (frame - background)
         if not regions:
             continue
         moving = sum(len(r) for r in regions)
@@ -135,66 +139,50 @@ def analyse(frames: list[bytes], fps: float, sensitivity: str = "medium", night:
     return Motion(round(score, 4), out)
 
 
-def _changed(frame: bytes, reference: list[float], threshold: float,
-             skip: list[bool]) -> list[bool]:
-    """Per pixel: differs by more than ``threshold`` from every reference pixel around it."""
-    low, high = _spread(reference)
-    return [not skip[p] and (frame[p] > high[p] + threshold or frame[p] < low[p] - threshold)
-            for p in range(WIDTH * HEIGHT)]
+def _changed(frame: np.ndarray, spread: tuple[np.ndarray, np.ndarray], threshold: float,
+             skip: np.ndarray) -> np.ndarray:
+    """Per pixel: differs by more than ``threshold`` from every reference pixel around it
+    (``spread``: the reference's 3x3 lowest and highest values)."""
+    low, high = spread
+    return ~skip & ((frame > high + threshold) | (frame < low - threshold))
 
 
-def _moved(region: list[tuple[int, int]], since_last: list[bool]) -> bool:
-    """Something in the region changed since the previous frame."""
-    return any(since_last[(cy * CELL + dy) * WIDTH + cx * CELL + dx]
-               for cx, cy in region for dy in range(CELL) for dx in range(CELL))
-
-
-def _spread(image: list[float]) -> tuple[list[float], list[float]]:
+def _spread(image: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Per pixel the lowest and highest value around it (3x3)."""
-    def rows(img: list[float], pick) -> list[float]:
-        out = []
-        for y in range(HEIGHT):
-            r = img[y * WIDTH:(y + 1) * WIDTH]
-            out += [pick(r[max(0, x - 1):x + 2]) for x in range(WIDTH)]
-        return out
+    def pick(img: np.ndarray, fn, edge: float) -> np.ndarray:
+        p = np.pad(img, 1, constant_values=edge)
+        rows = fn(fn(p[:, :-2], p[:, 1:-1]), p[:, 2:])
+        return fn(fn(rows[:-2], rows[1:-1]), rows[2:])
 
-    def cols(img: list[float], pick) -> list[float]:
-        return [pick(img[max(0, y - 1) * WIDTH + x:min(HEIGHT, y + 2) * WIDTH:WIDTH])
-                for y in range(HEIGHT) for x in range(WIDTH)]
-
-    return cols(rows(image, min), min), cols(rows(image, max), max)
+    return pick(image, np.minimum, np.inf), pick(image, np.maximum, -np.inf)
 
 
-def _lit(region: list[tuple[int, int]], frame: bytes, background: list[float]) -> bool:
+def _lit(region: list[tuple[int, int]], frame: np.ndarray, background: np.ndarray) -> bool:
     """The region (with a margin) has the background's pattern, only brighter or darker:
     light, not something moving."""
     xs, ys = [c[0] for c in region], [c[1] for c in region]
     x0, x1 = max(0, min(xs) * CELL - 2), min(WIDTH, (max(xs) + 1) * CELL + 2)
     y0, y1 = max(0, min(ys) * CELL - 2), min(HEIGHT, (max(ys) + 1) * CELL + 2)
-    a = [frame[y * WIDTH + x] for y in range(y0, y1) for x in range(x0, x1)]
-    b = [background[y * WIDTH + x] for y in range(y0, y1) for x in range(x0, x1)]
-    n = len(a)
-    ma, mb = sum(a) / n, sum(b) / n
-    va = sum((v - ma) ** 2 for v in a)
-    vb = sum((v - mb) ** 2 for v in b)
+    a, b = frame[y0:y1, x0:x1].ravel(), background[y0:y1, x0:x1].ravel()
+    n = a.size
+    da, db = a - a.mean(), b - b.mean()
+    va, vb = float(da @ da), float(db @ db)
     if va < n * FLAT_STD ** 2 and vb < n * FLAT_STD ** 2:
         return True
     if not va or not vb:
         return False
-    return sum((p - ma) * (q - mb) for p, q in zip(a, b, strict=True)) / (va * vb) ** 0.5 \
-        >= LIGHT_CORRELATION
+    return float(da @ db) / (va * vb) ** 0.5 >= LIGHT_CORRELATION
 
 
-def _cells(changed: list[bool]) -> set[tuple[int, int]]:
+def _cell_any(pixels: np.ndarray) -> np.ndarray:
+    """Per cell (``ROWS`` x ``COLS``): any of its pixels set."""
+    return pixels.reshape(ROWS, CELL, COLS, CELL).any(axis=(1, 3))
+
+
+def _cells(changed: np.ndarray) -> set[tuple[int, int]]:
     """Cells with at least two changed pixels of their four."""
-    cells = set()
-    for cy in range(ROWS):
-        for cx in range(COLS):
-            p = cy * CELL * WIDTH + cx * CELL
-            n = changed[p] + changed[p + 1] + changed[p + WIDTH] + changed[p + WIDTH + 1]
-            if n >= 2:
-                cells.add((cx, cy))
-    return cells
+    counts = changed.reshape(ROWS, CELL, COLS, CELL).sum(axis=(1, 3))
+    return {(int(cx), int(cy)) for cy, cx in zip(*np.nonzero(counts >= 2), strict=True)}
 
 
 def _regions(cells: set[tuple[int, int]]) -> list[list[tuple[int, int]]]:
