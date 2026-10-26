@@ -93,16 +93,7 @@ export function Queue() {
   const segmentId = Number(segment) || null;
   // The tabs and their buttons show at once; what needs the queue waits for it.
   const queueState = (
-    <QueryState
-      error={queue.error}
-      loading={queue.isPending}
-      skeleton={
-        <div className="form-stack">
-          {tab === "detection" && <StatsSkeleton count={3} />}
-          <TableSkeleton />
-        </div>
-      }
-    />
+    <QueryState error={queue.error} loading={queue.isPending} skeleton={<TableSkeleton />} />
   );
 
   return (
@@ -139,45 +130,50 @@ export function Queue() {
       {tab === "preparation" && <PreprocessingSection />}
       {tab === "archiving" && <ArchivingSection />}
 
-      {tab === "detection" && !q && queueState}
-      {tab === "detection" && q && (
+      {tab === "detection" && (
         <>
           <Caption1 as="p" className="muted stats-caption">
             {t("queue.filterByState")}
           </Caption1>
-          <section className="stats">
-            {STATES.map((st) => (
-              <Stat
-                key={st}
-                icon={STATE_ICON[st]}
-                label={stateLabel(st)}
-                value={q.stats.counts[st]}
-                selected={state === st}
-                // The counters filter the job list, so they bring you to it.
-                onClick={() => setFilter("state", state === st ? "" : st)}
-              />
-            ))}
-          </section>
+          {queue.isPending && <StatsSkeleton count={STATES.length} />}
+          {q && (
+            <section className="stats">
+              {STATES.map((st) => (
+                <Stat
+                  key={st}
+                  icon={STATE_ICON[st]}
+                  label={stateLabel(st)}
+                  value={q.stats.counts[st]}
+                  selected={state === st}
+                  // The counters filter the job list, so they bring you to it.
+                  onClick={() => setFilter("state", state === st ? "" : st)}
+                />
+              ))}
+            </section>
+          )}
           <Caption1 as="p" className="muted stats-caption stats-caption-next">
             {t("queue.stats")}
           </Caption1>
-          <section className="stats">
-            <Stat
-              icon={<Timer20Regular />}
-              label={t("queue.oldestWaiting")}
-              value={duration(q.stats.oldest_pending_age_s)}
-            />
-            <Stat
-              icon={<ArrowTrending20Regular />}
-              label={t("queue.doneLastHour")}
-              value={q.stats.done_last_hour}
-            />
-            <Stat
-              icon={<Gauge20Regular />}
-              label={t("queue.avgProcessing")}
-              value={avgMs ? `${decimal(avgMs / 1000, 1)} s` : "–"}
-            />
-          </section>
+          {queue.isPending && <StatsSkeleton count={3} />}
+          {q && (
+            <section className="stats">
+              <Stat
+                icon={<Timer20Regular />}
+                label={t("queue.oldestWaiting")}
+                value={duration(q.stats.oldest_pending_age_s)}
+              />
+              <Stat
+                icon={<ArrowTrending20Regular />}
+                label={t("queue.doneLastHour")}
+                value={q.stats.done_last_hour}
+              />
+              <Stat
+                icon={<Gauge20Regular />}
+                label={t("queue.avgProcessing")}
+                value={avgMs ? `${decimal(avgMs / 1000, 1)} s` : "–"}
+              />
+            </section>
+          )}
 
           <Subtitle2 as="h2" className="section row">
             {t("queue.latestJobs")}
@@ -195,7 +191,8 @@ export function Queue() {
               </>
             )}
           </Subtitle2>
-          {q.jobs.length > 0 && (
+          {!q && queueState}
+          {q && q.jobs.length > 0 && (
             <DataTable
               ariaLabel={t("nav.queue")}
               items={q.jobs}
@@ -207,7 +204,7 @@ export function Queue() {
               onRowClick={(j) => setFilter("segment", String(j.segment_id))}
             />
           )}
-          {q.jobs.length === 0 && <Empty>{t("queue.noJobs")}</Empty>}
+          {q?.jobs.length === 0 && <Empty>{t("queue.noJobs")}</Empty>}
           <SegmentPanel segmentId={segmentId} onClose={() => setFilter("segment", "")} />
         </>
       )}

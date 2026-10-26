@@ -20,7 +20,7 @@ import { CameraTag, useCameraName } from "./CameraSelect";
 import { byString, DataTable, type Column } from "./DataTable";
 import { SegmentPanel } from "./SegmentDetail";
 import { Empty, InfoBanner, QueryState, Stat, Tag, Time } from "./ui";
-import { TableSkeleton } from "./Skeletons";
+import { StatsSkeleton, TableSkeleton } from "./Skeletons";
 
 const columns = (
   t: I18n["t"],
@@ -72,7 +72,22 @@ export function PreprocessingSection() {
   const p = status.data;
   if (!p) {
     return (
-      <QueryState error={status.error} loading={status.isPending} skeleton={<TableSkeleton />} />
+      <>
+        <InfoBanner id="preprocessing">{t("prep.intro")}</InfoBanner>
+        <QueryState
+          error={status.error}
+          loading={status.isPending}
+          skeleton={
+            <>
+              <StatsSkeleton count={6} />
+              <Subtitle2 as="h2" className="section">
+                {t("prep.next")}
+              </Subtitle2>
+              <TableSkeleton />
+            </>
+          }
+        />
+      </>
     );
   }
   const segmentId = Number(segment) || null;

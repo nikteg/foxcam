@@ -19,7 +19,7 @@ import { useFilters } from "../useFilters";
 import { byNumber, byString, DataTable, type Column } from "./DataTable";
 import { CameraTag, useCameraName } from "./CameraSelect";
 import { Empty, InfoBanner, QueryState, Stat, Tag, Time } from "./ui";
-import { TableSkeleton } from "./Skeletons";
+import { StatsSkeleton, TableSkeleton } from "./Skeletons";
 
 interface PeriodRow {
   key: string;
@@ -101,7 +101,19 @@ export function ArchivingSection() {
   const c = status.data;
   if (!c) {
     return (
-      <QueryState error={status.error} loading={status.isPending} skeleton={<TableSkeleton />} />
+      <QueryState
+        error={status.error}
+        loading={status.isPending}
+        skeleton={
+          <>
+            <StatsSkeleton />
+            <Subtitle2 as="h2" className="section">
+              {t("archiving.periodsTitle")}
+            </Subtitle2>
+            <TableSkeleton />
+          </>
+        }
+      />
     );
   }
   // One row per period: being archived now, waiting, or archived (the latest files).
