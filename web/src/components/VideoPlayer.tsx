@@ -54,7 +54,7 @@ export type PlayerHandle = MediaPlayerInstance;
 /** A stretch of the video to mark on the timeline, in seconds. */
 export type Marker = { from: number; to: number };
 
-const RATES = [0.5, 1, 1.5, 2, 4, 8];
+const RATES = [0.25, 0.5, 1, 1.5, 2, 4, 8];
 /** A double tap at the side seeks this far when there is no marker to jump to. */
 const SEEK_S = 10;
 
