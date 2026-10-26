@@ -87,6 +87,7 @@ export const sv: Record<MessageKey, string> = {
   "col.segmentStart": "Segmentstart",
   "col.state": "Status",
   "col.attempts": "Försök",
+  "col.detections": "Detektioner",
   "col.worker": "Arbetare",
   "col.took": "Tid",
   "col.error": "Fel",

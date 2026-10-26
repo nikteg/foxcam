@@ -491,6 +491,10 @@ export interface Job {
   error: string | null;
   model: string | null;
   processing_ms: number | null;
+  /** Share of the recording's picture that moved (null: not measured). */
+  motion_score: number | null;
+  /** What the job found; null until it is done. */
+  detections: number | null;
 }
 
 /** What a settings file holds (server: backup.py). */

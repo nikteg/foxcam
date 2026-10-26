@@ -22,7 +22,7 @@ import {
 
 import { useI18n } from "../i18n";
 import { PHONE, useMediaQuery } from "../useMediaQuery";
-import { Fact, Facts } from "./ui";
+import { Fact, Facts, NoValue } from "./ui";
 
 export interface Column<T> {
   id: string;
@@ -86,7 +86,12 @@ export function DataTable<T>({
       columnId: c.id,
       compare: c.compare,
       renderHeaderCell: () => c.header,
-      renderCell: c.cell,
+      // Nothing to show: a subtle dash, except where a picture or buttons go.
+      renderCell: (item: T) => {
+        const v = c.cell(item);
+        if (!empty(v)) return v;
+        return c.phone === "thumb" || c.phone === "nolabel" ? null : <NoValue />;
+      },
     }),
   );
   // Columns grow to fit what is in them (measured after rendering, see below), so tags,
@@ -270,7 +275,9 @@ function RowImpl<T>({ item, className, selected, activate }: RowProps<T>) {
 // change.
 const Row = memo(RowImpl) as typeof RowImpl;
 
-const empty = (v: ReactNode) => v === null || v === undefined || v === false || v === "";
+/** A cell without a value (columns may also return "–"). */
+const empty = (v: ReactNode) =>
+  v === null || v === undefined || v === false || v === "" || v === "–";
 
 interface PhoneCardProps<T> {
   item: T;

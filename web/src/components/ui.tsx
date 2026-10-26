@@ -564,6 +564,11 @@ export function QueryState({ error, loading }: { error: unknown; loading: boolea
   return null;
 }
 
+/** A value that isn't there (a table cell, a fact): a subtle dash. */
+export function NoValue() {
+  return <span className="muted no-value">–</span>;
+}
+
 export function Empty({ children }: { children: ReactNode }) {
   return <Body1 className="muted empty">{children}</Body1>;
 }

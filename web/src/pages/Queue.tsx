@@ -34,6 +34,7 @@ import {
   useSubPage,
 } from "../components/ui";
 import { decimal, duration } from "../format";
+import { MotionShare } from "../components/Motion";
 import { ProfileTag } from "../components/ProfileSelect";
 import { AddWorkerDialog } from "../components/AddWorkerDialog";
 import { ArchivingSection } from "../components/ArchivingSection";
@@ -230,14 +231,14 @@ function makeJobColumns(
       id: "profile",
       header: t("profiles.profile"),
       width: 110,
-      cell: (j) => (j.profile_id ? <ProfileTag id={j.profile_id} /> : "–"),
+      cell: (j) => j.profile_id && <ProfileTag id={j.profile_id} />,
       compare: byString((j) => j.profile_id),
     },
     {
       id: "detector",
       header: t("col.detector"),
       width: 110,
-      cell: (j) => j.detector_id ?? "–",
+      cell: (j) => j.detector_id,
       compare: byString((j) => j.detector_id),
     },
     {
@@ -256,6 +257,20 @@ function makeJobColumns(
       compare: byString((j) => j.state),
     },
     {
+      id: "motion",
+      header: t("recordings.motion"),
+      width: 90,
+      cell: (j) => <MotionShare score={j.motion_score} short />,
+      compare: byNumber((j) => j.motion_score),
+    },
+    {
+      id: "detections",
+      header: t("col.detections"),
+      width: 100,
+      cell: (j) => j.detections,
+      compare: byNumber((j) => j.detections),
+    },
+    {
       id: "attempts",
       header: t("col.attempts"),
       width: 90,
@@ -266,20 +281,20 @@ function makeJobColumns(
       id: "worker",
       header: t("col.worker"),
       width: 160,
-      cell: (j) => <span title={j.leased_by ?? undefined}>{j.leased_by ?? "–"}</span>,
+      cell: (j) => j.leased_by && <span title={j.leased_by}>{j.leased_by}</span>,
       compare: byString((j) => j.leased_by),
     },
     {
       id: "model",
       header: t("col.model"),
       width: 130,
-      cell: (j) => <Caption1>{j.model ?? "–"}</Caption1>,
+      cell: (j) => j.model && <Caption1>{j.model}</Caption1>,
     },
     {
       id: "took",
       header: t("col.took"),
       width: 80,
-      cell: (j) => (j.processing_ms ? `${(j.processing_ms / 1000).toFixed(1)}s` : "–"),
+      cell: (j) => (j.processing_ms ? `${(j.processing_ms / 1000).toFixed(1)}s` : null),
       compare: byNumber((j) => j.processing_ms),
     },
     {
@@ -287,11 +302,12 @@ function makeJobColumns(
       header: t("col.error"),
       width: 140,
       phone: "full",
-      cell: (j) => (
-        <Caption1 className="err" title={j.error ?? undefined}>
-          {j.error?.slice(0, 80)}
-        </Caption1>
-      ),
+      cell: (j) =>
+        j.error && (
+          <Caption1 className="err" title={j.error}>
+            {j.error.slice(0, 80)}
+          </Caption1>
+        ),
     },
     {
       id: "actions",

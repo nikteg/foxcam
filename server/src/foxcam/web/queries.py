@@ -20,6 +20,7 @@ from ..models import (
     Detection,
     Event,
     Job,
+    JobState,
     MaskVersion,
     Segment,
     SegmentStatus,
@@ -435,6 +436,10 @@ def queue_view(limit: int = 100, state: str | None = None) -> dict[str, Any]:
             "current_job_id": w.current_job_id, "jobs_done": w.jobs_done,
             "jobs_failed": w.jobs_failed,
         } for w in s.scalars(select(Worker).order_by(Worker.last_seen.desc()))]
+        page = s.scalars(q).all()
+        counts = dict(s.execute(
+            select(Detection.job_id, func.count()).where(
+                Detection.job_id.in_([j.id for j in page])).group_by(Detection.job_id)).all())
         jobs = [{
             "id": j.id, "segment_id": j.segment_id, "camera_id": j.segment.camera_id,
             "profile_id": j.profile_id, "detector_id": j.detector_id,
@@ -442,7 +447,10 @@ def queue_view(limit: int = 100, state: str | None = None) -> dict[str, Any]:
             "leased_by": j.leased_by, "lease_expires_at": iso(j.lease_expires_at),
             "created_at": iso(j.created_at), "finished_at": iso(j.finished_at),
             "error": j.error, "model": j.model, "processing_ms": j.processing_ms,
-        } for j in s.scalars(q)]
+            "motion_score": j.segment.motion_score,
+            # Found by this job (None until it is done).
+            "detections": counts.get(j.id, 0) if j.state == JobState.DONE else None,
+        } for j in page]
     return {"stats": queue.stats(), "workers": workers, "jobs": jobs}
 
 

@@ -86,6 +86,7 @@ export const en = {
   "col.segmentStart": "Segment start",
   "col.state": "State",
   "col.attempts": "Attempts",
+  "col.detections": "Detections",
   "col.worker": "Worker",
   "col.took": "Took",
   "col.error": "Error",
