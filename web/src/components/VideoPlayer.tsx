@@ -127,7 +127,9 @@ export function VideoPlayer({
         thumbnails={thumbnails}
         markers={allMarkers}
         motion={
-          hasMotion ? { on: showMotion, toggle: () => setShowMotion(!showMotion) } : undefined
+          hasMotion
+            ? { on: showMotion, toggle: () => setShowMotion(!showMotion), frames: motion }
+            : undefined
         }
       />
     </MediaPlayer>
@@ -186,7 +188,7 @@ function PlayerControls({
   thumbnails?: string;
   markers?: Marker[];
   /** The "show motion" toggle, when the video has motion to show. */
-  motion?: { on: boolean; toggle: () => void };
+  motion?: { on: boolean; toggle: () => void; frames: MotionFrame[] };
 }) {
   const { t } = useI18n();
   const remote = useMediaRemote();
@@ -206,10 +208,14 @@ function PlayerControls({
     // Always dark: the controls sit on the picture.
     <FluentProvider theme={darkTheme} className="player-ui">
       {thumbnails && scrub !== null && duration > 0 && (
-        <ScrubPicture src={thumbnails} time={(scrub / 100) * duration} />
+        <ScrubPicture
+          src={thumbnails}
+          time={(scrub / 100) * duration}
+          motion={motion?.on ? motion.frames : undefined}
+        />
       )}
       {waiting && <Spinner className="player-spinner" size="medium" />}
-      {!started && paused && !waiting && (
+      {!started && paused && !waiting && scrub === null && (
         <Button
           className="player-start"
           shape="circular"
@@ -336,7 +342,16 @@ function PlayerControls({
 /** While scrubbing: the thumbnail of that moment over the whole picture (a live preview,
  * instead of the video catching up with each seek). The thumbnails are tiles of a sprite:
  * the sprite is scaled so its tile fills the frame. */
-function ScrubPicture({ src, time }: { src: string; time: number }) {
+function ScrubPicture({
+  src,
+  time,
+  motion,
+}: {
+  src: string;
+  time: number;
+  /** Shown on the picture too, like during playback. */
+  motion?: MotionFrame[];
+}) {
   const thumbs = useThumbnails(src);
   const active = useActiveThumbnail(thumbs, time);
   const [spriteWidth, setSpriteWidth] = useState(0);
@@ -363,6 +378,7 @@ function ScrubPicture({ src, time }: { src: string; time: number }) {
               : { width: "100%", height: "100%", objectFit: "contain" }
           }
         />
+        {motion && <MotionBoxes boxes={motionAt(motion, time * 1000)?.[1] ?? []} />}
       </div>
     </div>
   );
@@ -432,7 +448,7 @@ export function MotionOverlay({ frames }: { frames: MotionFrame[] }) {
     if (video?.videoWidth) setAspect(video.videoWidth / video.videoHeight);
   }, [canPlay]);
   const ms = time * 1000;
-  const frame = started ? frames.findLast(([at]) => at <= ms && ms < at + FRAME_MS) : undefined;
+  const frame = started ? motionAt(frames, ms) : undefined;
   let picture = { left: 0, top: 0, width, height };
   if (aspect && width && height) {
     const w = Math.min(width, height * aspect);
@@ -442,19 +458,29 @@ export function MotionOverlay({ frames }: { frames: MotionFrame[] }) {
   return (
     <div ref={box} className="motion-overlay" aria-hidden="true">
       <div className="motion-picture" style={picture}>
-        {frame?.[1].map(([x, y, w, h]) => (
-          <span
-            key={`${x},${y}`}
-            className="motion-box"
-            style={{
-              left: `${x * 100}%`,
-              top: `${y * 100}%`,
-              width: `${w * 100}%`,
-              height: `${h * 100}%`,
-            }}
-          />
-        ))}
+        {frame && <MotionBoxes boxes={frame[1]} />}
       </div>
     </div>
   );
+}
+
+/** The frame with motion at `ms`, if any. */
+function motionAt(frames: MotionFrame[], ms: number): MotionFrame | undefined {
+  return frames.findLast(([at]) => at <= ms && ms < at + FRAME_MS);
+}
+
+/** Boxes around what moved, over a box the size of the picture. */
+function MotionBoxes({ boxes }: { boxes: MotionFrame[1] }) {
+  return boxes.map(([x, y, w, h]) => (
+    <span
+      key={`${x},${y}`}
+      className="motion-box"
+      style={{
+        left: `${x * 100}%`,
+        top: `${y * 100}%`,
+        width: `${w * 100}%`,
+        height: `${h * 100}%`,
+      }}
+    />
+  ));
 }
