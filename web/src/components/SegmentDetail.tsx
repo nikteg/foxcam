@@ -106,13 +106,15 @@ function SegmentDetail({
     queryFn: () => api.segmentJobs(s.id),
     placeholderData: keepPreviousData,
   });
-  // Where things moved: only the single recording carries it (lists stay small).
+  // Where things moved and footage missing: only the single recording carries them (lists
+  // stay small).
   const detail = useQuery({
     queryKey: ["segment", s.id],
     queryFn: () => api.segment(s.id),
     placeholderData: keepPreviousData,
   });
-  const motionFrames = (!detail.isPlaceholderData && detail.data?.motion_boxes) || [];
+  const shown = !detail.isPlaceholderData ? detail.data : undefined;
+  const motionFrames = shown?.motion_boxes || [];
   const seek = (ms: number) => {
     if (!player.current) return;
     player.current.currentTime = ms / 1000;
@@ -135,6 +137,7 @@ function SegmentDetail({
             poster={s.thumb_url}
             thumbnails={`/api/segments/${s.id}/thumbnails.vtt`}
             motion={motionFrames}
+            gaps={shown?.gaps}
           />
         </div>
       )}

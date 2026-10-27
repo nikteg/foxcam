@@ -19,7 +19,7 @@ import {
 } from "../components/ui";
 import { duration, fileSize, localTime } from "../format";
 import { useI18n, type I18n } from "../i18n";
-import { useVideoMotion } from "../components/Motion";
+import { useVideoTimeline } from "../components/Motion";
 import { VideoPlayer } from "../components/VideoPlayer";
 import { TableSkeleton } from "../components/Skeletons";
 
@@ -167,7 +167,7 @@ export function ArchivePanel({
   const { t } = useI18n();
   const cameraName = useCameraName();
   const howMade = useHowMade();
-  const motion = useVideoMotion("archives", archive?.id ?? null);
+  const timeline = useVideoTimeline("archives", archive?.id ?? null);
   return (
     <DetailPanel
       open={!!archive}
@@ -187,7 +187,8 @@ export function ArchivePanel({
                 src={archive.play_url}
                 poster={archive.thumb_url}
                 thumbnails={`/api/archives/${archive.id}/thumbnails.vtt`}
-                motion={motion}
+                motion={timeline.motion}
+                gaps={timeline.gaps}
               />
             </div>
           ) : (

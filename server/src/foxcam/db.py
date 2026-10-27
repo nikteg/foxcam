@@ -162,6 +162,14 @@ def _backfill(engine: Engine, added: set[str]) -> None:
             if "moving" in cols:
                 conn.execute(text("UPDATE detection SET still = 1, is_target = 1 "
                                   "WHERE moving = 0"))
+        if "event.clip_gaps" in added:
+            # Clips used to join their recordings back to back, gaps closed: build again
+            # those that span several, while their recordings are all still here.
+            conn.execute(text(
+                "UPDATE event SET clip_dirty = 1 WHERE clip_path IS NOT NULL AND (SELECT "
+                "COUNT(*) FROM event_segment es WHERE es.event_id = event.id) > 1 AND NOT "
+                "EXISTS (SELECT 1 FROM event_segment es JOIN segment g ON g.id = es.segment_id "
+                "WHERE es.event_id = event.id AND g.deleted_at IS NOT NULL)"))
         if "detection.event_id" in added:
             # Events used to be per segment: link their target detections.
             conn.execute(text(

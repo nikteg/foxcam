@@ -228,6 +228,8 @@ and retention) and **Share**.
   Docker image). It uses the unofficial [ontapo](https://pypi.org/project/ontapo/) library
   and about 1–2 Mbit/s of upload per HD camera at the camera's site. The relay delivers
   frames in bunches; recordings keep the camera's own frame times, so they play evenly.
+  When the camera's connection stalls, the relay catches up by dropping footage: the
+  player marks what is missing on the timeline ("Footage missing").
 - **Test sources** – a looping video file or a test pattern, for development.
 
 Cameras can also be defined in `config.yaml` (see [`config.example.yaml`](config.example.yaml)).

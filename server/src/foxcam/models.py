@@ -114,6 +114,22 @@ class MaskVersion(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class FootageSkip(Base):
+    """Footage the camera never delivered: its clock jumped ahead in the stream (a cloud
+    relay catching up after a stall drops what it could not send). The recording runs on
+    without a pause, so this is where to mark it."""
+
+    __tablename__ = "footage_skip"
+    __table_args__ = (Index("ix_footage_skip_camera_at", "camera_id", "at"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    camera_id: Mapped[str] = mapped_column(String)
+    # When the stream went on after the jump (UTC, the recorder's clock).
+    at: Mapped[datetime] = mapped_column(DateTime)
+    # How far the camera's clock jumped: about this much footage is missing there.
+    missing_s: Mapped[float] = mapped_column(Float)
+
+
 class SegmentStatus:
     NEW = "new"  # registered, waiting for preprocessing
     QUEUED = "queued"  # derivative built, job waiting/running
@@ -357,6 +373,9 @@ class Event(Base):
     clip_path: Mapped[str | None] = mapped_column(String)
     clip_start: Mapped[datetime | None] = mapped_column(DateTime)
     clip_duration_s: Mapped[float | None] = mapped_column(Float)
+    # Gaps between its recordings the clip keeps ([from_s, to_s, missing_s] in clip time,
+    # footage.py; None: built before clips kept them).
+    clip_gaps: Mapped[list[Any] | None] = mapped_column(JSON)
     thumb_path: Mapped[str | None] = mapped_column(String)
     # Object keys once uploaded to S3 (reset when the clip is rebuilt).
     clip_remote_key: Mapped[str | None] = mapped_column(String)

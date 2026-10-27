@@ -54,6 +54,9 @@
    the match threshold) are merged into events when within `merge_gap_seconds`. After
    `settle_seconds` (and once the post-roll footage exists) a clip is cut from the **original**
    recordings with pre/post roll, plus a thumbnail with the box drawn. Event segments are pinned.
+   A gap between two recordings (the recorder stopped and started again) stays a gap in the
+   clip, the picture holding there, so clip time is clock time; the player marks it as missing
+   footage (`footage.py`), as it does skips inside a recording (below).
    Two kinds of target detection join no event:
    - **marked wrong** (❌ on the Detections page): a wrong detection is no match anywhere,
      not in counts, "with a match", the Status page, notifications or archives. An event
@@ -218,7 +221,8 @@ or `foxcam motion-backfill --days 7`); that changes no detections or events.
 | `archive` | One hourly file made by compaction: camera, start, size, recording profile and encoder used, S3 key. |
 | `job` | Work item per segment, profile and detector (with the worker's raw result, ≤ 256 kB, for debugging): state (`pending/leased/done/failed/dead`, `skipped` for cascade detectors that did not run and profiles that skip recordings without motion), lease token and expiry, attempts, model, timing. |
 | `detection` | Worker result: profile, detector, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, standing still, event. |
-| `event` | Merged sighting of one label for one profile: time range, best detection, detectors that saw it and how many (`agreement`), confirmed, quiet (rebuilt, notifies nobody), clip and thumbnail paths. |
+| `event` | Merged sighting of one label for one profile: time range, best detection, detectors that saw it and how many (`agreement`), confirmed, quiet (rebuilt, notifies nobody), clip and thumbnail paths, the gaps between recordings the clip keeps. |
+| `footage_skip` | Footage a camera never delivered: when its stream jumped ahead (the Tapo cloud relay catching up after a stall) and by how much. The player marks it. |
 | `worker` | Last-seen info, tags and reported vocabulary per worker id (Jobs → Detection workers). |
 | `worker_token` | Worker access tokens (hashed) with their tags. |
 | `detection_profile` | Detection profiles added in the web UI. |

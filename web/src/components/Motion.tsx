@@ -1,21 +1,23 @@
 // Motion detection's results, the same way everywhere (pipeline/motion.py, still.py).
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-import { api, type Detection, type MotionFrame } from "../api";
+import { api, type Detection, type VideoTimeline } from "../api";
 import { percent } from "../format";
 import { useI18n } from "../i18n";
 import { NoValue, Tag } from "./ui";
 
-/** Where things moved in an event's clip or an archive (that video's own time); none
- *  while another video's is still on screen. */
-export function useVideoMotion(kind: "events" | "archives", id: number | null): MotionFrame[] {
+const NO_TIMELINE: VideoTimeline = { motion: [], gaps: [] };
+
+/** Where things moved in an event's clip or an archive, and footage missing from it (that
+ *  video's own time); none while another video's is still on screen. */
+export function useVideoTimeline(kind: "events" | "archives", id: number | null): VideoTimeline {
   const q = useQuery({
-    queryKey: ["video-motion", kind, id],
-    queryFn: () => api.videoMotion(kind, id!),
+    queryKey: ["video-timeline", kind, id],
+    queryFn: () => api.videoTimeline(kind, id!),
     enabled: id !== null,
     placeholderData: keepPreviousData,
   });
-  return (!q.isPlaceholderData && q.data) || [];
+  return (!q.isPlaceholderData && q.data) || NO_TIMELINE;
 }
 
 /** How much of a recording's picture moved: "12% of the picture", "none" or "–". */

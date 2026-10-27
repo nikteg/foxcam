@@ -251,6 +251,8 @@ export interface Segment {
   motion_score: number | null;
   /** Where things moved: only from api.segment (one recording). */
   motion_boxes?: MotionFrame[] | null;
+  /** Footage missing in it: only from api.segment. */
+  gaps?: FootageGap[];
   /** Archived in S3 storage. */
   remote: boolean;
   /** Joined into an hourly file by compaction. */
@@ -283,6 +285,17 @@ export interface SegmentJob {
 /** One row of GET /api/models/stats: a profile's detector running one model. */
 /** One frame with motion: its time in the recording and boxes around what moved. */
 export type MotionFrame = [offsetMs: number, boxes: Rect[]];
+
+/** Footage missing from a video, in its own time (server: footage.py): a stretch where the
+ *  picture holds (a gap between recordings in an event's clip), or a moment (from = to)
+ *  where the video goes on after footage the camera never delivered. */
+export type FootageGap = [fromS: number, toS: number, missingS: number];
+
+/** What a video's timeline marks: where things moved, and footage that is missing. */
+export interface VideoTimeline {
+  motion: MotionFrame[];
+  gaps: FootageGap[];
+}
 
 /** Detections split by the correct / wrong marks. */
 export interface Rated {
@@ -883,10 +896,10 @@ export const api = {
     limit?: number;
   }) => request<Segment[]>("GET", withQuery("/api/segments", q)),
   segment: (id: number) => request<Segment>("GET", `/api/segments/${id}`),
-  /** Where things moved in an event's clip, in clip time. */
-  /** Where things moved in an event's clip or an archive, in that video's own time. */
-  videoMotion: (kind: "events" | "archives", id: number) =>
-    request<MotionFrame[]>("GET", `/api/${kind}/${id}/motion`),
+  /** Where things moved in an event's clip or an archive, and footage missing from it, in
+   *  that video's own time. */
+  videoTimeline: (kind: "events" | "archives", id: number) =>
+    request<VideoTimeline>("GET", `/api/${kind}/${id}/timeline`),
   segmentJobs: (id: number) => request<SegmentJob[]>("GET", `/api/segments/${id}/jobs`),
   /** A link to one file that works for 10 minutes without signing in (Safari, iOS app). */
   downloadLink: (path: string) => request<{ url: string }>("POST", "/api/download-links", { path }),

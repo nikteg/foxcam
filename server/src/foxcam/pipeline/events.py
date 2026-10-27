@@ -23,7 +23,7 @@ from pathlib import Path
 
 from sqlalchemy import delete, func, select, update
 
-from .. import ffmpeg, notify, sprites
+from .. import ffmpeg, footage, notify, sprites
 from ..config import Settings
 from ..db import session_scope
 from ..models import Detection, Event, Segment, event_segments, utcnow
@@ -198,12 +198,17 @@ def _build_clip(settings: Settings, event_id: int) -> bool:
 
         clip_rel = Path("clips") / ev.camera_id / f"event-{ev.id}.mp4"
         sources: list[ffmpeg.ClipPart] = []
-        for g in segs:
+        for g, nxt in zip(segs, [*segs[1:], None], strict=True):
             src = segment_source(settings, g)
             if src is None:
                 raise RuntimeError(f"recording {g.id} is gone")
-            sources.append((src.path, src.offset_s, src.offset_s + src.duration_s)
-                           if src.archived else (src.path, None, None))
+            # A gap before the next recording (the stream dropped) stays a gap in the clip,
+            # so its time stays the clock's (motion, detections) and the gap can be marked.
+            gap = (nxt.start_at - g.end_at).total_seconds() if nxt else 0
+            span = (nxt.start_at - g.start_at).total_seconds() if gap > footage.GAP_S else None
+            inpoint, outpoint = ((src.offset_s, src.offset_s + src.duration_s)
+                                 if src.archived else (None, None))
+            sources.append((src.path, inpoint, outpoint, span))
         ffmpeg.concat_clip(sources, settings.data_dir / clip_rel, offset, duration)
 
         best = s.get(Detection, ev.best_detection_id) if ev.best_detection_id else None
@@ -228,6 +233,7 @@ def _build_clip(settings: Settings, event_id: int) -> bool:
         ev.thumb_path = str(thumb_rel) if thumb_rel else None
         ev.clip_start = start
         ev.clip_duration_s = duration
+        ev.clip_gaps = footage.clip_gaps(segs, start, duration)
         ev.clip_dirty = False
         ev.clip_error = None
         # The clip changed: upload it again (same key, overwritten).

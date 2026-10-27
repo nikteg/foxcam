@@ -32,12 +32,16 @@ def _signed(delta: int) -> int:
 
 class Retimer:
     """Rewrites the timestamps of an MPEG-TS byte stream passed through ``write`` and hands
-    whole packets on to ``out``. Call ``new_session`` when the next relay session starts."""
+    whole packets on to ``out``. Call ``new_session`` when the next relay session starts.
+    ``on_skip`` hears of each jump ahead in the camera's clock within a session (seconds):
+    footage the camera did not deliver, which the output closes up."""
 
     def __init__(self, out: Callable[[bytes], None],
-                 clock: Callable[[], float] = time.monotonic) -> None:
+                 clock: Callable[[], float] = time.monotonic,
+                 on_skip: Callable[[float], None] | None = None) -> None:
         self._out = out
         self._clock = clock
+        self._on_skip = on_skip
         self._buf = bytearray()
         self._offset = 0
         self._anchor = True  # at the next timestamp
@@ -70,7 +74,9 @@ class Retimer:
 
     def _map(self, ts: int, kind: str) -> int:
         now = self._clock()
-        if self._last_in is not None and abs(_signed(ts - self._last_in)) > JUMP:
+        if self._last_in is not None and abs(jump := _signed(ts - self._last_in)) > JUMP:
+            if jump > 0 and not self._anchor and self._on_skip:
+                self._on_skip(jump / HZ)
             self._anchor = True
         if self._anchor:
             # Continue from the last output of this kind plus the real time since (the

@@ -13,7 +13,7 @@ import { Feedback } from "./Feedback";
 import { ProfileTag, useDetectorNames, useProfiles, useSeveralDetectors } from "./ProfileSelect";
 import { ConfidenceBar, Fact, Facts, Light, QueryState, Tag, Time, useRouterHref } from "./ui";
 import { VideoPlayer } from "./VideoPlayer";
-import { DetectionMotion, useVideoMotion } from "./Motion";
+import { DetectionMotion, useVideoTimeline } from "./Motion";
 
 /** The event's detections, with its best one open. */
 const detectionsHref = (e: DetectionEvent) =>
@@ -36,16 +36,16 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
   const best = detections.data?.find((d) => d.id === e.best_detection_id) ?? detections.data?.[0];
   // Where things moved: in the clip (its own clock), or in the recording shown until the
   // clip is cut. The previous event's stays until this one's arrives, but is not drawn.
-  const clipMotion = useVideoMotion("events", e.clip_url ? e.id : null);
+  const clip = useVideoTimeline("events", e.clip_url ? e.id : null);
   const recording = useQuery({
     queryKey: ["segment", best?.segment_id],
     queryFn: () => api.segment(best!.segment_id),
     enabled: !e.clip_url && !!best,
     placeholderData: keepPreviousData,
   });
-  const motion = e.clip_url
-    ? clipMotion
-    : (!recording.isPlaceholderData && recording.data?.motion_boxes) || [];
+  const shown = !recording.isPlaceholderData ? recording.data : undefined;
+  const motion = e.clip_url ? clip.motion : shown?.motion_boxes || [];
+  const gaps = e.clip_url ? clip.gaps : shown?.gaps || [];
 
   return (
     <div className="detail-stack">
@@ -57,6 +57,7 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
         <VideoPlayer
           title={e.label}
           motion={motion}
+          gaps={gaps}
           {...(e.clip_url || !best
             ? {
                 src: e.clip_url!,

@@ -115,7 +115,7 @@ def test_clip_parts_from_an_archive(settings, tmp_path):
     compaction.compact_once(settings)
     src = [compaction.source_for(settings, i) for i in ids[1:]]
     clip = tmp_path / "clip.mp4"
-    ffmpeg.concat_clip([(x.path, x.offset_s, x.offset_s + x.duration_s) for x in src],
+    ffmpeg.concat_clip([(x.path, x.offset_s, x.offset_s + x.duration_s, None) for x in src],
                        clip, 1.0, 2.5)
     assert abs(ffmpeg.probe(clip).duration_s - 2.5) < 0.4
 

@@ -24,6 +24,7 @@ from .. import (
     changes,
     download_links,
     ffmpeg,
+    footage,
     mediamtx_auth,
     model_stats,
     recording,
@@ -345,9 +346,11 @@ def _serve_segment(settings: Settings, seg: Segment, filename: str | None = None
 
 @router.get("/segments/{segment_id}")
 def segment(segment_id: int, p: Principal = Depends(principal)) -> dict[str, Any]:
-    """One recording, with where things moved (``motion_boxes``)."""
+    """One recording, with where things moved (``motion_boxes``) and footage missing in it
+    (``gaps``)."""
     seg = _segment(p, segment_id)
-    return {**queries.segment_dict(seg), "motion_boxes": seg.motion_boxes}
+    return {**queries.segment_dict(seg), "motion_boxes": seg.motion_boxes,
+            "gaps": footage.segment_gaps(seg)}
 
 
 @router.post("/segments/{segment_id}/reanalyse")
@@ -586,11 +589,13 @@ def event_sprite_image(event_id: int, settings: Settings = Depends(settings_dep)
     return _sprite_image(settings, "clip", event_id)
 
 
-@router.get("/archives/{archive_id}/motion")
-def archive_motion(archive_id: int, p: Principal = Depends(principal)) -> list[list[Any]]:
-    """Where things moved in the archive, in its own time (``[ms, boxes]`` frames)."""
+@router.get("/archives/{archive_id}/timeline")
+def archive_timeline(archive_id: int, p: Principal = Depends(principal)) -> dict[str, Any]:
+    """For the player's timeline, in the archive's own time: where things moved
+    (``[ms, boxes]`` frames) and footage that is missing (``[from_s, to_s, missing_s]``)."""
     _archive(p, archive_id)
-    return queries.archive_motion(archive_id)
+    return {"motion": queries.archive_motion(archive_id),
+            "gaps": footage.archive_gaps(archive_id)}
 
 
 @router.get("/archives/{archive_id}/thumbnails.vtt")
@@ -711,11 +716,12 @@ def event_clip(event_id: int, download: bool = False,
                   name if download else None)
 
 
-@router.get("/events/{event_id}/motion")
-def event_motion(event_id: int, p: Principal = Depends(principal)) -> list[list[Any]]:
-    """Where things moved in the event's clip, in clip time (``[ms, boxes]`` frames)."""
+@router.get("/events/{event_id}/timeline")
+def event_timeline(event_id: int, p: Principal = Depends(principal)) -> dict[str, Any]:
+    """For the player's timeline, in clip time: where things moved (``[ms, boxes]``
+    frames) and footage that is missing (``[from_s, to_s, missing_s]``)."""
     _event(p, event_id)
-    return queries.event_motion(event_id)
+    return {"motion": queries.event_motion(event_id), "gaps": footage.event_gaps(event_id)}
 
 
 @router.get("/events/{event_id}/thumb")

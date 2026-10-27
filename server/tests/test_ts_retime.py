@@ -60,3 +60,28 @@ def test_the_clock_wrapping_is_not_a_jump(tmp_path):
     r.write(data)
     assert r._offset == 0  # still as anchored first: the camera's own times
     assert bytes(out) == data
+
+
+@needs_ffmpeg
+def test_a_jump_ahead_in_the_camera_clock_is_reported(tmp_path):
+    """The relay catching up drops footage: the camera's clock jumps ahead within a
+    session. The output closes it up (real time since), and the jump is reported."""
+    first = _ts(tmp_path / "a.ts", 100.0)
+    later = _ts(tmp_path / "b.ts", 113.0)  # 11 s the camera never delivered
+    skips: list[float] = []
+    out = bytearray()
+    r = Retimer(out.extend, clock=lambda: 0.0, on_skip=skips.append)
+    r.write(first)
+    r.write(later)
+    assert len(skips) == 1
+    assert 10 < skips[0] < 11.5  # from the last frame to the next PCR: about
+
+
+@needs_ffmpeg
+def test_a_new_session_is_not_a_skip(tmp_path):
+    skips: list[float] = []
+    r = Retimer(lambda _: None, clock=lambda: 0.0, on_skip=skips.append)
+    r.write(_ts(tmp_path / "a.ts", 100.0))
+    r.new_session()
+    r.write(_ts(tmp_path / "b.ts", 500.0))
+    assert skips == []

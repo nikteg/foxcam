@@ -152,21 +152,25 @@ def snapshot_from_url(url: str, dst: Path, timeout: float = 10) -> None:
 
 
 # A piece of footage for concat_clip: a file, or the [inpoint, outpoint) part of one
-# (a segment inside a compacted archive).
-ClipPart = tuple[Path, float | None, float | None]
+# (a segment inside a compacted archive), and how long after its start the next piece
+# starts (None: right after it, or the last piece).
+ClipPart = tuple[Path, float | None, float | None, float | None]
 
 
-def concat_clip(sources: list[Path | ClipPart], dst: Path, offset_s: float,
+def concat_clip(sources: list[ClipPart], dst: Path, offset_s: float,
                 duration_s: float) -> None:
-    """Join consecutive segments and cut [offset, offset+duration) without re-encoding."""
+    """Join segments and cut [offset, offset+duration) without re-encoding. A gap between
+    two pieces (a piece's span longer than its footage) stays a gap: the picture holds
+    there, so the clip's time is the clock's."""
     dst.parent.mkdir(parents=True, exist_ok=True)
     list_file = dst.with_suffix(".txt")
     lines = []
-    for src in sources:
-        path, inpoint, outpoint = src if isinstance(src, tuple) else (src, None, None)
+    for path, inpoint, outpoint, span in sources:
         lines.append(f"file '{path.as_posix()}'\n")
         if inpoint is not None:  # segments start on keyframes, so this cut is exact
             lines.append(f"inpoint {inpoint:.6f}\noutpoint {outpoint:.6f}\n")
+        if span is not None:  # the next piece starts this long after this one
+            lines.append(f"duration {span:.6f}\n")
     list_file.write_text("".join(lines))
     try:
         # Input seeking snaps to the previous keyframe, so stream copy stays decodable.

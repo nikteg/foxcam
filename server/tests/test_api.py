@@ -4,7 +4,15 @@ from datetime import timedelta
 
 import pytest
 from foxcam.db import session_scope
-from foxcam.models import Detection, Event, JobState, Segment, SegmentStatus, utcnow
+from foxcam.models import (
+    Detection,
+    Event,
+    FootageSkip,
+    JobState,
+    Segment,
+    SegmentStatus,
+    utcnow,
+)
 
 from .conftest import add_detection, add_job, add_segment, app_client, make_video, needs_ffmpeg
 
@@ -389,10 +397,42 @@ def test_event_motion_is_in_clip_time(settings):
         s.flush()
         ev_id = ev.id
     with app_client(settings) as c:
-        r = c.get(f"/api/events/{ev_id}/motion")
+        r = c.get(f"/api/events/{ev_id}/timeline")
     assert r.status_code == 200
     # 1000 ms is before the clip; 8000 -> 3000; the second recording's 500 -> 5500.
-    assert r.json() == [[3000, [[0.5, 0.5, 0.1, 0.1]]], [5500, [[0.2, 0.2, 0.1, 0.1]]]]
+    assert r.json()["motion"] == [[3000, [[0.5, 0.5, 0.1, 0.1]]],
+                                  [5500, [[0.2, 0.2, 0.1, 0.1]]]]
+    assert r.json()["gaps"] == []
+
+
+def test_missing_footage_in_an_event_clip(settings):
+    """The gaps between its recordings the clip kept, and the skips the camera's stream
+    made inside them, in clip time."""
+    start = utcnow().replace(microsecond=0)
+    with session_scope() as s:
+        ev = Event(camera_id="cam", label="fox", first_ts=start, last_ts=start,
+                   max_confidence=0.9, clip_dirty=False, clip_path="clips/cam/ev.mp4",
+                   clip_start=start, clip_duration_s=30, clip_gaps=[[8.0, 15.0, 7.0]])
+        s.add(ev)
+        s.add(FootageSkip(camera_id="cam", at=start + timedelta(seconds=20), missing_s=11.2))
+        s.add(FootageSkip(camera_id="cam", at=start + timedelta(seconds=40), missing_s=3))
+        s.add(FootageSkip(camera_id="other", at=start + timedelta(seconds=21), missing_s=9))
+        s.flush()
+        ev_id = ev.id
+    with app_client(settings) as c:
+        r = c.get(f"/api/events/{ev_id}/timeline")
+    assert r.json()["gaps"] == [[8.0, 15.0, 7.0], [20.0, 20.0, 11.2]]
+
+
+def test_missing_footage_in_a_recording(settings):
+    start = utcnow().replace(microsecond=0)
+    seg = add_segment(settings, start=start, seconds=60, with_file=False)
+    with session_scope() as s:
+        s.add(FootageSkip(camera_id="cam", at=start + timedelta(seconds=14), missing_s=11))
+        s.add(FootageSkip(camera_id="cam", at=start + timedelta(seconds=90), missing_s=5))
+    with app_client(settings) as c:
+        r = c.get(f"/api/segments/{seg}")
+    assert r.json()["gaps"] == [[14.0, 14.0, 11.0]]
 
 
 
@@ -447,6 +487,33 @@ def test_archive_motion_is_in_archive_time(settings):
             g = s.get(Segment, seg)
             g.archive_id, g.archive_offset_s = arc_id, 10.0 * i
     with app_client(settings) as c:
-        r = c.get(f"/api/archives/{arc_id}/motion")
+        r = c.get(f"/api/archives/{arc_id}/timeline")
     assert r.status_code == 200
-    assert r.json() == [[1000, [[0.1, 0.1, 0.2, 0.2]]], [10500, [[0.2, 0.2, 0.1, 0.1]]]]
+    assert r.json()["motion"] == [[1000, [[0.1, 0.1, 0.2, 0.2]]],
+                                  [10500, [[0.2, 0.2, 0.1, 0.1]]]]
+    assert r.json()["gaps"] == []
+
+
+def test_missing_footage_in_an_archive(settings):
+    """Recordings with a gap between them are joined back to back: the gap is a moment
+    where they meet. Skips inside a recording sit where it does in the file."""
+    from foxcam.models import Archive
+
+    start = utcnow().replace(microsecond=0)
+    with session_scope() as s:
+        arc = Archive(camera_id="cam", start_at=start, path="archive/cam/a.mp4",
+                      duration_s=20, size_bytes=1)
+        s.add(arc)
+        s.flush()
+        arc_id = arc.id
+        s.add(FootageSkip(camera_id="cam", at=start + timedelta(seconds=22), missing_s=4))
+    # 0-10 s, then (8 s gap) 18-28 s: the second sits at 10 s in the file.
+    for i, at in enumerate((0, 18)):
+        seg = add_segment(settings, start=start + timedelta(seconds=at), seconds=10,
+                          with_file=False)
+        with session_scope() as s:
+            g = s.get(Segment, seg)
+            g.archive_id, g.archive_offset_s = arc_id, 10.0 * i
+    with app_client(settings) as c:
+        r = c.get(f"/api/archives/{arc_id}/timeline")
+    assert r.json()["gaps"] == [[10.0, 10.0, 8.0], [14.0, 14.0, 4.0]]

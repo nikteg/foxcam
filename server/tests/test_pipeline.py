@@ -138,6 +138,35 @@ def test_fox_segments_merge_into_one_event_with_clip(settings):
 
 
 @needs_ffmpeg
+def test_a_clip_keeps_the_gap_between_its_recordings(settings):
+    """The recorder stopped for 5 s between two recordings: the clip holds the picture
+    there instead of joining them back to back, so its time stays the clock's (the
+    event's moments, motion) and the gap is marked."""
+    settings.events.pre_roll_seconds = 1
+    settings.events.post_roll_seconds = 1
+    start = utcnow().replace(microsecond=0) - timedelta(minutes=5)
+    first = add_segment(settings, start=start, seconds=2)
+    second = add_segment(settings, start=start + timedelta(seconds=7), seconds=2)
+    for seg_id, at in ((first, 1500), (second, 500)):
+        add_detection(seg_id, add_job(seg_id, state="done"), at)
+        with session_scope() as s:
+            s.get(Segment, seg_id).has_target = True
+    events.assign_events(settings)
+    with session_scope() as s:  # one event across the gap
+        s.query(Event).update({Event.first_ts: start + timedelta(seconds=1.5),
+                               Event.last_ts: start + timedelta(seconds=7.5)})
+        s.query(Event).filter(Event.id != s.query(Event.id).limit(1).scalar_subquery()) \
+            .delete(synchronize_session=False)
+    assert events.build_clips(settings) == 1
+    with session_scope() as s:
+        ev = s.query(Event).one()
+        clip, gaps = settings.data_dir / ev.clip_path, ev.clip_gaps
+    # 0.5 s .. 8.5 s after the first recording's start, the gap from 2 s to 7 s in it.
+    assert gaps == [[1.5, 6.5, 5.0]]
+    assert 7.0 < ffmpeg.probe(clip).duration_s < 8.5
+
+
+@needs_ffmpeg
 def test_pre_roll_reaches_into_previous_segment(settings):
     settings.events.pre_roll_seconds = 3
     start = utcnow().replace(microsecond=0) - timedelta(minutes=5)

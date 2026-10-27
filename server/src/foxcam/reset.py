@@ -23,6 +23,7 @@ from .models import (
     Detection,
     DetectionProfile,
     Event,
+    FootageSkip,
     Invite,
     Job,
     JobState,
@@ -63,7 +64,7 @@ def recordings(settings: Settings) -> str:
     with session_scope() as s:
         n = s.query(Segment).count()
         s.execute(delete(event_segments))
-        for model in (Event, Detection, Job, Segment, Archive):
+        for model in (Event, Detection, Job, Segment, Archive, FootageSkip):
             s.execute(delete(model))
     for d in (settings.recordings_dir, settings.derived_dir, settings.thumbs_dir,
               settings.clips_dir, settings.sprites_dir):

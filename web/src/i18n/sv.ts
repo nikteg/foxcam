@@ -358,6 +358,7 @@ export const sv: Record<MessageKey, string> = {
   "player.fullscreen": "Helskärm",
   "player.exitFullscreen": "Lämna helskärm",
   "player.speed": "Uppspelningshastighet",
+  "player.footageMissing": "Bild saknas – cirka {seconds} s",
   "hourly.showSegments": "Visa segmenten",
   "compaction.title": "Arkivering",
   "compaction.off": "av",

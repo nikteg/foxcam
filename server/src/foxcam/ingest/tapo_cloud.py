@@ -206,6 +206,15 @@ def _write_all(fd: int, data: bytes) -> None:
         view = view[os.write(fd, view):]
 
 
+def _skipped(camera_id: str, seconds: float) -> None:
+    """The camera's stream jumped ahead (the relay catching up after a stall): note it, so
+    the player can mark the missing footage."""
+    from ..footage import record_skip
+
+    log.info("[%s] stream skipped %.1f s", camera_id, seconds)
+    record_skip(camera_id, seconds)
+
+
 async def _feed_relay_sessions(settings: Settings, session, dev, cam: CameraConfig,
                                fd: int, proc: subprocess.Popen, stop: threading.Event,
                                keepalive: bool) -> None:
@@ -215,7 +224,8 @@ async def _feed_relay_sessions(settings: Settings, session, dev, cam: CameraConf
     from .ts_retime import Retimer
 
     failures = 0
-    retimer = Retimer(lambda data: _write_all(fd, data))
+    retimer = Retimer(lambda data: _write_all(fd, data),
+                      on_skip=lambda seconds: _skipped(cam.id, seconds))
     if not keepalive:
         log.warning("[%s] ontapo internals changed: no heartbeats, reconnecting instead", cam.id)
     while not stop.is_set() and proc.poll() is None:

@@ -353,6 +353,7 @@ export const en = {
   "player.fullscreen": "Fullscreen",
   "player.exitFullscreen": "Exit fullscreen",
   "player.speed": "Playback speed",
+  "player.footageMissing": "Footage missing – about {seconds} s",
   "hourly.showSegments": "Show its segments",
   "compaction.title": "Archiving",
   "compaction.off": "off",

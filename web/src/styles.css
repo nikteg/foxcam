@@ -1667,6 +1667,41 @@ Fluent's text styles would otherwise reset the margins. */
   border-radius: 3px;
   background: rgb(76 201 255 / 0.85);
 }
+/* Footage missing: a hatched stretch where the picture holds, or a tick where the video
+   goes on after footage the camera never delivered. */
+.player-gap {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  min-width: 3px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgb(255 185 0 / 0.9) 0 3px,
+    rgb(255 185 0 / 0.35) 3px 6px
+  );
+}
+.player-gap-moment {
+  top: -5px;
+  bottom: -5px;
+  translate: -50% 0;
+  background: rgb(255 185 0 / 0.95);
+}
+/* Said on the picture while playing where footage is missing: top right, clear of the
+   camera's own clock (top left on most). */
+.player-gap-notice {
+  position: absolute;
+  top: var(--spacingVerticalM);
+  right: var(--spacingHorizontalM);
+  z-index: 1;
+  max-width: calc(60% - var(--spacingHorizontalM));
+  padding: var(--spacingVerticalXXS) var(--spacingHorizontalS);
+  border-radius: var(--borderRadiusMedium);
+  background: rgb(0 0 0 / 0.65);
+  color: white;
+  font-size: var(--fontSizeBase200);
+  pointer-events: none;
+}
 .player-thumb {
   position: absolute;
   top: 50%;

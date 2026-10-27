@@ -1,7 +1,7 @@
 // The app's video player: Vidstack plays the video and keeps its state (keyboard
 // shortcuts, gestures, hiding the controls); the controls are our own, made of Fluent UI
 // parts on a dark theme, with a timeline that previews the server's thumbnail sprites
-// (WebVTT) and can show markers (e.g. where things moved).
+// (WebVTT) and can show markers (e.g. where things moved, footage that is missing).
 import {
   FluentProvider,
   Button,
@@ -47,7 +47,7 @@ import { useEffect, useRef, useState, type ReactNode, type RefObject } from "rea
 
 import "@vidstack/react/player/styles/base.css";
 
-import type { MotionFrame } from "../api";
+import type { FootageGap, MotionFrame } from "../api";
 import { useI18n } from "../i18n";
 import { darkTheme } from "../theme";
 import { useMediaQuery } from "../useMediaQuery";
@@ -72,6 +72,7 @@ export function VideoPlayer({
   overlay,
   markers,
   motion,
+  gaps,
 }: {
   src: string;
   title: string;
@@ -90,11 +91,18 @@ export function VideoPlayer({
   /** Where things moved: boxes on the picture and marks on the timeline, with a button in
    * the bar to hide them (shown by default). */
   motion?: MotionFrame[];
+  /** Footage missing from the video: marked on the timeline (the arrows and double taps
+   * jump to them too) and said on the picture while playing there. */
+  gaps?: FootageGap[];
 }) {
   const [showMotion, setShowMotion] = useState(true);
   const hasMotion = !!motion?.length;
   const motionOn = hasMotion && showMotion;
-  const allMarkers = motionOn ? [...(markers ?? []), ...motionMarkers(motion)] : markers;
+  const allMarkers = [
+    ...(markers ?? []),
+    ...(motionOn ? motionMarkers(motion) : []),
+    ...(gaps ?? []).map(([from, to]) => ({ from, to })),
+  ];
   const own = useRef<MediaPlayerInstance>(null);
   const ref = playerRef ?? own;
   // One player for every item a drawer shows (remounting it made the drawer jump): another
@@ -126,11 +134,13 @@ export function VideoPlayer({
       </MediaProvider>
       {overlay}
       {motionOn && <MotionOverlay frames={motion} />}
+      {!!gaps?.length && <GapNotice gaps={gaps} />}
       <FrameClock />
       <PictureTaps markers={allMarkers} />
       <PlayerControls
         thumbnails={thumbnails}
-        markers={allMarkers}
+        markers={[...(markers ?? []), ...(motionOn ? motionMarkers(motion) : [])]}
+        gaps={gaps}
         motion={
           hasMotion
             ? { on: showMotion, toggle: () => setShowMotion(!showMotion), frames: motion }
@@ -319,10 +329,12 @@ function PictureTaps({ markers }: { markers?: Marker[] }) {
 function PlayerControls({
   thumbnails,
   markers,
+  gaps,
   motion,
 }: {
   thumbnails?: string;
   markers?: Marker[];
+  gaps?: FootageGap[];
   /** The "show motion" toggle, when the video has motion to show. */
   motion?: { on: boolean; toggle: () => void; frames: MotionFrame[] };
 }) {
@@ -372,15 +384,25 @@ function PlayerControls({
           >
             <TimeSlider.Track className="player-track">
               <TimeSlider.Progress className="player-track-progress" />
-              {duration > 0 && markers && (
+              {duration > 0 && (markers?.length || gaps?.length) && (
                 <span className="player-markers" aria-hidden="true">
-                  {markers.map((m) => (
+                  {markers?.map((m) => (
                     <span
                       key={m.from}
                       className="player-marker"
                       style={{
                         left: `${(m.from / duration) * 100}%`,
                         width: `${(Math.max(m.to - m.from, 0) / duration) * 100}%`,
+                      }}
+                    />
+                  ))}
+                  {gaps?.map(([from, to]) => (
+                    <span
+                      key={`gap-${from}`}
+                      className={to > from ? "player-gap" : "player-gap player-gap-moment"}
+                      style={{
+                        left: `${(from / duration) * 100}%`,
+                        width: `${((to - from) / duration) * 100}%`,
                       }}
                     />
                   ))}
@@ -549,6 +571,25 @@ function SpeedMenu() {
         </MenuList>
       </MenuPopover>
     </Menu>
+  );
+}
+
+/** How long a moment where footage is missing stays said on the picture (s). */
+const GAP_NOTICE_S = 2;
+
+/** "Footage missing" on the picture while playing where it is (inside a `VideoPlayer`). */
+function GapNotice({ gaps }: { gaps: FootageGap[] }) {
+  const { t } = useI18n();
+  const time = useMediaState("currentTime");
+  const started = useMediaState("started");
+  const gap = started
+    ? gaps.find(([from, to]) => time >= from - 0.1 && time < Math.max(to, from + GAP_NOTICE_S))
+    : undefined;
+  if (!gap) return null;
+  return (
+    <output className="player-gap-notice">
+      {t("player.footageMissing", { seconds: Math.max(Math.round(gap[2]), 1) })}
+    </output>
   );
 }
 
