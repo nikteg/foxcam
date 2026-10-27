@@ -134,25 +134,18 @@ function JobCounts() {
   );
 }
 
-/** A nav button's numbers (new events; on Jobs each kind of backlog, in the order of its
- *  tabs): tiny, side by side and centred on the button; none at 0. Bottom bar: above the
- *  icon; top bar: above the name. */
-function NavBadges({ badges }: { badges: NavBadge[] }) {
-  if (!badges.some((b) => b.count > 0)) return null;
-  return (
-    <span className="nav-badges">
-      {badges.map((b) => (
-        <CountBadge key={b.kind} {...b} tiny />
-      ))}
-    </span>
-  );
-}
-
-function NavIcon({ icon, badges }: { icon: ReactElement; badges?: NavBadge[] }) {
+/** A nav icon with its number (new events) on the top right corner; none at 0. */
+function NavIcon({ icon, badges }: { icon: ReactElement; badges: NavBadge[] }) {
   return (
     <span className="nav-icon">
       {icon}
-      {badges && <NavBadges badges={badges} />}
+      {badges.some((b) => b.count > 0) && (
+        <span className="nav-badges">
+          {badges.map((b) => (
+            <CountBadge key={b.kind} {...b} />
+          ))}
+        </span>
+      )}
     </span>
   );
 }
@@ -244,13 +237,9 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
   const extraTabs = EXTRA_TABS.filter((tab) => isAdmin || !tab.admin);
   const badges = useNavBadges(selected === "/events");
   const icon = (tab: NavItem) => <NavIcon icon={tab.icon} badges={badges[tab.to] ?? []} />;
-  // Top bar: the numbers after the name.
   const topTab = (tab: NavItem) => (
-    <Tab key={tab.to} value={tab.to} icon={<NavIcon icon={tab.icon} />}>
-      <span className="nav-label">
-        {t(tab.label)}
-        <NavBadges badges={badges[tab.to] ?? []} />
-      </span>
+    <Tab key={tab.to} value={tab.to} icon={icon(tab)}>
+      {t(tab.label)}
     </Tab>
   );
   // Pressing the open section scrolls back up, like a phone app's tab bar.

@@ -649,21 +649,13 @@ export function useSubPage<T extends string>(base: string, ids: readonly T[]): T
  * nothing depends on scrolling to an anchor). The first tab is the base path, unless
  * ``ownPaths``: then every tab has its own (the base shows the first). Tabs with a ``group``
  * are set apart from the ones before them by a divider. */
-/** A count on a nav button (new events); nothing at 0. ``tiny``: the nav buttons' size. */
-export function CountBadge({
-  count,
-  kind,
-  tiny = false,
-}: {
-  count: number;
-  kind: BadgeKind;
-  tiny?: boolean;
-}) {
+/** A count on a nav button (new events); nothing at 0. */
+export function CountBadge({ count, kind }: { count: number; kind: BadgeKind }) {
   const { t } = useI18n();
   if (count <= 0) return null;
   return (
     <CounterBadge
-      className={`count-badge count-badge-${kind}${tiny ? " count-badge-tiny" : ""}`}
+      className={`count-badge count-badge-${kind}`}
       count={count}
       overflowCount={99}
       size="small"
