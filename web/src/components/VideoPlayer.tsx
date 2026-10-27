@@ -153,8 +153,9 @@ function videoTime(player: MediaPlayerInstance): number {
   return player.el?.querySelector("video")?.currentTime ?? player.currentTime;
 }
 
-/** To the previous / next marker's start, or `fallback` seconds when there is none.
- * Backwards skips the marker playing now (pressed again, it goes one further). */
+/** To the previous / next marker edge (where a marked stretch starts or ends), or
+ * `fallback` seconds when there is none. Backwards skips the edge just passed (pressed
+ * again, it goes one further). */
 function jumpToMarker(
   player: MediaPlayerInstance,
   markers: Marker[] | undefined,
@@ -162,45 +163,69 @@ function jumpToMarker(
   fallback: number,
 ) {
   const now = videoTime(player);
-  const starts = (markers ?? []).map((m) => m.from);
+  const edges = [...new Set((markers ?? []).flatMap((m) => [m.from, m.to]))].toSorted(
+    (a, b) => a - b,
+  );
   const marker =
-    direction > 0 ? starts.find((t) => t > now + 0.5) : starts.findLast((t) => t < now - 1);
-  const end = player.state.duration || Infinity;
-  player.remoteControl.seek(Math.min(Math.max(marker ?? now + direction * fallback, 0), end));
+    direction > 0 ? edges.find((t) => t > now + 0.25) : edges.findLast((t) => t < now - 1);
+  seekVideo(player, marker ?? now + direction * fallback);
 }
+
+/** Seek on the video element itself. Vidstack follows it through its events, timeline
+ * included; its own seek requests left the timeline (and its clock) behind while paused,
+ * and its pause request while already paused left play / pause stuck. */
+function seekVideo(player: MediaPlayerInstance, seconds: number) {
+  const video = player.el?.querySelector("video");
+  if (!video) return;
+  const end = Number.isFinite(video.duration) ? video.duration : Infinity;
+  video.currentTime = Math.min(Math.max(seconds, 0), end);
+}
+
+/** Keys pressed on the timeline are the timeline's own (it moves 5 s itself). */
+const onTimeline = (event: KeyboardEvent) =>
+  event.target instanceof Element && !!event.target.closest("[data-media-time-slider]");
 
 /** One frame back or forward, paused (the , and . keys). */
 const stepFrame =
   (direction: -1 | 1) =>
   ({ player }: { player: MediaPlayerInstance }) => {
-    // On the video element itself, which Vidstack follows through its events: a pause
-    // request while already paused left Vidstack waiting for a pause that never came,
-    // and play / pause stuck behind it.
     const video = player.el?.querySelector("video");
     if (!video) return;
-    if (!video.paused) video.pause();
-    const end = Number.isFinite(video.duration) ? video.duration : Infinity;
-    const at = video.currentTime + direction * (frameSeconds.get(player) ?? DEFAULT_FRAME_S);
-    video.currentTime = Math.min(Math.max(at, 0), end);
+    // Through Vidstack (paused behind its back, it kept thinking it played); only when
+    // playing (a pause request while paused waited for a pause that never came).
+    if (!video.paused) player.remoteControl.pause();
+    seekVideo(
+      player,
+      video.currentTime + direction * (frameSeconds.get(player) ?? DEFAULT_FRAME_S),
+    );
   };
 
-/** Keyboard on the player: Vidstack's shortcuts, with the arrows jumping between markers
- * (Shift: 5 s) and , / . stepping one frame. */
+/** A key that moves `seconds` (J / L, Shift+arrows). */
+const seekBy =
+  (seconds: number) =>
+  ({ event, player }: { event: KeyboardEvent; player: MediaPlayerInstance }) => {
+    if (!onTimeline(event)) seekVideo(player, videoTime(player) + seconds);
+  };
+
+/** Keyboard on the player: Vidstack's shortcuts, except seeking, which is ours (on the
+ * video element, see `seekVideo`): the arrows jump between markers, Shift+arrows and J / L
+ * move 5 s, and , / . step one frame. */
 function keyShortcuts(markers: Marker[] | undefined): MediaKeyShortcuts {
+  const jump =
+    (direction: -1 | 1) =>
+    ({ event, player }: { event: KeyboardEvent; player: MediaPlayerInstance }) => {
+      if (!onTimeline(event)) jumpToMarker(player, markers, direction, KEY_SEEK_S);
+    };
   return {
     ...MEDIA_KEY_SHORTCUTS,
     togglePictureInPicture: null,
     toggleCaptions: null,
-    seekBackward: "j J Shift+ArrowLeft",
-    seekForward: "l L Shift+ArrowRight",
-    previousMarker: {
-      keys: "ArrowLeft",
-      onKeyDown: ({ player }) => jumpToMarker(player, markers, -1, KEY_SEEK_S),
-    },
-    nextMarker: {
-      keys: "ArrowRight",
-      onKeyDown: ({ player }) => jumpToMarker(player, markers, 1, KEY_SEEK_S),
-    },
+    seekBackward: null,
+    seekForward: null,
+    back: { keys: "j J Shift+ArrowLeft", onKeyDown: seekBy(-KEY_SEEK_S) },
+    forward: { keys: "l L Shift+ArrowRight", onKeyDown: seekBy(KEY_SEEK_S) },
+    previousMarker: { keys: "ArrowLeft", onKeyDown: jump(-1) },
+    nextMarker: { keys: "ArrowRight", onKeyDown: jump(1) },
     previousFrame: { keys: ",", onKeyDown: stepFrame(-1) },
     nextFrame: { keys: ".", onKeyDown: stepFrame(1) },
   };
