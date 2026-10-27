@@ -650,8 +650,8 @@ export function useSubPage<T extends string>(base: string, ids: readonly T[]): T
  * ``ownPaths``: then every tab has its own (the base shows the first). Tabs with a ``group``
  * are set apart from the ones before them by a divider. */
 /** A count on a nav button or a tab; nothing at 0. Its colour says what it counts (the
- *  same on the Jobs nav button and its tabs): detection orange, preparation dark,
- *  archiving grey. ``tiny``: stacked beside a nav icon. */
+ *  same on the Jobs nav button and its tabs; styles.css): preparation violet, archiving
+ *  teal, detection pink, new events orange. ``tiny``: stacked beside a nav icon. */
 export function CountBadge({
   count,
   kind,
@@ -669,7 +669,7 @@ export function CountBadge({
       count={count}
       overflowCount={99}
       size="small"
-      color={kind === "preparation" ? "important" : kind === "archiving" ? "informative" : "brand"}
+      color="brand"
       aria-label={t(`badge.${kind}`, { n: count })}
     />
   );

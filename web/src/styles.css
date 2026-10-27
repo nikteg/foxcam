@@ -303,7 +303,7 @@ h2.section > .section-link {
 .nav-badges {
   position: absolute;
   top: -7px;
-  right: calc(100% + 2px);
+  right: calc(100% - 6px);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -327,10 +327,19 @@ h2.section > .section-link {
   top: -0.55em;
   margin-inline-start: 2px;
 }
-/* A white badge is too loud in the dark theme: a muted grey one there. */
-html[data-theme="dark"] .count-badge-preparation.count-badge-preparation {
-  background-color: var(--colorNeutralStroke1);
-  color: var(--colorNeutralForeground1);
+/* Each kind of job its own colour (the same in both themes): preparation violet,
+   archiving teal, detection pink; new events keep the brand orange. */
+.count-badge-preparation.count-badge-preparation {
+  background-color: #8b5cf6;
+  color: white;
+}
+.count-badge-archiving.count-badge-archiving {
+  background-color: #0d9488;
+  color: white;
+}
+.count-badge-detection.count-badge-detection {
+  background-color: #db2777;
+  color: white;
 }
 /* Top bar: a refresh button whenever the bottom tab bar shows (below 1280 px, as in the
    media query further down); theme and language except on phones. Doubled class: wins
@@ -1454,6 +1463,11 @@ Fluent's text styles would otherwise reset the margins. */
 .page-tabs > .fui-Tab,
 .drawer-column > .fui-TabList > .fui-Tab {
   flex-shrink: 0;
+}
+/* Fluent's tab clips its content: let a count badge stick up out of the name. */
+.page-tabs > .fui-Tab.fui-Tab,
+.page-tabs .fui-Tab__content.fui-Tab__content {
+  overflow: visible;
 }
 /* Between groups of sub-pages (Jobs: detection | the server's own work). */
 .page-tabs-divider {
