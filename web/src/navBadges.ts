@@ -66,9 +66,10 @@ export function useNavBadges(isAdmin: boolean, onEvents: boolean): Record<string
     "/events": [{ count: newEvents, kind: "events" }],
     "/jobs": isAdmin
       ? [
-          { count: jobs.detection, kind: "detection" },
+          // In the order of the Jobs tabs.
           { count: jobs.preparation, kind: "preparation" },
           { count: jobs.archiving, kind: "archiving" },
+          { count: jobs.detection, kind: "detection" },
         ]
       : [],
   };

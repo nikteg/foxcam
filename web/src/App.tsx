@@ -85,19 +85,25 @@ function currentTab(pathname: string): string {
 }
 
 /** Signed-in user: account page and sign out. */
-/** A nav icon with numbers beside it (new events; on Jobs each kind of backlog), tiny and
- *  stacked on its left; none at 0. */
-function NavIcon({ icon, badges }: { icon: ReactElement; badges: NavBadge[] }) {
+/** A nav button's numbers (new events; on Jobs each kind of backlog, in the order of its
+ *  tabs): tiny, side by side and centred on the button; none at 0. Bottom bar: above the
+ *  icon; top bar: above the name. */
+function NavBadges({ badges }: { badges: NavBadge[] }) {
+  if (!badges.some((b) => b.count > 0)) return null;
+  return (
+    <span className="nav-badges">
+      {badges.map((b) => (
+        <CountBadge key={b.kind} {...b} tiny />
+      ))}
+    </span>
+  );
+}
+
+function NavIcon({ icon, badges }: { icon: ReactElement; badges?: NavBadge[] }) {
   return (
     <span className="nav-icon">
       {icon}
-      {badges.some((b) => b.count > 0) && (
-        <span className="nav-badges">
-          {badges.map((b) => (
-            <CountBadge key={b.kind} {...b} tiny />
-          ))}
-        </span>
-      )}
+      {badges && <NavBadges badges={badges} />}
     </span>
   );
 }
@@ -189,6 +195,15 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
   const extraTabs = EXTRA_TABS.filter((tab) => isAdmin || !tab.admin);
   const badges = useNavBadges(isAdmin, selected === "/events");
   const icon = (tab: NavItem) => <NavIcon icon={tab.icon} badges={badges[tab.to] ?? []} />;
+  // Top bar: the numbers after the name.
+  const topTab = (tab: NavItem) => (
+    <Tab key={tab.to} value={tab.to} icon={<NavIcon icon={tab.icon} />}>
+      <span className="nav-label">
+        {t(tab.label)}
+        <NavBadges badges={badges[tab.to] ?? []} />
+      </span>
+    </Tab>
+  );
   // Pressing the open section scrolls back up, like a phone app's tab bar.
   const go = (to: string) => {
     if (to === pathname) window.scrollTo({ top: 0, behavior: "smooth" });
@@ -210,16 +225,8 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
           onTabSelect={(_, d) => go(String(d.value))}
           size="medium"
         >
-          {tabs.map((tab) => (
-            <Tab key={tab.to} value={tab.to} icon={icon(tab)}>
-              {t(tab.label)}
-            </Tab>
-          ))}
-          {extraTabs.map((tab) => (
-            <Tab key={tab.to} value={tab.to} icon={icon(tab)}>
-              {t(tab.label)}
-            </Tab>
-          ))}
+          {tabs.map(topTab)}
+          {extraTabs.map(topTab)}
         </TabList>
         {/* Right-aligned header actions. */}
         <div className="topbar-actions">
