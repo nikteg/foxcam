@@ -179,7 +179,16 @@ function seekVideo(player: MediaPlayerInstance, seconds: number) {
   const video = player.el?.querySelector("video");
   if (!video) return;
   const end = Number.isFinite(video.duration) ? video.duration : Infinity;
-  video.currentTime = Math.min(Math.max(seconds, 0), end);
+  const at = Math.min(Math.max(seconds, 0), end);
+  // Vidstack marks the video ended on a seek into its last second, and while ended counts
+  // the time as the whole length, so seeking back left the timeline full: only playing
+  // cleared it. Clear it here (its state store is not typed, hence the guard).
+  if (player.state.ended && at < end - 0.01) {
+    (player as unknown as { $state?: { ended?: { set(v: boolean): void } } }).$state?.ended?.set(
+      false,
+    );
+  }
+  video.currentTime = at;
 }
 
 /** Keys pressed on the timeline are the timeline's own (it moves 5 s itself). */
