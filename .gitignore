@@ -6,6 +6,9 @@ __pycache__/
 /data/
 config.yaml
 .env
+# Private, per machine: production URL and API key, notes about the deploy
+mise.local.toml
+CLAUDE.local.md
 *.pt
 out/
 samples/*

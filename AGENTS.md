@@ -12,6 +12,9 @@ Rules agreed while building this project. `CLAUDE.md` is a symlink to this file.
 - Never force push. If it seems needed, write out the commands for a person to run.
 - No backwards compatibility needed yet: links, URLs, config keys, headers and names may
   change freely.
+- Work on a branch. "Merge" or "ship" means: `mise run check` and `mise run build` pass,
+  merge into `main`, push, switch back to `main`, delete the branch (the `ship` skill).
+  Pushing `main` may deploy production (`CLAUDE.local.md`, if present, says).
 
 ## Writing
 
@@ -120,6 +123,23 @@ iPad and desktop, in light and dark theme, and as an iOS home screen app.
 - Workers are not let in without a token unless configured to be.
 - Prefer copying streams over re-encoding; anything that decodes or encodes video should use
   hardware acceleration where it is available (`hwaccel.py`).
+
+## Times
+
+- The database stores UTC (naive datetimes); the API sends UTC with `Z`; the UI shows local
+  time. Recording file names and segment `start_at` come from MediaMTX's clock when it
+  started writing, not from when the camera filmed it. Docker logs are UTC. Say which
+  clock a time is on, and convert before comparing.
+
+## Debugging what production does
+
+- Look at real data and logs before theorising: the `prod` skill (`scripts/prod-api.sh`
+  with the key in `mise.local.toml`, never pasted into commands), and for logs give the
+  user ready-to-run `docker logs` commands with a UTC time window.
+- For video problems (jumps, missing footage, wrong frames, boxes in the wrong place)
+  start with `scripts/footage_probe.py` (the `footage-debug` skill).
+- Dev servers the user started are theirs: don't stop or restart them. To look at a
+  change without one, use `scripts/scratch-server.sh` (the `ui-check` skill).
 
 ## Checks before committing
 
