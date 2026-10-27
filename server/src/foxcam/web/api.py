@@ -517,26 +517,26 @@ async def segment_thumbnails(segment_id: int, settings: Settings = Depends(setti
 async def event_thumbnails(event_id: int, settings: Settings = Depends(settings_dep),
                            p: Principal = Depends(principal)) -> Response:
     """Timeline previews for an event's clip: the clip's own sprite (every frame, a tile
-    each half second); for a clip only in S3 storage, its recordings' sprites, their times
-    moved to the clip's clock (it starts with the pre-roll) and cut to the clip."""
+    each half second); for an older clip only in S3 storage, its recordings' sprites,
+    their times moved to the clip's clock (it starts with the pre-roll), cut to the clip."""
     ev = _event(p, event_id)
     if ev.clip_start is None:
         raise HTTPException(404, "no clip")
-    clip = settings.data_dir / ev.clip_path if ev.clip_path else None
-    if clip is not None and clip.exists():
-        # The clip's own sprite: every frame, finer tiles.
+    if ev.clip_path:
+        # The clip's own sprite (every frame, finer tiles), made when it was cut; kept when
+        # the clip itself moved to S3 storage.
         try:
-            sprite = await asyncio.to_thread(sprites.event_sprite, settings, event_id, clip,
+            sprite = await asyncio.to_thread(sprites.event_sprite, settings, ev.clip_path,
                                              ev.clip_duration_s or 0)
         except RuntimeError as e:
             raise HTTPException(503, str(e)) from e
         if sprite is not None:
-            version = int(sprites.event_files(settings, event_id)[0].stat().st_mtime)
+            version = int(sprites.event_files(settings, ev.clip_path)[0].stat().st_mtime)
             url = f"/api/events/{event_id}/sprite.jpg?v={version}"  # new with a new clip
-            return Response(sprites.vtt(sprite, url),
-                            media_type="text/vtt",
+            return Response(sprites.vtt(sprite, url), media_type="text/vtt",
                             headers={"Cache-Control": "private, max-age=3600"})
-    # Only in S3 storage: the recordings' sprites, moved to the clip's clock.
+    # A clip from before these sprites, now only in S3 storage: the recordings' sprites,
+    # moved to the clip's clock.
     with session_scope() as s:
         segs = [(g.id, (g.start_at - ev.clip_start).total_seconds()) for g in
                 sorted(s.get(Event, event_id).segments, key=lambda g: g.start_at)]
@@ -556,9 +556,9 @@ async def event_thumbnails(event_id: int, settings: Settings = Depends(settings_
 @router.get("/events/{event_id}/sprite.jpg")
 def event_sprite_image(event_id: int, settings: Settings = Depends(settings_dep),
                        p: Principal = Depends(principal)) -> FileResponse:
-    _event(p, event_id)
-    image = sprites.event_files(settings, event_id)[0]
-    if not image.exists():
+    ev = _event(p, event_id)
+    image = sprites.event_files(settings, ev.clip_path)[0] if ev.clip_path else None
+    if image is None or not image.exists():
         raise HTTPException(404, "load thumbnails.vtt first")
     return FileResponse(image, media_type="image/jpeg",
                         headers={"Cache-Control": "private, max-age=3600"})

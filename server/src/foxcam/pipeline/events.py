@@ -23,7 +23,7 @@ from pathlib import Path
 
 from sqlalchemy import delete, func, select, update
 
-from .. import ffmpeg, notify
+from .. import ffmpeg, notify, sprites
 from ..config import Settings
 from ..db import session_scope
 from ..models import Detection, Event, Segment, event_segments, utcnow
@@ -204,6 +204,10 @@ def _build_clip(settings: Settings, event_id: int) -> bool:
             sources.append((src.path, src.offset_s, src.offset_s + src.duration_s)
                            if src.archived else (src.path, None, None))
         ffmpeg.concat_clip(sources, settings.data_dir / clip_rel, offset, duration)
+        try:  # the timeline previews, now while the clip is surely on disk
+            sprites.event_sprite(settings, clip_rel, duration)
+        except RuntimeError as e:
+            log.warning("event %s: no previews: %s", event_id, e)
 
         best = s.get(Detection, ev.best_detection_id) if ev.best_detection_id else None
         thumb_rel = None

@@ -76,6 +76,7 @@ def _expire_events(settings: Settings) -> int:
             for rel in (ev.clip_path, ev.thumb_path):
                 if rel:
                     (settings.data_dir / rel).unlink(missing_ok=True)
+            sprites.remove_event(settings, ev.clip_path)
             for key in (ev.clip_remote_key, ev.thumb_remote_key):
                 if key and store:
                     _delete_remote(store, key)

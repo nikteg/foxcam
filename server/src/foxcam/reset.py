@@ -93,6 +93,7 @@ def footage(settings: Settings) -> str:
             arc.deleted_at = utcnow()
         for ev in s.scalars(select(Event).where(Event.clip_path.is_not(None))):
             (settings.data_dir / ev.clip_path).unlink(missing_ok=True)
+            sprites.remove_event(settings, ev.clip_path)
             ev.clip_path = None
         s.execute(update(Event).values(clip_dirty=False))  # nothing to cut them from
     return f"footage of {n} recordings removed (detections, events and marks kept)"
@@ -213,6 +214,8 @@ def camera_ids_with_data() -> set[str]:
 def purge_camera(settings: Settings, camera_id: str) -> dict[str, int]:
     """Delete a camera's recordings, events, detections and settings. Removes the camera
     itself when it was added in the UI (config.yaml cameras must be removed there)."""
+    from . import sprites  # deferred, like in footage()
+
     with session_scope() as s:
         seg_ids = list(s.scalars(select(Segment.id).where(Segment.camera_id == camera_id)))
         derived = [p for p in s.scalars(select(Segment.derived_path)
@@ -221,6 +224,8 @@ def purge_camera(settings: Settings, camera_id: str) -> dict[str, int]:
                                         .where(Segment.camera_id == camera_id)) if p]
         events = s.scalars(select(Event).where(Event.camera_id == camera_id)).all()
         clips = [p for ev in events for p in (ev.clip_path, ev.thumb_path) if p]
+        clips += [str(f.relative_to(settings.data_dir)) for ev in events if ev.clip_path
+                  for f in sprites.event_files(settings, ev.clip_path)]
         n_events = len(events)
         s.execute(delete(event_segments).where(event_segments.c.segment_id.in_(seg_ids)))
         for ev in events:

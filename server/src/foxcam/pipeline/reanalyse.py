@@ -13,6 +13,7 @@ import logging
 
 from sqlalchemy import delete, select
 
+from .. import sprites
 from ..config import Settings
 from ..db import session_scope
 from ..models import Detection, Event, Job, JobState, Segment, SegmentStatus, utcnow
@@ -69,6 +70,7 @@ def _refresh_event(settings: Settings, s, event_id: int, seg: Segment) -> None:
         for rel in (ev.clip_path, ev.thumb_path):
             if rel:
                 (settings.data_dir / rel).unlink(missing_ok=True)
+        sprites.remove_event(settings, ev.clip_path)
         segments = list(ev.segments)
         s.delete(ev)
         s.flush()

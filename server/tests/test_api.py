@@ -436,7 +436,8 @@ def test_event_thumbnails_are_in_clip_time(settings):
 
 @needs_ffmpeg
 def test_event_thumbnails_from_the_clip_itself(settings):
-    """A clip on disk gets its own sprite: a tile each half second, from every frame."""
+    """An event clip gets its own sprite: a tile each half second, from every frame, kept
+    when the clip itself leaves the disk."""
     start = utcnow().replace(microsecond=0)
     make_video(settings.data_dir / "clips" / "cam" / "ev.mp4", seconds=3)
     with session_scope() as s:
@@ -454,4 +455,8 @@ def test_event_thumbnails_from_the_clip_itself(settings):
         assert len(cues) == 6
         image = next(line for line in r.text.splitlines() if "#xywh" in line).split("#")[0]
         assert image.startswith(f"/api/events/{ev_id}/sprite.jpg?v=")
+        assert c.get(image).status_code == 200
+        # The clip moved to S3 storage (local copy deleted): its previews stay.
+        (settings.data_dir / "clips" / "cam" / "ev.mp4").unlink()
+        assert c.get(f"/api/events/{ev_id}/thumbnails.vtt").text == r.text
         assert c.get(image).status_code == 200

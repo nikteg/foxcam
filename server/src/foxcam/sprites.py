@@ -161,23 +161,31 @@ def segment_sprite(settings: Settings, segment_id: int) -> Sprite | None:
                  offset=src.offset_s if src.archived else 0.0)
 
 
-def event_files(settings: Settings, event_id: int) -> tuple[Path, Path]:
-    folder = settings.data_dir / "cache" / "sprites"
-    return folder / f"event-{event_id}.jpg", folder / f"event-{event_id}.json"
+def event_files(settings: Settings, clip_rel: str | Path) -> tuple[Path, Path]:
+    """An event clip's sprite, next to the clip (kept when the clip moves to S3 storage)."""
+    clip = settings.data_dir / clip_rel
+    return clip.with_name(f"{clip.stem}-sprite.jpg"), clip.with_name(f"{clip.stem}-sprite.json")
 
 
-def event_sprite(settings: Settings, event_id: int, clip: Path,
-                 duration: float) -> Sprite | None:
-    """Make (or reuse) the sprite of an event's clip (``clip``, on disk), from all its frames.
-    Made again when the clip is newer (rebuilt)."""
-    image, meta = event_files(settings, event_id)
-    if image.exists() and image.stat().st_mtime >= clip.stat().st_mtime and \
-            (sprite := load(meta)):
+def event_sprite(settings: Settings, clip_rel: str | Path, duration: float) -> Sprite | None:
+    """Make (or reuse) the sprite of an event's clip, from all its frames: made when the
+    clip is cut (events.py), again when it is newer. None when there is neither."""
+    clip = settings.data_dir / clip_rel
+    image, meta = event_files(settings, clip_rel)
+    fresh = image.exists() and (not clip.exists() or
+                                image.stat().st_mtime >= clip.stat().st_mtime)
+    if fresh and (sprite := load(meta)):
         return sprite
-    if duration <= 0:
+    if not clip.exists() or duration <= 0:
         return None
     return build(clip, image, meta, duration=duration, interval=EVENT_INTERVAL,
                  keyframes_only=False, tile_width=EVENT_TILE_WIDTH)
+
+
+def remove_event(settings: Settings, clip_rel: str | Path | None) -> None:
+    if clip_rel:
+        for path in event_files(settings, clip_rel):
+            path.unlink(missing_ok=True)
 
 
 def backfill_archives(settings: Settings, limit: int = 1) -> int:
