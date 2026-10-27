@@ -2023,6 +2023,9 @@ h2.panel-heading {
 /* The fox (public/icon.svg) next to the name, in the top bar and on the sign-in page. */
 .brand-icon {
   height: 1.15em;
+  /* Its own size before it has loaded (the viewBox is 336 x 344): otherwise it starts 0
+     wide and the whole top bar jumps sideways on every reload. */
+  aspect-ratio: 336 / 344;
   width: auto;
   vertical-align: -0.18em;
   margin-inline-end: 0.35em;

@@ -161,7 +161,8 @@ export function Layout() {
   const auth = useAuth();
   useUnauthorizedRedirect();
   if (auth.isPending) return <PageSpinner />;
-  if (auth.error) {
+  // The last known state stays on screen when the check itself fails (e.g. offline).
+  if (auth.error && !auth.data) {
     return <div className="auth-page">{String(auth.error.message ?? auth.error)}</div>;
   }
   if (!auth.data.signed_in) return <AuthScreen />;
@@ -199,7 +200,7 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
       <header className="topbar">
         <RouterLink to="/" className="brand">
           <Text weight="semibold" size={500}>
-            <img className="brand-icon" src="/icon.svg" alt="" />
+            <img className="brand-icon" src="/icon.svg" alt="" width={336} height={344} />
             Foxcam
           </Text>
         </RouterLink>

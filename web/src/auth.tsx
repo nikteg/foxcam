@@ -7,8 +7,33 @@ import { api, setUnauthorizedHandler, type AuthState, type Camera, type CameraRo
 
 export const AUTH_KEY = ["auth"] as const;
 
+/** The last answer, so a reload starts with the app (and its top bar) instead of a
+ *  spinner while the server is asked again. */
+const LAST_KEY = "foxcam.auth";
+
+function lastAuth(): AuthState | undefined {
+  try {
+    return JSON.parse(localStorage.getItem(LAST_KEY) ?? "") as AuthState;
+  } catch {
+    return undefined;
+  }
+}
+
+function remember(state: AuthState): AuthState {
+  localStorage.setItem(LAST_KEY, JSON.stringify(state));
+  return state;
+}
+
 export function useAuth() {
-  return useQuery({ queryKey: AUTH_KEY, queryFn: api.authState, staleTime: 60_000 });
+  return useQuery({
+    queryKey: AUTH_KEY,
+    queryFn: async () => remember(await api.authState()),
+    staleTime: 60_000,
+    // Shown at once and asked again right away (updated at 0: stale); a session that
+    // ended meanwhile then shows the sign-in screen.
+    initialData: lastAuth,
+    initialDataUpdatedAt: 0,
+  });
 }
 
 /** The auth state once loaded (inside the signed-in app it always is). */
@@ -27,7 +52,7 @@ export function useAuthChanged() {
   const client = useQueryClient();
   return (state?: AuthState) => {
     client.removeQueries({ predicate: (q) => q.queryKey[0] !== AUTH_KEY[0] });
-    if (state) client.setQueryData(AUTH_KEY, state);
+    if (state) client.setQueryData(AUTH_KEY, remember(state));
     else void client.invalidateQueries({ queryKey: AUTH_KEY });
   };
 }
