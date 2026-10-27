@@ -1459,6 +1459,11 @@ Fluent's text styles would otherwise reset the margins. */
   color: white;
   font-family: var(--fontFamilyBase);
 }
+/* Pictures in the player (poster, previews) are not dragged out like a web image. */
+.video-player img {
+  -webkit-user-drag: none;
+  user-select: none;
+}
 .video-player[data-fullscreen] {
   border-radius: 0;
 }

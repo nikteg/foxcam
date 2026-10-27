@@ -34,6 +34,10 @@ TILE_WIDTH = 160
 COLUMNS = 10
 SEGMENT_INTERVAL = 2.0  # seconds per tile (cameras send a keyframe every 1-2 s)
 ARCHIVE_INTERVAL = 10.0
+# Event clips are short and scrubbed closely (the scrub picture fills the player): every
+# frame decoded, a tile each half second, twice as wide.
+EVENT_INTERVAL = 0.5
+EVENT_TILE_WIDTH = 320
 
 
 @dataclass
@@ -64,18 +68,23 @@ def load(meta_path: Path) -> Sprite | None:
 
 
 def build(src: Path, image: Path, meta: Path, *, duration: float, interval: float,
-          offset: float = 0.0) -> Sprite:
-    """Make the sprite of ``src`` from ``offset`` for ``duration`` seconds."""
+          offset: float = 0.0, keyframes_only: bool = True,
+          tile_width: int = TILE_WIDTH) -> Sprite:
+    """Make the sprite of ``src`` from ``offset`` for ``duration`` seconds. With
+    ``keyframes_only`` a tile shows the last keyframe before its time (cheap, but up to a
+    keyframe interval early); otherwise the frame on screen then."""
     tiles = max(1, math.ceil(duration / interval))
     rows = math.ceil(tiles / COLUMNS)
     columns = min(COLUMNS, tiles)
     image.parent.mkdir(parents=True, exist_ok=True)
     part = image.with_suffix(".part.jpg")
-    args = ["ffmpeg", "-v", "error", "-y", "-hwaccel", "auto", "-skip_frame", "nokey"]
+    args = ["ffmpeg", "-v", "error", "-y", "-hwaccel", "auto"]
+    if keyframes_only:
+        args += ["-skip_frame", "nokey"]
     if offset:
         args += ["-ss", f"{offset:.3f}"]
     args += ["-t", f"{duration:.3f}", "-i", str(src),
-             "-vf", f"{ffmpeg.sample(f'1/{interval}')},scale={TILE_WIDTH}:-2,tile={columns}x{rows}",
+             "-vf", f"{ffmpeg.sample(f'1/{interval}')},scale={tile_width}:-2,tile={columns}x{rows}",
              "-frames:v", "1", "-q:v", "5", str(part)]
     proc = subprocess.run(args, capture_output=True, text=True, timeout=600, check=False)
     if proc.returncode != 0 or not part.exists():
@@ -150,6 +159,25 @@ def segment_sprite(settings: Settings, segment_id: int) -> Sprite | None:
         return None
     return build(src.path, image, meta, duration=src.duration_s, interval=SEGMENT_INTERVAL,
                  offset=src.offset_s if src.archived else 0.0)
+
+
+def event_files(settings: Settings, event_id: int) -> tuple[Path, Path]:
+    folder = settings.data_dir / "cache" / "sprites"
+    return folder / f"event-{event_id}.jpg", folder / f"event-{event_id}.json"
+
+
+def event_sprite(settings: Settings, event_id: int, clip: Path,
+                 duration: float) -> Sprite | None:
+    """Make (or reuse) the sprite of an event's clip (``clip``, on disk), from all its frames.
+    Made again when the clip is newer (rebuilt)."""
+    image, meta = event_files(settings, event_id)
+    if image.exists() and image.stat().st_mtime >= clip.stat().st_mtime and \
+            (sprite := load(meta)):
+        return sprite
+    if duration <= 0:
+        return None
+    return build(clip, image, meta, duration=duration, interval=EVENT_INTERVAL,
+                 keyframes_only=False, tile_width=EVENT_TILE_WIDTH)
 
 
 def backfill_archives(settings: Settings, limit: int = 1) -> int:

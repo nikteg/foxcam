@@ -432,3 +432,26 @@ def test_event_thumbnails_are_in_clip_time(settings):
                     "00:00:07.000 --> 00:00:08.000"]
     assert images[0] == f"/api/segments/{first}/sprite.jpg#xywh=320,0,160,90"
     assert images[3] == f"/api/segments/{second}/sprite.jpg#xywh=0,0,160,90"
+
+
+@needs_ffmpeg
+def test_event_thumbnails_from_the_clip_itself(settings):
+    """A clip on disk gets its own sprite: a tile each half second, from every frame."""
+    start = utcnow().replace(microsecond=0)
+    make_video(settings.data_dir / "clips" / "cam" / "ev.mp4", seconds=3)
+    with session_scope() as s:
+        ev = Event(camera_id="cam", label="fox", first_ts=start, last_ts=start,
+                   max_confidence=0.9, clip_dirty=False, clip_path="clips/cam/ev.mp4",
+                   clip_start=start, clip_duration_s=3)
+        s.add(ev)
+        s.flush()
+        ev_id = ev.id
+    with app_client(settings) as c:
+        r = c.get(f"/api/events/{ev_id}/thumbnails.vtt")
+        assert r.status_code == 200
+        cues = [line for line in r.text.splitlines() if "-->" in line]
+        assert cues[:2] == ["00:00:00.000 --> 00:00:00.500", "00:00:00.500 --> 00:00:01.000"]
+        assert len(cues) == 6
+        image = next(line for line in r.text.splitlines() if "#xywh" in line).split("#")[0]
+        assert image.startswith(f"/api/events/{ev_id}/sprite.jpg?v=")
+        assert c.get(image).status_code == 200

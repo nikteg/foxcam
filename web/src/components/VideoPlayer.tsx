@@ -500,6 +500,7 @@ function ScrubPicture({
         <img
           src={active.url.href}
           alt=""
+          draggable={false}
           onLoad={(e) => setSpriteWidth(e.currentTarget.naturalWidth)}
           style={
             tile
