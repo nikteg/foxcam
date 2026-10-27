@@ -22,8 +22,15 @@ import { useRecordingProfiles, useRecordingSummary } from "../recordingProfiles"
 import { FieldSkeleton } from "./Skeletons";
 import { Fact, Facts, QueryState, Tag } from "./ui";
 
-/** "percent": stored 0–1, entered and shown as 0–100 %. "choice": one of `options`. */
-type Kind = "number" | "bool" | "url" | "percent" | "choice";
+/** "percent": stored 0–1, entered and shown as 0–100 %. "choice": one of `options`.
+ *  "timezone": an IANA zone (e.g. Europe/Stockholm), or none (the server's own). */
+type Kind = "number" | "bool" | "url" | "percent" | "choice" | "timezone";
+
+/** Every zone the browser knows, this device's first. */
+const TIME_ZONES = (() => {
+  const own = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return [own, ...Intl.supportedValuesOf("timeZone").filter((z) => z !== own)];
+})();
 
 /** Not a runtime setting: the default recording profile (its own endpoint, saved with the
  * same Save button). Put this key in a group to show it there. */
@@ -42,6 +49,11 @@ const META: Record<
   }
 > = {
   public_url: { label: "runtime.publicUrl", hint: "runtime.publicUrlHint", kind: "url" },
+  "notifications.timezone": {
+    label: "runtime.timezone",
+    hint: "runtime.timezoneHint",
+    kind: "timezone",
+  },
   segment_seconds: {
     label: "runtime.segmentSeconds",
     hint: "runtime.segmentSecondsHint",
@@ -273,7 +285,7 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
     if (typeof d === "boolean") return d;
     if (d.trim() === "") return null;
     const kind = META[k]?.kind;
-    if (kind === "url" || kind === "choice") return d.trim();
+    if (kind === "url" || kind === "choice" || kind === "timezone") return d.trim();
     return kind === "percent" ? Number(d) / 100 : Number(d);
   };
 
@@ -340,6 +352,21 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
                         checked={value}
                         onChange={(_, d) => setDraft((v) => ({ ...v, [k]: d.checked }))}
                       />
+                    ) : meta.kind === "timezone" ? (
+                      <Select
+                        value={value}
+                        onChange={(_, d) => setDraft((v) => ({ ...v, [k]: d.value }))}
+                      >
+                        <option value="">{t("runtime.serverTime")}</option>
+                        {(TIME_ZONES.includes(value) || !value
+                          ? TIME_ZONES
+                          : [value, ...TIME_ZONES]
+                        ).map((z) => (
+                          <option key={z} value={z}>
+                            {z}
+                          </option>
+                        ))}
+                      </Select>
                     ) : meta.kind === "choice" ? (
                       <Select
                         value={value}
@@ -486,7 +513,10 @@ function shown(
   v: RuntimeSetting["value"],
   meta: (typeof META)[string],
 ): string {
-  if (v === null) return t(meta.kind === "url" ? "runtime.notSet" : "retention.noCap");
+  if (v === null) {
+    if (meta.kind === "timezone") return t("runtime.serverTime");
+    return t(meta.kind === "url" ? "runtime.notSet" : "retention.noCap");
+  }
   if (typeof v === "boolean") return t(v ? "runtime.on" : "runtime.off");
   if (meta.kind === "percent") return `${toPercent(v as number)} %`;
   const option = meta.options?.find(([o]) => o === v);

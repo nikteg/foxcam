@@ -500,6 +500,11 @@ export const en = {
   "runtime.source.ui": "set here",
   "runtime.resetToConfig": "Reset to {value} (config.yaml)",
   "runtime.resetToDefault": "Reset to {value} (default)",
+  "runtime.timezone": "Time zone",
+  "runtime.timezoneHint":
+    "The times in notifications, and quiet hours, are in this zone. Not set: the server's own clock, which is UTC in Docker.",
+  "runtime.serverTime": "Server time",
+  "runtime.group.messages": "Messages",
   "runtime.notSet": "not set",
   "runtime.on": "on",
   "runtime.off": "off",

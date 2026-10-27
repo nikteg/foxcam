@@ -114,6 +114,8 @@ def test_webhook_payload_and_signature(settings):
     assert data["event"]["id"] == event_id and data["event"]["label"] == "fox"
     assert data["event"]["camera_name"] == "Cam" and data["event"]["confidence"] == 0.9
     assert data["links"]["events"] == "http://cams.local:8000/events?camera=cam"
+    assert data["links"]["event"] == \
+        f"http://cams.local:8000/events?camera=cam&details={event_id}"
     assert _notes() == [("hook", "event.new", "sent", None)]
 
 
@@ -147,7 +149,11 @@ def test_ntfy_without_image_posts_json(settings):
     assert req.headers["Authorization"] == "Basic " + base64.b64encode(b"me:pw").decode()
     msg = json.loads(req.content)
     assert msg["topic"] == "foxes" and msg["title"] == "Fox – Cam"
-    assert msg["click"] == "https://cams.example.org/events?camera=cam"
+    # Tapping shows the notification; its button opens the event.
+    assert "click" not in msg
+    assert msg["actions"] == [{"action": "view", "label": "Open event",
+                               "url": "https://cams.example.org/events?camera=cam&details=1"}]
+    assert "90 % sure" in msg["message"] and "Profile: " in msg["message"]
 
 
 def test_failures_are_retried_then_given_up(settings):
@@ -193,6 +199,21 @@ def test_apprise_channel(settings, monkeypatch):
     _fox_event(settings)
     assert notify.deliver_pending(settings) == 1
     assert sent["url"] == "tgram://bot/chat" and sent["title"] == "Fox – Cam"
+
+
+def test_message_times_are_in_the_configured_zone(settings):
+    settings.notifications.timezone = "Asia/Tokyo"  # UTC+9, no daylight saving
+    ts = utcnow().replace(hour=12, minute=0, second=5, microsecond=0)
+    data = {"type": "event.new", "event": {
+        "label": "fox", "camera_name": "Cam", "profile_name": "Foxes", "confidence": 0.91,
+        "first_ts": notify._iso(ts), "last_ts": notify._iso(ts + timedelta(seconds=75)),
+        "detection_count": 4, "is_night": True, "detectors": ["a", "b"],
+        "detector_names": ["Model A", "Model B"], "agreement": 2, "clip_duration_s": None}}
+    _, body = notify.texts(settings, data)
+    lines = body.splitlines()
+    assert "21:00:05" in lines[0] and "91 % sure" in lines[0] and "night" in lines[0]
+    assert lines[1:] == ["Profile: Foxes", "Seen for 1 min 15 s (4 detections)",
+                         "Models: Model A, Model B (2 agree)"]
 
 
 def test_channel_validation():

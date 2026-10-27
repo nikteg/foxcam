@@ -12,9 +12,10 @@ import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Any, Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
-from pydantic import BaseModel, Field, PrivateAttr, model_validator
+from pydantic import AfterValidator, BaseModel, Field, PrivateAttr, model_validator
 
 _ENV_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
 
@@ -483,10 +484,21 @@ class ChannelConfig(BaseModel):
             raise ValueError("webhook url must start with http:// or https://")
 
 
+def _time_zone(name: str | None) -> str | None:
+    if not name:
+        return None
+    try:
+        ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError):
+        raise ValueError(f"unknown time zone '{name}' (e.g. Europe/Stockholm)") from None
+    return name
+
+
 class NotificationsConfig(BaseModel):
     channels: list[ChannelConfig] = []
-    # IANA zone for quiet hours, e.g. Europe/Stockholm. None = the server's local time.
-    timezone: str | None = None
+    # IANA zone for quiet hours and the times in messages, e.g. Europe/Stockholm. None = the
+    # server's local time (UTC in Docker). Also set in Settings → Notifications.
+    timezone: Annotated[str | None, AfterValidator(_time_zone)] = None
 
 
 class LocationConfig(BaseModel):

@@ -132,9 +132,14 @@ def public_channel(ch: ChannelConfig) -> dict[str, Any]:
 # --- enqueueing ----------------------------------------------------------------------
 
 
-def _in_quiet_hours(settings: Settings, quiet: str, now: datetime) -> bool:
+def _local(settings: Settings, dt: datetime) -> datetime:
+    """A stored (naive UTC) time in notifications.timezone, else the server's own zone."""
     tz = ZoneInfo(settings.notifications.timezone) if settings.notifications.timezone else None
-    local = now.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz).time()
+    return dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz)
+
+
+def _in_quiet_hours(settings: Settings, quiet: str, now: datetime) -> bool:
+    local = _local(settings, now).time()
     start, end = (time.fromisoformat(t) for t in quiet.split("-"))
     return start <= local < end if start < end else local >= start or local < end
 
@@ -201,9 +206,19 @@ def _iso(dt: datetime | None) -> str | None:
     return dt.isoformat(timespec="seconds") + "Z" if dt else None
 
 
-def _local_hm(settings: Settings, dt: datetime) -> str:
-    tz = ZoneInfo(settings.notifications.timezone) if settings.notifications.timezone else None
-    return dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz).strftime("%H:%M")
+def _when(settings: Settings, dt: datetime) -> str:
+    """"14:05:09", with the day when it was not today (a backlog sends old events late)."""
+    local, today = _local(settings, dt), _local(settings, utcnow()).date()
+    if local.date() == today:
+        return local.strftime("%H:%M:%S")
+    if local.date() == today - timedelta(days=1):
+        return local.strftime("yesterday %H:%M:%S")
+    return local.strftime("%a %-d %b %H:%M:%S")
+
+
+def _seconds(s: float) -> str:
+    s = round(s)
+    return f"{s} s" if s < 60 else f"{s // 60} min {s % 60} s" if s % 60 else f"{s // 60} min"
 
 
 def payload(settings: Settings, event_id: int, kind: str) -> dict[str, Any]:
@@ -214,6 +229,8 @@ def payload(settings: Settings, event_id: int, kind: str) -> dict[str, Any]:
             raise NotifyError("event no longer exists")
         cam = settings.camera(ev.camera_id)
         profile = settings.profile(ev.profile_id)
+        detectors = [d.display_name if (d := profile and profile.detector(i)) else i
+                     for i in ev.detectors or []]
         base = settings.public_url
         data = {
             "type": kind,
@@ -226,13 +243,17 @@ def payload(settings: Settings, event_id: int, kind: str) -> dict[str, Any]:
                 "label": ev.label, "confidence": round(ev.max_confidence, 3),
                 "first_ts": _iso(ev.first_ts), "last_ts": _iso(ev.last_ts),
                 "detection_count": ev.detection_count, "is_night": ev.is_night,
-                "detectors": ev.detectors or [], "agreement": ev.agreement or 1,
+                "detectors": ev.detectors or [], "detector_names": detectors,
+                "agreement": ev.agreement or 1,
                 "confirmed": ev.confirmed is not False,
                 "clip_ready": bool(ev.clip_path and not ev.clip_dirty),
                 "clip_duration_s": ev.clip_duration_s,
             },
             # Links into the (private) web UI; null without public_url in the config.
             "links": {
+                # The event's details (opened in the camera's event list).
+                "event": f"{base}/events?camera={ev.camera_id}&details={ev.id}" if base
+                else None,
                 "events": f"{base}/events?camera={ev.camera_id}" if base else None,
                 "thumbnail": f"{base}/api/events/{ev.id}/thumb" if base and ev.thumb_path
                 else None,
@@ -243,15 +264,26 @@ def payload(settings: Settings, event_id: int, kind: str) -> dict[str, Any]:
 
 
 def texts(settings: Settings, data: dict[str, Any]) -> tuple[str, str]:
+    """Title ("Fox – Garden") and a few lines of facts about the event."""
     ev = data["event"]
     title = f"{ev['label'].capitalize()} – {ev['camera_name']}"
-    when = _local_hm(settings, datetime.fromisoformat(ev["first_ts"].rstrip("Z")))
-    parts = [f"{round(ev['confidence'] * 100)}%", when, ev["profile_name"]]
+    first = datetime.fromisoformat(ev["first_ts"].rstrip("Z"))
+    last = datetime.fromisoformat(ev["last_ts"].rstrip("Z")) if ev.get("last_ts") else first
+    head = [_when(settings, first), f"{round(ev['confidence'] * 100)} % sure"]
     if ev["is_night"]:
-        parts.append("night")
-    body = " – ".join(str(p) for p in parts if p)
+        head.append("night")
+    lines = [" – ".join(head), f"Profile: {ev['profile_name']}"]
+    count = ev.get("detection_count") or 1
+    seen = f"{count} detection{'s' if count != 1 else ''}"
+    if (last - first).total_seconds() >= 1:
+        seen = f"Seen for {_seconds((last - first).total_seconds())} ({seen})"
+    lines.append(seen[0].upper() + seen[1:])
+    names = ev.get("detector_names") or ev.get("detectors") or []
+    if len(names) > 1 or (ev.get("agreement") or 1) > 1:
+        lines.append(f"Models: {', '.join(names)} ({ev.get('agreement') or 1} agree)")
     if data["type"] == "event.clip" and ev["clip_duration_s"]:
-        body += f"\nClip ready ({round(ev['clip_duration_s'])} s)"
+        lines.append(f"Clip ready ({_seconds(ev['clip_duration_s'])})")
+    body = "\n".join(lines)
     if data["type"] == "test":
         title = f"Test: {title}"
     return title, body
@@ -298,6 +330,11 @@ def send_ntfy(ch: ChannelConfig, settings: Settings, data: dict[str, Any],
     label = data["event"]["label"].lower()
     tags = [*ch.tags, *([LABEL_EMOJI[label]] if label in LABEL_EMOJI else [])]
     links = data["links"]
+    # No click URL: tapping the notification shows it in full (picture and all), and its
+    # buttons open the event or the clip.
+    actions = [{"action": "view", "label": label, "url": links[key]}
+               for key, label in (("event", "Open event"), ("clip", "Open clip"))
+               if links.get(key)]
     auth = None
     headers: dict[str, str] = {}
     if ch.token:
@@ -311,18 +348,14 @@ def send_ntfy(ch: ChannelConfig, settings: Settings, data: dict[str, Any],
                         "Priority": str(ch.priority), "Filename": image.name})
         if tags:
             headers["Tags"] = _header(",".join(tags))
-        if links["events"]:
-            headers["Click"] = links["events"]
-        if links["clip"]:
-            headers["Actions"] = f"view, Open clip, {links['clip']}"
+        if actions:
+            headers["Actions"] = "; ".join(f"view, {a['label']}, {a['url']}" for a in actions)
         r = client.put(url, content=image.read_bytes(), headers=headers, auth=auth)
     else:
         message = {"topic": ch.topic, "title": title, "message": body, "tags": tags,
                    "priority": ch.priority}
-        if links["events"]:
-            message["click"] = links["events"]
-        if links["clip"]:
-            message["actions"] = [{"action": "view", "label": "Open clip", "url": links["clip"]}]
+        if actions:
+            message["actions"] = actions
         r = client.post(ch.server.rstrip("/") + "/", json=message, headers=headers, auth=auth)
     if r.status_code >= 400:
         raise NotifyError(f"ntfy answered {r.status_code}: {r.text.strip()[:200]}")
@@ -351,8 +384,8 @@ def send_apprise(ch: ChannelConfig, settings: Settings, data: dict[str, Any],
         raise NotifyError("Apprise is not installed: uv sync --all-packages --extra notify"
                           ) from e
     title, body = texts(settings, data)
-    if data["links"]["events"]:
-        body += f"\n{data['links']['events']}"
+    if link := data["links"].get("event") or data["links"]["events"]:
+        body += f"\n{link}"
     app = apprise.Apprise()
     if not app.add(ch.url):
         raise NotifyError("Apprise does not understand this URL")
@@ -445,8 +478,10 @@ def test(settings: Settings, ch: ChannelConfig) -> dict[str, Any]:
                           "profile_id": "default", "profile_name": "Test", "label": "fox",
                           "confidence": 0.9, "first_ts": now, "last_ts": now,
                           "detection_count": 1, "is_night": False, "clip_ready": False,
-                          "clip_duration_s": None},
-                "links": {"events": f"{settings.public_url}/events" if settings.public_url
+                          "clip_duration_s": None, "detectors": [], "detector_names": [],
+                          "agreement": 1},
+                "links": {"event": None,
+                          "events": f"{settings.public_url}/events" if settings.public_url
                           else None, "thumbnail": None, "clip": None}}
         image = None
     try:

@@ -17,7 +17,8 @@ and the latest deliveries) or in `config.yaml`. Each channel chooses:
   events whose best match is at least this are sent. Events below it are still made, just
   not sent to this channel. Which detections are matches at all is the profile's match
   threshold ("Match from").
-- **Quiet hours** (e.g. `23:00-06:00`, in `notifications.timezone`) and a **cooldown**
+- **Quiet hours** (e.g. `23:00-06:00`, in the time zone set under Settings → Notifications,
+  `notifications.timezone` in the config) and a **cooldown**
   (at most one *event starts* per camera per N minutes).
 - **Image**: the frame of the best detection with its box, **censor areas blacked out**,
   so masked areas never leave the server through a notification either.
@@ -38,7 +39,7 @@ open where the UI is reachable (home network, VPN).
 public_url: http://192.168.1.10:8000
 
 notifications:
-  timezone: Europe/Stockholm        # for quiet hours and times in messages
+  timezone: Europe/Stockholm        # quiet hours and times in messages (also in Settings)
   channels:
     - id: phone
       name: My phone
@@ -73,8 +74,14 @@ so a second model joining an event never sends it again.
 Install the ntfy app (Android, iOS, web), subscribe to your topic, done. Options:
 `server` (default `https://ntfy.sh`), `topic`, `token` (protected topics, `tk_…`) or
 `username` / `password`, `priority` 1–5 and extra `tags` (emoji short codes become emojis;
-the label adds one, e.g. 🦊 for `fox`). Messages carry a click-through link to the events
-page and, for `event.clip`, an **Open clip** button.
+the label adds one, e.g. 🦊 for `fox`).
+
+A message says when the event started (with the day when it was not today), how sure the
+match is, day or night, the profile, how long it was seen and in how many detections, the
+models when several agree, and the clip's length once it is ready. Without a time zone
+(Settings → Notifications) the times are the server's own clock, which is UTC in Docker.
+Tapping it shows the whole notification (picture and all) rather than opening a page: its
+**Open event** button opens the event's details, and **Open clip** the clip once it is ready.
 
 On the public ntfy.sh anyone who knows a topic name can read it: pick a long random name,
 use access control, or self-host ntfy.
@@ -93,10 +100,12 @@ A `POST` with `Content-Type: application/json` per notification:
     "label": "fox", "confidence": 0.91,
     "first_ts": "2026-10-24T13:04:58Z", "last_ts": "2026-10-24T13:05:03Z",
     "detection_count": 12, "is_night": true,
-    "detectors": ["speciesnet", "yolo"], "agreement": 2,
+    "detectors": ["speciesnet", "yolo"], "detector_names": ["SpeciesNet", "YOLO-World"],
+    "agreement": 2,
     "clip_ready": false, "clip_duration_s": null
   },
   "links": {
+    "event": "http://192.168.1.10:8000/events?camera=garden&details=42",
     "events": "http://192.168.1.10:8000/events?camera=garden",
     "thumbnail": null,
     "clip": null
