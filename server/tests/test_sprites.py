@@ -1,7 +1,8 @@
-"""Timeline thumbnail sprites (WebVTT + JPEG grid) for segments and archives."""
+"""Timeline preview sprites (WebVTT + JPEG grid) for recordings, archives and clips."""
 
 from __future__ import annotations
 
+import re
 import subprocess
 from datetime import timedelta
 
@@ -37,10 +38,10 @@ def test_segment_thumbnails_are_made_on_first_request(settings):
         r = c.get(f"/api/segments/{seg}/thumbnails.vtt")
         assert r.status_code == 200 and r.headers["content-type"].startswith("text/vtt")
         assert r.text.count("#xywh=") == 3  # one tile per 2 s
-        assert f"/api/segments/{seg}/sprite.jpg#xywh=160,0,160,90" in r.text
+        assert re.search(rf"/api/segments/{seg}/sprite.jpg\?v=\d+#xywh=160,0,160,90", r.text)
         img = c.get(f"/api/segments/{seg}/sprite.jpg")
         assert img.status_code == 200 and img.headers["content-type"] == "image/jpeg"
-    assert _size(sprites.segment_files(settings, seg)[0]) == (480, 90)
+    assert _size(sprites.files(settings, "segment", seg)[0]) == (480, 90)
 
 
 @needs_ffmpeg
@@ -50,7 +51,7 @@ def test_archives_get_a_sprite_when_built_and_lose_it_with_the_file(settings):
     assert compaction.compact_once(settings) == 1
     with session_scope() as s:
         arc_id = s.get(Segment, ids[0]).archive_id
-    image, meta = sprites.archive_files(settings, arc_id)
+    image, meta = sprites.files(settings, "archive", arc_id)
     assert image.exists() and sprites.load(meta).tiles == 1  # 6 s, a tile per 10 s
 
     with app_client(settings) as c:
@@ -75,10 +76,10 @@ def test_older_archives_are_filled_in_one_at_a_time(settings):
     compaction.compact_once(settings)
     with session_scope() as s:
         arc_id = s.query(Archive).one().id
-    for path in sprites.archive_files(settings, arc_id):
+    for path in sprites.files(settings, "archive", arc_id):
         path.unlink()
     assert sprites.backfill_archives(settings) == 1
-    assert sprites.archive_files(settings, arc_id)[0].exists()
+    assert sprites.files(settings, "archive", arc_id)[0].exists()
     assert sprites.backfill_archives(settings) == 0
 
 
@@ -89,5 +90,16 @@ def test_preprocessing_makes_the_segments_sprite(settings):
 
     seg = add_segment(settings, seconds=4, status=SegmentStatus.NEW)
     preprocess.preprocess_segment(settings, seg)
-    image, meta = sprites.segment_files(settings, seg)
+    image, meta = sprites.files(settings, "segment", seg)
     assert image.exists() and sprites.load(meta).tiles == 2
+
+
+@needs_ffmpeg
+def test_a_recordings_sprite_goes_with_its_footage(settings):
+    seg = add_segment(settings, seconds=4, size="320x180")
+    assert sprites.get(settings, "segment", seg) is not None
+    image, meta = sprites.files(settings, "segment", seg)
+    assert image.exists() and image.parent == settings.sprites_dir
+    with session_scope() as s:
+        retention._remove_files(settings, s.get(Segment, seg))
+    assert not image.exists() and not meta.exists()

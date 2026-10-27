@@ -40,6 +40,7 @@ def _remove_files(settings: Settings, seg: Segment) -> None:
     # A compacted segment's footage lives in its archive, which goes once all its
     # segments are gone (_remove_empty_archives).
     (settings.recordings_dir / seg.path).unlink(missing_ok=True)
+    sprites.remove(settings, "segment", seg.id)
     for rel in (seg.derived_path, seg.thumb_path):
         if rel:
             (settings.data_dir / rel).unlink(missing_ok=True)
@@ -76,7 +77,7 @@ def _expire_events(settings: Settings) -> int:
             for rel in (ev.clip_path, ev.thumb_path):
                 if rel:
                     (settings.data_dir / rel).unlink(missing_ok=True)
-            sprites.remove_event(settings, ev.clip_path)
+            sprites.remove(settings, "clip", ev.id)
             for key in (ev.clip_remote_key, ev.thumb_remote_key):
                 if key and store:
                     _delete_remote(store, key)
@@ -177,7 +178,7 @@ def _remove_empty_archives(settings: Settings) -> int:
                                                    Archive.id.not_in(live))).all()
         for arc in archives:
             (settings.recordings_dir / arc.path).unlink(missing_ok=True)
-            sprites.remove_archive(settings, arc.id)
+            sprites.remove(settings, "archive", arc.id)
             arc.deleted_at = utcnow()
         return len(archives)
 

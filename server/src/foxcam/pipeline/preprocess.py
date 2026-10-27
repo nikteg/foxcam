@@ -172,7 +172,7 @@ def _preprocess(settings: Settings, segment_id: int) -> bool | None:
         ffmpeg.thumbnail(src, thumb, at_s=min(1.0, seg.duration_s / 2))
         updates["thumb_path"] = str(thumb.relative_to(settings.data_dir))
         try:  # the player's timeline previews, ready before anyone plays it (<1 s)
-            sprites.segment_sprite(settings, segment_id)
+            sprites.get(settings, "segment", segment_id)
         except Exception as e:  # noqa: BLE001 - made on first play instead
             log.warning("segment %s: no thumbnail sprite: %s", segment_id, e)
 

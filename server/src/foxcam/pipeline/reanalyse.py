@@ -70,7 +70,7 @@ def _refresh_event(settings: Settings, s, event_id: int, seg: Segment) -> None:
         for rel in (ev.clip_path, ev.thumb_path):
             if rel:
                 (settings.data_dir / rel).unlink(missing_ok=True)
-        sprites.remove_event(settings, ev.clip_path)
+        sprites.remove(settings, "clip", ev.id)
         segments = list(ev.segments)
         s.delete(ev)
         s.flush()

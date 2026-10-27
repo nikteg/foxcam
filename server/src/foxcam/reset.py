@@ -51,7 +51,10 @@ def _drop_events(settings: Settings) -> int:
         s.execute(delete(event_segments))
         s.execute(delete(Event))
         s.execute(update(Segment).values(pinned=False))
+    from . import sprites  # deferred, like in footage()
+
     _clear_dir(settings.clips_dir)
+    sprites.remove_kind(settings, "clip")
     return n
 
 
@@ -63,7 +66,7 @@ def recordings(settings: Settings) -> str:
         for model in (Event, Detection, Job, Segment, Archive):
             s.execute(delete(model))
     for d in (settings.recordings_dir, settings.derived_dir, settings.thumbs_dir,
-              settings.clips_dir):
+              settings.clips_dir, settings.sprites_dir):
         _clear_dir(d)
     return f"{n} recordings removed (cameras, masks, profiles and workers kept)"
 
@@ -89,11 +92,11 @@ def footage(settings: Settings) -> str:
         s.execute(update(Worker).values(current_job_id=None))
         for arc in s.scalars(select(Archive).where(Archive.deleted_at.is_(None))):
             (settings.recordings_dir / arc.path).unlink(missing_ok=True)
-            sprites.remove_archive(settings, arc.id)
+            sprites.remove(settings, "archive", arc.id)
             arc.deleted_at = utcnow()
         for ev in s.scalars(select(Event).where(Event.clip_path.is_not(None))):
             (settings.data_dir / ev.clip_path).unlink(missing_ok=True)
-            sprites.remove_event(settings, ev.clip_path)
+            sprites.remove(settings, "clip", ev.id)
             ev.clip_path = None
         s.execute(update(Event).values(clip_dirty=False))  # nothing to cut them from
     return f"footage of {n} recordings removed (detections, events and marks kept)"
@@ -224,8 +227,9 @@ def purge_camera(settings: Settings, camera_id: str) -> dict[str, int]:
                                         .where(Segment.camera_id == camera_id)) if p]
         events = s.scalars(select(Event).where(Event.camera_id == camera_id)).all()
         clips = [p for ev in events for p in (ev.clip_path, ev.thumb_path) if p]
-        clips += [str(f.relative_to(settings.data_dir)) for ev in events if ev.clip_path
-                  for f in sprites.event_files(settings, ev.clip_path)]
+        previews = [*(("segment", i) for i in seg_ids), *(("clip", ev.id) for ev in events),
+                    *(("archive", i) for i in s.scalars(
+                        select(Archive.id).where(Archive.camera_id == camera_id)))]
         n_events = len(events)
         s.execute(delete(event_segments).where(event_segments.c.segment_id.in_(seg_ids)))
         for ev in events:
@@ -240,6 +244,8 @@ def purge_camera(settings: Settings, camera_id: str) -> dict[str, int]:
         removed = s.execute(delete(ManagedCamera).where(ManagedCamera.id == camera_id)).rowcount
     for rel in [*derived, *thumbs, *clips]:
         (settings.data_dir / rel).unlink(missing_ok=True)
+    for kind, item_id in previews:
+        sprites.remove(settings, kind, item_id)
     for folder in (settings.recordings_dir / camera_id, settings.derived_dir / camera_id,
                    settings.thumbs_dir / camera_id, settings.clips_dir / camera_id):
         if folder.is_dir():

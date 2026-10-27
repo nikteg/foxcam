@@ -395,49 +395,11 @@ def test_event_motion_is_in_clip_time(settings):
     assert r.json() == [[3000, [[0.5, 0.5, 0.1, 0.1]]], [5500, [[0.2, 0.2, 0.1, 0.1]]]]
 
 
-def test_event_thumbnails_are_in_clip_time(settings):
-    """The clip's timeline previews: each recording's sprite tiles, moved to the clip's
-    clock and cut to the clip."""
-    import json as _json
-
-    from foxcam import sprites
-
-    start = utcnow().replace(microsecond=0)
-    first = add_segment(settings, start=start, seconds=10, with_file=False)
-    second = add_segment(settings, start=start + timedelta(seconds=10), seconds=10,
-                         with_file=False)
-    for seg in (first, second):  # sprites made already: 5 tiles of 2 s each
-        image, meta = sprites.segment_files(settings, seg)
-        image.parent.mkdir(parents=True, exist_ok=True)
-        image.write_bytes(b"jpg")
-        meta.write_text(_json.dumps({"interval": 2.0, "duration": 10.0, "tiles": 5,
-                                     "columns": 5, "tile_w": 160, "tile_h": 90}))
-    with session_scope() as s:
-        ev = Event(camera_id="cam", label="fox", first_ts=start, last_ts=start,
-                   max_confidence=0.9, clip_dirty=False, clip_path="clips/cam/ev.mp4",
-                   clip_start=start + timedelta(seconds=5), clip_duration_s=8)
-        ev.segments = [s.get(Segment, first), s.get(Segment, second)]
-        s.add(ev)
-        s.flush()
-        ev_id = ev.id
-    with app_client(settings) as c:
-        r = c.get(f"/api/events/{ev_id}/thumbnails.vtt")
-    assert r.status_code == 200
-    cues = [line for line in r.text.splitlines() if "-->" in line]
-    images = [line for line in r.text.splitlines() if "#xywh" in line]
-    # First recording: tiles 4-6 s (cut to 5), 6-8 s, 8-10 s; then the second's 0-2, 2-4
-    # (cut at the clip's end, 8 s on its clock).
-    assert cues == ["00:00:00.000 --> 00:00:01.000", "00:00:01.000 --> 00:00:03.000",
-                    "00:00:03.000 --> 00:00:05.000", "00:00:05.000 --> 00:00:07.000",
-                    "00:00:07.000 --> 00:00:08.000"]
-    assert images[0] == f"/api/segments/{first}/sprite.jpg#xywh=320,0,160,90"
-    assert images[3] == f"/api/segments/{second}/sprite.jpg#xywh=0,0,160,90"
-
 
 @needs_ffmpeg
 def test_event_thumbnails_from_the_clip_itself(settings):
-    """An event clip gets its own sprite: a tile each half second, from every frame, kept
-    when the clip itself leaves the disk."""
+    """An event clip's sprite: a tile each half second, from every frame; kept when the
+    clip itself leaves the disk (moved to S3 storage), gone with the event."""
     start = utcnow().replace(microsecond=0)
     make_video(settings.data_dir / "clips" / "cam" / "ev.mp4", seconds=3)
     with session_scope() as s:
@@ -460,3 +422,7 @@ def test_event_thumbnails_from_the_clip_itself(settings):
         (settings.data_dir / "clips" / "cam" / "ev.mp4").unlink()
         assert c.get(f"/api/events/{ev_id}/thumbnails.vtt").text == r.text
         assert c.get(image).status_code == 200
+    from foxcam import sprites
+
+    sprites.remove(settings, "clip", ev_id)
+    assert not sprites.files(settings, "clip", ev_id)[0].exists()

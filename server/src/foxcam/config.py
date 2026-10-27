@@ -653,6 +653,10 @@ class Settings(BaseModel):
     def clips_dir(self) -> Path:
         return self.data_dir / "clips"
 
+    @property
+    def sprites_dir(self) -> Path:
+        return self.data_dir / "sprites"
+
     def ensure_dirs(self) -> None:
         for d in (self.data_dir, self.recordings_dir, self.derived_dir, self.thumbs_dir,
                   self.clips_dir):

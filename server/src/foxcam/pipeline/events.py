@@ -128,6 +128,7 @@ def rebuild_events(settings: Settings) -> dict[str, int]:
         if settings.clips_dir.exists():
             shutil.rmtree(settings.clips_dir)
         settings.clips_dir.mkdir(parents=True, exist_ok=True)
+        sprites.remove_kind(settings, "clip")
         _assign_events(settings, quiet=True)
         with session_scope() as s:
             created = s.scalar(select(func.count()).select_from(Event)) or 0
@@ -204,10 +205,6 @@ def _build_clip(settings: Settings, event_id: int) -> bool:
             sources.append((src.path, src.offset_s, src.offset_s + src.duration_s)
                            if src.archived else (src.path, None, None))
         ffmpeg.concat_clip(sources, settings.data_dir / clip_rel, offset, duration)
-        try:  # the timeline previews, now while the clip is surely on disk
-            sprites.event_sprite(settings, clip_rel, duration)
-        except RuntimeError as e:
-            log.warning("event %s: no previews: %s", event_id, e)
 
         best = s.get(Detection, ev.best_detection_id) if ev.best_detection_id else None
         thumb_rel = None
@@ -238,4 +235,8 @@ def _build_clip(settings: Settings, event_id: int) -> bool:
         ev.thumb_remote_key = None
         notify.enqueue(s, settings, ev, "event.clip")  # first clip only (once per channel)
         log.info("event %s: clip %s (%.0fs)", ev.id, clip_rel, duration)
+    try:  # the player's timeline previews, made with the clip (sprites.py)
+        sprites.get(settings, "clip", event_id)
+    except Exception as e:  # noqa: BLE001 - made on first play instead
+        log.warning("event %s: no timeline previews: %s", event_id, e)
     return True

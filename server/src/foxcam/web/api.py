@@ -8,7 +8,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import math
 import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -492,16 +491,27 @@ def segment_play(segment_id: int, settings: Settings = Depends(settings_dep),
     return _serve_segment(settings, _segment(p, segment_id))
 
 
-async def _thumbnails(make, item_id: int, image_url: str) -> Response:
-    """WebVTT thumbnails track for the player (made on first request when missing)."""
+async def _thumbnails(settings: Settings, kind: sprites.SpriteKind, item_id: int,
+                      url: str) -> Response:
+    """WebVTT thumbnails track for the player (sprites.py: made when missing)."""
     try:
-        sprite = await asyncio.to_thread(make, item_id)
+        sprite = await asyncio.to_thread(sprites.get, settings, kind, item_id)
     except RuntimeError as e:
         raise HTTPException(503, str(e)) from e
     if sprite is None:
         raise HTTPException(404, "no footage")
-    return Response(sprites.vtt(sprite, image_url), media_type="text/vtt",
-                    headers={"Cache-Control": "private, max-age=3600"})
+    # The image's version: a new one when the sprite is made again (cached an hour).
+    version = int(sprites.files(settings, kind, item_id)[0].stat().st_mtime)
+    return Response(sprites.vtt(sprite, f"{url}/sprite.jpg?v={version}"),
+                    media_type="text/vtt", headers={"Cache-Control": "private, max-age=3600"})
+
+
+def _sprite_image(settings: Settings, kind: sprites.SpriteKind, item_id: int) -> FileResponse:
+    image = sprites.files(settings, kind, item_id)[0]
+    if not image.exists():
+        raise HTTPException(404, "load thumbnails.vtt first")
+    return FileResponse(image, media_type="image/jpeg",
+                        headers={"Cache-Control": "private, max-age=3600"})
 
 
 @router.get("/segments/{segment_id}/thumbnails.vtt")
@@ -509,89 +519,43 @@ async def segment_thumbnails(segment_id: int, settings: Settings = Depends(setti
                              p: Principal = Depends(principal)) -> Response:
     """Timeline previews for the player: which tile of the sprite shows which second."""
     _segment(p, segment_id)
-    return await _thumbnails(lambda i: sprites.segment_sprite(settings, i), segment_id,
-                             f"/api/segments/{segment_id}/sprite.jpg")
-
-
-@router.get("/events/{event_id}/thumbnails.vtt")
-async def event_thumbnails(event_id: int, settings: Settings = Depends(settings_dep),
-                           p: Principal = Depends(principal)) -> Response:
-    """Timeline previews for an event's clip: the clip's own sprite (every frame, a tile
-    each half second); for an older clip only in S3 storage, its recordings' sprites,
-    their times moved to the clip's clock (it starts with the pre-roll), cut to the clip."""
-    ev = _event(p, event_id)
-    if ev.clip_start is None:
-        raise HTTPException(404, "no clip")
-    if ev.clip_path:
-        # The clip's own sprite (every frame, finer tiles), made when it was cut; kept when
-        # the clip itself moved to S3 storage.
-        try:
-            sprite = await asyncio.to_thread(sprites.event_sprite, settings, ev.clip_path,
-                                             ev.clip_duration_s or 0)
-        except RuntimeError as e:
-            raise HTTPException(503, str(e)) from e
-        if sprite is not None:
-            version = int(sprites.event_files(settings, ev.clip_path)[0].stat().st_mtime)
-            url = f"/api/events/{event_id}/sprite.jpg?v={version}"  # new with a new clip
-            return Response(sprites.vtt(sprite, url), media_type="text/vtt",
-                            headers={"Cache-Control": "private, max-age=3600"})
-    # A clip from before these sprites, now only in S3 storage: the recordings' sprites,
-    # moved to the clip's clock.
-    with session_scope() as s:
-        segs = [(g.id, (g.start_at - ev.clip_start).total_seconds()) for g in
-                sorted(s.get(Event, event_id).segments, key=lambda g: g.start_at)]
-    lines = ["WEBVTT", ""]
-    for seg_id, shift in segs:
-        try:
-            sprite = await asyncio.to_thread(sprites.segment_sprite, settings, seg_id)
-        except RuntimeError:
-            sprite = None
-        if sprite is not None:  # footage gone: no previews for that part
-            lines += sprites.cues(sprite, f"/api/segments/{seg_id}/sprite.jpg", shift,
-                                  ev.clip_duration_s or math.inf)
-    return Response("\n".join(lines), media_type="text/vtt",
-                    headers={"Cache-Control": "private, max-age=3600"})
-
-
-@router.get("/events/{event_id}/sprite.jpg")
-def event_sprite_image(event_id: int, settings: Settings = Depends(settings_dep),
-                       p: Principal = Depends(principal)) -> FileResponse:
-    ev = _event(p, event_id)
-    image = sprites.event_files(settings, ev.clip_path)[0] if ev.clip_path else None
-    if image is None or not image.exists():
-        raise HTTPException(404, "load thumbnails.vtt first")
-    return FileResponse(image, media_type="image/jpeg",
-                        headers={"Cache-Control": "private, max-age=3600"})
+    return await _thumbnails(settings, "segment", segment_id, f"/api/segments/{segment_id}")
 
 
 @router.get("/segments/{segment_id}/sprite.jpg")
 def segment_sprite_image(segment_id: int, settings: Settings = Depends(settings_dep),
                          p: Principal = Depends(principal)) -> FileResponse:
     _segment(p, segment_id)
-    image = sprites.segment_files(settings, segment_id)[0]
-    if not image.exists():
-        raise HTTPException(404, "load thumbnails.vtt first")
-    return FileResponse(image, media_type="image/jpeg",
-                        headers={"Cache-Control": "private, max-age=3600"})
+    return _sprite_image(settings, "segment", segment_id)
+
+
+@router.get("/events/{event_id}/thumbnails.vtt")
+async def event_thumbnails(event_id: int, settings: Settings = Depends(settings_dep),
+                           p: Principal = Depends(principal)) -> Response:
+    """Timeline previews for an event's clip."""
+    _event(p, event_id)
+    return await _thumbnails(settings, "clip", event_id, f"/api/events/{event_id}")
+
+
+@router.get("/events/{event_id}/sprite.jpg")
+def event_sprite_image(event_id: int, settings: Settings = Depends(settings_dep),
+                       p: Principal = Depends(principal)) -> FileResponse:
+    _event(p, event_id)
+    return _sprite_image(settings, "clip", event_id)
 
 
 @router.get("/archives/{archive_id}/thumbnails.vtt")
 async def archive_thumbnails(archive_id: int, settings: Settings = Depends(settings_dep),
                              p: Principal = Depends(principal)) -> Response:
     _archive(p, archive_id)
-    return await _thumbnails(lambda i: sprites.archive_sprite(settings, i), archive_id,
-                             f"/api/archives/{archive_id}/sprite.jpg")
+    return await _thumbnails(settings, "archive", archive_id, f"/api/archives/{archive_id}")
 
 
 @router.get("/archives/{archive_id}/sprite.jpg")
 def archive_sprite_image(archive_id: int, settings: Settings = Depends(settings_dep),
                          p: Principal = Depends(principal)) -> FileResponse:
     _archive(p, archive_id)
-    image = sprites.archive_files(settings, archive_id)[0]
-    if not image.exists():
-        raise HTTPException(404, "load thumbnails.vtt first")
-    return FileResponse(image, media_type="image/jpeg",
-                        headers={"Cache-Control": "private, max-age=3600"})
+    return _sprite_image(settings, "archive", archive_id)
 
 
 @router.get("/segments/{segment_id}/thumb")
