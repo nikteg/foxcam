@@ -153,10 +153,19 @@ async def _stream_once(settings: Settings, cam: CameraConfig, stop: threading.Ev
     TP-Link ends cloud live view after a few minutes. Instead of tearing everything down
     each time (a 10-20 s outage and a new MediaMTX publisher), ffmpeg keeps reading from a
     FIFO that we also hold open for writing, so it never sees end-of-file between relay
-    sessions; timestamps come from the arrival time, so the timeline stays continuous across
-    sessions. Viewers and the recorder see at most a short freeze. Relay sessions also send
-    the app's heartbeats (see tapo_relay.py), so reconnects should be rare.
+    sessions. Frames keep the camera's own timestamps, continuous across sessions
+    (ts_retime.py); the relay delivers them in bunches, so arrival times would jitter. Only
+    the fallback without heartbeats (ontapo writes the file itself) stamps arrival times.
+    Viewers and the recorder see at most a short freeze. Relay sessions also send the app's
+    heartbeats (see tapo_relay.py), so reconnects should be rare.
     """
+    from . import tapo_relay
+
+    keepalive = tapo_relay.supported()
+    timing = (
+        # A real gap between relay sessions stays a gap (ffmpeg closes jumps over 10 s up).
+        ["-dts_delta_threshold", "86400"] if keepalive
+        else ["-use_wallclock_as_timestamps", "1"])
     session = load_session(settings)
     try:
         dev = await _find_device(settings, session, cam)
@@ -166,8 +175,7 @@ async def _stream_once(settings: Settings, cam: CameraConfig, stop: threading.Ev
             # Video is copied as-is; audio (G.711 on most Tapo models) is converted to AAC
             # so it can be stored in fMP4.
             proc = subprocess.Popen(  # noqa: ASYNC220 - own event loop per camera thread
-                ["ffmpeg", "-v", "error", "-use_wallclock_as_timestamps", "1",
-                 "-f", "mpegts", "-i", str(fifo),
+                ["ffmpeg", "-v", "error", *timing, "-f", "mpegts", "-i", str(fifo),
                  "-map", "0:v", "-map", "0:a?", "-c:v", "copy", "-c:a", "aac",
                  "-f", "rtsp", "-rtsp_transport", "tcp", publish_url(settings, cam)],
                 stderr=subprocess.PIPE, text=True,
@@ -176,7 +184,8 @@ async def _stream_once(settings: Settings, cam: CameraConfig, stop: threading.Ev
             # the publisher's lifetime keeps EOF away while relay sessions come and go.
             keeper = os.open(fifo, os.O_WRONLY)
             try:
-                await _feed_relay_sessions(settings, session, dev, cam, keeper, proc, stop)
+                await _feed_relay_sessions(settings, session, dev, cam, keeper, proc, stop,
+                                           keepalive)
             finally:
                 os.close(keeper)
                 try:
@@ -190,23 +199,36 @@ async def _stream_once(settings: Settings, cam: CameraConfig, stop: threading.Ev
         await session.aclose()
 
 
+def _write_all(fd: int, data: bytes) -> None:
+    """Blocking write to the pipe ffmpeg reads (fine: each camera has its own thread)."""
+    view = memoryview(data)
+    while view:
+        view = view[os.write(fd, view):]
+
+
 async def _feed_relay_sessions(settings: Settings, session, dev, cam: CameraConfig,
-                               fd: int, proc: subprocess.Popen, stop: threading.Event) -> None:
+                               fd: int, proc: subprocess.Popen, stop: threading.Event,
+                               keepalive: bool) -> None:
     """Run relay sessions back to back into ``fd`` until stopped, ffmpeg dies or the relay
     keeps failing (then the caller tears the publisher down and retries with backoff)."""
     from . import tapo_relay
+    from .ts_retime import Retimer
 
     failures = 0
-    keepalive = tapo_relay.supported()
+    retimer = Retimer(lambda data: _write_all(fd, data))
     if not keepalive:
         log.warning("[%s] ontapo internals changed: no heartbeats, reconnecting instead", cam.id)
     while not stop.is_set() and proc.poll() is None:
         try:
             if keepalive:
-                result = await call_with_refresh(settings, session, lambda: tapo_relay.relay_preview(
-                    session, dev, fd, resolution=cam.source.resolution,
-                    heartbeat=cam.source.heartbeat_seconds,
-                    max_seconds=cam.source.session_seconds, stop=stop))
+                async def relay_session() -> tapo_relay.RelayResult:
+                    retimer.new_session()  # also when a token refresh starts it over
+                    return await tapo_relay.relay_preview(
+                        session, dev, retimer.write, resolution=cam.source.resolution,
+                        heartbeat=cam.source.heartbeat_seconds,
+                        max_seconds=cam.source.session_seconds, stop=stop)
+
+                result = await call_with_refresh(settings, session, relay_session)
                 log.info("[%s] relay session ended after %.0f s, %.1f MB, %d heartbeat(s): %s",
                          cam.id, result.seconds, result.bytes / 1e6, result.heartbeats,
                          result.reason)

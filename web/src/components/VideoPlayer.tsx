@@ -268,7 +268,7 @@ function FrameClock() {
         if (gap > 0.005 && gap < 1) {
           gaps.push(gap);
           if (gaps.length > 30) gaps.shift();
-          // The median: one late frame or a burst does not move it.
+          // The median: one late frame does not move it.
           const median = gaps.toSorted((a, b) => a - b)[Math.floor(gaps.length / 2)];
           if (median) frameSeconds.set(player, median);
         }

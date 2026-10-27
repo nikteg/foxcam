@@ -226,7 +226,8 @@ and retention) and **Share**.
   under **Cameras → Integrations** (two-step verification supported) and add cameras from
   the list. Needs the `tapo-cloud` extra (in the
   Docker image). It uses the unofficial [ontapo](https://pypi.org/project/ontapo/) library
-  and about 1–2 Mbit/s of upload per HD camera at the camera's site.
+  and about 1–2 Mbit/s of upload per HD camera at the camera's site. The relay delivers
+  frames in bunches; recordings keep the camera's own frame times, so they play evenly.
 - **Test sources** – a looping video file or a test pattern, for development.
 
 Cameras can also be defined in `config.yaml` (see [`config.example.yaml`](config.example.yaml)).
@@ -242,7 +243,8 @@ password change) are the cloud cameras paused until you sign in again.
 
 ```sh
 uv run foxcam tapo-login      # e-mail, password (hidden), then the MFA code
-uv run foxcam tapo-check      # lists cameras, records 10 s, prints codec/size only
+uv run foxcam tapo-check      # lists cameras, records 10 s, prints codec/size and how
+                              # evenly the camera's frame times are spaced (--keep FILE)
 uv run foxcam tapo-logout     # delete the saved session
 ```
 

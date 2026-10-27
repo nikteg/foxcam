@@ -22,9 +22,9 @@ import asyncio
 import contextlib
 import json
 import logging
-import os
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 
 log = logging.getLogger(__name__)
@@ -77,23 +77,16 @@ async def _read_part(st, reader: asyncio.StreamReader) -> tuple[dict[str, str], 
     return headers, (await reader.readexactly(length) if length else b"")
 
 
-def _write_all(fd: int, data: bytes) -> None:
-    """Blocking write to the pipe ffmpeg reads (fine: each camera has its own thread)."""
-    view = memoryview(data)
-    while view:
-        view = view[os.write(fd, view):]
-
-
 def _preview_request(resolution: str) -> str:
     return json.dumps({"type": "request", "seq": 1, "params": {"method": "get", "preview": {
         "channels": [0], "resolutions": [resolution], "audio": ["default"]}}},
         separators=(",", ":"))
 
 
-async def relay_preview(session, dev, out_fd: int, *, resolution: str = "HD",
+async def relay_preview(session, dev, out: Callable[[bytes], None], *, resolution: str = "HD",
                         heartbeat: float = 20.0, max_seconds: float = 0,
                         stop: threading.Event | None = None) -> RelayResult:
-    """Stream the camera's live view as MPEG-TS into ``out_fd`` until the relay ends it,
+    """Stream the camera's live view as MPEG-TS into ``out`` until the relay ends it,
     ``max_seconds`` pass (0 = no limit) or ``stop`` is set."""
     from ontapo import stream as st
     from ontapo.errors import RelayError
@@ -136,7 +129,7 @@ async def relay_preview(session, dev, out_fd: int, *, resolution: str = "HD",
             session_id = headers.get("x-session-id") or session_id
             kind = headers.get("content-type", "")
             if "video/mp2t" in kind and payload:
-                _write_all(out_fd, payload)
+                out(payload)
                 written += len(payload)
                 last_data = time.monotonic()
                 seq = headers.get("x-data-sequence", "")

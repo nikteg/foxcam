@@ -132,9 +132,8 @@ def thumbnail(src: Path, dst: Path, at_s: float = 0.0, width: int = 480,
                   ":color=red@0.9:t=4")
     vf.append(f"scale={width}:-2")
     # The picture on screen at ``at_s``: the last frame at or before it, as sampling picks
-    # (``sample``). A seek gives the first frame at or after it, and cameras that send
-    # frames in bursts can have a quarter second between the two (a falling leaf the
-    # detector saw, gone in the image).
+    # (``sample``). A seek gives the first frame at or after it: up to a frame later
+    # (older cloud-relay recordings, stamped on arrival in bunches: a quarter second).
     at_s = max(at_s, 0)
     start = max(at_s - THUMB_WINDOW_S, 0)
     dst.unlink(missing_ok=True)
