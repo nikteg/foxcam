@@ -406,22 +406,28 @@ def test_event_motion_is_in_clip_time(settings):
 
 
 def test_missing_footage_in_an_event_clip(settings):
-    """The gaps between its recordings the clip kept, and the skips the camera's stream
-    made inside them, in clip time."""
+    """The gaps between its recordings the clip kept (how much they cost is unknown), and
+    the skips inside them, in clip time."""
     start = utcnow().replace(microsecond=0)
+    first = add_segment(settings, start=start, seconds=8, with_file=False,
+                        skips=[[3.5, 11.2]])
+    # Prepared before skips were found in the file: where ingest noted them, by the clock.
+    second = add_segment(settings, start=start + timedelta(seconds=15), seconds=15,
+                         with_file=False)
     with session_scope() as s:
         ev = Event(camera_id="cam", label="fox", first_ts=start, last_ts=start,
                    max_confidence=0.9, clip_dirty=False, clip_path="clips/cam/ev.mp4",
-                   clip_start=start, clip_duration_s=30, clip_gaps=[[8.0, 15.0, 7.0]])
+                   clip_start=start + timedelta(seconds=2), clip_duration_s=26,
+                   clip_gaps=[[6.0, 13.0, 7.0]])
+        ev.segments = [s.get(Segment, first), s.get(Segment, second)]
         s.add(ev)
-        s.add(FootageSkip(camera_id="cam", at=start + timedelta(seconds=20), missing_s=11.2))
-        s.add(FootageSkip(camera_id="cam", at=start + timedelta(seconds=40), missing_s=3))
+        s.add(FootageSkip(camera_id="cam", at=start + timedelta(seconds=20), missing_s=6))
         s.add(FootageSkip(camera_id="other", at=start + timedelta(seconds=21), missing_s=9))
         s.flush()
         ev_id = ev.id
     with app_client(settings) as c:
         r = c.get(f"/api/events/{ev_id}/timeline")
-    assert r.json()["gaps"] == [[8.0, 15.0, 7.0], [20.0, 20.0, 11.2]]
+    assert r.json()["gaps"] == [[1.5, 1.5, 11.2], [6.0, 13.0, None], [18.0, 18.0, 6.0]]
 
 
 def test_missing_footage_in_a_recording(settings):
@@ -433,6 +439,12 @@ def test_missing_footage_in_a_recording(settings):
     with app_client(settings) as c:
         r = c.get(f"/api/segments/{seg}")
     assert r.json()["gaps"] == [[14.0, 14.0, 11.0]]
+    # Found in the file when it was prepared: those win.
+    with session_scope() as s:
+        s.get(Segment, seg).skips = [[13.62, 11.0], [40.1, None]]
+    with app_client(settings) as c:
+        r = c.get(f"/api/segments/{seg}")
+    assert r.json()["gaps"] == [[13.62, 13.62, 11.0], [40.1, 40.1, None]]
 
 
 
@@ -516,7 +528,7 @@ def test_missing_footage_in_an_archive(settings):
             g.archive_id, g.archive_offset_s = arc_id, 10.0 * i
     with app_client(settings) as c:
         r = c.get(f"/api/archives/{arc_id}/timeline")
-    assert r.json()["gaps"] == [[10.0, 10.0, 8.0], [14.0, 14.0, 4.0]]
+    assert r.json()["gaps"] == [[10.0, 10.0, None], [14.0, 14.0, 4.0]]
 
 
 def test_api_responses_say_which_web_build_is_served(settings, tmp_path, monkeypatch):
@@ -536,3 +548,28 @@ def test_no_build_header_without_a_build(settings, tmp_path, monkeypatch):
     monkeypatch.setenv("FOXCAM_WEB_DIST", str(tmp_path / "missing"))
     with app_client(settings) as c:
         assert "x-foxcam-build" not in c.get("/api/events").headers
+
+
+@needs_ffmpeg
+def test_skips_are_found_where_ingest_left_a_pause(settings, tmp_path):
+    """Ingest leaves half a second in the timestamps where the camera skipped ahead and
+    notes how far; preparing the recording finds the place, with the amount."""
+    from foxcam import footage
+
+    parts = [tmp_path / f"{i}.mp4" for i in range(3)]
+    for part in parts:
+        make_video(part, 2)
+    joined = tmp_path / "joined.mp4"
+    lst = tmp_path / "list.txt"
+    # 2 s, a 0.5 s pause, 2 s, a 0.5 s pause, 2 s.
+    lst.write_text("".join(f"file '{p}'\nduration 2.5\n" for p in parts[:2])
+                   + f"file '{parts[2]}'\n")
+    import subprocess
+    subprocess.run(["ffmpeg", "-v", "error", "-f", "concat", "-safe", "0", "-i", str(lst),
+                    "-c", "copy", str(joined)], check=True)
+    start = utcnow().replace(microsecond=0)
+    with session_scope() as s:
+        s.add(FootageSkip(camera_id="cam", at=start + timedelta(seconds=3), missing_s=11.2))
+    skips = footage.find_skips(joined, "cam", start, 7.0)
+    assert [round(at, 1) for at, _ in skips] == [2.5, 5.0]
+    assert [missing for _, missing in skips] == [11.2, None]

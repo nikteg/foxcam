@@ -75,6 +75,12 @@ def test_a_jump_ahead_in_the_camera_clock_is_reported(tmp_path):
     r.write(later)
     assert len(skips) == 1
     assert 10 < skips[0] < 11.5  # from the last frame to the next PCR: about
+    # Closed up to a short pause that marks the place (found again in the recording).
+    (tmp_path / "out.ts").write_bytes(out)
+    pts = _pts(tmp_path / "out.ts")
+    steps = [b - a for a, b in itertools.pairwise(pts)]
+    assert max(steps) == steps[29]
+    assert 0.45 < steps[29] < 0.7
 
 
 @needs_ffmpeg

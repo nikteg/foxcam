@@ -217,12 +217,12 @@ or `foxcam motion-backfill --days 7`); that changes no detections or events.
 
 | Table | Holds |
 |---|---|
-| `segment` | One recording file: camera, start (UTC), duration, status, light tags, mask version used, motion (score, boxes and faint boxes), match flag, pinned, archive and offset in it, `deleted_at`. |
+| `segment` | One recording file: camera, start (UTC), duration, status, light tags, mask version used, motion (score, boxes and faint boxes), skips in the camera's footage, match flag, pinned, archive and offset in it, `deleted_at`. |
 | `archive` | One hourly file made by compaction: camera, start, size, recording profile and encoder used, S3 key. |
 | `job` | Work item per segment, profile and detector (with the worker's raw result, ≤ 256 kB, for debugging): state (`pending/leased/done/failed/dead`, `skipped` for cascade detectors that did not run and profiles that skip recordings without motion), lease token and expiry, attempts, model, timing. |
 | `detection` | Worker result: profile, detector, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, standing still, event. |
 | `event` | Merged sighting of one label for one profile: time range, best detection, detectors that saw it and how many (`agreement`), confirmed, quiet (rebuilt, notifies nobody), clip and thumbnail paths, the gaps between recordings the clip keeps. |
-| `footage_skip` | Footage a camera never delivered: when its stream jumped ahead (the Tapo cloud relay catching up after a stall) and by how much. The player marks it. |
+| `footage_skip` | Footage a camera never delivered: when its stream jumped ahead (the Tapo cloud relay catching up after a stall) and how far the camera's clock jumped. Ingest also leaves a half-second pause in the stream there, which preparing the recording finds (`segment.skips`), so the player marks the exact place. |
 | `worker` | Last-seen info, tags and reported vocabulary per worker id (Jobs → Detection workers). |
 | `worker_token` | Worker access tokens (hashed) with their tags. |
 | `detection_profile` | Detection profiles added in the web UI. |

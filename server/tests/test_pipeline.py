@@ -162,7 +162,7 @@ def test_a_clip_keeps_the_gap_between_its_recordings(settings):
         ev = s.query(Event).one()
         clip, gaps = settings.data_dir / ev.clip_path, ev.clip_gaps
     # 0.5 s .. 8.5 s after the first recording's start, the gap from 2 s to 7 s in it.
-    assert gaps == [[1.5, 6.5, 5.0]]
+    assert gaps == [[1.5, 6.5, None]]
     assert 7.0 < ffmpeg.probe(clip).duration_s < 8.5
 
 

@@ -356,6 +356,7 @@ export const en = {
   "player.exitFullscreen": "Exit fullscreen",
   "player.speed": "Playback speed",
   "player.footageMissing": "Footage missing – about {seconds} s",
+  "player.footageMissingUnknown": "Footage missing",
   "hourly.showSegments": "Show its segments",
   "compaction.title": "Archiving",
   "compaction.off": "off",

@@ -210,6 +210,9 @@ class Segment(Base):
     motion_score: Mapped[float | None] = mapped_column(Float)
     motion_boxes: Mapped[list[Any] | None] = mapped_column(JSON)
     motion_faint: Mapped[list[Any] | None] = mapped_column(JSON(none_as_null=True))
+    # Skips in the camera's footage, found where ingest left a pause in the timestamps
+    # (footage.py): [[offset_s, missing_s or None], ...]; None = prepared before that.
+    skips: Mapped[list[Any] | None] = mapped_column(JSON(none_as_null=True))
 
     has_target: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     max_confidence: Mapped[float | None] = mapped_column(Float)
@@ -373,7 +376,7 @@ class Event(Base):
     clip_path: Mapped[str | None] = mapped_column(String)
     clip_start: Mapped[datetime | None] = mapped_column(DateTime)
     clip_duration_s: Mapped[float | None] = mapped_column(Float)
-    # Gaps between its recordings the clip keeps ([from_s, to_s, missing_s] in clip time,
+    # Gaps between its recordings the clip keeps ([from_s, to_s, None] in clip time,
     # footage.py; None: built before clips kept them).
     clip_gaps: Mapped[list[Any] | None] = mapped_column(JSON)
     thumb_path: Mapped[str | None] = mapped_column(String)

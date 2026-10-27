@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import json
 import logging
 import re
@@ -189,6 +190,15 @@ def cut(src: Path, dst: Path, offset_s: float, duration_s: float) -> None:
           "-t", f"{duration_s:.6f}", "-map", "0:v:0", "-map", "0:a:0?", "-c", "copy",
           "-avoid_negative_ts", "make_zero", "-movflags", "+faststart", str(part)])
     part.replace(dst)
+
+
+def timestamp_steps(path: Path, min_s: float) -> list[float]:
+    """Where the video goes on after a pause in its timestamps of at least ``min_s``
+    (seconds into the file), reading only the container's index."""
+    out = _run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                "packet=pts_time", "-of", "csv=p=0", str(path)], timeout=600).stdout
+    times = sorted(float(v.split(",")[0]) for v in out.split() if v.split(",")[0] != "N/A")
+    return [round(b, 3) for a, b in itertools.pairwise(times) if b - a >= min_s]
 
 
 def keyframe_times(path: Path) -> list[float]:

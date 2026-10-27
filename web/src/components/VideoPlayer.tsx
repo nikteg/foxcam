@@ -588,7 +588,9 @@ function GapNotice({ gaps }: { gaps: FootageGap[] }) {
   if (!gap) return null;
   return (
     <output className="player-gap-notice">
-      {t("player.footageMissing", { seconds: Math.max(Math.round(gap[2]), 1) })}
+      {gap[2] === null
+        ? t("player.footageMissingUnknown")
+        : t("player.footageMissing", { seconds: Math.max(Math.round(gap[2]), 1) })}
     </output>
   );
 }

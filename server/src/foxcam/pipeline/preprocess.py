@@ -20,7 +20,7 @@ from typing import Any
 
 from sqlalchemy import func, select
 
-from .. import changes, ffmpeg, hwaccel, sprites
+from .. import changes, ffmpeg, footage, hwaccel, sprites
 from ..config import Settings
 from ..db import session_scope
 from ..models import CameraState, Job, JobState, MaskVersion, Segment, SegmentStatus, utcnow
@@ -169,6 +169,11 @@ def _preprocess(settings: Settings, segment_id: int) -> bool | None:
         elif elev is not None:
             updates["is_night"] = elev < -6
         updates["sun_elevation"] = elev
+
+        try:
+            updates["skips"] = footage.find_skips(src, camera_id, seg.start_at, seg.duration_s)
+        except Exception as e:  # noqa: BLE001 - only the player's marks
+            log.warning("segment %s: no skips found: %s", segment_id, e)
 
         thumb = settings.thumbs_dir / Path(rel).with_suffix(".jpg")
         ffmpeg.thumbnail(src, thumb, at_s=min(1.0, seg.duration_s / 2))

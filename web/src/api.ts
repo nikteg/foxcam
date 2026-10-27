@@ -290,8 +290,9 @@ export type MotionFrame = [offsetMs: number, boxes: Rect[]];
 
 /** Footage missing from a video, in its own time (server: footage.py): a stretch where the
  *  picture holds (a gap between recordings in an event's clip), or a moment (from = to)
- *  where the video goes on after footage the camera never delivered. */
-export type FootageGap = [fromS: number, toS: number, missingS: number];
+ *  where the video goes on after footage the camera never delivered; how much is missing
+ *  when the camera's clock says (null: unknown). */
+export type FootageGap = [fromS: number, toS: number, missingS: number | null];
 
 /** What a video's timeline marks: where things moved, and footage that is missing. */
 export interface VideoTimeline {

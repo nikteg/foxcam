@@ -20,6 +20,10 @@ SYNC = 0x47
 HZ = 90_000  # MPEG timestamps (and the PCR base) count 90 kHz ticks...
 WRAP = 1 << 33  # ...in 33 bits
 JUMP = 5 * HZ  # a step this big in the camera's clock is a discontinuity, not a frame
+# Left in the output where the camera's clock jumped ahead (footage it never delivered):
+# a pause this long marks the place in the recording, found again when it is prepared
+# (footage.py), without letting the stream drift much from the clock.
+SKIP_MARK = HZ // 2
 # PES stream ids without the optional header (no timestamps).
 NO_PES_HEADER = {0xBC, 0xBE, 0xBF, 0xF0, 0xF1, 0xF2, 0xF8, 0xFF}
 
@@ -34,7 +38,8 @@ class Retimer:
     """Rewrites the timestamps of an MPEG-TS byte stream passed through ``write`` and hands
     whole packets on to ``out``. Call ``new_session`` when the next relay session starts.
     ``on_skip`` hears of each jump ahead in the camera's clock within a session (seconds):
-    footage the camera did not deliver, which the output closes up."""
+    footage the camera did not deliver, which the output closes up to a short pause
+    (``SKIP_MARK``)."""
 
     def __init__(self, out: Callable[[bytes], None],
                  clock: Callable[[], float] = time.monotonic,
@@ -45,6 +50,7 @@ class Retimer:
         self._buf = bytearray()
         self._offset = 0
         self._anchor = True  # at the next timestamp
+        self._skipped = False  # ... after a jump ahead: leave SKIP_MARK there
         self._last_in: int | None = None
         # Per kind ("pcr", "pes": a frame's time runs ahead of the PCR by the muxer's
         # delay), the latest output timestamp and when it passed.
@@ -75,16 +81,19 @@ class Retimer:
     def _map(self, ts: int, kind: str) -> int:
         now = self._clock()
         if self._last_in is not None and abs(jump := _signed(ts - self._last_in)) > JUMP:
-            if jump > 0 and not self._anchor and self._on_skip:
-                self._on_skip(jump / HZ)
+            if jump > 0 and not self._anchor:
+                self._skipped = True
+                if self._on_skip:
+                    self._on_skip(jump / HZ)
             self._anchor = True
         if self._anchor:
             # Continue from the last output of this kind plus the real time since (the
             # very first time: as is).
             last = self._last_out.get(kind) or next(iter(self._last_out.values()), None)
-            target = ts if last is None else (last[0] + round((now - last[1]) * HZ)) % WRAP
+            pause = SKIP_MARK if self._skipped else 0
+            target = ts if last is None else (last[0] + round((now - last[1]) * HZ) + pause) % WRAP
             self._offset = (target - ts) % WRAP
-            self._anchor = False
+            self._anchor = self._skipped = False
         self._last_in = ts
         mapped = (ts + self._offset) % WRAP
         last = self._last_out.get(kind)
