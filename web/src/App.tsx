@@ -265,7 +265,8 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
         <RouterLink to="/" className="brand">
           <Text weight="semibold" size={500}>
             <img className="brand-icon" src="/icon.svg" alt="" width={336} height={344} />
-            Foxcam
+            {/* Phones: the fox only (the job counts need the room). */}
+            <span className="brand-name">Foxcam</span>
           </Text>
         </RouterLink>
         <TabList

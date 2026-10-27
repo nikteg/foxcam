@@ -397,6 +397,34 @@ h2.section > .section-link {
   .not-phone {
     display: none;
   }
+  /* Phones: the top bar fits on the narrowest screens (360 px) with the job counts: the
+     fox without its name (still read out), tighter buttons. */
+  .topbar {
+    gap: var(--spacingHorizontalS);
+    padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right));
+  }
+  .brand-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .brand-icon {
+    height: 1.4em;
+    margin-inline-end: 0;
+  }
+  .job-cards {
+    gap: 2px;
+    margin-inline-end: 0;
+  }
+  .job-card.job-card {
+    padding-inline: 6px;
+  }
+  .job-card.job-card > .fui-Button__icon {
+    margin-inline-end: 2px;
+  }
 }
 .spin {
   animation: spin 0.8s linear infinite;
