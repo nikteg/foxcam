@@ -298,11 +298,12 @@ h2.section > .section-link {
   overflow: visible;
 }
 /* Doubled class: wins over Fluent's own position on the badge. */
-/* The numbers on a nav icon: tiny, stacked down beside it on the left, left aligned (Jobs
-   has three). */
+/* The numbers on a nav icon: tiny, stacked beside it on the left, left aligned, and
+   centred on the icon whatever their number (one: level with it; three: the middle one). */
 .nav-badges {
   position: absolute;
-  top: -7px;
+  top: 50%;
+  translate: 0 -50%;
   right: calc(100% - 6px);
   display: flex;
   flex-direction: column;
@@ -313,13 +314,12 @@ h2.section > .section-link {
 .top-tabs .nav-icon:has(.nav-badges) {
   margin-inline-start: 14px;
 }
-/* Three fit between the icon's top and its label. */
 .count-badge-tiny.count-badge-tiny {
-  min-width: 10px;
-  height: 10px;
+  min-width: 11px;
+  height: 11px;
   padding: 0 2px;
-  font-size: 8px;
-  line-height: 10px;
+  font-size: 9px;
+  line-height: 11px;
 }
 /* A count on a tab: at the top right of its name. */
 .fui-Tab .count-badge {
