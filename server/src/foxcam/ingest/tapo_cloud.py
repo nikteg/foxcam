@@ -25,9 +25,11 @@ from __future__ import annotations
 
 import asyncio
 import fcntl
+import itertools
 import json
 import logging
 import os
+import shutil
 import subprocess
 import tempfile
 import threading
@@ -283,11 +285,31 @@ def interactive_login(settings: Settings) -> None:
     asyncio.run(main())
 
 
-def check(settings: Settings, camera: str | None, seconds: float, resolution: str) -> int:
+def frame_timing(path: Path) -> str:
+    """How evenly the camera's own timestamps in an MPEG-TS sample are spaced: the median
+    gap between frames, and how many gaps are under 10 ms (frames bunched together)."""
+    out = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0",
+                          "-show_entries", "packet=pts_time", "-of", "csv=p=0", str(path)],
+                         capture_output=True, text=True, check=True).stdout
+    times = sorted(float(v) for v in (line.split(",")[0] for line in out.split())
+                   if v not in ("", "N/A"))
+    gaps = [b - a for a, b in itertools.pairwise(times)]
+    if not gaps:
+        return "no frame timestamps"
+    median = sorted(gaps)[len(gaps) // 2]
+    bunched = sum(g < 0.010 for g in gaps) / len(gaps)
+    return (f"{len(times)} frames over {times[-1] - times[0]:.1f} s, median gap "
+            f"{median * 1000:.0f} ms, {bunched:.0%} of gaps under 10 ms")
+
+
+def check(settings: Settings, camera: str | None, seconds: float, resolution: str,
+          keep: str | None = None) -> int:
     """Smoke-test the cloud relay without printing any secrets.
 
     Lists the cameras on the account, records ``seconds`` of live video from one of them
-    to a temporary file and reports codec / resolution / bitrate. Returns an exit code.
+    to a temporary file and reports codec / resolution / bitrate, and how evenly the
+    camera's own frame timestamps are spaced (``keep``: save the sample). Returns an exit
+    code.
     """
     from .. import ffmpeg
 
@@ -315,6 +337,10 @@ def check(settings: Settings, camera: str | None, seconds: float, resolution: st
                 kbps = written * 8 / 1000 / max(info.duration_s or seconds, 0.1)
                 print(f"OK: {written / 1e6:.1f} MB, {info.codec} {info.width}x{info.height}, "
                       f"{info.duration_s:.1f} s, ~{kbps:.0f} kbit/s")
+                print(f"Camera timestamps: {frame_timing(out)}")
+                if keep:
+                    shutil.copyfile(out, keep)
+                    print(f"Sample saved to {keep}")
                 if info.codec == "hevc":
                     print("Note: H.265 — browsers may not play it; set H.264 in the Tapo app "
                           "if possible.")

@@ -155,6 +155,8 @@ def main() -> None:
     check.add_argument("--camera", help="camera name or device id (default: first)")
     check.add_argument("--seconds", type=float, default=10)
     check.add_argument("--resolution", choices=["HD", "VGA"], default="HD")
+    check.add_argument("--keep", metavar="FILE",
+                       help="save the recorded MPEG-TS sample here (for a closer look)")
     sub.add_parser("tapo-logout", help="delete the saved Tapo session")
     tok = sub.add_parser("worker-token", help="create a worker access token and print it")
     tok.add_argument("name")
@@ -311,7 +313,8 @@ def main() -> None:
         from .ingest.tapo_cloud import check
 
         try:
-            raise SystemExit(check(settings, args.camera, args.seconds, args.resolution))
+            raise SystemExit(check(settings, args.camera, args.seconds, args.resolution,
+                                   keep=args.keep))
         except RuntimeError as e:  # e.g. not signed in / ontapo not installed
             raise SystemExit(f"error: {e}") from None
     elif args.cmd == "worker-token":
