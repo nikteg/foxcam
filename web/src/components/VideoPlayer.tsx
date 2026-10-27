@@ -41,6 +41,7 @@ import {
   MEDIA_KEY_SHORTCUTS,
   type MediaKeyShortcuts,
   type MediaPlayerInstance,
+  type MediaRemoteControl,
 } from "@vidstack/react";
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 
@@ -188,16 +189,22 @@ const onTimeline = (event: KeyboardEvent) =>
 /** One frame back or forward, paused (the , and . keys). */
 const stepFrame =
   (direction: -1 | 1) =>
-  ({ player }: { player: MediaPlayerInstance }) => {
+  ({ player, remote }: { player: MediaPlayerInstance; remote: MediaRemoteControl }) => {
     const video = player.el?.querySelector("video");
     if (!video) return;
-    // Through Vidstack (paused behind its back, it kept thinking it played); only when
-    // playing (a pause request while paused waited for a pause that never came).
-    if (!video.paused) player.remoteControl.pause();
-    seekVideo(
-      player,
-      video.currentTime + direction * (frameSeconds.get(player) ?? DEFAULT_FRAME_S),
-    );
+    const step = () =>
+      seekVideo(
+        player,
+        video.currentTime + direction * (frameSeconds.get(player) ?? DEFAULT_FRAME_S),
+      );
+    if (video.paused) {
+      step();
+      return;
+    }
+    // Playing: pause through Vidstack (paused behind its back, it kept showing playing),
+    // and step once it has paused (a seek in between left it showing playing too).
+    video.addEventListener("pause", step, { once: true });
+    remote.pause();
   };
 
 /** A key that moves `seconds` (J / L, Shift+arrows). */
