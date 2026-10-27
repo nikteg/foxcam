@@ -292,43 +292,18 @@ h2.section > .section-link {
   position: relative;
   display: inline-flex;
 }
-/* Fluent's tab clips its icon and name: let the numbers stick out. */
+/* Fluent's tab clips its icon slot: let the number stick out of the corner. */
 .top-tabs .fui-Tab.fui-Tab,
-.top-tabs .fui-Tab__icon.fui-Tab__icon,
-.top-tabs .fui-Tab__content.fui-Tab__content {
+.top-tabs .fui-Tab__icon.fui-Tab__icon {
   overflow: visible;
 }
-/* Doubled class: wins over Fluent's own position on the badge. */
-/* A nav button's numbers: tiny, side by side and centred on the button (with three, the
-   middle one), taking no room. */
+/* A nav icon's number: on its top right corner, taking no room. */
 .nav-badges {
   position: absolute;
-  left: 50%;
+  top: -6px;
+  left: 14px;
   display: flex;
-  align-items: center;
-  gap: 2px;
   pointer-events: none;
-}
-/* Bottom tab bar (phones, tablets): above the icon, over its top edge. */
-.bottom-tabs .nav-badges {
-  bottom: calc(100% - 5px);
-  translate: -50% 0;
-}
-/* Top bar: above the name (20 px high, centred in the button), centred on the whole button
-   (icon and name). */
-.top-tabs .fui-Tab {
-  position: relative;
-}
-.nav-label .nav-badges {
-  top: 50%;
-  translate: -50% calc(-100% - 13px);
-}
-.count-badge-tiny.count-badge-tiny {
-  min-width: 11px;
-  height: 11px;
-  padding: 0 2px;
-  font-size: 9px;
-  line-height: 11px;
 }
 /* The top bar's language button: as narrow as its contents (Fluent's are 96 px wide). */
 .language-menu.language-menu {
@@ -396,6 +371,34 @@ h2.section > .section-link {
 @media (max-width: 720px) {
   .not-phone {
     display: none;
+  }
+  /* Phones: the top bar fits on the narrowest screens (360 px) with the job counts: the
+     fox without its name (still read out), tighter buttons. */
+  .topbar {
+    gap: var(--spacingHorizontalS);
+    padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right));
+  }
+  .brand-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .brand-icon {
+    height: 1.4em;
+    margin-inline-end: 0;
+  }
+  .job-cards {
+    gap: 2px;
+    margin-inline-end: 0;
+  }
+  .job-card.job-card {
+    padding-inline: 6px;
+  }
+  .job-card.job-card > .fui-Button__icon {
+    margin-inline-end: 2px;
   }
 }
 .spin {

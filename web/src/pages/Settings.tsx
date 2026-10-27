@@ -59,6 +59,9 @@ const GENERAL: SettingsGroup[] = [
     ],
   },
 ];
+const NOTIFICATIONS: SettingsGroup[] = [
+  { title: "runtime.group.messages", keys: ["notifications.timezone"] },
+];
 const DETECTION: SettingsGroup[] = [
   {
     title: "runtime.group.frames",
@@ -224,7 +227,15 @@ export function Settings() {
       )}
       {tab === "retention" && <RuntimeSettingsSection groups={RETENTION} showDisk />}
       {tab === "users" && <UsersSection />}
-      {tab === "notifications" && <Notifications />}
+      {tab === "notifications" && (
+        <>
+          <Notifications />
+          <section className="form-stack">
+            <Divider className="settings-divider" />
+            <RuntimeSettingsSection groups={NOTIFICATIONS} />
+          </section>
+        </>
+      )}
       {tab === "storage" && <StorageCard />}
       {tab === "danger" && <DangerZoneSection />}
       {tab === "configuration" && (

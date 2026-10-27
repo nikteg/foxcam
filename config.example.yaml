@@ -222,7 +222,7 @@ auth:
 # Notifications when an event starts (event.new) or its clip is ready (event.clip).
 # Channels can also be added in the web UI (Settings -> Notifications). docs/NOTIFICATIONS.md
 # notifications:
-#   timezone: Europe/Stockholm      # quiet hours and times in messages
+#   timezone: Europe/Stockholm      # quiet hours and times in messages (also in Settings)
 #   channels:
 #     - id: phone
 #       type: ntfy                  # push via ntfy.sh or a self-hosted ntfy
