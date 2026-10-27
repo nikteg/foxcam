@@ -25,6 +25,7 @@ from typing import Any
 from sqlalchemy import and_, exists, func, or_, select, update
 from sqlalchemy.orm import aliased, object_session
 
+from .. import changes
 from ..config import Settings
 from ..db import session_scope
 from ..models import (
@@ -76,6 +77,7 @@ def touch_worker(worker_id: str, info: dict[str, Any] | None = None,
             w.current_job_id = current_job_id
 
 
+@changes.notifies
 def lease(settings: Settings, worker_id: str, info: dict[str, Any] | None = None,
           tags: list[str] | None = None, labels: list[str] | None = None,
           vocabulary: list[str] | None = None) -> Job | None:
@@ -157,6 +159,7 @@ def raw_result(body: dict[str, Any]) -> Any:
             "text": text.encode()[:RAW_RESULT_MAX].decode(errors="ignore") + " …[truncated]"}
 
 
+@changes.notifies
 def complete(settings: Settings, job_id: int, token: str, detections: list[DetectionIn],
              model: str | None, processing_ms: int | None,
              raw: dict[str, Any] | None = None) -> None:
@@ -300,6 +303,7 @@ def settle_segment(settings: Settings, seg: Segment) -> None:
         seg.derived_path = None
 
 
+@changes.notifies
 def fail(settings: Settings, job_id: int, token: str, error: str, retryable: bool = True) -> None:
     with session_scope() as s:
         job = _get_leased(s, job_id, token)
@@ -327,6 +331,7 @@ def _fail_job(settings: Settings, job: Job, error: str, retryable: bool) -> None
         settle_segment(settings, job.segment)
 
 
+@changes.notifies
 def reap(settings: Settings) -> int:
     """Return expired leases to the queue (or mark dead after too many attempts)."""
     now = utcnow()
@@ -340,6 +345,7 @@ def reap(settings: Settings) -> int:
         return len(expired)
 
 
+@changes.notifies
 def requeue(settings: Settings, job_id: int) -> None:
     """Manual retry from the UI. Once the masked copy is gone (deleted after the jobs were
     done), the whole recording is analysed again instead (see reanalyse)."""

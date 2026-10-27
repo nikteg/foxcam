@@ -11,27 +11,31 @@ import {
   TabList,
   Text,
   Title2,
+  Tooltip,
 } from "@fluentui/react-components";
 import {
+  Archive20Regular,
   ArrowClockwise20Regular,
   Camera24Regular,
-  Person20Regular,
-  Person24Regular,
-  SignOut20Regular,
   DataBarVertical24Regular,
   Folder24Regular,
+  Person20Regular,
+  Person24Regular,
+  ScanObject20Regular,
   Server24Regular,
   Settings24Regular,
+  SignOut20Regular,
   Target24Regular,
+  Wrench20Regular,
 } from "@fluentui/react-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLayoutEffect, useRef, useState, type ReactElement } from "react";
 import { Outlet, useLocation, useNavigate, useNavigationType } from "react-router";
 
 import { api } from "./api";
-import { useNavBadges, type NavBadge } from "./navBadges";
+import { useJobCounts, useNavBadges, type NavBadge } from "./navBadges";
 import { useAuth, useAuthChanged, useUnauthorizedRedirect } from "./auth";
-import { CountBadge, RouterLink, usePageTitle } from "./components/ui";
+import { CountBadge, RouterLink, usePageTitle, useRouterHref } from "./components/ui";
 import { AuthScreen } from "./pages/Login";
 import { LanguageMenu, useI18n, type MessageKey } from "./i18n";
 import { ThemeMenu } from "./theme";
@@ -85,6 +89,51 @@ function currentTab(pathname: string): string {
 }
 
 /** Signed-in user: account page and sign out. */
+/** Larger counts show as "999+": the button keeps room for that, so it never moves. */
+const MAX_JOB_COUNT = 999;
+/** A backlog this big is a warning; over 99, trouble. */
+const JOB_WARN_AT = 10;
+const JOB_DANGER_AT = 100;
+
+const jobLevel = (n: number) =>
+  n >= JOB_DANGER_AT ? " job-card-danger" : n >= JOB_WARN_AT ? " job-card-warn" : "";
+
+const JOB_CARDS = [
+  { kind: "preparation", label: "prep.tab", icon: <Wrench20Regular /> },
+  { kind: "archiving", label: "compaction.title", icon: <Archive20Regular /> },
+  { kind: "detection", label: "queue.queueTab", icon: <ScanObject20Regular /> },
+] as const;
+
+/** The jobs' backlog (admins): small buttons in the top bar (like a camera card's
+ *  Recordings), always shown, in the order of the Jobs tabs; each opens its tab. */
+function JobCounts() {
+  const { t } = useI18n();
+  const jobs = useJobCounts();
+  const routerHref = useRouterHref();
+  return (
+    <span className="job-cards">
+      {JOB_CARDS.map(({ kind, label, icon }) => {
+        return (
+          // The tooltip names it; the button's own text is the count.
+          <Tooltip key={kind} content={t(label)} relationship="description">
+            <Button
+              as="a"
+              size="small"
+              icon={icon}
+              className={`job-card${jobLevel(jobs[kind])}`}
+              {...routerHref(`/jobs/${kind}`)}
+            >
+              <span className="job-count">
+                {jobs[kind] > MAX_JOB_COUNT ? `${MAX_JOB_COUNT}+` : jobs[kind]}
+              </span>
+            </Button>
+          </Tooltip>
+        );
+      })}
+    </span>
+  );
+}
+
 /** A nav button's numbers (new events; on Jobs each kind of backlog, in the order of its
  *  tabs): tiny, side by side and centred on the button; none at 0. Bottom bar: above the
  *  icon; top bar: above the name. */
@@ -193,7 +242,7 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
   const { t } = useI18n();
   const tabs = TABS.filter((tab) => isAdmin || !tab.admin);
   const extraTabs = EXTRA_TABS.filter((tab) => isAdmin || !tab.admin);
-  const badges = useNavBadges(isAdmin, selected === "/events");
+  const badges = useNavBadges(selected === "/events");
   const icon = (tab: NavItem) => <NavIcon icon={tab.icon} badges={badges[tab.to] ?? []} />;
   // Top bar: the numbers after the name.
   const topTab = (tab: NavItem) => (
@@ -232,6 +281,7 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
         <div className="topbar-actions">
           {/* Phones: no room (they are in Settings → General and on the Account page). With
               the bottom tab bar (tablets, phones, home screen app): no pull to refresh. */}
+          {isAdmin && <JobCounts />}
           <span className="not-phone">
             <ThemeMenu />
             <LanguageMenu className="language-menu" />

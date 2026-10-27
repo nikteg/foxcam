@@ -6,6 +6,7 @@ Non-admins only see the cameras shared with them, and everything recorded by the
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
@@ -13,13 +14,14 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from fastapi.responses import FileResponse, RedirectResponse, Response
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
+from fastapi.responses import FileResponse, RedirectResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from .. import (
     backup,
+    changes,
     download_links,
     ffmpeg,
     mediamtx_auth,
@@ -33,7 +35,7 @@ from ..accounts import Principal
 from ..config import Settings
 from ..db import session_scope
 from ..mediamtx import MediaMtx
-from ..models import Archive, CameraRole, Detection, Event, Segment, utcnow
+from ..models import Archive, CameraRole, Detection, Event, Job, JobState, Segment, utcnow
 from ..pipeline import compaction, motion_report, preprocess, queue, runner, uploader
 from ..pipeline.events import rebuild_events as rebuild_all_events
 from ..pipeline.reanalyse import ReanalyseError, reanalyse_segment
@@ -93,6 +95,46 @@ async def status(settings: Settings = Depends(settings_dep),
         "preprocessing": await asyncio.to_thread(preprocess.status, settings, 0)
         if p.is_admin else None,
     }
+
+
+def job_counts(settings: Settings) -> dict[str, int]:
+    """The jobs' backlog, as the top bar shows it: recordings waiting for (or in)
+    preparation, periods waiting to be archived, detection jobs waiting or running."""
+    prep = preprocess.status(settings, 0)
+    with session_scope() as s:
+        detection = s.scalar(select(func.count()).select_from(Job).where(
+            Job.state.in_([JobState.PENDING, JobState.LEASED]))) or 0
+    return {"preparation": prep["waiting"] + prep["preparing"],
+            "archiving": compaction.status(settings)["waiting_periods"],
+            "detection": detection}
+
+
+LIVE_CHECK_SECONDS = 5.0  # archiving runs in its own process: no nudges from there
+LIVE_MIN_GAP_SECONDS = 0.5  # a burst of nudges (a worker taking jobs) counts once
+
+
+@router.get("/live/jobs", dependencies=[Depends(require_admin)])
+async def live_jobs(request: Request,
+                    settings: Settings = Depends(settings_dep)) -> StreamingResponse:
+    """Server-sent events: the jobs' backlog (``job_counts``) whenever it changes, counted
+    again at once when the queue or preparation nudges (changes.py), else every few
+    seconds. A comment line in between keeps proxies from closing the connection."""
+
+    async def events():
+        last = None
+        with changes.listen() as changed:
+            while not await request.is_disconnected():
+                changed.clear()
+                counts = await asyncio.to_thread(job_counts, settings)
+                yield (f"data: {json.dumps(counts)}\n\n" if counts != last
+                       else ": still\n\n")
+                last = counts
+                await asyncio.sleep(LIVE_MIN_GAP_SECONDS)
+                with contextlib.suppress(TimeoutError):
+                    await asyncio.wait_for(changed.wait(), LIVE_CHECK_SECONDS)
+
+    return StreamingResponse(events(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @router.get("/settings")

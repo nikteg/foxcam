@@ -20,7 +20,7 @@ from typing import Any
 
 from sqlalchemy import func, select
 
-from .. import ffmpeg, hwaccel, sprites
+from .. import changes, ffmpeg, hwaccel, sprites
 from ..config import Settings
 from ..db import session_scope
 from ..models import CameraState, Job, JobState, MaskVersion, Segment, SegmentStatus, utcnow
@@ -88,12 +88,14 @@ class Activity:
     def started(self, segment_id: int) -> None:
         with self.lock:
             self.running[segment_id] = utcnow()
+        changes.notify()
 
     def finished(self, segment_id: int, seconds: float, ok: bool | None) -> None:
         with self.lock:
             self.running.pop(segment_id, None)
             if ok is not None:  # None: nothing to do (no longer new)
                 self.recent.append((utcnow(), seconds, ok))
+        changes.notify()  # also: its jobs are queued now
 
 
 activity = Activity()

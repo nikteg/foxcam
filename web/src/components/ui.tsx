@@ -649,9 +649,7 @@ export function useSubPage<T extends string>(base: string, ids: readonly T[]): T
  * nothing depends on scrolling to an anchor). The first tab is the base path, unless
  * ``ownPaths``: then every tab has its own (the base shows the first). Tabs with a ``group``
  * are set apart from the ones before them by a divider. */
-/** A count on a nav button or a tab; nothing at 0. Its colour says what it counts (the
- *  same on the Jobs nav button and its tabs; styles.css): preparation violet, archiving
- *  teal, detection pink, new events orange. ``tiny``: stacked beside a nav icon. */
+/** A count on a nav button (new events); nothing at 0. ``tiny``: the nav buttons' size. */
 export function CountBadge({
   count,
   kind,
@@ -683,7 +681,7 @@ export function PageTabs<T extends string>({
 }: {
   base: string;
   current: T;
-  tabs: { id: T; label: string; group?: string; badge?: { count: number; kind: BadgeKind } }[];
+  tabs: { id: T; label: string; group?: string }[];
   ownPaths?: boolean;
 }) {
   const navigate = useNavigate();
@@ -716,10 +714,7 @@ export function PageTabs<T extends string>({
           {i > 0 && tab.group !== tabs[i - 1]!.group && (
             <span className="page-tabs-divider" aria-hidden />
           )}
-          <Tab value={tab.id}>
-            {tab.label}
-            {tab.badge && <CountBadge {...tab.badge} />}
-          </Tab>
+          <Tab value={tab.id}>{tab.label}</Tab>
         </Fragment>
       ))}
     </TabList>

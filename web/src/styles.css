@@ -330,29 +330,54 @@ h2.section > .section-link {
   font-size: 9px;
   line-height: 11px;
 }
-/* A count on a sub-page tab: at the top right of its name, taking no room of its own;
-   a longer one grows to the left, over the name. */
-.page-tabs .fui-Tab__content {
-  position: relative;
+/* The top bar's language button: as narrow as its contents (Fluent's are 96 px wide). */
+.language-menu.language-menu {
+  min-width: 0;
+  padding-inline: var(--spacingHorizontalS);
 }
-.page-tabs .count-badge {
-  position: absolute;
-  bottom: calc(100% - 0.55em);
-  right: -8px;
+/* The top bar's job counts (admins): small buttons, always shown, each opening its tab. */
+.job-cards {
+  display: flex;
+  align-items: center;
+  gap: var(--spacingHorizontalXS);
+  margin-inline-end: var(--spacingHorizontalS);
 }
-/* Each kind of job its own colour (the same in both themes): preparation violet,
-   archiving teal, detection pink; new events keep the brand orange. */
-.count-badge-preparation.count-badge-preparation {
-  background-color: #8b5cf6;
-  color: white;
+/* As narrow as the number (Fluent's small buttons are 64 px wide), which keeps room for
+   the largest one shown ("999+"): it never changes width. */
+.job-card.job-card {
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
 }
-.count-badge-archiving.count-badge-archiving {
-  background-color: #0d9488;
-  color: white;
+/* A big backlog warns, a very big one (100 and more) alarms. */
+.job-card-warn.job-card-warn {
+  background: var(--colorStatusWarningBackground1);
+  border-color: var(--colorStatusWarningBorder1);
+  color: var(--colorStatusWarningForeground1);
 }
-.count-badge-detection.count-badge-detection {
-  background-color: #db2777;
-  color: white;
+.job-card-danger.job-card-danger {
+  background: var(--colorStatusDangerBackground1);
+  border-color: var(--colorStatusDangerBorder1);
+  color: var(--colorStatusDangerForeground1);
+}
+/* Hover: the next shade of the same colour. */
+.job-card-warn.job-card-warn:hover {
+  background: var(--colorStatusWarningBackground2);
+  border-color: var(--colorStatusWarningBorder2);
+  color: var(--colorStatusWarningForeground1);
+}
+.job-card-danger.job-card-danger:hover {
+  background: var(--colorStatusDangerBackground2);
+  border-color: var(--colorStatusDangerBorder2);
+  color: var(--colorStatusDangerForeground1);
+}
+.job-card-warn.job-card-warn > .fui-Button__icon,
+.job-card-danger.job-card-danger > .fui-Button__icon {
+  color: inherit;
+}
+.job-count {
+  display: inline-block;
+  min-width: 4ch;
+  text-align: center;
 }
 /* Top bar: a refresh button whenever the bottom tab bar shows (below 1280 px, as in the
    media query further down); theme and language except on phones. Doubled class: wins
