@@ -884,7 +884,9 @@ export const api = {
   }) => request<Segment[]>("GET", withQuery("/api/segments", q)),
   segment: (id: number) => request<Segment>("GET", `/api/segments/${id}`),
   /** Where things moved in an event's clip, in clip time. */
-  eventMotion: (id: number) => request<MotionFrame[]>("GET", `/api/events/${id}/motion`),
+  /** Where things moved in an event's clip or an archive, in that video's own time. */
+  videoMotion: (kind: "events" | "archives", id: number) =>
+    request<MotionFrame[]>("GET", `/api/${kind}/${id}/motion`),
   segmentJobs: (id: number) => request<SegmentJob[]>("GET", `/api/segments/${id}/jobs`),
   /** A link to one file that works for 10 minutes without signing in (Safari, iOS app). */
   downloadLink: (path: string) => request<{ url: string }>("POST", "/api/download-links", { path }),

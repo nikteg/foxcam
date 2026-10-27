@@ -544,6 +544,13 @@ def event_sprite_image(event_id: int, settings: Settings = Depends(settings_dep)
     return _sprite_image(settings, "clip", event_id)
 
 
+@router.get("/archives/{archive_id}/motion")
+def archive_motion(archive_id: int, p: Principal = Depends(principal)) -> list[list[Any]]:
+    """Where things moved in the archive, in its own time (``[ms, boxes]`` frames)."""
+    _archive(p, archive_id)
+    return queries.archive_motion(archive_id)
+
+
 @router.get("/archives/{archive_id}/thumbnails.vtt")
 async def archive_thumbnails(archive_id: int, settings: Settings = Depends(settings_dep),
                              p: Principal = Depends(principal)) -> Response:

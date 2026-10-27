@@ -426,3 +426,27 @@ def test_event_thumbnails_from_the_clip_itself(settings):
 
     sprites.remove(settings, "clip", ev_id)
     assert not sprites.files(settings, "clip", ev_id)[0].exists()
+
+
+def test_archive_motion_is_in_archive_time(settings):
+    """An archive's recordings' motion, each moved by where it sits in the file."""
+    from foxcam.models import Archive
+
+    start = utcnow().replace(microsecond=0)
+    with session_scope() as s:
+        arc = Archive(camera_id="cam", start_at=start, path="archive/cam/a.mp4",
+                      duration_s=20, size_bytes=1)
+        s.add(arc)
+        s.flush()
+        arc_id = arc.id
+    for i, boxes in enumerate(([[1000, [[0.1, 0.1, 0.2, 0.2]]]],
+                               [[500, [[0.2, 0.2, 0.1, 0.1]]]])):
+        seg = add_segment(settings, start=start + timedelta(seconds=10 * i), seconds=10,
+                          with_file=False, motion_boxes=boxes)
+        with session_scope() as s:
+            g = s.get(Segment, seg)
+            g.archive_id, g.archive_offset_s = arc_id, 10.0 * i
+    with app_client(settings) as c:
+        r = c.get(f"/api/archives/{arc_id}/motion")
+    assert r.status_code == 200
+    assert r.json() == [[1000, [[0.1, 0.1, 0.2, 0.2]]], [10500, [[0.2, 0.2, 0.1, 0.1]]]]

@@ -416,22 +416,37 @@ def events(camera_id: str | None = None, limit: int = 100,
         } for e, is_wrong, is_correct in s.execute(q)]
 
 
+def _motion_in(parts: list[tuple[Segment, float]], length_s: float) -> list[list[Any]]:
+    """Where things moved in a video made of recordings: each recording's motion frames,
+    their times (ms) moved by where the recording starts in the video (``parts``: the
+    recording and that offset in seconds, may be negative) and cut to its length."""
+    frames = []
+    for seg, offset_s in sorted(parts, key=lambda p: p[1]):
+        for at, boxes in seg.motion_boxes or []:
+            t = round(at + offset_s * 1000)
+            if 0 <= t <= length_s * 1000:
+                frames.append([t, boxes])
+    return frames
+
+
 def event_motion(event_id: int) -> list[list[Any]]:
-    """Where things moved in an event's clip: each recording's motion frames, with their
-    times (ms) counted from the start of the clip instead of the recording."""
+    """Motion in an event's clip (it starts with the pre-roll, inside a recording)."""
     with session_scope() as s:
         ev = s.get(Event, event_id)
         if ev is None or ev.clip_start is None:
             return []
-        length_ms = (ev.clip_duration_s or 0) * 1000
-        frames = []
-        for seg in sorted(ev.segments, key=lambda g: g.start_at):
-            shift = (seg.start_at - ev.clip_start).total_seconds() * 1000
-            for at, boxes in seg.motion_boxes or []:
-                t = round(at + shift)
-                if 0 <= t <= length_ms:
-                    frames.append([t, boxes])
-        return frames
+        return _motion_in([(g, (g.start_at - ev.clip_start).total_seconds())
+                           for g in ev.segments], ev.clip_duration_s or 0)
+
+
+def archive_motion(archive_id: int) -> list[list[Any]]:
+    """Motion in an archive (its recordings, each from its offset in the file)."""
+    with session_scope() as s:
+        arc = s.get(Archive, archive_id)
+        if arc is None:
+            return []
+        segs = s.scalars(select(Segment).where(Segment.archive_id == archive_id)).all()
+        return _motion_in([(g, g.archive_offset_s or 0.0) for g in segs], arc.duration_s)
 
 
 def worker_summary() -> dict[str, int]:

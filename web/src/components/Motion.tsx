@@ -1,8 +1,22 @@
 // Motion detection's results, the same way everywhere (pipeline/motion.py, still.py).
-import type { Detection } from "../api";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+
+import { api, type Detection, type MotionFrame } from "../api";
 import { percent } from "../format";
 import { useI18n } from "../i18n";
 import { NoValue, Tag } from "./ui";
+
+/** Where things moved in an event's clip or an archive (that video's own time); none
+ *  while another video's is still on screen. */
+export function useVideoMotion(kind: "events" | "archives", id: number | null): MotionFrame[] {
+  const q = useQuery({
+    queryKey: ["video-motion", kind, id],
+    queryFn: () => api.videoMotion(kind, id!),
+    enabled: id !== null,
+    placeholderData: keepPreviousData,
+  });
+  return (!q.isPlaceholderData && q.data) || [];
+}
 
 /** How much of a recording's picture moved: "12% of the picture", "none" or "–". */
 export function MotionShare({ score, short = false }: { score: number | null; short?: boolean }) {

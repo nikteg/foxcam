@@ -5,7 +5,7 @@ import { Button } from "@fluentui/react-components";
 import { ScanObject20Regular } from "@fluentui/react-icons";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-import { api, detectionFrameUrl, type DetectionEvent, type MotionFrame } from "../api";
+import { api, detectionFrameUrl, type DetectionEvent } from "../api";
 import { duration } from "../format";
 import { useI18n } from "../i18n";
 import { CameraTag } from "./CameraSelect";
@@ -13,24 +13,12 @@ import { Feedback } from "./Feedback";
 import { ProfileTag, useDetectorNames, useProfiles, useSeveralDetectors } from "./ProfileSelect";
 import { ConfidenceBar, Fact, Facts, Light, QueryState, Tag, Time, useRouterHref } from "./ui";
 import { VideoPlayer } from "./VideoPlayer";
-import { DetectionMotion } from "./Motion";
+import { DetectionMotion, useVideoMotion } from "./Motion";
 
 /** The event's detections, with its best one open. */
 const detectionsHref = (e: DetectionEvent) =>
   `/events/detections?event=${e.id}&only_targets=true` +
   (e.best_detection_id ? `&selected=${e.best_detection_id}` : "");
-
-/** Where things moved in an event's clip (clip time); none while another event's is still
- * on screen. */
-export function useClipMotion(eventId: number | null): MotionFrame[] {
-  const q = useQuery({
-    queryKey: ["event-motion", eventId],
-    queryFn: () => api.eventMotion(eventId!),
-    enabled: eventId !== null,
-    placeholderData: keepPreviousData,
-  });
-  return (!q.isPlaceholderData && q.data) || [];
-}
 
 export function EventDetail({ event: e }: { event: DetectionEvent }) {
   const { t } = useI18n();
@@ -48,7 +36,7 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
   const best = detections.data?.find((d) => d.id === e.best_detection_id) ?? detections.data?.[0];
   // Where things moved: in the clip (its own clock), or in the recording shown until the
   // clip is cut. The previous event's stays until this one's arrives, but is not drawn.
-  const clipMotion = useClipMotion(e.clip_url ? e.id : null);
+  const clipMotion = useVideoMotion("events", e.clip_url ? e.id : null);
   const recording = useQuery({
     queryKey: ["segment", best?.segment_id],
     queryFn: () => api.segment(best!.segment_id),

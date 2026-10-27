@@ -16,7 +16,8 @@ import { duration, localDay, localTime } from "../format";
 import { useI18n } from "../i18n";
 import { useCameraName } from "./CameraSelect";
 import { DetailPanel } from "./DetailPanel";
-import { EventDetail, useClipMotion } from "./EventDetail";
+import { EventDetail } from "./EventDetail";
+import { useVideoMotion } from "./Motion";
 import {
   useDetectorNames,
   useProfileName,
@@ -44,7 +45,7 @@ export function EventsGrid({
 }) {
   const { t } = useI18n();
   const [playing, setPlaying] = useState<DetectionEvent | null>(null);
-  const playingMotion = useClipMotion(playing?.clip_url ? playing.id : null);
+  const playingMotion = useVideoMotion("events", playing?.clip_url ? playing.id : null);
   // The open event's details are in the URL (?details=<id>) on whichever page shows the
   // grid, so the nav tab stays put, Back closes it and it can be linked. Looked up in the
   // (refreshed) list, so marking it right or wrong shows at once.
