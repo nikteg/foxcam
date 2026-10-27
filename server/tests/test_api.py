@@ -517,3 +517,22 @@ def test_missing_footage_in_an_archive(settings):
     with app_client(settings) as c:
         r = c.get(f"/api/archives/{arc_id}/timeline")
     assert r.json()["gaps"] == [[10.0, 10.0, 8.0], [14.0, 14.0, 4.0]]
+
+
+def test_api_responses_say_which_web_build_is_served(settings, tmp_path, monkeypatch):
+    """A page left open across a deploy compares this with its own build (newVersion.ts)."""
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text(
+        '<html><head><meta name="foxcam-build" content="abc123"></head></html>')
+    monkeypatch.setenv("FOXCAM_WEB_DIST", str(dist))
+    with app_client(settings) as c:
+        assert c.get("/api/events").headers["x-foxcam-build"] == "abc123"
+        assert c.get("/api/nothing-here").headers["x-foxcam-build"] == "abc123"
+        assert "x-foxcam-build" not in c.get("/").headers  # the page itself carries it
+
+
+def test_no_build_header_without_a_build(settings, tmp_path, monkeypatch):
+    monkeypatch.setenv("FOXCAM_WEB_DIST", str(tmp_path / "missing"))
+    with app_client(settings) as c:
+        assert "x-foxcam-build" not in c.get("/api/events").headers

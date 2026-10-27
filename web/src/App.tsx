@@ -39,6 +39,7 @@ import { CountBadge, RouterLink, usePageTitle, useRouterHref } from "./component
 import { AuthScreen } from "./pages/Login";
 import { LanguageMenu, useI18n, type MessageKey } from "./i18n";
 import { ThemeMenu } from "./theme";
+import { NewVersionBanner } from "./components/NewVersionBanner";
 import { PageSpinner } from "./components/Skeletons";
 
 interface NavItem {
@@ -282,6 +283,7 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
       </header>
 
       <main>
+        <NewVersionBanner />
         <Outlet />
       </main>
 

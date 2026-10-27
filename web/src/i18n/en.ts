@@ -23,6 +23,8 @@ export const en = {
   "common.camera": "Camera",
   "common.cancel": "Cancel",
   "common.close": "Close",
+  "app.newVersion": "A new version of Foxcam is out. Reload to use it.",
+  "app.reload": "Reload",
   "common.done": "Done",
   "common.download": "Download",
   "common.edit": "Edit",

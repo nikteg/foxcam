@@ -1,17 +1,29 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   // Where the Python server runs during `pnpm dev` (override in web/.env.local, e.g.
   // FOXCAM_API=https://cams.example.org to work on the UI against a real server).
   const api = loadEnv(mode, ".", "").FOXCAM_API ?? "http://localhost:8000";
   const target = new URL(api);
   const local = ["localhost", "127.0.0.1", "[::1]"].includes(target.hostname);
+  // Which build this is. The server reads it from index.html and sends it with every API
+  // response, so a page left open across a deploy can offer to reload (newVersion.ts).
+  // None in the dev server: it hot-reloads itself.
+  const buildId = command === "build" ? Date.now().toString(36) : "";
   return {
+    define: { __BUILD_ID__: JSON.stringify(buildId) },
     plugins: [
       // `compiler: true` runs the Rust port of React Compiler (oxc-transform-react),
       // so components need no manual useMemo/useCallback.
       react({ compiler: true }),
+      {
+        name: "foxcam-build-id",
+        transformIndexHtml: () =>
+          buildId
+            ? [{ tag: "meta", attrs: { name: "foxcam-build", content: buildId }, injectTo: "head" }]
+            : [],
+      },
     ],
     server: {
       port: 5173,

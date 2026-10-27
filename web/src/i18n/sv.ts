@@ -24,6 +24,8 @@ export const sv: Record<MessageKey, string> = {
   "common.camera": "Kamera",
   "common.cancel": "Avbryt",
   "common.close": "Stäng",
+  "app.newVersion": "Det finns en ny version av Foxcam. Ladda om för att använda den.",
+  "app.reload": "Ladda om",
   "common.done": "Klar",
   "common.download": "Ladda ner",
   "common.edit": "Redigera",

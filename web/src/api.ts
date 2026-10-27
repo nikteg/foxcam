@@ -1,3 +1,5 @@
+import { noteBuild } from "./newVersion";
+
 // Typed client for the foxcam JSON API. All timestamps are ISO-8601 UTC ("...Z").
 
 export type Rect = [x: number, y: number, w: number, h: number];
@@ -803,6 +805,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     headers: body === undefined ? undefined : { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+  noteBuild(res);
   if (res.status === 401 && !path.startsWith("/api/auth/")) onUnauthorized();
   if (!res.ok) {
     let detail = res.statusText;

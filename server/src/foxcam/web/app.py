@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -109,6 +110,36 @@ def create_app(settings: Settings | None = None, background: bool = True) -> Fas
     return app
 
 
+_BUILD_META = re.compile(r'<meta name="foxcam-build" content="([^"]+)"')
+
+
+def _build_id(index: Path) -> str | None:
+    """The web build's id (vite.config.ts writes it into index.html)."""
+    found = _BUILD_META.search(index.read_text(errors="replace"))
+    return found.group(1) if found else None
+
+
+class BuildHeader:
+    """Says on every API response which web build the server serves (X-Foxcam-Build), so
+    a page left open across a deploy can tell and offer to reload (web/src/newVersion.ts).
+    Plain ASGI, so streamed responses (video, live view) pass through untouched."""
+
+    def __init__(self, app, build: str) -> None:
+        self.app = app
+        self.header = (b"x-foxcam-build", build.encode())
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or not scope["path"].startswith("/api/"):
+            return await self.app(scope, receive, send)
+
+        async def send_with_build(message):
+            if message["type"] == "http.response.start":
+                message["headers"] = [*message.get("headers", []), self.header]
+            await send(message)
+
+        return await self.app(scope, receive, send_with_build)
+
+
 def _mount_spa(app: FastAPI, dist: Path) -> None:
     """Serve the React build; unknown non-API paths fall back to index.html (client routing).
 
@@ -122,6 +153,9 @@ def _mount_spa(app: FastAPI, dist: Path) -> None:
         return
     if (dist / "assets").is_dir():
         app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
+    build = _build_id(index)
+    if build:
+        app.add_middleware(BuildHeader, build=build)
 
     @app.get("/{path:path}", include_in_schema=False)
     def spa(path: str) -> FileResponse:
