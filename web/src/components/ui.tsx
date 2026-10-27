@@ -4,6 +4,7 @@ import {
   Caption1,
   Card,
   Checkbox as FluentCheckbox,
+  CounterBadge,
   Input,
   Link,
   MessageBar,
@@ -53,6 +54,7 @@ import { useLocation, useNavigate } from "react-router";
 import { api, ApiError } from "../api";
 import { localTime, percent, relativeTime } from "../format";
 import { useI18n } from "../i18n";
+import type { BadgeKind } from "../navBadges";
 
 /** Running as an iOS home screen app (no browser UI around it). */
 const standalone =
@@ -647,6 +649,32 @@ export function useSubPage<T extends string>(base: string, ids: readonly T[]): T
  * nothing depends on scrolling to an anchor). The first tab is the base path, unless
  * ``ownPaths``: then every tab has its own (the base shows the first). Tabs with a ``group``
  * are set apart from the ones before them by a divider. */
+/** A count on a nav button or a tab; nothing at 0. Its colour says what it counts (the
+ *  same on the Jobs nav button and its tabs): detection orange, preparation dark,
+ *  archiving grey. ``tiny``: stacked beside a nav icon. */
+export function CountBadge({
+  count,
+  kind,
+  tiny = false,
+}: {
+  count: number;
+  kind: BadgeKind;
+  tiny?: boolean;
+}) {
+  const { t } = useI18n();
+  if (count <= 0) return null;
+  return (
+    <CounterBadge
+      className={`count-badge count-badge-${kind}${tiny ? " count-badge-tiny" : ""}`}
+      count={count}
+      overflowCount={99}
+      size="small"
+      color={kind === "preparation" ? "important" : kind === "archiving" ? "informative" : "brand"}
+      aria-label={t(`badge.${kind}`, { n: count })}
+    />
+  );
+}
+
 export function PageTabs<T extends string>({
   base,
   current,
@@ -655,7 +683,7 @@ export function PageTabs<T extends string>({
 }: {
   base: string;
   current: T;
-  tabs: { id: T; label: string; group?: string }[];
+  tabs: { id: T; label: string; group?: string; badge?: { count: number; kind: BadgeKind } }[];
   ownPaths?: boolean;
 }) {
   const navigate = useNavigate();
@@ -688,7 +716,10 @@ export function PageTabs<T extends string>({
           {i > 0 && tab.group !== tabs[i - 1]!.group && (
             <span className="page-tabs-divider" aria-hidden />
           )}
-          <Tab value={tab.id}>{tab.label}</Tab>
+          <Tab value={tab.id}>
+            {tab.label}
+            {tab.badge && <CountBadge {...tab.badge} />}
+          </Tab>
         </Fragment>
       ))}
     </TabList>

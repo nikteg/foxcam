@@ -43,6 +43,7 @@ import { SegmentPanel } from "../components/SegmentDetail";
 
 import { WorkersSection } from "../components/WorkersSection";
 import { useI18n, type I18n } from "../i18n";
+import { useJobCounts } from "../navBadges";
 import { useFilters } from "../useFilters";
 import { StatsSkeleton, TableSkeleton } from "../components/Skeletons";
 
@@ -90,6 +91,8 @@ export function Queue() {
     "detection-workers",
   ] as const);
   const [addingWorker, setAddingWorker] = useState(false);
+  // The same numbers as on the Jobs nav button (Jobs is for admins).
+  const jobs = useJobCounts(true);
   const segmentId = Number(segment) || null;
   // The tabs and their buttons show at once; what needs the queue waits for it.
   const queueState = (
@@ -106,9 +109,24 @@ export function Queue() {
         current={tab}
         tabs={[
           // The server's own work, then detection (the queue and the workers emptying it).
-          { id: "preparation", label: t("prep.tab"), group: "server" },
-          { id: "archiving", label: t("compaction.title"), group: "server" },
-          { id: "detection", label: t("queue.queueTab"), group: "detection" },
+          {
+            id: "preparation",
+            label: t("prep.tab"),
+            group: "server",
+            badge: { count: jobs.preparation, kind: "preparation" },
+          },
+          {
+            id: "archiving",
+            label: t("compaction.title"),
+            group: "server",
+            badge: { count: jobs.archiving, kind: "archiving" },
+          },
+          {
+            id: "detection",
+            label: t("queue.queueTab"),
+            group: "detection",
+            badge: { count: jobs.detection, kind: "detection" },
+          },
           { id: "detection-workers", label: t("queue.workersTab"), group: "detection" },
         ]}
       />

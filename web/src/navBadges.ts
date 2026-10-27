@@ -1,6 +1,5 @@
 // Numbers on the Events and Jobs nav buttons: events since you last opened Events; on Jobs
-// (admins) two at once: detection jobs waiting for or running on a worker, and recordings
-// waiting for the server to prepare them (they have no jobs yet).
+// (admins) the backlog of each kind of job, the same numbers as on the Jobs tabs.
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
@@ -17,10 +16,31 @@ function seenAt(): number {
   return now;
 }
 
-/** One number on a nav button; ``server``: the server's own backlog (a second, neutral badge). */
+/** What a count is of (its colour and words, see `CountBadge`). */
+export type BadgeKind = "events" | "detection" | "preparation" | "archiving";
+
 export interface NavBadge {
   count: number;
-  kind: "main" | "server";
+  kind: BadgeKind;
+}
+
+/** Jobs' backlog (admins): detection jobs waiting for or running on a worker, recordings
+ *  waiting for the server to prepare them, and periods waiting to be archived. */
+export function useJobCounts(
+  enabled: boolean,
+): Record<"detection" | "preparation" | "archiving", number> {
+  const status = useQuery({
+    queryKey: ["status"],
+    queryFn: api.status,
+    refetchInterval: 30_000,
+    enabled,
+  });
+  const d = status.data;
+  return {
+    detection: (d?.queue.counts.pending ?? 0) + (d?.queue.counts.leased ?? 0),
+    preparation: (d?.preprocessing?.waiting ?? 0) + (d?.preprocessing?.preparing ?? 0),
+    archiving: d?.compaction?.waiting_periods ?? 0,
+  };
 }
 
 export function useNavBadges(isAdmin: boolean, onEvents: boolean): Record<string, NavBadge[]> {
@@ -29,12 +49,7 @@ export function useNavBadges(isAdmin: boolean, onEvents: boolean): Record<string
     queryFn: () => api.events({ limit: 50, hide_wrong: true }),
     refetchInterval: 30_000,
   });
-  const status = useQuery({
-    queryKey: ["status"],
-    queryFn: api.status,
-    refetchInterval: 30_000,
-    enabled: isAdmin,
-  });
+  const jobs = useJobCounts(isAdmin);
   // Looking at Events marks everything up to now as seen (also what arrives meanwhile).
   const updated = events.dataUpdatedAt;
   useEffect(() => {
@@ -47,16 +62,14 @@ export function useNavBadges(isAdmin: boolean, onEvents: boolean): Record<string
   const newEvents = onEvents
     ? 0
     : (events.data ?? []).filter((e) => Date.parse(e.first_ts) > seen).length;
-  const counts = status.data?.queue.counts;
-  const preparing = status.data?.segments.new ?? 0;
   return {
-    "/events": [{ count: newEvents, kind: "main" }],
-    "/jobs":
-      isAdmin && counts
-        ? [
-            { count: (counts.pending ?? 0) + (counts.leased ?? 0), kind: "main" },
-            { count: preparing, kind: "server" },
-          ]
-        : [],
+    "/events": [{ count: newEvents, kind: "events" }],
+    "/jobs": isAdmin
+      ? [
+          { count: jobs.detection, kind: "detection" },
+          { count: jobs.preparation, kind: "preparation" },
+          { count: jobs.archiving, kind: "archiving" },
+        ]
+      : [],
   };
 }

@@ -1,7 +1,6 @@
 import {
   Button,
   Caption1,
-  CounterBadge,
   Menu,
   MenuDivider,
   MenuItem,
@@ -32,7 +31,7 @@ import { Outlet, useLocation, useNavigate, useNavigationType } from "react-route
 import { api } from "./api";
 import { useNavBadges, type NavBadge } from "./navBadges";
 import { useAuth, useAuthChanged, useUnauthorizedRedirect } from "./auth";
-import { RouterLink, usePageTitle } from "./components/ui";
+import { CountBadge, RouterLink, usePageTitle } from "./components/ui";
 import { AuthScreen } from "./pages/Login";
 import { LanguageMenu, useI18n, type MessageKey } from "./i18n";
 import { ThemeMenu } from "./theme";
@@ -86,26 +85,18 @@ function currentTab(pathname: string): string {
 }
 
 /** Signed-in user: account page and sign out. */
-/** A nav icon with numbers on it (new events; detection jobs, and recordings waiting for
- *  the server in the other corner, neutral); none at 0. */
+/** A nav icon with numbers beside it (new events; on Jobs each kind of backlog), tiny and
+ *  stacked on its left; none at 0. */
 function NavIcon({ icon, badges }: { icon: ReactElement; badges: NavBadge[] }) {
-  const { t } = useI18n();
   return (
     <span className="nav-icon">
       {icon}
-      {badges.map(
-        (b) =>
-          b.count > 0 && (
-            <CounterBadge
-              key={b.kind}
-              className={`nav-badge nav-badge-${b.kind}`}
-              count={b.count}
-              overflowCount={99}
-              size="small"
-              color={b.kind === "server" ? "important" : "brand"}
-              aria-label={b.kind === "server" ? t("nav.badgeServer", { n: b.count }) : undefined}
-            />
-          ),
+      {badges.some((b) => b.count > 0) && (
+        <span className="nav-badges">
+          {badges.map((b) => (
+            <CountBadge key={b.kind} {...b} tiny />
+          ))}
+        </span>
       )}
     </span>
   );

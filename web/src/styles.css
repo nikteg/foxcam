@@ -298,20 +298,37 @@ h2.section > .section-link {
   overflow: visible;
 }
 /* Doubled class: wins over Fluent's own position on the badge. */
-.nav-badge.nav-badge {
+/* The numbers on a nav icon: tiny, stacked down beside it on the left, left aligned (Jobs
+   has three). */
+.nav-badges {
   position: absolute;
-  top: -6px;
-  left: 14px;
+  top: -7px;
+  right: calc(100% + 2px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   pointer-events: none;
 }
-/* Jobs: the recordings waiting for the server, in the other top corner (below the icon the
-   number would cover the tab's label). */
-.nav-badge-server.nav-badge-server {
-  left: auto;
-  right: 14px;
+/* Top bar: room for them before the icon (the previous tab's name is right there). */
+.top-tabs .nav-icon:has(.nav-badges) {
+  margin-inline-start: 14px;
+}
+/* Three fit between the icon's top and its label. */
+.count-badge-tiny.count-badge-tiny {
+  min-width: 10px;
+  height: 10px;
+  padding: 0 2px;
+  font-size: 8px;
+  line-height: 10px;
+}
+/* A count on a tab: at the top right of its name. */
+.fui-Tab .count-badge {
+  position: relative;
+  top: -0.55em;
+  margin-inline-start: 2px;
 }
 /* A white badge is too loud in the dark theme: a muted grey one there. */
-html[data-theme="dark"] .nav-badge-server.nav-badge-server {
+html[data-theme="dark"] .count-badge-preparation.count-badge-preparation {
   background-color: var(--colorNeutralStroke1);
   color: var(--colorNeutralForeground1);
 }
