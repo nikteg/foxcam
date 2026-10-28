@@ -728,6 +728,8 @@ export interface ChannelInput {
   password: string | null;
   priority: number;
   tags: string[];
+  /** Web push: users who aren't admins can turn it on too (only their cameras). */
+  open_to_users: boolean;
   url: string | null;
   secret: string | null;
   headers: Record<string, string>;
@@ -749,10 +751,21 @@ export interface PushDevice {
   name: string | null;
   /** Who turned it on. */
   user: string | null;
+  user_id: number | null;
   /** Matches push.ts currentEndpointId() on that device. */
   endpoint_id: string;
   created_at: string;
   last_sent_at: string | null;
+}
+
+/** The web push channels the signed-in user may turn on, with their own devices on them. */
+export interface PushOverview {
+  key: string;
+  channels: {
+    id: string;
+    name: string;
+    devices: { id: number; name: string | null; endpoint_id: string }[];
+  }[];
 }
 
 export interface NotificationsOverview {
@@ -1158,16 +1171,17 @@ export const api = {
     ),
   deleteChannel: (id: string) =>
     request<{ status: string }>("DELETE", `/api/notifications/channels/${encodeURIComponent(id)}`),
+  push: () => request<PushOverview>("GET", "/api/push"),
   addPushDevice: (channelId: string, body: PushSubscriptionJSON & { name: string }) =>
     request<{ id: number; endpoint_id: string }>(
       "POST",
-      `/api/notifications/channels/${encodeURIComponent(channelId)}/devices`,
+      `/api/push/channels/${encodeURIComponent(channelId)}/devices`,
       body,
     ),
   removePushDevice: (channelId: string, deviceId: number) =>
     request<{ status: string }>(
       "DELETE",
-      `/api/notifications/channels/${encodeURIComponent(channelId)}/devices/${deviceId}`,
+      `/api/push/channels/${encodeURIComponent(channelId)}/devices/${deviceId}`,
     ),
   testChannel: (id: string) =>
     request<ProbeResult>("POST", `/api/notifications/channels/${encodeURIComponent(id)}/test`),

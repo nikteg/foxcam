@@ -14,9 +14,9 @@ from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from foxcam import notify, webpush
 from foxcam.db import session_scope
-from foxcam.models import PushSubscription
+from foxcam.models import CameraAccess, CameraRole, PushSubscription
 
-from .conftest import app_client
+from .conftest import app_client, sign_in
 from .test_notify import _channel, _fox_event, _notes
 
 
@@ -167,12 +167,12 @@ def test_device_api(settings, monkeypatch):
         assert len(webpush.unb64url(overview["webpush_key"])) == 65
         assert overview["channels"][0]["devices"] == []
 
-        r = c.post("/api/notifications/channels/app/devices",
+        r = c.post("/api/push/channels/app/devices",
                    json={**browser.subscription(), "name": "iPhone"})
         assert r.status_code == 201
         assert r.json()["endpoint_id"] == notify.endpoint_id(browser.endpoint)
         # Subscribing again (new keys after a reinstall) updates the same device.
-        assert c.post("/api/notifications/channels/app/devices",
+        assert c.post("/api/push/channels/app/devices",
                       json={**browser.subscription(), "name": "iPhone"}).status_code == 201
         [device] = c.get("/api/notifications").json()["channels"][0]["devices"]
         assert device["name"] == "iPhone" and device["endpoint_id"] == r.json()["endpoint_id"]
@@ -180,21 +180,21 @@ def test_device_api(settings, monkeypatch):
         assert browser.endpoint not in listed and browser.p256dh not in listed
 
         bad = {**browser.subscription(), "keys": {"p256dh": "x", "auth": "y"}}
-        assert c.post("/api/notifications/channels/app/devices", json=bad).status_code == 400
-        assert c.post("/api/notifications/channels/nope/devices",
+        assert c.post("/api/push/channels/app/devices", json=bad).status_code == 400
+        assert c.post("/api/push/channels/nope/devices",
                       json=browser.subscription()).status_code == 404
         ntfy = {"id": "phone", "type": "ntfy", "topic": "t"}
         assert c.post("/api/notifications/channels", json=ntfy).status_code == 201
-        assert c.post("/api/notifications/channels/phone/devices",
-                      json=browser.subscription()).status_code == 400
+        assert c.post("/api/push/channels/phone/devices",
+                      json=browser.subscription()).status_code == 404
 
-        assert c.delete(f"/api/notifications/channels/app/devices/{device['id']}"
+        assert c.delete(f"/api/push/channels/app/devices/{device['id']}"
                         ).status_code == 200
-        assert c.delete(f"/api/notifications/channels/app/devices/{device['id']}"
+        assert c.delete(f"/api/push/channels/app/devices/{device['id']}"
                         ).status_code == 400
 
         # Removing the channel forgets its devices.
-        c.post("/api/notifications/channels/app/devices", json=browser.subscription())
+        c.post("/api/push/channels/app/devices", json=browser.subscription())
         assert c.delete("/api/notifications/channels/app").status_code == 200
         with session_scope() as s:
             assert s.query(PushSubscription).count() == 0
@@ -205,3 +205,54 @@ def test_b64url_round_trip():
     assert webpush.unb64url(webpush.b64url(data)) == data
     assert "=" not in webpush.b64url(data)
     assert webpush.b64url(data) == base64.urlsafe_b64encode(data).decode().rstrip("=")
+
+
+def test_users_turn_on_open_channels_for_their_own_devices(settings):
+    _channel(settings, id="admins", type="webpush")
+    _channel(settings, id="family", type="webpush", open_to_users=True)
+    mine, theirs = Browser("https://push.example.com/mine"), Browser("https://push.example.com/b")
+    with app_client(settings, email="user@example.org", admin=False) as c:
+        r = c.get("/api/push").json()
+        assert [ch["id"] for ch in r["channels"]] == ["family"] and len(r["key"]) == 87
+        assert c.post("/api/push/channels/admins/devices",
+                      json=mine.subscription()).status_code == 404
+        assert c.post("/api/push/channels/family/devices",
+                      json={**mine.subscription(), "name": "iPhone"}).status_code == 201
+        # Admin routes stay closed.
+        assert c.get("/api/notifications").status_code == 403
+
+        # Someone else's device: listed for admins, not removable (or shown) here.
+        ch = notify.channel(settings, "family")
+        other = theirs.subscription()
+        other_id = notify.add_device(ch, other["endpoint"], other["keys"]["p256dh"],
+                                     other["keys"]["auth"], "iPad", None)
+        [device] = c.get("/api/push").json()["channels"][0]["devices"]
+        assert device["name"] == "iPhone" and set(device) == {"id", "name", "endpoint_id"}
+        assert c.delete(f"/api/push/channels/family/devices/{other_id}").status_code == 400
+        assert c.delete(f"/api/push/channels/family/devices/{device['id']}").status_code == 200
+        assert [d["name"] for d in notify.devices("family")] == ["iPad"]
+
+
+def test_devices_only_get_cameras_their_user_can_see(settings, monkeypatch):
+    ch = _channel(settings, id="family", type="webpush", open_to_users=True)
+    with app_client(settings, email="admin@example.org") as c:
+        viewer = sign_in(c, settings, "viewer@example.org")
+        stranger = sign_in(c, settings, "stranger@example.org")
+    with session_scope() as s:
+        s.add(CameraAccess(user_id=viewer, camera_id="cam", role=CameraRole.VIEWER))
+    browsers = {uid: Browser(f"https://push.example.com/{uid}") for uid in (viewer, stranger)}
+    for uid, b in browsers.items():
+        sub = b.subscription()
+        notify.add_device(ch, sub["endpoint"], sub["keys"]["p256dh"], sub["keys"]["auth"],
+                          None, uid)
+    _fox_event(settings)
+    service = PushService()
+    assert notify.deliver_pending(settings, service.client()) == 1
+    assert [str(r.url) for r in service.requests] == [browsers[viewer].endpoint]
+
+    # Nobody on the channel may see the camera: nothing goes out, and that is no failure.
+    with session_scope() as s:
+        s.query(CameraAccess).delete()
+    sent = []
+    monkeypatch.setattr(webpush, "send", lambda *a, **k: sent.append(a))
+    assert notify.test(settings, ch)["ok"] and sent == []

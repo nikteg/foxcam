@@ -16,8 +16,6 @@ import {
 import {
   Add20Regular,
   Alert20Regular,
-  AlertOff20Regular,
-  AlertOn20Regular,
   Delete20Regular,
   Edit20Regular,
   Send20Regular,
@@ -35,7 +33,6 @@ import {
   type ProbeResult,
 } from "../api";
 import { percent } from "../format";
-import { currentEndpointId, deviceName, PushDenied, pushSupport, subscribe } from "../push";
 import { ConfirmPopover } from "./ConfirmPopover";
 import { DataTable, type Column } from "./DataTable";
 import { useI18n, type MessageKey } from "../i18n";
@@ -66,6 +63,7 @@ import {
   DialogTitle,
 } from "./Drawer";
 import { CardsSkeleton } from "./Skeletons";
+import { PushToggleButton, PushToggleMessage, usePushToggle, useThisDevice } from "./PushToggle";
 
 const TYPE_LABELS: Record<ChannelType, MessageKey> = {
   ntfy: "notify.type.ntfy",
@@ -176,9 +174,8 @@ function ChannelCard({
   const [result, setResult] = useState<ProbeResult | null>(null);
   const test = useMutation({ mutationFn: () => api.testChannel(c.id), onSuccess: setResult });
   const target = c.type === "ntfy" ? `${c.server.replace(/\/$/, "")}/${c.topic}` : (c.url ?? "");
-  const thisDevice = useQuery({ queryKey: ["push-endpoint"], queryFn: currentEndpointId });
-  const push = usePushToggle(c, pushKey, thisDevice.data ?? null);
-  const pushHere = c.type === "webpush" && push.support === "ok";
+  const thisDevice = useThisDevice();
+  const push = usePushToggle(c.id, c.devices ?? [], pushKey);
 
   return (
     <Card>
@@ -194,6 +191,7 @@ function ChannelCard({
           <span className="row wrap tags">
             <Tag>{t(TYPE_LABELS[c.type])}</Tag>
             {c.managed === "config" && <ConfigTag />}
+            {c.type === "webpush" && c.open_to_users && <Tag>{t("notify.openToUsersTag")}</Tag>}
             {!c.enabled && <Tag kind="warn">{t("notify.disabled")}</Tag>}
           </span>
         }
@@ -206,10 +204,10 @@ function ChannelCard({
                 {c.devices.map((d) => (
                   <Tag
                     key={d.id}
-                    kind={d.endpoint_id === thisDevice.data ? "brand" : undefined}
+                    kind={d.endpoint_id === thisDevice ? "brand" : undefined}
                     title={d.user ?? undefined}
                   >
-                    {d.endpoint_id === thisDevice.data
+                    {d.endpoint_id === thisDevice
                       ? t("notify.thisDevice", { name: d.name ?? "?" })
                       : (d.name ?? "?")}
                   </Tag>
@@ -290,36 +288,14 @@ function ChannelCard({
           {c.include_image && IMAGE_TYPES.has(c.type) ? t("common.yes") : t("common.no")}
         </Fact>
       </Facts>
-      {c.type === "webpush" && push.support !== "ok" && (
-        <Caption1 className="muted">
-          {push.support === "ios-browser" ? t("notify.pushIosHint") : t("notify.pushUnsupported")}
-        </Caption1>
-      )}
-      {pushHere && push.change.error && (
-        <MessageBar intent="error">
-          <MessageBarBody>
-            {push.change.error instanceof PushDenied
-              ? t("notify.pushDenied")
-              : push.change.error.message}
-          </MessageBarBody>
-        </MessageBar>
-      )}
+      {c.type === "webpush" && <PushToggleMessage push={push} />}
       {result && (
         <MessageBar intent={result.ok ? "success" : "error"}>
           <MessageBarBody>{result.ok ? t("notify.testOk") : result.detail}</MessageBarBody>
         </MessageBar>
       )}
       <CardFooter className="wrap">
-        {pushHere && (
-          <Button
-            size="small"
-            icon={push.on ? <AlertOff20Regular /> : <AlertOn20Regular />}
-            disabled={push.change.isPending}
-            onClick={() => push.change.mutate()}
-          >
-            {push.on ? t("notify.pushOff") : t("notify.pushOn")}
-          </Button>
-        )}
+        {c.type === "webpush" && <PushToggleButton push={push} />}
         <Button
           size="small"
           icon={<Send20Regular />}
@@ -347,25 +323,6 @@ function ChannelCard({
       </CardFooter>
     </Card>
   );
-}
-
-/** Turning a web push channel on or off for the device the page is open on. */
-function usePushToggle(c: Channel, pushKey: string, thisDevice: string | null) {
-  const client = useQueryClient();
-  const mine = c.devices?.find((d) => d.endpoint_id === thisDevice);
-  const change = useMutation({
-    mutationFn: async () => {
-      if (mine) return api.removePushDevice(c.id, mine.id);
-      const sub = await subscribe(pushKey);
-      return api.addPushDevice(c.id, { ...sub, name: deviceName() });
-    },
-    onSettled: () =>
-      Promise.all([
-        client.invalidateQueries({ queryKey: ["notifications"] }),
-        client.invalidateQueries({ queryKey: ["push-endpoint"] }),
-      ]),
-  });
-  return { support: pushSupport(), on: !!mine, change };
 }
 
 function Deliveries({ channelName }: { channelName: (id: string) => string }) {
@@ -468,6 +425,7 @@ function ChannelDialog({
   const [token, setToken] = useState("");
   const [priority, setPriority] = useState(String(channel?.priority ?? 3));
   const [tags, setTags] = useState(channel?.tags.join(", ") ?? "");
+  const [openToUsers, setOpenToUsers] = useState(channel?.open_to_users ?? false);
   const [url, setUrl] = useState(channel?.type === "apprise" ? "" : (channel?.url ?? ""));
   const [secret, setSecret] = useState("");
   const [headers, setHeaders] = useState(
@@ -497,6 +455,7 @@ function ChannelDialog({
     password: null,
     priority: Number(priority),
     tags: splitList(tags),
+    open_to_users: openToUsers,
     url: url.trim() || null,
     secret: secret || null,
     headers: Object.fromEntries(
@@ -617,9 +576,18 @@ function ChannelDialog({
                 </>
               )}
               {type === "webpush" && (
-                <MessageBar intent="info">
-                  <MessageBarBody>{t("notify.webpushHint")}</MessageBarBody>
-                </MessageBar>
+                <>
+                  <MessageBar intent="info">
+                    <MessageBarBody>{t("notify.webpushHint")}</MessageBarBody>
+                  </MessageBar>
+                  <Field hint={t("notify.openToUsersHint")}>
+                    <Switch
+                      label={t("notify.openToUsers")}
+                      checked={openToUsers}
+                      onChange={(_, d) => setOpenToUsers(d.checked)}
+                    />
+                  </Field>
+                </>
               )}
               {type === "apprise" && (
                 <>

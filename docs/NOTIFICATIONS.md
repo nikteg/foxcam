@@ -77,6 +77,11 @@ settings beyond the usual filters), then on each phone, iPad or computer that sh
 them open **Settings → Notifications** and press **Turn on here** on the channel's card. The
 card lists the devices that have turned it on; **Turn off here** stops them on this one.
 
+Only admins see Settings. To let other users get them too, turn on **Users can turn it on**
+(`open_to_users: true`): the channel then shows up on their **Account** page, where they
+turn it on for their own devices. Each device only gets events from cameras its user can
+see, and an admin's test is held to the same rule.
+
 - **iPhone and iPad** (iOS 16.4 or later): only the home screen app can get them. In Safari
   use Share → **Add to Home Screen**, open Foxcam from there, and turn them on in it.
 - **Android, Mac, Windows, Linux**: Chrome, Edge, Firefox and Safari can all get them, also
@@ -100,6 +105,7 @@ notifications:
     - id: app
       type: webpush
       when: [event.new, event.clip]
+      open_to_users: true  # on users' Account pages too
 ```
 
 ## ntfy

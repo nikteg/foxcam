@@ -29,6 +29,8 @@ from . import ffmpeg, webpush
 from .config import ChannelConfig, Settings
 from .db import db_ready, session_scope
 from .models import (
+    CameraAccess,
+    CameraRole,
     Detection,
     Event,
     MaskVersion,
@@ -137,7 +139,7 @@ def devices(channel_id: str) -> list[dict[str, Any]]:
                          .join(User, User.id == PushSubscription.user_id, isouter=True)
                          .where(PushSubscription.channel_id == channel_id)
                          .order_by(PushSubscription.created_at)).all()
-        return [{"id": d.id, "name": d.name, "user": name or email,
+        return [{"id": d.id, "name": d.name, "user": name or email, "user_id": d.user_id,
                  "endpoint_id": endpoint_id(d.endpoint), "created_at": _iso(d.created_at),
                  "last_sent_at": _iso(d.last_sent_at)} for d, name, email in rows]
 
@@ -165,12 +167,34 @@ def add_device(ch: ChannelConfig, endpoint: str, p256dh: str, auth: str, name: s
         return row.id
 
 
-def remove_device(channel_id: str, device_id: int) -> None:
+def remove_device(channel_id: str, device_id: int, user_id: int | None = None) -> None:
+    """`user_id`: only that user's own device (None: any, for admins)."""
     with session_scope() as s:
         row = s.get(PushSubscription, device_id)
-        if row is None or row.channel_id != channel_id:
+        if row is None or row.channel_id != channel_id or \
+                (user_id is not None and row.user_id != user_id):
             raise NotifyError("unknown device")
         s.delete(row)
+
+
+def push_channels(settings: Settings, is_admin: bool) -> list[ChannelConfig]:
+    """The web push channels this user may turn on: all for admins, else the open ones."""
+    return [c for c in all_channels(settings) if c.type == "webpush"
+            and (is_admin or c.open_to_users)]
+
+
+def _may_see(s: Session, user_id: int | None, camera_id: str) -> bool:
+    """Whether a device's user may get an event from this camera (as in the web UI)."""
+    if user_id is None:
+        return True  # added with sign-in turned off: everyone sees everything
+    user = s.get(User, user_id)
+    if user is None or user.disabled:
+        return False
+    if user.is_admin:
+        return True
+    role = s.scalar(select(CameraAccess.role).where(CameraAccess.user_id == user_id,
+                                                    CameraAccess.camera_id == camera_id))
+    return role is not None and CameraRole.at_least(role, CameraRole.VIEWER)
 
 
 def public_channel(ch: ChannelConfig) -> dict[str, Any]:
@@ -431,11 +455,17 @@ def send_webpush(ch: ChannelConfig, settings: Settings, data: dict[str, Any],
                # The clip-ready notification replaces the event's first one.
                "tag": f"event-{ev['id']}"}
     with session_scope() as s:
+        devices = s.scalars(select(PushSubscription)
+                            .where(PushSubscription.channel_id == ch.id)).all()
+        if not devices:
+            raise NotifyError("no device has turned this channel on yet")
+        # Each device only gets events from cameras its user can see (the test without any
+        # event has no camera).
         targets = [(d.id, d.name, webpush.Device(d.endpoint, d.p256dh, d.auth))
-                   for d in s.scalars(select(PushSubscription)
-                                      .where(PushSubscription.channel_id == ch.id))]
+                   for d in devices
+                   if not ev["id"] or _may_see(s, d.user_id, ev["camera_id"])]
     if not targets:
-        raise NotifyError("no device has turned this channel on yet (Settings → Notifications)")
+        return  # nobody on this channel may see this camera
     sent, gone, errors = [], [], []
     for device_id, name, device in targets:
         try:

@@ -9,9 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from .. import notify, webpush
-from ..accounts import Principal
 from ..config import PROFILE_ID, Settings
-from .deps import principal, require_admin, settings_dep
+from .deps import require_admin, settings_dep
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"],
                    dependencies=[Depends(require_admin)])
@@ -39,6 +38,7 @@ class ChannelIn(BaseModel):
     password: str | None = None
     priority: int = Field(default=3, ge=1, le=5)
     tags: list[str] = []
+    open_to_users: bool = False
     url: str | None = None
     secret: str | None = None
     headers: dict[str, str] = {}
@@ -122,33 +122,3 @@ async def test_channel(channel_id: str, settings: Settings = Depends(settings_de
         raise HTTPException(404, "unknown channel")
     return await asyncio.to_thread(notify.test, settings, ch)
 
-
-class DeviceIn(BaseModel):
-    """A browser's PushSubscription (its toJSON()), and what to call the device."""
-
-    endpoint: str = Field(max_length=2000)
-    keys: dict[str, str]
-    name: str | None = Field(default=None, max_length=80)
-
-
-@router.post("/channels/{channel_id}/devices", status_code=201)
-def add_device(channel_id: str, body: DeviceIn, p: Principal = Depends(principal),
-               settings: Settings = Depends(settings_dep)) -> dict:
-    ch = notify.channel(settings, channel_id)
-    if ch is None:
-        raise HTTPException(404, "unknown channel")
-    try:
-        device_id = notify.add_device(ch, body.endpoint, body.keys.get("p256dh", ""),
-                                      body.keys.get("auth", ""), body.name, p.user_id)
-    except notify.NotifyError as e:
-        raise _error(e) from e
-    return {"id": device_id, "endpoint_id": notify.endpoint_id(body.endpoint)}
-
-
-@router.delete("/channels/{channel_id}/devices/{device_id}")
-def remove_device(channel_id: str, device_id: int) -> dict[str, str]:
-    try:
-        notify.remove_device(channel_id, device_id)
-    except notify.NotifyError as e:
-        raise _error(e) from e
-    return {"status": "ok"}

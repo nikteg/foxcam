@@ -719,6 +719,10 @@ export const sv: Record<MessageKey, string> = {
   "notify.pushUnsupported": "Den här webbläsaren kan inte ta emot push-notiser.",
   "notify.pushDenied":
     "Notiser är blockerade för Foxcam på den här enheten. Tillåt dem i systeminställningarna (iPhone: Inställningar → Notiser → Foxcam) och försök igen.",
+  "notify.openToUsers": "Användare kan slå på den",
+  "notify.openToUsersHint":
+    "Användare som inte är administratörer kan slå på den för sina egna enheter på sin kontosida. De får bara händelser från kameror de kan se.",
+  "notify.openToUsersTag": "Öppen för användare",
   "notify.disabled": "Avstängd",
   "notify.target": "Skickar till",
   "notify.when": "När",
@@ -1164,6 +1168,7 @@ export const sv: Record<MessageKey, string> = {
   "account.disconnectTitle": "Koppla bort {name}?",
   "account.disconnectBody": "Du kan inte längre logga in med det.",
   "account.myCameras": "Mina kameror",
+  "account.notifications": "Aviseringar",
   "account.noCameras": "Inga kameror är delade med dig än.",
   "account.leave": "Lämna",
   "apiKeys.title": "API-nycklar",

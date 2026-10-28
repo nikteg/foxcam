@@ -716,6 +716,10 @@ export const en = {
   "notify.pushUnsupported": "This browser can't receive push notifications.",
   "notify.pushDenied":
     "Notifications are blocked for Foxcam on this device. Allow them in the system settings (iPhone: Settings → Notifications → Foxcam) and try again.",
+  "notify.openToUsers": "Users can turn it on",
+  "notify.openToUsersHint":
+    "Users who aren't admins can turn it on for their own devices on their Account page. They only get events from cameras they can see.",
+  "notify.openToUsersTag": "Open to users",
   "notify.disabled": "Disabled",
   "notify.target": "Sends to",
   "notify.when": "When",
@@ -1156,6 +1160,7 @@ export const en = {
   "account.disconnectTitle": "Disconnect {name}?",
   "account.disconnectBody": "You can no longer sign in with it.",
   "account.myCameras": "My cameras",
+  "account.notifications": "Notifications",
   "account.noCameras": "No cameras are shared with you yet.",
   "account.leave": "Stop seeing",
   "apiKeys.title": "API keys",

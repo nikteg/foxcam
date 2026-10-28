@@ -435,7 +435,8 @@ class ChannelConfig(BaseModel):
     - ``apprise``: any of ~100 services (Telegram, Discord, Pushover, Gotify, Slack, e-mail,
       …) through an Apprise URL. Needs the ``notify`` extra.
     - ``webpush``: straight to the web app (home screen app on iOS, any browser elsewhere);
-      each device turns it on in Settings → Notifications. No picture.
+      each device turns it on in Settings → Notifications (admins) or on the Account page
+      (users, with ``open_to_users``). No picture.
     """
 
     id: str = Field(pattern=PROFILE_ID, max_length=40)
@@ -466,6 +467,9 @@ class ChannelConfig(BaseModel):
     password: str | None = None
     priority: int = Field(default=3, ge=1, le=5)
     tags: list[str] = []
+    # webpush: users who aren't admins can turn it on for their own devices too; each device
+    # only gets events from cameras its user can see.
+    open_to_users: bool = False
     # webhook (url) / apprise (url)
     url: str | None = None
     # webhook: HMAC-SHA256 of the body in X-Foxcam-Signature: sha256=<hex>
