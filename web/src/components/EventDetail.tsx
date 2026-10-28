@@ -12,7 +12,17 @@ import { CameraTag } from "./CameraSelect";
 import { FavoriteStar } from "./Favorite";
 import { Feedback } from "./Feedback";
 import { ProfileTag, useDetectorNames, useProfiles, useSeveralDetectors } from "./ProfileSelect";
-import { ConfidenceBar, Fact, Facts, Light, QueryState, Tag, Time, useRouterHref } from "./ui";
+import {
+  ConfidenceBar,
+  DownloadButton,
+  Fact,
+  Facts,
+  Light,
+  QueryState,
+  Tag,
+  Time,
+  useRouterHref,
+} from "./ui";
 import { VideoPlayer } from "./VideoPlayer";
 import { FeedbackSkeleton, TextSkeleton } from "./Skeletons";
 import { DetectionMotion, useVideoTimeline } from "./Motion";
@@ -162,9 +172,16 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
           )}
         </span>
       )}
-      <Button as="a" icon={<ScanObject20Regular />} {...routerHref(detectionsHref(e))}>
-        {t("events.allDetections")}
-      </Button>
+      <span className="row wrap">
+        <Button as="a" icon={<ScanObject20Regular />} {...routerHref(detectionsHref(e))}>
+          {t("events.allDetections")}
+        </Button>
+        {e.clip_url && (
+          <DownloadButton href={`${e.clip_url}?download=true`}>
+            {t("common.download")}
+          </DownloadButton>
+        )}
+      </span>
     </div>
   );
 }

@@ -6,6 +6,7 @@ from datetime import timedelta
 
 from foxcam import download_links
 from foxcam.models import utcnow
+from foxcam.web.deps import SESSION_COOKIE
 
 from .conftest import add_segment, app_client, needs_ffmpeg
 
@@ -22,6 +23,10 @@ def test_a_download_link_works_without_signing_in(settings):
     with app_client(settings, email=None) as anon:
         assert anon.get(path).status_code == 401
         assert anon.get(url).status_code == 200
+        # Safari may still hold an expired session cookie: the link works anyway.
+        anon.cookies.set(SESSION_COOKIE, "expired-session")
+        assert anon.get(url).status_code == 200
+        anon.cookies.clear()
         token = url.split("dl=")[1]
         # Only for its own file.
         other = add_segment(settings, start=utcnow() - timedelta(hours=1))

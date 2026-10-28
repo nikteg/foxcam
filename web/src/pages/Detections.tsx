@@ -412,13 +412,21 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
           gaps={shown?.gaps}
         />
       </div>
-      <Button
-        as="a"
-        icon={<Folder20Regular />}
-        {...routerHref(`/recordings/segments?selected=${d.segment_id}`)}
-      >
-        {t("detections.openRecording")}
-      </Button>
+      <span className="row wrap">
+        <Button
+          as="a"
+          icon={<Folder20Regular />}
+          {...routerHref(`/recordings/segments?selected=${d.segment_id}`)}
+        >
+          {t("detections.openRecording")}
+        </Button>
+        {/* Shown at once (no jump); gone only when the recording turns out to be deleted. */}
+        {(!shown || shown.download_url) && (
+          <DownloadButton href={`/api/segments/${d.segment_id}/download`}>
+            {t("common.download")}
+          </DownloadButton>
+        )}
+      </span>
     </div>
   );
 }

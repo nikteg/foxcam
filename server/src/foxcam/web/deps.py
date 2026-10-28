@@ -65,16 +65,16 @@ def current_principal(request: Request) -> Principal | None:
         token = request.cookies.get(SESSION_COOKIE)
         key = _api_key(request)
         link = request.query_params.get("dl")
-        if token:
-            cached = accounts.session_principal(settings, token)
-        elif key and not request.url.path.startswith("/api/auth/"):
-            cached = api_keys.principal(key)
-        elif link and request.method in ("GET", "HEAD"):
-            # A signed download link (download_links.py), e.g. opened in Safari.
+        cached = None
+        if link and request.method in ("GET", "HEAD"):
+            # A signed download link (download_links.py), e.g. opened in Safari. It goes
+            # first: Safari may still hold an expired session cookie from an old sign-in.
             user_id = download_links.verify(settings, link, request.url.path)
             cached = accounts.principal_for(user_id) if user_id is not None else None
-        else:
-            cached = None
+        if cached is None and token:
+            cached = accounts.session_principal(settings, token)
+        elif cached is None and key and not request.url.path.startswith("/api/auth/"):
+            cached = api_keys.principal(key)
         request.state.principal = cached
     return cached
 
