@@ -58,8 +58,10 @@ import { DetectionBoxes, MotionBoxes, PictureBoxes } from "./Boxes";
 
 export type PlayerHandle = MediaPlayerInstance;
 
-/** A stretch of the video to mark on the timeline, in seconds; `kind` colours it. */
-export type Marker = { from: number; to: number; kind?: "motion" | "detection" };
+/** A stretch of the video to mark on the timeline, in seconds; `kind` colours it: where
+ * things moved, detections that count, and other detections (no target, standing still,
+ * marked wrong). */
+export type Marker = { from: number; to: number; kind?: "motion" | "match" | "detection" };
 
 const RATES = [0.25, 0.5, 1, 1.5, 2, 4, 8];
 /** A double tap at the side seeks this far when there is no marker to jump to. */
@@ -712,14 +714,16 @@ export function motionMarkers(frames: MotionFrame[]): Marker[] {
   );
 }
 
-/** Where detections that count were, as timeline markers. */
+/** Where detections were, as timeline markers: those that count, and the others. */
 function detectionMarkers(detections: PlayerDetection[]): Marker[] {
-  const moments = detections.filter((d) => d.match).map((d) => d.at_ms);
-  return stretches(
-    [...new Set(moments)].toSorted((a, b) => a - b),
-    FRAME_MS,
-    "detection",
-  );
+  const moments = (match: boolean) =>
+    [...new Set(detections.filter((d) => d.match === match).map((d) => d.at_ms))].toSorted(
+      (a, b) => a - b,
+    );
+  return [
+    ...stretches(moments(false), FRAME_MS, "detection"),
+    ...stretches(moments(true), FRAME_MS, "match"),
+  ];
 }
 
 /** How long one frame's motion stays on screen (frames are 0.5 s apart at 2 fps). */

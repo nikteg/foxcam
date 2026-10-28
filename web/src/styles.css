@@ -1964,8 +1964,9 @@ Fluent's text styles would otherwise reset the margins. */
   width: var(--slider-fill);
   background: var(--colorBrandBackground);
 }
-/* Markers (where things moved, detections): a thin lane of their own just above the
-   track, so they never cover the progress. Detections over motion, in the boxes' colours. */
+/* Markers: thin lanes of their own beside the track, so they never cover the progress:
+   detections above, where things moved below. In the boxes' colours: red for a match,
+   faint white for other detections (no target, standing still, marked wrong). */
 .player-markers {
   position: absolute;
   inset: 0;
@@ -1978,9 +1979,15 @@ Fluent's text styles would otherwise reset the margins. */
   height: 3px;
   min-width: 3px;
   border-radius: 2px;
+}
+.player-marker.motion {
+  top: calc(100% + 3px);
   background: #4aa3ff;
 }
 .player-marker.detection {
+  background: rgb(255 255 255 / 0.35);
+}
+.player-marker.match {
   z-index: 1;
   background: #ff4d4f;
 }

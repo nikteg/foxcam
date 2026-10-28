@@ -56,8 +56,9 @@ anything else, and keep the clips.
 - **Events with clips.** Sightings close in time become one event with a clip cut from the
   original footage (with pre/post roll), a thumbnail, a day/night tag and ✅/❌ feedback
   for building a training set. Detection boxes are drawn over the pictures and the playing
-  video (with label and confidence, marked on the timeline, and a button to hide them),
-  not burned in; only notification images have the box in the picture. A detection marked wrong is no match anywhere
+  video (with label and confidence, marked on the timeline: matches in red, other
+  detections faint, motion below; one button cycles which boxes show), not burned in;
+  only notification images have the box (and its label) in the picture. A detection marked wrong is no match anywhere
   (counts, events, notifications, archives), and something that stands still (a parked
   car, ten minutes by default) stops making events.
 - **Filters.** Events and detections filter by camera, profile, label, period (the last
