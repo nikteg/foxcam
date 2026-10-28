@@ -128,33 +128,6 @@ def test_rebuilding_events_decides_again_and_notifies_nobody(cars):
         assert all(e.quiet for e in s.scalars(select(Event)))
 
 
-def test_older_standing_still_flags_are_carried_over(settings):
-    """Databases from before: `stationary` (parked for minutes) and `moving = 0` (no motion
-    under the box, which also cleared is_target) both become `still`."""
-    import sqlite3
-
-    from foxcam import db
-
-    seg = add_segment(settings, with_file=False)
-    job = add_job(seg, state="done")
-    with session_scope() as s:
-        for target in (True, False, True):
-            s.add(Detection(segment_id=seg, job_id=job, camera_id="cam", ts=T0, offset_ms=0,
-                            label="car", confidence=0.9, is_target=target))
-    con = sqlite3.connect(settings.database_url.removeprefix("sqlite:///"))
-    con.execute("ALTER TABLE detection DROP COLUMN still")
-    con.execute("ALTER TABLE detection ADD COLUMN stationary BOOLEAN")
-    con.execute("ALTER TABLE detection ADD COLUMN moving BOOLEAN")
-    con.execute("UPDATE detection SET moving = 0 WHERE id = 2")  # was a target, no motion
-    con.execute("UPDATE detection SET stationary = 1 WHERE id = 3")  # parked
-    con.commit()
-    con.close()
-    db.init_db(settings)
-    with session_scope() as s:
-        got = {d.id: (d.is_target, d.still) for d in s.scalars(select(Detection))}
-    assert got == {1: (True, None), 2: (True, True), 3: (True, True)}
-
-
 def _now(settings, boxes: list[list[float]], faint=None, motion_boxes=None) -> list[bool]:
     """A recording where a car is seen once a second at ``boxes`` with the profile wanting
     it to be moving right now; what it decided for each look (True: standing still)."""

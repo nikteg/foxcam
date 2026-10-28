@@ -3,13 +3,11 @@
 from datetime import timedelta
 
 import pytest
-from foxcam import db
 from foxcam.config import ProfileConfig, Settings
 from foxcam.db import session_scope
 from foxcam.models import Detection, Event, Job, JobState, Segment, SegmentStatus, utcnow
 from foxcam.pipeline import events, preprocess, queue, retention
 from foxcam.profiles import camera_profiles, set_camera_profiles
-from sqlalchemy import text
 
 from .conftest import add_job, add_segment, app_client, needs_ffmpeg
 
@@ -205,29 +203,6 @@ def test_lease_returns_profile_targets_and_frame_rate(two_profiles):
     assert job["profile"]["id"] == "vehicles" and job["sample_fps"] == 1
     assert job["hints"]["target_labels"] == ["car", "person"]
     assert job["hints"]["min_confidence"] == 0.4
-
-
-def test_legacy_rows_join_the_default_profile(settings):
-    seg = add_segment(settings, status=SegmentStatus.DONE, with_file=False)
-    job = add_job(seg, state=JobState.DONE, profile_id=None)
-    now = utcnow()
-    with session_scope() as s:
-        ev = Event(camera_id="cam", label="fox", first_ts=now, last_ts=now, max_confidence=0.9)
-        ev.segments.append(s.get(Segment, seg))
-        s.add(ev)
-        s.flush()
-        s.add(Detection(segment_id=seg, job_id=job, camera_id="cam", ts=now, offset_ms=0,
-                        label="fox", confidence=0.9, is_target=True))
-    engine = db._engine
-    with engine.begin() as conn:
-        conn.execute(text("UPDATE event SET profile_id = NULL"))
-    db._backfill(engine, {"detection.event_id"})
-    with session_scope() as s:
-        assert s.get(Job, job).profile_id == "default"
-        d = s.query(Detection).one()
-        assert d.profile_id == "default" and d.event_id == s.query(Event).one().id
-        assert s.query(Event).one().profile_id == "default"
-    assert events.assign_events(settings) == 0  # already part of the old event
 
 
 def test_fixed_class_workers_only_get_matching_profiles(two_profiles):

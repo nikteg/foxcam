@@ -38,11 +38,8 @@ def init_db(settings: Settings) -> Engine:
     # The server, ingest and compaction containers start together on a new database: one
     # at a time creates and migrates it, the others then find it ready.
     with _init_lock(settings):
-        _adopt_old_database(settings)
-        _drop_old_tables(engine)
         Base.metadata.create_all(engine)
-        added = _add_missing_columns(engine)
-        _backfill(engine, added)
+        _add_missing_columns(engine)
         _optimize(engine)
     _engine = engine
     _SessionLocal = sessionmaker(engine, expire_on_commit=False)
@@ -51,20 +48,6 @@ def init_db(settings: Settings) -> Engine:
 
     runtime_settings.refresh(settings, force=True)
     return engine
-
-
-def _adopt_old_database(settings: Settings) -> None:
-    """Before the rename to Foxcam the database was media-streamer.db: carry it over
-    (with its WAL files) the first time, instead of starting empty."""
-    new = settings.data_dir / "foxcam.db"
-    old = settings.data_dir / "media-streamer.db"
-    if settings.database_url != f"sqlite:///{new}" or new.exists() or not old.exists():
-        return
-    for suffix in ("", "-wal", "-shm"):
-        src = old.with_name(old.name + suffix)
-        if src.exists():
-            src.rename(new.with_name(new.name + suffix))
-    log.info("database %s renamed to %s", old.name, new.name)
 
 
 @contextmanager
@@ -78,25 +61,16 @@ def _init_lock(settings: Settings) -> Iterator[None]:
             fcntl.flock(f, fcntl.LOCK_UN)
 
 
-# Tables no longer in the schema. push_subscription: web push devices belonged to channels
-# before they belonged to users (push_device).
-_OLD_TABLES = ("push_subscription",)
-
-
-def _drop_old_tables(engine: Engine) -> None:
-    with engine.begin() as conn:
-        for table in _OLD_TABLES:
-            conn.execute(text(f'DROP TABLE IF EXISTS "{table}"'))
-
-
-def _add_missing_columns(engine: Engine) -> set[str]:
-    """Minimal migration: add new nullable columns to existing tables.
+def _add_missing_columns(engine: Engine) -> None:
+    """The only migration: add new nullable columns (and indexes) to existing tables.
 
     ``create_all`` creates missing tables but never alters existing ones; new optional
-    columns are added here so existing databases keep working after an upgrade.
+    columns are added here so existing databases keep working after an upgrade. One-off data
+    fixes for an upgrade (filling a new column, dropping an old table) go next to this while
+    they are needed, and are removed once production has run them: no backwards
+    compatibility is kept, so they don't pile up.
     """
     insp = inspect(engine)
-    added: set[str] = set()
     with engine.begin() as conn:
         for table in Base.metadata.sorted_tables:
             if not insp.has_table(table.name):
@@ -110,14 +84,12 @@ def _add_missing_columns(engine: Engine) -> set[str]:
                 ddl = col.type.compile(dialect=engine.dialect)
                 conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {ddl}'))
                 log.info("database: added column %s.%s", table.name, col.name)
-                added.add(f"{table.name}.{col.name}")
             # Indexes of added columns (and indexes added to old columns) too.
             existing_ix = {ix["name"] for ix in insp.get_indexes(table.name)}
             for ix in table.indexes:
                 if ix.name not in existing_ix:
                     ix.create(conn)
                     log.info("database: added index %s", ix.name)
-    return added
 
 
 def _optimize(engine: Engine) -> None:
@@ -127,68 +99,6 @@ def _optimize(engine: Engine) -> None:
     with engine.begin() as conn:
         conn.exec_driver_sql("PRAGMA analysis_limit=1000")
         conn.exec_driver_sql("PRAGMA optimize=0x10002")
-
-
-def _backfill(engine: Engine, added: set[str]) -> None:
-    """Data written before detection profiles existed belongs to the `default` profile."""
-    with engine.begin() as conn:
-        for table in ("job", "detection", "event"):
-            conn.execute(text(f"UPDATE {table} SET profile_id = 'default' "
-                              "WHERE profile_id IS NULL"))
-        # Recordings whose only matches were marked wrong, themselves or through their
-        # event (from before marking one wrong updated the recordings, pipeline/queue.py
-        # counts_as_match): no match.
-        conn.execute(text(
-            "UPDATE segment SET has_target = 0, max_confidence = NULL WHERE has_target = 1 "
-            "AND NOT EXISTS (SELECT 1 FROM detection d WHERE d.segment_id = segment.id "
-            "AND d.is_target = 1 AND (d.feedback IS NULL OR d.feedback = 1) "
-            "AND NOT (d.event_id IS NOT NULL "
-            "AND EXISTS (SELECT 1 FROM detection w WHERE w.event_id = d.event_id "
-            "AND w.feedback = 0) "
-            "AND NOT EXISTS (SELECT 1 FROM detection c WHERE c.event_id = d.event_id "
-            "AND c.feedback = 1)))"))
-        # ... and to its single detector, from before profiles had several.
-        for table in ("job", "detection"):
-            conn.execute(text(f"UPDATE {table} SET detector_id = 'default' "
-                              "WHERE detector_id IS NULL"))
-        if "user_account.email_verified" in added:
-            # Accounts from before: admins, and those an OAuth provider confirmed.
-            conn.execute(text(
-                "UPDATE user_account SET email_verified = (is_admin = 1 OR EXISTS (SELECT 1 "
-                "FROM oauth_identity o WHERE o.user_id = user_account.id "
-                "AND lower(o.email) = user_account.email))"))
-        if "event.agreement" in added:
-            # Which detectors saw each event (one, `default`, before there were several).
-            conn.execute(text(
-                "UPDATE event SET detectors = (SELECT json_group_array(DISTINCT d.detector_id) "
-                "FROM detection d WHERE d.event_id = event.id), agreement = (SELECT "
-                "COUNT(DISTINCT d.detector_id) FROM detection d WHERE d.event_id = event.id)"))
-            conn.execute(text("UPDATE event SET detectors = '[\"default\"]', agreement = 1 "
-                              "WHERE agreement IS NULL OR agreement = 0"))
-        if "detection.still" in added:
-            # Standing still was two flags (parked for minutes; no motion under the box,
-            # which also cleared is_target): one now, so neither starts making events.
-            cols = {r[1] for r in conn.execute(text("PRAGMA table_info(detection)"))}
-            if "stationary" in cols:
-                conn.execute(text("UPDATE detection SET still = 1 WHERE stationary = 1"))
-            if "moving" in cols:
-                conn.execute(text("UPDATE detection SET still = 1, is_target = 1 "
-                                  "WHERE moving = 0"))
-        if "event.clip_gaps" in added:
-            # Clips used to join their recordings back to back, gaps closed: build again
-            # those that span several, while their recordings are all still here.
-            conn.execute(text(
-                "UPDATE event SET clip_dirty = 1 WHERE clip_path IS NOT NULL AND (SELECT "
-                "COUNT(*) FROM event_segment es WHERE es.event_id = event.id) > 1 AND NOT "
-                "EXISTS (SELECT 1 FROM event_segment es JOIN segment g ON g.id = es.segment_id "
-                "WHERE es.event_id = event.id AND g.deleted_at IS NOT NULL)"))
-        if "detection.event_id" in added:
-            # Events used to be per segment: link their target detections.
-            conn.execute(text(
-                "UPDATE detection SET event_id = (SELECT es.event_id FROM event_segment es "
-                "JOIN event e ON e.id = es.event_id WHERE es.segment_id = detection.segment_id "
-                "AND e.camera_id = detection.camera_id ORDER BY es.event_id LIMIT 1) "
-                "WHERE is_target = 1 AND event_id IS NULL"))
 
 
 def db_ready() -> bool:

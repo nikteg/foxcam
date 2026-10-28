@@ -212,7 +212,6 @@ def test_events_marked_wrong_can_be_left_out(settings):
 
 
 def test_an_event_marked_wrong_is_no_match_in_any_of_its_recordings(settings):
-    from foxcam import db
     from foxcam.web import queries
 
     start = utcnow().replace(microsecond=0) - timedelta(minutes=5)
@@ -237,13 +236,6 @@ def test_an_event_marked_wrong_is_no_match_in_any_of_its_recordings(settings):
     # detection marked wrong itself stays no match).
     queries.set_feedback(settings, dets[1], True)
     assert matches() == [False, True]
-    # Recordings from before this rule are put right at startup.
-    queries.set_feedback(settings, dets[1], None)
-    with session_scope() as s:
-        for i in segs:
-            s.get(Segment, i).has_target = True
-    db._backfill(db._engine, set())
-    assert matches() == [False, False]
 
 
 def test_detections_standing_still_can_be_left_out(settings):
