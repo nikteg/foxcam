@@ -424,7 +424,7 @@ class NotificationStatus:
     PENDING = "pending"  # waiting to be sent (or retried)
     SENT = "sent"
     FAILED = "failed"  # gave up after retries
-    SKIPPED = "skipped"  # quiet hours / cooldown
+    SKIPPED = "skipped"  # quiet hours / cooldown / too old
 
 
 class Notification(Base):

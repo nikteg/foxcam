@@ -57,6 +57,11 @@ const META: Record<
     hint: "runtime.timezoneHint",
     kind: "timezone",
   },
+  "notifications.max_age_minutes": {
+    label: "runtime.maxAge",
+    hint: "runtime.maxAgeHint",
+    unit: "runtime.unit.minutes",
+  },
   "location.latitude": { label: "runtime.latitude", hint: "runtime.latitudeHint" },
   "location.longitude": { label: "runtime.longitude", hint: "runtime.longitudeHint" },
   segment_seconds: {

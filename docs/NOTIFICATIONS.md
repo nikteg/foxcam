@@ -26,6 +26,11 @@ and the latest deliveries) or in `config.yaml`. Each channel chooses:
   **censor areas blacked out**,
   so masked areas never leave the server through a notification either.
 
+Only recent events notify: one whose latest detection is older than
+`notifications.max_age_minutes` (default 15, 0 = no limit, also under Settings →
+Notifications) is recorded as skipped ("too old"), e.g. when a worker catches up on a
+backlog of footage.
+
 Delivery goes through an outbox: if a service is down, Foxcam retries with backoff
 (30 s, 1, 2, 4, 8 min) before giving up; the UI shows sent / waiting / failed / skipped.
 An event marked wrong (one of its detections marked wrong, none correct) sends nothing more:
@@ -43,6 +48,7 @@ public_url: http://192.168.1.10:8000
 
 notifications:
   timezone: Europe/Stockholm        # quiet hours and times in messages (also in Settings)
+  max_age_minutes: 15               # older events notify nobody; 0 = no limit
   channels:
     - id: phone
       name: My phone

@@ -288,6 +288,9 @@ def enqueue(s: Session, settings: Settings, event: Event, kind: str) -> int:
     queued = 0
     if event.quiet or (event.id is not None and marked_wrong(s, event.id)):
         return 0
+    max_age = settings.notifications.max_age_minutes
+    # Seen long ago (a backlog processed late): recorded as skipped, not sent.
+    too_old = bool(max_age) and event.last_ts < now - timedelta(minutes=max_age)
     for key, rules, zone in _recipients(s, settings):
         if not _matches(rules, event, kind):
             continue
@@ -300,7 +303,9 @@ def enqueue(s: Session, settings: Settings, event: Event, kind: str) -> int:
         if exists:
             continue
         status, reason = NotificationStatus.PENDING, None
-        if rules.quiet_hours and _in_quiet_hours(settings, rules.quiet_hours, now, zone):
+        if too_old:
+            status, reason = NotificationStatus.SKIPPED, "too old"
+        elif rules.quiet_hours and _in_quiet_hours(settings, rules.quiet_hours, now, zone):
             status, reason = NotificationStatus.SKIPPED, "quiet hours"
         elif rules.cooldown_minutes and kind == "event.new" and s.scalar(
                 select(func.count()).select_from(Notification).where(

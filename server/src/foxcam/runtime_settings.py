@@ -59,6 +59,7 @@ EDITABLE: tuple[str, ...] = (
     "retention.events_days",
     "retention.max_disk_gb",
     "notifications.timezone",
+    "notifications.max_age_minutes",
     "location.latitude",
     "location.longitude",
 )

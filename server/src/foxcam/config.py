@@ -514,6 +514,9 @@ class NotificationsConfig(BaseModel):
     # IANA zone for quiet hours and the times in messages, e.g. Europe/Stockholm. None = the
     # server's local time (UTC in Docker). Also set in Settings → Notifications.
     timezone: Annotated[str | None, AfterValidator(_time_zone)] = None
+    # Events whose latest detection is older than this notify nobody (a worker catching up
+    # on a backlog, footage processed again). 0 = no limit. Also set in Settings.
+    max_age_minutes: int = Field(default=15, ge=0, le=10080)
 
 
 class LocationConfig(BaseModel):

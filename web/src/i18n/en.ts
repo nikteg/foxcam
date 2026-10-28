@@ -594,6 +594,9 @@ export const en = {
   "runtime.timezone": "Time zone",
   "runtime.timezoneHint":
     "The times in notifications, and quiet hours, are in this zone. Not set: the server's own clock, which is UTC in Docker.",
+  "runtime.maxAge": "Only recent events",
+  "runtime.maxAgeHint":
+    "Events last seen longer ago than this send no notifications, e.g. when a worker catches up on old footage. 0: no limit.",
   "runtime.serverTime": "Server time",
   "runtime.group.messages": "Messages",
   "runtime.notSet": "not set",

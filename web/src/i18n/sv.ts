@@ -599,6 +599,9 @@ export const sv: Record<MessageKey, string> = {
   "runtime.timezone": "Tidszon",
   "runtime.timezoneHint":
     "Tiderna i notiserna, och tysta timmar, är i den här zonen. Inte angiven: serverns egen klocka, som är UTC i Docker.",
+  "runtime.maxAge": "Bara nya händelser",
+  "runtime.maxAgeHint":
+    "Händelser som senast sågs för längre sedan än så här skickar inga notiser, t.ex. när en worker hinner ikapp gammalt material. 0: ingen gräns.",
   "runtime.serverTime": "Serverns tid",
   "runtime.group.messages": "Meddelanden",
   "runtime.notSet": "inte angivet",

@@ -98,6 +98,24 @@ def test_quiet_hours_and_cooldown_skip(settings):
     ]
 
 
+def test_old_events_are_skipped(settings):
+    _channel(settings, id="all", type="webhook", url="http://hook")
+    settings.notifications.max_age_minutes = 15
+    now = utcnow()
+    with session_scope() as s:
+        old = Event(camera_id="cam", profile_id="default", label="fox",
+                    first_ts=now - timedelta(hours=2), last_ts=now - timedelta(minutes=20),
+                    max_confidence=0.9)
+        s.add(old)
+        s.flush()
+        notify.enqueue(s, settings, old, "event.new")
+    assert _notes() == [("all", "event.new", "skipped", "too old")]
+    settings.notifications.max_age_minutes = 0  # no limit
+    with session_scope() as s:
+        notify.enqueue(s, settings, s.get(Event, old.id), "event.clip")
+    assert ("all", "event.clip", "skipped", "too old") not in _notes()
+
+
 def test_webhook_payload_and_signature(settings):
     settings.public_url = "http://cams.local:8000"
     _channel(settings, id="hook", type="webhook", url="http://hook.local/in", secret="s3cret",

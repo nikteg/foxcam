@@ -65,7 +65,10 @@ const GENERAL: SettingsGroup[] = [
   },
 ];
 const NOTIFICATIONS: SettingsGroup[] = [
-  { title: "runtime.group.messages", keys: ["notifications.timezone"] },
+  {
+    title: "runtime.group.messages",
+    keys: ["notifications.timezone", "notifications.max_age_minutes"],
+  },
 ];
 const DETECTION: SettingsGroup[] = [
   {

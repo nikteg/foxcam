@@ -223,6 +223,7 @@ auth:
 # Channels can also be added in the web UI (Settings -> Notifications). docs/NOTIFICATIONS.md
 # notifications:
 #   timezone: Europe/Stockholm      # quiet hours and times in messages (also in Settings)
+#   max_age_minutes: 15             # events seen longer ago notify nobody; 0 = no limit
 #   channels:
 #     - id: phone
 #       type: ntfy                  # push via ntfy.sh or a self-hosted ntfy
