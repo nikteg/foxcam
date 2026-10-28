@@ -574,8 +574,11 @@ class AuthConfig(BaseModel):
     admin_emails: list[str] = []
     # Stay signed in this long since the last visit.
     session_days: float = Field(default=30, gt=0)
-    # Users (not only admins) may add cameras; they own them and can share them.
-    users_can_add_cameras: bool = True
+    # New accounts may add cameras (they own them and can share them); admins change it per
+    # account in Settings → Users. Admins always may.
+    users_can_add_cameras: bool = False
+    # The most cameras an account (not an admin) may own; None = no limit.
+    max_cameras_per_user: int | None = Field(default=2, ge=0)
     oauth: list[OAuthProviderConfig] = []
     # How browsers reach the server, for OAuth redirect URLs. None = public_url, else the
     # address of the request.

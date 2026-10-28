@@ -37,6 +37,7 @@ class UserPatch(BaseModel):
     is_admin: bool | None = None
     disabled: bool | None = None
     can_add_cameras: bool | None = None
+    can_use_local_network: bool | None = None
 
 
 class PasswordIn(BaseModel):
@@ -65,7 +66,8 @@ def update_user(user_id: int, body: UserPatch,
     try:
         return accounts.update_user(user_id, name=body.name, is_admin=body.is_admin,
                                     disabled=body.disabled,
-                                    can_add_cameras=body.can_add_cameras)
+                                    can_add_cameras=body.can_add_cameras,
+                                    can_use_local_network=body.can_use_local_network)
     except AccountError as e:
         raise _error(e) from e
 

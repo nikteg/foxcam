@@ -23,7 +23,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactElement, type ReactNode } from "react";
 
 import { api, type CameraSource, type ProbeResult } from "../api";
-import { useIsAdmin } from "../auth";
+import { AUTH_KEY, useIsAdmin } from "../auth";
 import { useI18n, type MessageKey } from "../i18n";
 import { TapoCameraList, TapoNotInstalled, TapoSignIn } from "./TapoAccount";
 import { ActionRow, PasswordInput } from "./ui";
@@ -124,6 +124,8 @@ function useAddCamera(onDone?: () => void) {
       void client.invalidateQueries({ queryKey: ["cameras"] });
       void client.invalidateQueries({ queryKey: ["status"] });
       void client.invalidateQueries({ queryKey: ["tapo", "devices"] });
+      // How many more this account may add.
+      void client.invalidateQueries({ queryKey: AUTH_KEY });
       onDone?.();
     },
   });

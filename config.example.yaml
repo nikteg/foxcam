@@ -200,7 +200,9 @@ auth:
   session_days: 30
   # New accounts may add their own cameras (they own them and decide who else sees them).
   # Admins change it per account in Settings → Users.
-  users_can_add_cameras: true
+  users_can_add_cameras: false
+  # The most cameras an account (not an admin) may add; null = no limit.
+  max_cameras_per_user: 2
   # Sign in with Google / Microsoft / GitHub / any OpenID Connect provider. Register the
   # redirect URL <how you open the UI>/api/auth/oauth/<id>/callback at the provider.
   oauth: []

@@ -1054,6 +1054,13 @@ export const sv: Record<MessageKey, string> = {
   "detections.showFrom": "Visa från (%)",
   "detections.showFromShort": "från",
   "runtime.unit.percent": "%",
+  "runtime.group.accounts": "Nya konton",
+  "runtime.usersCanAddCameras": "Nya konton får lägga till kameror",
+  "runtime.usersCanAddCamerasHint":
+    "Om ett nytt konto får lägga till egna kameror. Ändra det för ett konto ovan.",
+  "runtime.maxCameras": "Kameror per konto",
+  "runtime.maxCamerasHint":
+    "Hur många kameror ett konto (inte en admin) högst får lägga till. Varje kamera spelar in på serverns disk och använder arbetarna.",
   "profiles.matchIntro":
     "En detektion är en träff när dess etikett är ett mål och säkerheten når träffgränsen (Träff från). Träffar ger händelser.",
   "profiles.aliases": "Etikettalias",
@@ -1166,6 +1173,8 @@ export const sv: Record<MessageKey, string> = {
   "invite.accept": "Tacka ja",
   "invite.otherAccount": "Använd ett annat konto",
   "invite.haveAccount": "Jag har ett konto",
+  "invite.existingOnly":
+    "Logga in med ditt konto för att ta emot den. Inbjudan kan inte skapa ett nytt konto.",
 
   // Konto
   "account.title": "Konto",
@@ -1256,6 +1265,7 @@ export const sv: Record<MessageKey, string> = {
   "share.revokeTitle": "Återkalla inbjudningslänken?",
   "cameras.introUser": "Dina kameror och de som delats med dig. Dela de du äger med andra konton.",
   "cameras.editorsOnly": "Bara redaktörer för kameran kan ändra den",
+  "cameras.limitReached": "Det här kontot har lagt till så många kameror som det får.",
 
   // Användare (administratörer)
   "users.title": "Användare",
@@ -1284,6 +1294,7 @@ export const sv: Record<MessageKey, string> = {
   "users.removeTitle": "Ta bort {name}?",
   "users.removeBody":
     "Kontot, dess sessioner och kameradelningar tas bort. Kameror som kontot har lagt till finns kvar.",
+  "users.localNetwork": "Får använda lokala nätverket",
   "filter.period": "Period",
   "filter.anyTime": "När som helst",
   "filter.period.24h": "Senaste dygnet",

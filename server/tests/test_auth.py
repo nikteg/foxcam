@@ -105,7 +105,7 @@ def _two_users(settings):
     owner.__enter__()
     sign_in(owner, settings, "bob@example.org")
     r = owner.post("/api/cameras", json={"name": "Bob's garden", "source": {
-        "type": "rtsp", "url": "rtsp://user:pw@192.168.1.50:554/stream1"}})
+        "type": "rtsp", "url": "rtsp://user:pw@93.184.216.34:554/stream1"}})
     assert r.status_code == 201, r.text
     other = TestClient(create_app(settings, background=False))
     other.__enter__()
@@ -216,6 +216,43 @@ def test_adding_cameras_is_a_permission_per_account(settings):
         assert c.patch("/api/users/1", json={"can_add_cameras": True}).status_code == 403
         admin.patch(f"/api/users/{uid}", json={"can_add_cameras": True})
         assert c.get("/api/auth/state").json()["can_add_cameras"] is True
+
+
+def test_new_accounts_may_not_add_cameras_by_default(tmp_path):
+    from foxcam.config import Settings
+
+    assert Settings().auth.users_can_add_cameras is False
+
+
+def test_cameras_per_account_are_limited(settings):
+    settings.auth.max_cameras_per_user = 1
+    body = {"name": "x", "source": {"type": "rtsp", "url": "rtsp://93.184.216.34/x"}}
+    with app_client(settings, email="user@example.org", admin=False) as c:
+        assert c.get("/api/auth/state").json()["cameras_left"] == 1
+        assert c.post("/api/cameras", json=body).status_code == 201
+        assert c.get("/api/auth/state").json()["cameras_left"] == 0
+        r = c.post("/api/cameras", json={**body, "name": "y"})
+        assert r.status_code == 403 and "at most 1" in r.json()["detail"]
+        settings.auth.max_cameras_per_user = None
+        assert c.get("/api/auth/state").json()["cameras_left"] is None
+    with app_client(settings) as admin:
+        assert admin.get("/api/auth/state").json()["cameras_left"] is None
+
+
+def test_only_an_admins_invite_creates_an_account(settings):
+    """Others share their cameras with people who already have an account."""
+    body = {"name": "Mine", "source": {"type": "rtsp", "url": "rtsp://93.184.216.34/x"}}
+    with app_client(settings, email="owner@example.org", admin=False) as owner, \
+            app_client(settings, email=None) as guest:
+        cam = owner.post("/api/cameras", json=body).json()["id"]
+        token = owner.post("/api/invites", json={"cameras": [
+            {"camera_id": cam, "role": "viewer"}]}).json()["token"]
+        assert guest.get(f"/api/auth/invite/{token}").json()["new_accounts"] is False
+        r = guest.post("/api/auth/register", json={"email": "new@example.org",
+                                                   "password": PASSWORD, "invite": token})
+        assert r.status_code == 403
+        sign_in(guest, settings, "friend@example.org")
+        assert guest.post(f"/api/auth/invite/{token}/accept").status_code == 200
 
 
 def test_invite_link_creates_an_account_with_cameras(settings):

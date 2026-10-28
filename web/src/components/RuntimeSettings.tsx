@@ -187,6 +187,16 @@ const META: Record<
     hint: "retention.unprocessedDaysHint",
     unit: "retention.days",
   },
+  "auth.users_can_add_cameras": {
+    label: "runtime.usersCanAddCameras",
+    hint: "runtime.usersCanAddCamerasHint",
+    kind: "bool",
+  },
+  "auth.max_cameras_per_user": {
+    label: "runtime.maxCameras",
+    hint: "runtime.maxCamerasHint",
+    empty: "retention.noCap",
+  },
   "retention.max_disk_gb": {
     label: "retention.maxDisk",
     hint: "retention.maxDiskHint",

@@ -71,6 +71,8 @@ class Principal:
     all_cameras: bool = False
     # May add cameras of their own (User.can_add_cameras; admins always).
     can_add_cameras: bool = False
+    # May add cameras on the server's local network (User.can_use_local_network).
+    local_network: bool = False
 
     def role(self, camera_id: str) -> str | None:
         if self.is_admin or self.all_cameras:
@@ -134,6 +136,7 @@ def user_info(u: User, providers: list[str] | None = None) -> dict[str, Any]:
     return {"id": u.id, "email": u.email, "name": u.name, "display_name": u.name or u.email,
             "is_admin": u.is_admin, "disabled": u.disabled,
             "can_add_cameras": u.is_admin or bool(u.can_add_cameras),
+            "can_use_local_network": u.is_admin or bool(u.can_use_local_network),
             "email_verified": bool(u.email_verified), "has_password": u.password_hash is not None,
             "providers": providers if providers is not None else [],
             "created_at": _iso(u.created_at), "last_login_at": _iso(u.last_login_at)}
@@ -242,7 +245,8 @@ def _admins_left(s, without: int) -> int:
 
 def update_user(user_id: int, *, name: str | None = None, is_admin: bool | None = None,
                 disabled: bool | None = None,
-                can_add_cameras: bool | None = None) -> dict[str, Any]:
+                can_add_cameras: bool | None = None,
+                can_use_local_network: bool | None = None) -> dict[str, Any]:
     with session_scope() as s:
         u = s.get(User, user_id)
         if u is None:
@@ -256,6 +260,8 @@ def update_user(user_id: int, *, name: str | None = None, is_admin: bool | None 
             u.is_admin = is_admin
         if can_add_cameras is not None:
             u.can_add_cameras = can_add_cameras
+        if can_use_local_network is not None:
+            u.can_use_local_network = can_use_local_network
         if disabled is not None:
             u.disabled = disabled
             if disabled:
@@ -351,7 +357,8 @@ def _principal(s, u: User) -> Principal:
         select(CameraAccess.camera_id, CameraAccess.role)
         .where(CameraAccess.user_id == u.id)).all())
     return Principal(user_id=u.id, email=u.email, name=u.name, is_admin=u.is_admin,
-                     cameras=cams, can_add_cameras=u.is_admin or bool(u.can_add_cameras))
+                     cameras=cams, can_add_cameras=u.is_admin or bool(u.can_add_cameras),
+                     local_network=u.is_admin or bool(u.can_use_local_network))
 
 
 def principal_for(user_id: int) -> Principal:
@@ -421,6 +428,20 @@ def grant(camera_id: str, user_id: int, role: str, granted_by: int | None = None
                                granted_by=granted_by))
         else:
             row.role = role
+
+
+def cameras_owned(user_id: int) -> int:
+    with session_scope() as s:
+        return s.scalar(select(func.count()).select_from(CameraAccess).where(
+            CameraAccess.user_id == user_id, CameraAccess.role == CameraRole.OWNER)) or 0
+
+
+def cameras_left(settings: Settings, p: Principal) -> int | None:
+    """How many more cameras this account may add; None = no limit."""
+    limit = settings.auth.max_cameras_per_user
+    if p.is_admin or p.user_id is None or limit is None:
+        return None
+    return max(0, limit - cameras_owned(p.user_id))
 
 
 def share_by_email(camera_id: str, email: str, role: str, granted_by: int | None) -> int:
@@ -525,6 +546,20 @@ def _open_invite(s, token: str) -> Invite:
     return inv
 
 
+def _makes_accounts(s, settings: Settings, inv: Invite) -> bool:
+    """Only an admin's invite creates an account (unless anyone may sign up): others share
+    their cameras with people who already have one."""
+    if settings.auth.registration == "open" or inv.created_by is None:
+        return True
+    creator = s.get(User, inv.created_by)
+    return bool(creator and creator.is_admin)
+
+
+def _check_makes_accounts(s, settings: Settings, inv: Invite) -> None:
+    if not _makes_accounts(s, settings, inv):
+        raise AccountError("this invite is for an existing account: sign in to accept it", 403)
+
+
 def invite_preview(settings: Settings, token: str) -> dict[str, Any]:
     """What an invite gives, for the page the link opens (no login needed)."""
     with session_scope() as s:
@@ -532,6 +567,7 @@ def invite_preview(settings: Settings, token: str) -> dict[str, Any]:
         creator = s.get(User, inv.created_by) if inv.created_by else None
         names = {c.id: c.display_name for c in settings.all_cameras(include_disabled=True)}
         return {"from": (creator.name or creator.email) if creator else None,
+                "new_accounts": _makes_accounts(s, settings, inv),
                 "is_admin": inv.is_admin, "note": inv.note, "expires_at": _iso(inv.expires_at),
                 "cameras": [{**c, "name": names.get(c["camera_id"], c["camera_id"])}
                             for c in inv.cameras or []]}
@@ -609,6 +645,8 @@ def register(settings: Settings, email: str, password: str, name: str | None,
     # One transaction: the invite claimed, the account made and granted, or none of it.
     with session_scope() as s:
         inv = _claim_invite(s, invite) if invite else None
+        if inv is not None:
+            _check_makes_accounts(s, settings, inv)
         u = _new_user(s, settings, email, pw_hash, name, False, email_verified=False)
         if inv is not None:
             _grant_invite(s, inv, u)
@@ -640,6 +678,8 @@ def oauth_user(settings: Settings, provider: str, subject: str, email: str | Non
         if u is None:
             if not email or not email_verified:
                 raise AccountError("the provider did not confirm an e-mail address", 403)
+            if inv is not None and not _admin_by_config(settings, email):
+                _check_makes_accounts(s, settings, inv)
             if inv is None and not (settings.auth.registration == "open"
                                     or _admin_by_config(settings, email)):
                 raise AccountError("there is no account for this e-mail; ask for an invite "

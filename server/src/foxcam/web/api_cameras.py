@@ -118,11 +118,14 @@ async def add_camera(body: CameraIn, settings: Settings = Depends(settings_dep),
                      p: Principal = Depends(may_add_cameras)) -> dict[str, Any]:
     if body.source.type == "tapo_cloud" and not p.is_admin:
         raise HTTPException(403, "only admins can add cameras from the server's Tapo account")
+    if await asyncio.to_thread(accounts.cameras_left, settings, p) == 0:
+        raise HTTPException(403, f"an account may own at most "
+                                 f"{settings.auth.max_cameras_per_user} cameras")
     try:
         cam = await asyncio.to_thread(
             camera_store.add_camera, settings, name=body.name, camera_id=body.id,
             source=body.source.model_dump(), segment_seconds=body.segment_seconds,
-            admin=p.is_admin)
+            admin=p.is_admin, local_network=p.local_network)
     except camera_store.CameraError as e:
         raise HTTPException(e.status, str(e)) from e
     accounts.forget_camera(cam.id)  # shares left over from an older camera with this id
@@ -207,7 +210,8 @@ async def probe(body: ProbeIn, settings: Settings = Depends(settings_dep),
         raise HTTPException(403, "only admins can use the server's Tapo account")
     if src.type in ("rtsp", "test"):  # file: reported as a result below
         try:
-            await asyncio.to_thread(camera_store.check_source, settings, src, p.is_admin)
+            await asyncio.to_thread(camera_store.check_source, settings, src, p.is_admin,
+                                    p.local_network)
         except camera_store.CameraError as e:
             raise HTTPException(e.status, str(e)) from e
     if src.type == "file" and not p.is_admin:

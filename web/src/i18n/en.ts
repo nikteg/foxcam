@@ -953,6 +953,13 @@ export const en = {
   "detections.showFrom": "Show from (%)",
   "detections.showFromShort": "from",
   "runtime.unit.percent": "%",
+  "runtime.group.accounts": "New accounts",
+  "runtime.usersCanAddCameras": "New accounts can add cameras",
+  "runtime.usersCanAddCamerasHint":
+    "Whether a new account may add cameras of its own. Change it for an account above.",
+  "runtime.maxCameras": "Cameras per account",
+  "runtime.maxCamerasHint":
+    "The most cameras an account (not an admin) may add. Each one records to this server's disk and uses the detection workers.",
   "profiles.matchIntro":
     "A detection is a match when its label is a target and its confidence reaches the match threshold (Match from). Matches make events.",
   "profiles.aliases": "Label aliases",
@@ -1159,6 +1166,8 @@ export const en = {
   "invite.accept": "Accept invitation",
   "invite.otherAccount": "Use another account",
   "invite.haveAccount": "I have an account",
+  "invite.existingOnly":
+    "Sign in with your account to accept. This invite can't create a new account.",
 
   // Account
   "account.title": "Account",
@@ -1247,6 +1256,7 @@ export const en = {
   "cameras.introUser":
     "Your cameras and the ones shared with you. Share the ones you own with other accounts.",
   "cameras.editorsOnly": "Only editors of this camera can change it",
+  "cameras.limitReached": "This account has added as many cameras as it may.",
 
   // Users (admins)
   "users.title": "Users",
@@ -1276,6 +1286,7 @@ export const en = {
   "users.removeTitle": "Remove {name}?",
   "users.removeBody":
     "The account, its sessions and its camera shares are deleted. Cameras it added stay.",
+  "users.localNetwork": "Can use local network",
   "filter.period": "Period",
   "filter.anyTime": "Any time",
   "filter.period.24h": "Last 24 hours",

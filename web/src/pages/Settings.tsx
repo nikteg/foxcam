@@ -113,6 +113,13 @@ const RETENTION: SettingsGroup[] = [
   },
 ];
 
+const ACCOUNTS: SettingsGroup[] = [
+  {
+    title: "runtime.group.accounts",
+    keys: ["auth.users_can_add_cameras", "auth.max_cameras_per_user"],
+  },
+];
+
 const isObject = (v: unknown): v is Record<string, unknown> =>
   v !== null && typeof v === "object" && !Array.isArray(v);
 
@@ -234,7 +241,15 @@ export function Settings() {
         </>
       )}
       {tab === "retention" && <RuntimeSettingsSection groups={RETENTION} showDisk />}
-      {tab === "users" && <UsersSection />}
+      {tab === "users" && (
+        <>
+          <UsersSection />
+          <section className="form-stack">
+            <Divider className="settings-divider" />
+            <RuntimeSettingsSection groups={ACCOUNTS} />
+          </section>
+        </>
+      )}
       {tab === "notifications" && (
         <>
           <Notifications />

@@ -116,8 +116,7 @@ function UserCard({
   const { t } = useI18n();
   const client = useQueryClient();
   const update = useMutation({
-    mutationFn: (body: { is_admin?: boolean; disabled?: boolean; can_add_cameras?: boolean }) =>
-      api.updateUser(u.id, body),
+    mutationFn: (body: Parameters<typeof api.updateUser>[1]) => api.updateUser(u.id, body),
     onSuccess: () => client.invalidateQueries({ queryKey: ["users"] }),
   });
   return (
@@ -170,6 +169,14 @@ function UserCard({
               checked={u.can_add_cameras}
               disabled={update.isPending}
               onChange={(_, d) => update.mutate({ can_add_cameras: d.checked === true })}
+            />
+          )}
+          {!u.is_admin && u.can_add_cameras && (
+            <Checkbox
+              label={t("users.localNetwork")}
+              checked={u.can_use_local_network}
+              disabled={update.isPending}
+              onChange={(_, d) => update.mutate({ can_use_local_network: d.checked === true })}
             />
           )}
           <Checkbox

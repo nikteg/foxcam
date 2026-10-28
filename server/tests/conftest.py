@@ -32,6 +32,8 @@ def settings(tmp_path: Path) -> Settings:
         "cameras": [{"id": "cam", "name": "Cam", "source": {"type": "test"}}],
         # Most tests exercise the pipeline, not auth (test_api checks the locked default).
         "open_worker_access": True,
+        # Accounts may add cameras (off by default; test_auth checks that).
+        "auth": {"users_can_add_cameras": True},
         # The built-in `default` profile (fox) most tests use.
         "detection": {},
         "queue": {"lease_seconds": 60, "max_attempts": 2, "retry_backoff_seconds": 0},

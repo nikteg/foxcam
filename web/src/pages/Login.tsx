@@ -359,7 +359,20 @@ export function InvitePage() {
           </Button>
         </>
       )}
-      {inv && state.enabled && !state.signed_in && (
+      {inv && state.enabled && !state.signed_in && !inv.new_accounts && (
+        <>
+          <Body1 className="muted">{t("invite.existingOnly")}</Body1>
+          {state.password_login && (
+            <>
+              <LoginForm onDone={signedIn} />
+              <ErrorBar error={accept.error} />
+            </>
+          )}
+          {state.password_login && state.providers.length > 0 && <Or />}
+          <ProviderButtons providers={state.providers} next="/cameras" invite={token} />
+        </>
+      )}
+      {inv && state.enabled && !state.signed_in && inv.new_accounts && (
         <>
           {state.password_login && (
             <>

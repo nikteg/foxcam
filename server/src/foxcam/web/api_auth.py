@@ -164,6 +164,8 @@ def auth_state(settings: Settings, p: Principal | None) -> dict[str, Any]:
         "signed_in": p is not None,
         "is_admin": bool(p and p.is_admin),
         "can_add_cameras": bool(p and (p.is_admin or p.can_add_cameras)),
+        # How many more they may add (auth.max_cameras_per_user); null = no limit.
+        "cameras_left": accounts.cameras_left(settings, p) if p else None,
     }
 
 

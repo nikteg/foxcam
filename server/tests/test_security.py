@@ -25,6 +25,8 @@ from pydantic import ValidationError
 
 from .conftest import PASSWORD, add_segment, app_client, sign_in
 
+# A camera somewhere else on the internet (a literal address: nothing is looked up).
+REMOTE_CAMERA = "rtsp://user:pw@93.184.216.34:554/stream1"
 LAN_CAMERA = "rtsp://user:pw@192.168.1.50:554/stream1"
 
 
@@ -211,7 +213,32 @@ def test_the_mediamtx_host_counts_as_the_server(settings, monkeypatch):
     with pytest.raises(camera_store.CameraError):
         camera_store.check_source(settings, RtspSource(type="rtsp", url="rtsp://cams.lan/x"),
                                   admin=False)
-    camera_store.check_source(settings, RtspSource(type="rtsp", url=LAN_CAMERA), admin=False)
+    camera_store.check_source(settings, RtspSource(type="rtsp", url=REMOTE_CAMERA),
+                              admin=False)
+    # The server's local network is the admins' (and so is carrier-grade NAT).
+    for url in (LAN_CAMERA, "rtsp://100.64.0.5/x"):
+        with pytest.raises(camera_store.CameraError) as e:
+            camera_store.check_source(settings, RtspSource(type="rtsp", url=url), admin=False)
+        assert e.value.status == 403
+    camera_store.check_source(settings, RtspSource(type="rtsp", url=LAN_CAMERA), admin=True)
+    # An account allowed the local network (someone in the household); never the server.
+    camera_store.check_source(settings, RtspSource(type="rtsp", url=LAN_CAMERA), admin=False,
+                              local_network=True)
+    with pytest.raises(camera_store.CameraError):
+        camera_store.check_source(settings, RtspSource(type="rtsp", url="rtsp://cams.lan/x"),
+                                  admin=False, local_network=True)
+
+
+def test_the_local_network_is_a_permission_per_account(settings):
+    with app_client(settings) as admin, app_client(settings, email="kid@example.org",
+                                                   admin=False) as c:
+        body = {"name": "Shed", "source": {"type": "rtsp", "url": LAN_CAMERA}}
+        assert c.post("/api/cameras", json=body).status_code == 403
+        [uid] = [u["id"] for u in admin.get("/api/users").json()
+                 if u["email"] == "kid@example.org"]
+        r = admin.patch(f"/api/users/{uid}", json={"can_use_local_network": True})
+        assert r.json()["can_use_local_network"] is True
+        assert c.post("/api/cameras", json=body).status_code == 201
 
 
 # --- 3. test sources ------------------------------------------------------------------
@@ -235,7 +262,7 @@ def test_only_admins_add_test_cameras_and_sample_files(settings):
             assert c.post("/api/cameras/probe", json={"source": source}).status_code == 403
         assert c.get("/api/cameras-sample-files").status_code == 403
         r = c.post("/api/cameras", json={"name": "Garden", "source": {"type": "rtsp",
-                                                                      "url": LAN_CAMERA}})
+                                                                      "url": REMOTE_CAMERA}})
         assert r.status_code == 201
 
 
@@ -254,11 +281,11 @@ def test_probe_checks_the_source_and_allows_only_rtsp(settings, monkeypatch):
             r = c.post("/api/cameras/probe", json={"source": {"type": "rtsp", "url": url}})
             assert r.status_code == 400, url
         assert calls == []
-        r = c.post("/api/cameras/probe", json={"source": {"type": "rtsp", "url": LAN_CAMERA}})
+        r = c.post("/api/cameras/probe", json={"source": {"type": "rtsp", "url": REMOTE_CAMERA}})
         assert r.status_code == 200 and r.json()["ok"] is False
     args = calls[0]
     assert args[args.index("-protocol_whitelist") + 1] == "rtsp,rtsps,tcp,tls,udp,rtp"
-    assert args[-1] == LAN_CAMERA
+    assert args[-1] == REMOTE_CAMERA
 
 
 # --- 5. sign-up and e-mail verification -----------------------------------------------
@@ -387,7 +414,7 @@ def test_a_used_or_unknown_invite_creates_nothing(settings):
 def test_a_removed_cameras_id_is_not_handed_to_someone_else(settings):
     with app_client(settings) as admin:
         r = admin.post("/api/cameras", json={"name": "Garden", "id": "garden", "source": {
-            "type": "rtsp", "url": LAN_CAMERA}})
+            "type": "rtsp", "url": REMOTE_CAMERA}})
         assert r.status_code == 201
         add_segment(settings, camera="garden", with_file=False)
         r = admin.post("/api/invites", json={"cameras": [
@@ -402,7 +429,7 @@ def test_a_removed_cameras_id_is_not_handed_to_someone_else(settings):
         assert invites == [[{"camera_id": "cam", "role": "viewer"}]]
 
     with app_client(settings, email="eve@example.org", admin=False) as eve:
-        body = {"name": "Garden", "source": {"type": "rtsp", "url": LAN_CAMERA}}
+        body = {"name": "Garden", "source": {"type": "rtsp", "url": REMOTE_CAMERA}}
         r = eve.post("/api/cameras", json={**body, "id": "garden"})
         assert r.status_code == 409, r.text
         # Without an id she gets a fresh one, not the removed camera's.
@@ -412,7 +439,7 @@ def test_a_removed_cameras_id_is_not_handed_to_someone_else(settings):
 
     with app_client(settings) as admin:  # admins may, to continue its history
         r = admin.post("/api/cameras", json={"name": "Garden", "id": "garden", "source": {
-            "type": "rtsp", "url": LAN_CAMERA}})
+            "type": "rtsp", "url": REMOTE_CAMERA}})
         assert r.status_code == 201
 
 

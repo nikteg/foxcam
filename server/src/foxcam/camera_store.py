@@ -70,9 +70,9 @@ def unique_id(settings: Settings, wanted: str) -> str:
 
 def add_camera(settings: Settings, *, name: str, source: dict[str, Any],
                camera_id: str | None = None, segment_seconds: int | None = None,
-               admin: bool = True) -> CameraConfig:
+               admin: bool = True, local_network: bool = False) -> CameraConfig:
     """``admin``: added by an admin. Others may only add RTSP cameras elsewhere on the
-    network (see check_source)."""
+    internet, or (``local_network``) on the server's local network (see check_source)."""
     cam_id = slugify(camera_id) if camera_id else unique_id(settings, name)
     if settings.camera(cam_id):
         raise CameraError(f"a camera with id '{cam_id}' already exists")
@@ -83,7 +83,7 @@ def add_camera(settings: Settings, *, name: str, source: dict[str, Any],
     # Validate through the same model config.yaml uses.
     cam = CameraConfig.model_validate({"id": cam_id, "name": name, "source": source,
                                        "segment_seconds": segment_seconds, "managed": "ui"})
-    check_source(settings, cam.source, admin)
+    check_source(settings, cam.source, admin, local_network)
     with session_scope() as s:
         s.add(ManagedCamera(id=cam.id, name=name, source=cam.source.model_dump(),
                             segment_seconds=segment_seconds, enabled=True))
@@ -145,12 +145,14 @@ def delete_camera(camera_id: str) -> None:
         s.delete(row)
 
 
-def check_source(settings: Settings, source: Source, admin: bool) -> None:
+def check_source(settings: Settings, source: Source, admin: bool,
+                 local_network: bool = False) -> None:
     """Refuses sources the user may not add. Test patterns and sample files run ffmpeg on
     this server, so they are for admins (and tapo_cloud uses the server's account, see
-    api_cameras). An RTSP camera added by anyone else must be somewhere else on the
-    network: not this machine (MediaMTX, the server), not link-local addresses (cloud
-    metadata services)."""
+    api_cameras). An RTSP camera added by anyone else must be elsewhere on the internet:
+    the server's local network is the admin's home (their cameras, the router), unless the
+    account may use it (User.can_use_local_network, e.g. someone in the household). Never
+    this machine (MediaMTX, the server) or link-local addresses (cloud metadata services)."""
     if source.type in ("test", "file") and not admin:
         raise CameraError("only admins can add test cameras and sample files", 403)
     if source.type == "file":
@@ -163,7 +165,7 @@ def check_source(settings: Settings, source: Source, admin: bool) -> None:
         if not source.url.startswith(("rtsp://", "rtsps://")):
             raise CameraError("RTSP URLs start with rtsp:// or rtsps://")
         if not admin:
-            _check_host(settings, source.url)
+            _check_host(settings, source.url, local_network)
 
 
 def _addresses(host: str) -> set[ipaddress.IPv4Address | ipaddress.IPv6Address]:
@@ -190,7 +192,7 @@ def _own_addresses(settings: Settings) -> set[ipaddress.IPv4Address | ipaddress.
     return set().union(*(_addresses(h) for h in hosts))
 
 
-def _check_host(settings: Settings, url: str) -> None:
+def _check_host(settings: Settings, url: str, local_network: bool) -> None:
     try:
         host = urlsplit(url).hostname
     except ValueError:
@@ -203,9 +205,14 @@ def _check_host(settings: Settings, url: str) -> None:
     own = _own_addresses(settings)
     for a in addrs:
         if a.is_loopback or a.is_link_local or a.is_unspecified or a.is_multicast \
-                or a.is_reserved or a in own:
+                or a in own:
             raise CameraError("cameras on this server itself (or link-local addresses) "
                               "can only be added by an admin", 403)
+        # The local network (private ranges, carrier-grade NAT, reserved).
+        if not a.is_global and not local_network:
+            raise CameraError("this account may not add cameras on the server's local "
+                              "network; use the camera's public address, or ask an admin",
+                              403)
 
 
 def sample_files(settings: Settings) -> list[str]:

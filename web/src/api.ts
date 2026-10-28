@@ -851,6 +851,8 @@ export interface User {
   disabled: boolean;
   /** May add cameras of their own (always for admins). */
   can_add_cameras: boolean;
+  /** May add cameras on the server's local network (always for admins). */
+  can_use_local_network: boolean;
   has_password: boolean;
   /** Linked OAuth providers (ids). */
   providers: string[];
@@ -875,6 +877,8 @@ export interface AuthState {
   signed_in: boolean;
   is_admin: boolean;
   can_add_cameras: boolean;
+  /** How many more cameras they may add (auth.max_cameras_per_user); null = no limit. */
+  cameras_left: number | null;
 }
 
 export interface CameraMember {
@@ -902,6 +906,8 @@ export interface Invite {
 
 export interface InvitePreview {
   from: string | null;
+  /** False: only for people who have an account (an invite from someone not an admin). */
+  new_accounts: boolean;
   is_admin: boolean;
   note: string | null;
   expires_at: string;
@@ -985,7 +991,13 @@ export const api = {
     request<User>("POST", "/api/users", body),
   updateUser: (
     id: number,
-    body: { name?: string; is_admin?: boolean; disabled?: boolean; can_add_cameras?: boolean },
+    body: {
+      name?: string;
+      is_admin?: boolean;
+      disabled?: boolean;
+      can_add_cameras?: boolean;
+      can_use_local_network?: boolean;
+    },
   ) => request<User>("PATCH", `/api/users/${id}`, body),
   setUserPassword: (id: number, password: string) =>
     request<{ status: string }>("PUT", `/api/users/${id}/password`, { password }),

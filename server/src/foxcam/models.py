@@ -494,6 +494,9 @@ class User(Base):
     # May add cameras of their own (admins always may). New accounts get
     # auth.users_can_add_cameras; admins change it per account in Settings → Users.
     can_add_cameras: Mapped[bool | None] = mapped_column(Boolean)
+    # May add cameras on the server's local network (someone in the household); off for
+    # new accounts. Admins always may.
+    can_use_local_network: Mapped[bool | None] = mapped_column(Boolean)
     # The address is known to be this person's: confirmed by an OAuth provider, or the
     # account was made by an admin (or setup). Self sign-up with a password is not. Only
     # verified accounts get admin_emails' rights or are matched to OAuth sign-ins.

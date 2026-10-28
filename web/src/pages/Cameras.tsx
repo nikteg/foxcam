@@ -25,7 +25,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 
 import { api, type Camera } from "../api";
-import { useIsAdmin, hasRole, useMe } from "../auth";
+import { AUTH_KEY, useIsAdmin, hasRole, useMe } from "../auth";
 import { AddCameraDialog } from "../components/AddCameraDialog";
 import { MaskDrawer } from "./MaskEditor";
 import { CameraCard, CameraModelFact } from "../components/CameraCard";
@@ -123,9 +123,17 @@ export function Cameras() {
         <>
           {me?.can_add_cameras && (
             <Toolbar>
-              <Button appearance="primary" icon={<Add20Regular />} onClick={() => setAdding(true)}>
+              <Button
+                appearance="primary"
+                icon={<Add20Regular />}
+                disabled={me.cameras_left === 0}
+                onClick={() => setAdding(true)}
+              >
                 {t("addCamera.title")}
               </Button>
+              {me.cameras_left === 0 && (
+                <Caption1 className="muted">{t("cameras.limitReached")}</Caption1>
+              )}
             </Toolbar>
           )}
           {/* With no cameras, the empty note below says it all. */}
@@ -223,6 +231,8 @@ function GeneralPanel({
     mutationFn: () => api.deleteCamera(camera.id),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["cameras"] });
+      // How many more this account may add.
+      void client.invalidateQueries({ queryKey: AUTH_KEY });
       void client.invalidateQueries({ queryKey: ["status"] });
       onClose();
     },

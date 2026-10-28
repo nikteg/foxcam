@@ -119,19 +119,33 @@ pages. Per camera, a user is:
 | `editor` | + censor areas, private flag, detection profiles, recording profile, name, segment length, enable/disable, ✅/❌ feedback |
 | `owner` | + share the camera and remove it |
 
-Whoever adds a camera owns it. Adding cameras is a permission per account: new accounts
-get `auth.users_can_add_cameras` (false reserves it for admins), and an admin turns it on
-or off for an account in **Settings → Users** ("Can add cameras"). Admins always can. Cameras from `config.yaml` have no owner: admins share them. Adding Tapo cloud
-cameras is admin-only, since the Tapo account is the server's.
+Whoever adds a camera owns it. What an account may add is up to the admins (Settings →
+Users; admins themselves may do all of it):
+
+- **Can add cameras**, per account. New accounts get "New accounts can add cameras"
+  (`auth.users_can_add_cameras`, off by default), so an account made from an invite only
+  sees what was shared with it until an admin allows more.
+- **Cameras per account** (`auth.max_cameras_per_user`, 2 by default, empty for no
+  limit): each camera records to the server's disk and uses the detection workers.
+- **Can use local network**, per account, off by default. Without it an account's RTSP
+  cameras must have a public address: the server's local network is the admin's home
+  (their cameras, the router), and a camera test would tell whoever tries what is on it.
+  Turn it on for someone in the household. The server itself, MediaMTX and link-local
+  addresses stay admin-only either way.
+
+Both defaults are runtime settings, under "New accounts" on the Users tab. Cameras from
+`config.yaml` have no owner: admins share them. Adding Tapo cloud cameras is admin-only,
+since the Tapo account is the server's.
 
 ## Sharing
 
 On the Cameras page, **Settings → Share** on a camera you own:
 
 - **With an existing account**: enter its e-mail and pick a role.
-- **With anyone else: an invite link.** It works once, for 7 days, and lets the recipient
-  create an account (even with `registration: invite`) or accept with an existing one; it
-  grants the chosen role on the camera. Anyone with the link can use it, so send it
+- **With anyone else: an invite link.** It works once, for 7 days, and grants the chosen
+  role on the camera. An admin's link also lets the recipient create an account (even
+  with `registration: invite`); anyone else's is for people who already have one, so
+  only admins decide who gets an account. Anyone with the link can use it, so send it
   privately. Open links are listed there and can be revoked.
 
 Admins also create account-only invite links (optionally making the new account an admin)

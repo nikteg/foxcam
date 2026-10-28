@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 
 # Safe to change while running: read each time they are used. Left out on purpose:
 # compaction.period_minutes (archive boundaries), the mediamtx encoder (every transcoder
-# would restart), secrets, auth and storage.
+# would restart), secrets, storage and the rest of auth (sign-in itself).
 EDITABLE: tuple[str, ...] = (
     "public_url",
     "segment_seconds",
@@ -62,6 +62,8 @@ EDITABLE: tuple[str, ...] = (
     "notifications.max_age_minutes",
     "location.latitude",
     "location.longitude",
+    "auth.users_can_add_cameras",
+    "auth.max_cameras_per_user",
 )
 
 # Part of MediaMTX's path settings: pushed to it when they change (mediamtx.sync_paths).
