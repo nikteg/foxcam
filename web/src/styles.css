@@ -878,6 +878,19 @@ div.thumb.placeholder {
   place-items: center;
   color: var(--colorNeutralForeground3);
 }
+/* Phones: the video and the picture in a drawer reach the screen's edges (over the drawer
+   body's side padding), square-cornered. */
+@media (max-width: 720px) {
+  .app-drawer .fui-DrawerBody :is(.detail-media, .live-frame, .detail-stack > .video-player) {
+    width: calc(100% + 2 * var(--spacingHorizontalXXL));
+    max-width: none;
+    margin-inline: calc(-1 * var(--spacingHorizontalXXL));
+    border-radius: 0;
+  }
+  .app-drawer .detail-media .video-player {
+    border-radius: 0;
+  }
+}
 
 /* Events → Motion: a verdict with its numbers under it (they wrap). */
 .report-cell {
