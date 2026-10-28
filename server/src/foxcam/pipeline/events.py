@@ -57,6 +57,9 @@ def _assign_events(settings: Settings, quiet: bool) -> int:
         for d in pending:
             groups[(d.segment_id, d.camera_id, d.profile_id, d.label.lower())].append(d)
         for (segment_id, camera_id, profile_id, _), dets in groups.items():
+            seg = s.get(Segment, segment_id)
+            # Found again by a re-run (Reanalyse): notifies nobody, like a rebuild.
+            silent = quiet or bool(seg.reanalysed)
             first = min(d.ts for d in dets)
             last = max(d.ts for d in dets)
             best = max(dets, key=lambda d: d.confidence)
@@ -69,7 +72,7 @@ def _assign_events(settings: Settings, quiet: bool) -> int:
             if event is None:
                 event = Event(camera_id=camera_id, profile_id=profile_id, label=best.label,
                               first_ts=first, last_ts=last, max_confidence=best.confidence,
-                              detection_count=0, best_detection_id=best.id, quiet=quiet)
+                              detection_count=0, best_detection_id=best.id, quiet=silent)
                 s.add(event)
                 s.flush()
             else:
@@ -85,9 +88,8 @@ def _assign_events(settings: Settings, quiet: bool) -> int:
             # New events notify at once; a later rise above a channel's min_confidence, or
             # another model agreeing (min_agreement), too - once per channel. Quiet: not
             # even when older detections join an event that was there.
-            if not quiet:
+            if not silent:
                 notify.enqueue(s, settings, event, "event.new")
-            seg = s.get(Segment, segment_id)
             if seg not in event.segments:
                 event.segments.append(seg)
             # Joined an event already marked wrong: not a match in this recording either.
@@ -266,6 +268,7 @@ def _build_clip(settings: Settings, event_id: int) -> bool:
                 ev.segments.append(g)
         nights = [g.is_night for g in segs if g.is_night is not None]
         ev.is_night = (sum(nights) > len(nights) / 2) if nights else None
+        first_clip = ev.clip_path is None
         ev.clip_path = str(clip_rel)
         ev.thumb_path = str(thumb_rel) if thumb_rel else None
         ev.thumb_box = best.bbox if thumb_rel and best is not None else None
@@ -277,7 +280,9 @@ def _build_clip(settings: Settings, event_id: int) -> bool:
         # The clip changed: upload it again (same key, overwritten).
         ev.clip_remote_key = None
         ev.thumb_remote_key = None
-        notify.enqueue(s, settings, ev, "event.clip")  # first clip only (once per channel)
+        # The first clip only: one cut again (more detections, a re-run) notifies nobody.
+        if first_clip:
+            notify.enqueue(s, settings, ev, "event.clip")
         log.info("event %s: clip %s (%.0fs)", ev.id, clip_rel, duration)
     try:  # the player's timeline previews, made with the clip (sprites.py)
         sprites.get(settings, "clip", event_id)

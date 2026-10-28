@@ -19,6 +19,7 @@ from foxcam.models import (
     Event,
     Notification,
     NotificationStatus,
+    Segment,
     SegmentStatus,
     utcnow,
 )
@@ -114,6 +115,23 @@ def test_old_events_are_skipped(settings):
     with session_scope() as s:
         notify.enqueue(s, settings, s.get(Event, old.id), "event.clip")
     assert ("all", "event.clip", "skipped", "too old") not in _notes()
+
+
+def test_reanalysed_recordings_notify_nobody(settings):
+    from foxcam.pipeline.reanalyse import reanalyse_segment
+
+    _channel(settings, id="all", type="webhook", url="http://hook", when=["event.new", "event.clip"])
+    seg = add_segment(settings, status=SegmentStatus.DONE, start=utcnow() - timedelta(minutes=5))
+    reanalyse_segment(settings, seg)
+    with session_scope() as s:
+        s.get(Segment, seg).status = SegmentStatus.DONE
+    add_detection(seg, add_job(seg, state="done"), 500, label="fox", confidence=0.9)
+    events.assign_events(settings)
+    with session_scope() as s:
+        [ev] = s.query(Event).all()
+        assert ev.quiet
+        notify.enqueue(s, settings, ev, "event.clip")
+    assert _notes() == []
 
 
 def test_webhook_payload_and_signature(settings):

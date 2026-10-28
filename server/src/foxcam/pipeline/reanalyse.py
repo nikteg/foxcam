@@ -51,6 +51,7 @@ def reanalyse_segment(settings: Settings, segment_id: int) -> int:
             (settings.data_dir / seg.derived_path).unlink(missing_ok=True)
         seg.derived_path = None
         seg.status = SegmentStatus.NEW
+        seg.reanalysed = True
         seg.error = None
         seg.has_target = False
         seg.max_confidence = None
