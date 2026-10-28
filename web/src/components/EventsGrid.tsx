@@ -19,6 +19,7 @@ import { withShift, type Selection } from "./Bulk";
 import { DetailPanel } from "./DetailPanel";
 import { EventDetail } from "./EventDetail";
 import { FavoriteStar } from "./Favorite";
+import { EventFeedback } from "./Feedback";
 import { useVideoTimeline } from "./Motion";
 import {
   useDetectorNames,
@@ -204,12 +205,15 @@ export function EventsGrid({
                   <Tag kind="pending">{t("events.buildingClip")}</Tag>
                 )}
                 <span className="spacer" />
-                <FavoriteStar
-                  kind="events"
-                  id={e.id}
-                  cameraId={e.camera_id}
-                  favorite={e.favorite}
-                />
+                <span className="row">
+                  <EventFeedback event={e} />
+                  <FavoriteStar
+                    kind="events"
+                    id={e.id}
+                    cameraId={e.camera_id}
+                    favorite={e.favorite}
+                  />
+                </span>
               </CardFooter>
             </Card>
           </Fragment>

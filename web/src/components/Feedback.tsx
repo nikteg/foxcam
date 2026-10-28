@@ -8,7 +8,7 @@ import {
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 
-import { api, type Detection } from "../api";
+import { api, type Detection, type DetectionEvent } from "../api";
 import { hasRole, useCameraRole } from "../auth";
 import { useI18n } from "../i18n";
 import { useToast } from "./Toasts";
@@ -40,22 +40,60 @@ export function Feedback({
   detection: Detection;
   withLabels?: boolean;
 }) {
+  return (
+    <FeedbackButtons
+      cameraId={detection.camera_id}
+      value={detection.feedback}
+      send={(correct) => api.feedback(detection.id, correct)}
+      withLabels={withLabels}
+    />
+  );
+}
+
+/** ✓ / ✗ for an event, on its card: the mark goes on its best detection, like in the
+ * event's drawer. */
+export function EventFeedback({ event }: { event: DetectionEvent }) {
+  return (
+    <FeedbackButtons
+      cameraId={event.camera_id}
+      value={event.feedback === null ? null : event.feedback === "correct"}
+      send={(correct) => api.bulk("events", [event.id], { feedback: correct })}
+      tooltips
+    />
+  );
+}
+
+function FeedbackButtons({
+  cameraId,
+  value: saved,
+  send,
+  withLabels = false,
+  tooltips = withLabels,
+}: {
+  cameraId: string;
+  value: boolean | null;
+  send: (correct: boolean | null) => Promise<unknown>;
+  withLabels?: boolean;
+  /** Fluent tooltips (also on touch); table rows keep native ones: hundreds of Fluent
+   * Tooltips make lists slow. */
+  tooltips?: boolean;
+}) {
   const { t } = useI18n();
   const client = useQueryClient();
   const toast = useToast();
   const mutation = useMutation({
-    mutationFn: (correct: boolean | null) => api.feedback(detection.id, correct),
+    mutationFn: send,
     // Pending until the detection comes back with its new feedback, so the button
     // doesn't flash back to the old choice in between.
     onSuccess: () => refreshLabels(client),
     onError: (e) => toast.error(e),
   });
   // Show the pending choice immediately.
-  const value = mutation.isPending ? mutation.variables : detection.feedback;
+  const value = mutation.isPending ? mutation.variables : saved;
   const toggle = (want: boolean) => mutation.mutate(value === want ? null : want);
   const size = withLabels ? "medium" : "small";
   // Labelling is for editors of the camera; viewers see the choice but cannot change it.
-  const role = useCameraRole(detection.camera_id);
+  const role = useCameraRole(cameraId);
   const readOnly = !hasRole(role ? { role } : undefined, "editor");
   const button = (
     want: boolean,
@@ -75,15 +113,14 @@ export function Feedback({
         icon={checked ? on : off}
         disabled={readOnly}
         onClick={() => toggle(want)}
-        // In table rows a native tooltip: hundreds of Fluent Tooltips make lists slow.
         aria-label={withLabels ? undefined : label}
-        title={withLabels ? undefined : hint}
+        title={tooltips ? undefined : hint}
       >
         {withLabels && label}
       </ToggleButton>
     );
-    return withLabels ? (
-      <Tooltip content={hint} relationship="description">
+    return tooltips ? (
+      <Tooltip content={withLabels ? hint : `${label}: ${hint}`} relationship="description">
         {toggleButton}
       </Tooltip>
     ) : (
