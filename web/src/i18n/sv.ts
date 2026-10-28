@@ -538,14 +538,24 @@ export const sv: Record<MessageKey, string> = {
 
   // Maskeringsredigeraren
   "mask.helpMouse":
-    "Dra på bilden för att rita en rektangel. Dra en rektangel för att flytta den, dra i ett hörn för att ändra storlek och tryck på {key} eller klicka på × för att ta bort den.",
+    "Dra på bilden för att rita en rektangel, eller tryck på Lägg till. Dra en rektangel för att flytta den och dess hörn för att ändra storlek; piltangenterna flyttar den markerade (Skift: längre) och {key} tar bort den.",
   "mask.helpTouch":
-    "Rita en rektangel med fingret. Tryck på en för att markera den och dra sedan i den eller dess hörn; tryck på × för att ta bort den.",
+    "Dra på bilden för att rita en rektangel, eller tryck på Lägg till. Tryck på en för att markera den och dra sedan i den eller dess hörn; en liten rektangels hörn sitter strax utanför den.",
   "mask.helpCommon":
     "De här områdena svärtas i allt som skickas till arbetarna. Ändringar gäller bara nya segment.",
   "mask.actions": "Åtgärder för maskerade områden",
-  "mask.revert": "Ångra",
+  "mask.revert": "Återställ till sparat",
   "mask.clearAll": "Rensa alla",
+  "mask.undo": "Ångra",
+  "mask.redo": "Gör om",
+  "mask.add": "Lägg till",
+  "mask.more": "Fler åtgärder",
+  "mask.picture": "Bild",
+  "mask.pictureHint":
+    "Live, eller det kameran spelat in de senaste två dygnen: nattbilder kan visa annat att maskera.",
+  "mask.pictureFailed": "Bilden gick inte att läsa in.",
+  "mask.live": "Live",
+  "mask.night": "Natt",
   "mask.newSnapshot": "Ny ögonblicksbild",
   "mask.unsaved": "Osparade ändringar",
   "mask.saved": "Sparat",

@@ -589,6 +589,56 @@ def latest_segment_id(camera_id: str) -> int | None:
             Segment.status != SegmentStatus.FAILED).order_by(Segment.start_at.desc()).limit(1))
 
 
+def _with_footage():
+    """Segments whose footage can still be read (their own file or their archive)."""
+    return ((Segment.status != SegmentStatus.FAILED)
+            & (Segment.deleted_at.is_(None) | Segment.archive_id.is_not(None)))
+
+
+def segment_at(camera_id: str, at: datetime) -> tuple[int, float] | None:
+    """The recording that has ``at`` (naive UTC) and the second in it."""
+    with session_scope() as s:
+        seg = s.scalars(select(Segment).where(
+            Segment.camera_id == camera_id, Segment.start_at <= at, _with_footage())
+            .order_by(Segment.start_at.desc()).limit(1)).first()
+        if seg is None:
+            return None
+        offset = (at - seg.start_at).total_seconds()
+        return (seg.id, offset) if offset <= seg.duration_s else None
+
+
+def snapshot_moments(camera_id: str, hours: int = 48, step_h: int = 2) -> list[dict[str, Any]]:
+    """Moments of the last ``hours`` with footage, newest first, for choosing the mask
+    editor's picture (day and night look different): one per ``step_h`` hours, as close
+    to the whole hour as the footage allows (a camera that was off skips a few)."""
+    now = utcnow()
+    half = timedelta(hours=step_h / 2)
+    since = now - timedelta(hours=hours)
+    with session_scope() as s:
+        segs = s.execute(select(Segment.start_at, Segment.duration_s, Segment.is_night,
+                                Segment.id).where(
+            Segment.camera_id == camera_id, _with_footage(), Segment.start_at >= since - half)
+            .order_by(Segment.start_at)).all()
+    out = []
+    # Even whole hours: the same moments (and cached pictures) from one visit to the next.
+    target = now.replace(minute=0, second=0, microsecond=0)
+    target -= timedelta(hours=target.hour % step_h)
+    while target > since:
+        best: tuple[timedelta, datetime, bool | None, int] | None = None
+        for start, duration, night, seg_id in segs:
+            end = start + timedelta(seconds=max(duration - 1, 0))
+            at = min(max(target, start), end)
+            gap = abs(at - target)
+            if gap < half and at <= now and (best is None or gap < best[0]):
+                # Whole seconds (up: still in the recording) for short URLs.
+                up = timedelta(seconds=1) if at.microsecond else timedelta()
+                best = (gap, at.replace(microsecond=0) + up, night, seg_id)
+        if best:
+            out.append({"at": iso(best[1]), "is_night": best[2], "segment_id": best[3]})
+        target -= timedelta(hours=step_h)
+    return out
+
+
 def _redact_url(url: str) -> str:
     """Without the login. Passwords may contain unencoded @ and /: the login runs to the
     last @ before the first / that follows an @ (the start of the path)."""

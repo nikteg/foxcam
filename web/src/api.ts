@@ -617,6 +617,11 @@ export interface QueueView {
   jobs: Job[];
 }
 
+export interface SnapshotMoment {
+  at: string;
+  is_night: boolean | null;
+}
+
 export interface MaskState {
   private: boolean;
   rects: Rect[];
@@ -936,6 +941,12 @@ export const api = {
   status: () => request<Status>("GET", "/api/status"),
   settings: () => request<Settings>("GET", "/api/settings"),
   cameras: () => request<Camera[]>("GET", "/api/cameras"),
+  /** Moments of the last two days with footage (newest first), for the mask editor. */
+  snapshotMoments: (cameraId: string) =>
+    request<SnapshotMoment[]>(
+      "GET",
+      `/api/cameras/${encodeURIComponent(cameraId)}/snapshot-moments`,
+    ),
   mask: (cameraId: string) =>
     request<MaskState>("GET", `/api/cameras/${encodeURIComponent(cameraId)}/mask`),
   saveMask: (cameraId: string, body: { rects: Rect[]; private: boolean; burn_in?: boolean }) =>
@@ -1149,6 +1160,11 @@ export const snapshotUrl = (cameraId: string, fresh = false, source = false) => 
   const qs = query.toString();
   return `/api/cameras/${encodeURIComponent(cameraId)}/snapshot.jpg${qs ? `?${qs}` : ""}`;
 };
+
+/** The camera's picture recorded at ``at`` (UTC, with Z); ``small``: a preview. */
+export const recordedSnapshotUrl = (cameraId: string, at: string, small = false) =>
+  `/api/cameras/${encodeURIComponent(cameraId)}/snapshot.jpg?source=true&at=${encodeURIComponent(at)}` +
+  (small ? "&size=small" : "");
 
 /** The frame with its box. The recording and moment are in the URL: a re-analysed
  *  recording's detections can reuse the ids of the ones they replaced. */

@@ -99,7 +99,7 @@ anything else, and keep the clips.
   </tr>
   <tr>
     <td><b>Recordings</b> – every segment with day/night tag, motion and match; hourly archives under their own tab</td>
-    <td><b>Censor areas</b> – drawn on a snapshot (camera settings), blacked out before detection</td>
+    <td><b>Censor areas</b> – drawn on a live or recorded picture (day or night, camera settings), blacked out before detection</td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/profiles.jpg" alt="Detection profiles"></td>

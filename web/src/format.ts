@@ -94,6 +94,14 @@ export function localDay(iso: string): string {
   ).format(new Date(iso));
 }
 
+/** "Tue 14:00" (local time): a moment of the last few days. */
+export function localWeekdayTime(iso: string): string {
+  return cached(
+    "wdt",
+    () => new Intl.DateTimeFormat(locale, { weekday: "short", hour: "2-digit", minute: "2-digit" }),
+  ).format(new Date(iso));
+}
+
 export function relativeTime(iso: string | null | undefined, now = Date.now()): string {
   if (!iso) return "–";
   const rtf = cached("rel", () => new Intl.RelativeTimeFormat(locale, { numeric: "auto" }));

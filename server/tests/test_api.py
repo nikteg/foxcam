@@ -289,6 +289,31 @@ def test_default_recording_profile_is_for_admins(settings):
 
 
 @needs_ffmpeg
+def test_snapshot_from_a_recorded_moment(settings, client):
+    hour = utcnow().replace(minute=0, second=0, microsecond=0)
+    hour -= timedelta(hours=hour.hour % 2)  # moments are on even hours
+    seg = add_segment(settings, start=hour - timedelta(seconds=1), seconds=3, is_night=True)
+    # Footage 20 minutes off the hour stands in for it (its end nearest the hour); two days
+    # back is the limit.
+    add_segment(settings, start=hour - timedelta(hours=4, minutes=20))
+    add_segment(settings, start=hour - timedelta(hours=60))
+    # Footage that is not on this server (only in remote storage) is left out.
+    add_segment(settings, start=hour - timedelta(hours=8), with_file=False)
+    moments = client.get("/api/cameras/cam/snapshot-moments").json()
+    assert moments == [{"at": hour.isoformat() + "Z", "is_night": True},
+                       {"at": (hour - timedelta(hours=4, minutes=20, seconds=-1)).isoformat() + "Z",
+                        "is_night": None}]
+
+    r = client.get(f"/api/cameras/cam/snapshot.jpg?at={moments[0]['at']}&size=small&source=true")
+    assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg"
+    assert (settings.thumbs_dir / "snapshots" / "recorded" / f"cam-{seg}-1000-small.jpg").exists()
+    gone = (hour - timedelta(hours=7)).isoformat() + "Z"
+    assert client.get(f"/api/cameras/cam/snapshot.jpg?at={gone}").status_code == 404
+    elsewhere = (hour - timedelta(hours=8, seconds=-1)).isoformat() + "Z"
+    assert client.get(f"/api/cameras/cam/snapshot.jpg?at={elsewhere}").status_code == 410
+
+
+@needs_ffmpeg
 def test_detection_frame_has_a_small_preview(settings, client):
     import subprocess
 

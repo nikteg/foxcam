@@ -235,16 +235,37 @@ async def cameras(settings: Settings = Depends(settings_dep),
     return await asyncio.to_thread(queries.cameras, settings, await mtx.paths(), p)
 
 
+@router.get("/cameras/{camera_id}/snapshot-moments")
+async def snapshot_moments(camera_id: str, settings: Settings = Depends(settings_dep),
+                           p: Principal = Depends(principal)) -> list[dict[str, Any]]:
+    """Moments of the last two days with footage, for snapshot.jpg?at= (the mask editor's
+    choice of picture: day, night, another light)."""
+    camera_for(p, settings, camera_id, CameraRole.EDITOR)
+
+    def on_disk(segment_id: int) -> bool:  # not when only in remote storage
+        src = compaction.source_for(settings, segment_id)
+        return src is not None and src.path.exists()
+
+    moments = await asyncio.to_thread(queries.snapshot_moments, camera_id)
+    return [{"at": m["at"], "is_night": m["is_night"]} for m in moments
+            if await asyncio.to_thread(on_disk, m["segment_id"])]
+
+
 @router.get("/cameras/{camera_id}/snapshot.jpg")
 async def snapshot(camera_id: str, fresh: bool = False, source: bool = False,
+                   at: datetime | None = None,
+                   size: Literal["full", "small"] = "full",
                    settings: Settings = Depends(settings_dep),
                    p: Principal = Depends(principal)) -> FileResponse:
     """Current frame (from the live stream, falling back to the latest recording).
 
     ``source``: the camera's own picture, before burned-in masks (for the mask editor;
-    editors only).
+    editors only). ``at``: the frame recorded then instead (burned-in masks of that time
+    included); ``small`` for a preview.
     """
     cam = camera_for(p, settings, camera_id, CameraRole.EDITOR if source else CameraRole.VIEWER)
+    if at is not None:
+        return await _recorded_snapshot(settings, cam.id, at, size == "small")
     path = await asyncio.to_thread(recording.source_path, settings, cam) if source else cam.id
     name = camera_id if path == cam.id else f"{camera_id}.source"
     dst = settings.thumbs_dir / "snapshots" / f"{name}.jpg"
@@ -259,6 +280,26 @@ async def snapshot(camera_id: str, fresh: bool = False, source: bool = False,
                 raise HTTPException(503, "camera offline and no recordings yet") from None
             await asyncio.to_thread(ffmpeg.thumbnail, src.path, dst, src.offset_s + 0.5, 1280)
     return FileResponse(dst, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+async def _recorded_snapshot(settings: Settings, camera_id: str, at: datetime,
+                             small: bool) -> FileResponse:
+    if at.tzinfo:  # stored as naive UTC
+        at = at.astimezone(UTC).replace(tzinfo=None)
+    found = await asyncio.to_thread(queries.segment_at, camera_id, at)
+    src = found and await asyncio.to_thread(compaction.source_for, settings, found[0])
+    if not found or not src:
+        raise HTTPException(404, "no recording at that time")
+    if not src.path.exists():
+        raise HTTPException(410, "that footage is not on this server")
+    segment_id, offset_s = found
+    name = f"{camera_id}-{segment_id}-{round(offset_s * 1000)}{'-small' if small else ''}"
+    dst = settings.thumbs_dir / "snapshots" / "recorded" / f"{name}.jpg"
+    if not dst.exists():
+        await asyncio.to_thread(ffmpeg.thumbnail, src.path, dst, src.offset_s + offset_s,
+                                320 if small else 1280)
+    return FileResponse(dst, media_type="image/jpeg",
+                        headers={"Cache-Control": "private, max-age=86400"})
 
 
 def clean_rects(rects: list[list[float]]) -> list[list[float]]:

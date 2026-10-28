@@ -532,14 +532,24 @@ export const en = {
 
   // Censor-area editor
   "mask.helpMouse":
-    "Drag on the image to draw a rectangle. Drag a rectangle to move it, drag its corner to resize, and press {key} or click × to remove it.",
+    "Drag on the picture to draw a rectangle, or press Add. Drag a rectangle to move it and its corners to resize it; the arrow keys move the selected one (Shift: further) and {key} removes it.",
   "mask.helpTouch":
-    "Draw a rectangle with your finger. Tap one to select it, then drag it or its corners; tap × to remove it.",
+    "Drag on the picture to draw a rectangle, or tap Add. Tap one to select it, then drag it or its corners; a small one's corners sit just outside it.",
   "mask.helpCommon":
     "These areas are blacked out in everything sent to the workers. Changes apply to new segments only.",
   "mask.actions": "Censor area actions",
-  "mask.revert": "Revert",
+  "mask.revert": "Revert to saved",
   "mask.clearAll": "Clear all",
+  "mask.undo": "Undo",
+  "mask.redo": "Redo",
+  "mask.add": "Add",
+  "mask.more": "More actions",
+  "mask.picture": "Picture",
+  "mask.pictureHint":
+    "Live, or what the camera recorded the last two days: night pictures can show other things to mask.",
+  "mask.pictureFailed": "Could not load that picture.",
+  "mask.live": "Live",
+  "mask.night": "Night",
   "mask.newSnapshot": "New snapshot",
   "mask.unsaved": "Unsaved changes",
   "mask.saved": "Saved",

@@ -396,7 +396,10 @@ censor areas are burned in, the server reconfigures MediaMTX:
 
 Recording, live view, the low-data path, snapshots and worker jobs all keep reading
 `<camera>`, so nothing downstream changes. The mask editor snapshots `<camera>/raw`
-(`?source=true`) so you can see what is under existing masks.
+(`?source=true`) so you can see what is under existing masks. It can also show a picture
+from the last two days' recordings instead (`snapshot-moments`, then `snapshot.jpg?at=`),
+since night pictures show other things; those were recorded with the masks burned in at
+the time, and footage only in remote storage is left out.
 
 ## Archiving (compaction, recording profiles)
 

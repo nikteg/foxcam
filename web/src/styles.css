@@ -954,59 +954,106 @@ div.thumb.placeholder {
   background: #000;
   outline: none;
 }
-.overlay.preview .handle,
-.overlay.preview .del {
+.overlay.preview .handle {
   display: none;
 }
+/* Handles: --hx/--hy push them outside a small box (MaskEditor.tsx handleOffset), so its
+   middle stays free for moving. They only show; the editor finds what a press hits. */
 .handle {
+  --size: 12px;
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: var(--size);
+  height: var(--size);
   background: #fff;
   border: 2px solid var(--colorBrandStroke1);
   border-radius: 2px;
 }
 .handle.nw {
-  left: -6px;
-  top: -6px;
+  left: calc(var(--size) / -2 - var(--hx, 0px));
+  top: calc(var(--size) / -2 - var(--hy, 0px));
   cursor: nwse-resize;
 }
 .handle.se {
-  right: -6px;
-  bottom: -6px;
+  right: calc(var(--size) / -2 - var(--hx, 0px));
+  bottom: calc(var(--size) / -2 - var(--hy, 0px));
   cursor: nwse-resize;
 }
 .handle.ne {
-  right: -6px;
-  top: -6px;
+  right: calc(var(--size) / -2 - var(--hx, 0px));
+  top: calc(var(--size) / -2 - var(--hy, 0px));
   cursor: nesw-resize;
 }
 .handle.sw {
-  left: -6px;
-  bottom: -6px;
+  left: calc(var(--size) / -2 - var(--hx, 0px));
+  bottom: calc(var(--size) / -2 - var(--hy, 0px));
   cursor: nesw-resize;
 }
 .mrect:not(.selected) .handle {
   display: none;
 }
-.del {
-  position: absolute;
-  right: 6px;
-  top: 6px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 0;
-  padding: 0;
-  display: none;
-  place-items: center;
-  background: var(--colorPaletteRedBackground3);
-  color: #fff;
-  cursor: pointer;
+/* The selected box stands out; the others step back. */
+.overlay.has-selection .mrect:not(.selected) {
+  opacity: 0.6;
 }
-.mrect.selected .del,
-.mrect:hover .del {
+.mrect.selected {
+  z-index: 1;
+}
+.stage-loading {
+  position: absolute;
+  top: var(--spacingVerticalS);
+  left: var(--spacingHorizontalS);
+  padding: var(--spacingVerticalXXS) var(--spacingHorizontalS);
+  border-radius: var(--borderRadiusMedium);
+  background: var(--colorNeutralBackground1);
+  pointer-events: none;
+  z-index: 2;
+}
+/* The mask editor's choice of picture: live or a recorded moment, scrolling sideways. */
+.picture-strip {
+  display: flex;
+  gap: var(--spacingHorizontalS);
+  overflow-x: auto;
+  padding: 2px 2px var(--spacingVerticalXS);
+  align-items: center;
+}
+.picture-choice {
+  flex: 0 0 auto;
+  width: 112px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacingVerticalXXS);
+  padding: 4px;
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: var(--borderRadiusMedium);
+  background: var(--colorNeutralBackground1);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+.picture-choice:hover {
+  background: var(--colorNeutralBackground1Hover);
+}
+.picture-choice[aria-pressed="true"] {
+  outline: 2px solid var(--colorBrandStroke1);
+  outline-offset: -1px;
+}
+.picture-choice .frame-image {
+  border-radius: var(--borderRadiusSmall);
+}
+.picture-choice > .fui-Caption1 {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+.picture-choice-live {
   display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--borderRadiusSmall);
+  background: var(--colorNeutralBackground4);
 }
 .only-touch {
   display: none;
@@ -1028,32 +1075,9 @@ div.thumb.placeholder {
     font-size: 16px !important;
   }
   .handle {
-    width: 26px;
-    height: 26px;
+    --size: 22px;
     border-width: 3px;
-  }
-  .handle.nw {
-    left: -13px;
-    top: -13px;
-  }
-  .handle.se {
-    right: -13px;
-    bottom: -13px;
-  }
-  .handle.ne {
-    right: -13px;
-    top: -13px;
-  }
-  .handle.sw {
-    left: -13px;
-    bottom: -13px;
-  }
-  .del {
-    width: 34px;
-    height: 34px;
-  }
-  .mrect:hover:not(.selected) .del {
-    display: none;
+    border-radius: 50%;
   }
 }
 
