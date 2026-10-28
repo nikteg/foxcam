@@ -362,7 +362,10 @@ def detections(settings: Settings, camera_id: str | None = None, label: str | No
                detector_id: str | None = None,
                event_id: int | None = None,
                hide_still: bool = False,
-               only_favorites: bool = False) -> list[dict[str, Any]]:
+               only_favorites: bool = False,
+               since: datetime | None = None, until: datetime | None = None,
+               light: str | None = None,
+               feedback: str | None = None) -> list[dict[str, Any]]:
     # The recordings' few columns used here, in one query (not their motion data).
     q = _only(select(Detection), Detection.camera_id, camera_ids) \
         .options(selectinload(Detection.segment).options(
@@ -388,6 +391,18 @@ def detections(settings: Settings, camera_id: str | None = None, label: str | No
         q = q.where(Detection.still.is_not(True))
     if only_favorites:
         q = q.where(Detection.favorite.is_(True))
+    if since:
+        q = q.where(Detection.ts >= since)
+    if until:
+        q = q.where(Detection.ts < until)
+    if light:
+        q = q.where(Detection.segment.has(Segment.is_night.is_(light == "night")))
+    if feedback == "correct":
+        q = q.where(Detection.feedback.is_(True))
+    elif feedback == "wrong":
+        q = q.where(Detection.feedback.is_(False))
+    elif feedback == "none":
+        q = q.where(Detection.feedback.is_(None))
     moving = _moving(settings)
     with session_scope() as s:
         return [detection_dict(d, moving(d)) for d in s.scalars(q)]
@@ -459,7 +474,10 @@ def events(camera_id: str | None = None, limit: int = 100,
            profile_id: str | None = None, label: str | None = None,
            camera_ids: set[str] | None = None,
            min_agreement: int = 1, hide_wrong: bool = False,
-           only_favorites: bool = False) -> list[dict[str, Any]]:
+           only_favorites: bool = False,
+           since: datetime | None = None, until: datetime | None = None,
+           light: str | None = None,
+           feedback: str | None = None) -> list[dict[str, Any]]:
     wrong, correct = _feedback()
     favorite = _favorite()
     q = _only(select(Event, wrong, correct, favorite), Event.camera_id, camera_ids) \
@@ -476,6 +494,20 @@ def events(camera_id: str | None = None, limit: int = 100,
         q = q.where(func.lower(Event.label) == label.lower())
     if min_agreement > 1:
         q = q.where(func.coalesce(Event.agreement, 1) >= min_agreement)
+    # By when it started, like the list shows it.
+    if since:
+        q = q.where(Event.first_ts >= since)
+    if until:
+        q = q.where(Event.first_ts < until)
+    if light:
+        q = q.where(Event.is_night.is_(light == "night"))
+    # Like the event's own mark: correct wins over wrong.
+    if feedback == "correct":
+        q = q.where(correct)
+    elif feedback == "wrong":
+        q = q.where(wrong & ~correct)
+    elif feedback == "none":
+        q = q.where(~wrong & ~correct)
     with session_scope() as s:
         return [{
             "id": e.id, "camera_id": e.camera_id, "profile_id": e.profile_id, "label": e.label,

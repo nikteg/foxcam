@@ -1252,6 +1252,22 @@ export const en = {
   "users.removeTitle": "Remove {name}?",
   "users.removeBody":
     "The account, its sessions and its camera shares are deleted. Cameras it added stay.",
+  "filter.period": "Period",
+  "filter.anyTime": "Any time",
+  "filter.period.24h": "Last 24 hours",
+  "filter.period.7d": "Last 7 days",
+  "filter.period.30d": "Last 30 days",
+  "filter.period.custom": "From – to",
+  "filter.from": "From",
+  "filter.to": "To",
+  "filter.anyLight": "Day and night",
+  "filter.day": "Daylight",
+  "filter.night": "Night",
+  "filter.feedback": "Marked",
+  "filter.anyFeedback": "Marked or not",
+  "filter.correct": "Correct",
+  "filter.wrong": "Wrong",
+  "filter.unmarked": "Not marked",
 } as const;
 
 export type MessageKey = keyof typeof en;

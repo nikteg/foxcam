@@ -1039,6 +1039,11 @@ export const api = {
     hide_still?: boolean;
     /** Only starred ones. */
     favorite?: boolean;
+    /** From / before these times (ISO). */
+    since?: string;
+    until?: string;
+    light?: "day" | "night";
+    feedback?: "correct" | "wrong" | "none";
     limit?: number;
   }) => request<Detection[]>("GET", withQuery("/api/detections", q)),
   feedback: (id: number, correct: boolean | null) =>
@@ -1059,11 +1064,17 @@ export const api = {
   events: (q: {
     camera?: string;
     profile?: string;
+    label?: string;
     min_agreement?: number;
     /** Leave out events marked wrong. */
     hide_wrong?: boolean;
     /** Only starred ones. */
     favorite?: boolean;
+    /** Starting from / before these times (ISO). */
+    since?: string;
+    until?: string;
+    light?: "day" | "night";
+    feedback?: "correct" | "wrong" | "none";
     limit?: number;
   }) => request<DetectionEvent[]>("GET", withQuery("/api/events", q)),
   motionReport: (days: number) =>

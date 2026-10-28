@@ -58,6 +58,9 @@ anything else, and keep the clips.
   ✅/❌ feedback for building a training set. A detection marked wrong is no match anywhere
   (counts, events, notifications, archives), and something that stands still (a parked
   car, ten minutes by default) stops making events.
+- **Filters.** Events and detections filter by camera, profile, label, period (the last
+  day, week or month, or any From – To), day or night, and how they were marked
+  (correct, wrong, not yet); detections also by detector, confidence and standing still.
 - **Favorites and bulk actions.** Star events and detections (in the lists and their
   drawers) and filter on them; starred events are never expired. Pick several rows or
   cards (Shift for a range) and mark them correct, wrong or favorite at once, or run
@@ -91,7 +94,7 @@ anything else, and keep the clips.
     <td width="50%"><img src="docs/screenshots/detections.jpg" alt="Detections list with the selected frame and bounding box"></td>
   </tr>
   <tr>
-    <td><b>Events</b> – one clip per sighting, filterable by camera and profile</td>
+    <td><b>Events</b> – one clip per sighting, filterable by camera, profile, time, light and feedback</td>
     <td><b>Detections</b> – every hit with its frame, box, model and ✅/❌ feedback</td>
   </tr>
   <tr>

@@ -163,7 +163,7 @@ export function DateTimeInput({
   onChange,
   ...rest
 }: {
-  type: "date" | "time";
+  type: "date" | "time" | "datetime-local";
   value: string;
   placeholder: string;
   onChange: (value: string) => void;

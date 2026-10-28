@@ -466,6 +466,21 @@ button.fui-CompoundButton {
 .filters .narrow {
   width: 120px;
 }
+/* A period's From and To (components/Filters.tsx): side by side, a row of their own on
+   phones. */
+.period-range {
+  display: flex;
+  gap: var(--spacingHorizontalS);
+  min-width: 0;
+}
+.period-range > .fui-Input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.period-range input {
+  min-width: 0;
+  width: 100%;
+}
 
 /* Stats */
 .stats {
@@ -1311,6 +1326,9 @@ div.thumb.placeholder {
   }
   .filters > * {
     flex: 1 1 140px;
+  }
+  .filters > .period-range {
+    flex-basis: 100%;
   }
 
   .mask-options {

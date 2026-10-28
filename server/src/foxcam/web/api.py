@@ -80,6 +80,16 @@ def _serve(settings: Settings, base: Path, rel: str | None, remote_key: str | No
     raise HTTPException(404, "file not available")
 
 
+# List filters: recorded in daylight or at night; marked correct, wrong or not at all.
+Light = Literal["day", "night"]
+FeedbackFilter = Literal["correct", "wrong", "none"]
+
+
+def _utc(dt: datetime | None) -> datetime | None:
+    """A time from a request as the database keeps it: naive UTC (naive input is UTC)."""
+    return dt.astimezone(UTC).replace(tzinfo=None) if dt and dt.tzinfo else dt
+
+
 def _camera_filter(p: Principal, camera: str | None) -> set[str] | None:
     """Camera ids a list query may return: the user's cameras (None = all), and only
     `camera` when one is asked for."""
@@ -722,12 +732,15 @@ def detections(camera: str | None = None, label: str | None = None, only_targets
                hide_still: bool = Query(
                    False, description="leave out targets standing still (no match)"),
                favorite: bool = Query(False, description="only favorites"),
+               since: datetime | None = Query(None, description="from this time (UTC)"),
+               until: datetime | None = Query(None, description="before this time (UTC)"),
+               light: Light | None = None, feedback: FeedbackFilter | None = None,
                limit: int = Query(200, le=2000),
                settings: Settings = Depends(settings_dep),
                p: Principal = Depends(principal)) -> list[dict[str, Any]]:
     return queries.detections(settings, camera, label, only_targets, min_confidence, limit, segment,
                               profile, _camera_filter(p, camera), detector, event,
-                              hide_still, favorite)
+                              hide_still, favorite, _utc(since), _utc(until), light, feedback)
 
 
 @router.get("/detections/{detection_id}/frame.jpg")
@@ -890,10 +903,14 @@ def events(camera: str | None = None, profile: str | None = None, label: str | N
                                       description="seen by at least this many detectors"),
            hide_wrong: bool = Query(False, description="leave out events marked wrong"),
            favorite: bool = Query(False, description="only favorites"),
+           since: datetime | None = Query(None, description="starting from this time (UTC)"),
+           until: datetime | None = Query(None, description="starting before this time (UTC)"),
+           light: Light | None = None, feedback: FeedbackFilter | None = None,
            limit: int = Query(100, le=1000),
            p: Principal = Depends(principal)) -> list[dict[str, Any]]:
     return queries.events(camera, limit, profile, label, _camera_filter(p, camera),
-                          min_agreement, hide_wrong, favorite)
+                          min_agreement, hide_wrong, favorite, _utc(since), _utc(until), light,
+                          feedback)
 
 
 def _event(p: Principal, event_id: int) -> Event:

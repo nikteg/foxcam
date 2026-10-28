@@ -9,6 +9,15 @@ import { ProfileSelect, useDetectorNames, useSeveralDetectors } from "../compone
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
 import { FrameImage } from "../components/FrameImage";
+import {
+  FeedbackSelect,
+  asFeedback,
+  asLight,
+  LightSelect,
+  PERIOD_KEYS,
+  PeriodFilter,
+  periodBounds,
+} from "../components/Filters";
 import { BulkBar, useSelection } from "../components/Bulk";
 import { FavoriteStar } from "../components/Favorite";
 import { Feedback } from "../components/Feedback";
@@ -124,7 +133,10 @@ export function DetectionList() {
     "detector",
     "event",
     "favorite",
+    "light",
+    "feedback",
     "selected",
+    ...PERIOD_KEYS,
   ] as const);
   const query = {
     camera: f.camera,
@@ -137,13 +149,16 @@ export function DetectionList() {
     hide_still: f.still !== "true",
     min_confidence: Number(f.min_confidence) || 0,
     favorite: f.favorite === "true",
+    light: asLight(f.light),
+    feedback: asFeedback(f.feedback),
     limit: 500,
   };
+  const period = { period: f.period, from: f.from, to: f.to };
   const detections = useQuery({
-    queryKey: ["detections", query],
+    queryKey: ["detections", query, period],
     // A new filter keeps the current list on screen until its own data arrives.
     placeholderData: keepPreviousData,
-    queryFn: () => api.detections(query),
+    queryFn: () => api.detections({ ...query, ...periodBounds(period) }),
     refetchInterval: 20_000,
   });
   const selected = detections.data?.find((d) => String(d.id) === f.selected);
@@ -173,6 +188,7 @@ export function DetectionList() {
       <div className="filters">
         <CameraSelect value={f.camera} onChange={(v) => setFilter("camera", v)} />
         <ProfileSelect value={f.profile} onChange={(v) => setFilter("profile", v)} />
+        <PeriodFilter value={f} onChange={setFilter} />
         {(severalDetectors || f.detector) && (
           <Select
             value={f.detector}
@@ -194,6 +210,8 @@ export function DetectionList() {
           onKeyDown={(e) => e.key === "Enter" && setFilter("label", e.currentTarget.value.trim())}
           onBlur={(e) => setFilter("label", e.currentTarget.value.trim())}
         />
+        <LightSelect value={f.light} onChange={(v) => setFilter("light", v)} />
+        <FeedbackSelect value={f.feedback} onChange={(v) => setFilter("feedback", v)} />
         <Input
           type="number"
           className="narrow"
