@@ -575,8 +575,9 @@ def test_archive_motion_is_in_archive_time(settings):
     add_detection(seg_id, add_job(seg_id), 1600, label="person", target=False)
     with app_client(settings) as c:
         found = c.get(f"/api/archives/{arc_id}/timeline").json()["detections"]
-    # Targets only, at 10 s + 1.5 s.
-    assert [(d["label"], d["at_ms"]) for d in found] == [("fox", 11500)]
+    # Every detection (the other label too, no match), at 10 s + 1.5 s and 1.6 s.
+    assert [(d["label"], d["at_ms"], d["match"]) for d in found] == [
+        ("fox", 11500, True), ("person", 11600, False)]
 
 
 def test_missing_footage_in_an_archive(settings):

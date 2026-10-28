@@ -7,7 +7,7 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import case, exists, func, select
+from sqlalchemy import case, exists, func, select, true
 from sqlalchemy.orm import load_only, object_session, selectinload
 
 from .. import recording
@@ -595,14 +595,15 @@ def event_detections(event_id: int) -> list[dict[str, Any]]:
 
 
 def archive_detections(archive_id: int) -> list[dict[str, Any]]:
-    """The targets found in an archive's recordings, in the archive's time."""
+    """What was found in an archive's recordings, in the archive's time: every detection,
+    like a recording's player (the player draws the matches strong, the rest faint)."""
     with session_scope() as s:
         arc = s.get(Archive, archive_id)
         if arc is None:
             return []
         segs = s.scalars(select(Segment).where(Segment.archive_id == archive_id)).all()
         return _detections_in(s, [(g, g.archive_offset_s or 0.0) for g in segs],
-                              arc.duration_s, Detection.is_target.is_(True))
+                              arc.duration_s, true())
 
 
 def archive_motion(archive_id: int) -> list[list[Any]]:
