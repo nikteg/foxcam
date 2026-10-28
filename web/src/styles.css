@@ -2337,11 +2337,16 @@ h2.panel-heading {
 .event-card .fui-CardPreview {
   position: relative;
 }
-.event-pick {
+/* Fluent's CardPreview stretches its children over the whole preview: this one only as big
+   as its checkbox, or it covers the picture's button (and its ⓘ). */
+.event-card .fui-CardPreview > .event-pick {
   position: absolute;
   top: 4px;
   left: 4px;
   z-index: 1;
+  display: inline-flex;
+  width: auto;
+  height: auto;
   opacity: 0;
   transition: opacity 0.15s;
 }
@@ -2355,13 +2360,13 @@ h2.panel-heading {
 .dt-card > .dt-select .fui-Checkbox__indicator {
   box-shadow: var(--shadow4);
 }
-.event-card:hover .event-pick,
-.event-card:focus-within .event-pick,
-.cards.picking .event-pick {
+.event-card:hover .fui-CardPreview > .event-pick,
+.event-card:focus-within .fui-CardPreview > .event-pick,
+.cards.picking .fui-CardPreview > .event-pick {
   opacity: 1;
 }
 @media (pointer: coarse) {
-  .event-pick {
+  .event-card .fui-CardPreview > .event-pick {
     opacity: 1;
   }
 }
