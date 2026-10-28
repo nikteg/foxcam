@@ -6,7 +6,14 @@ import { useState } from "react";
 
 import type { Camera } from "../api";
 import { useI18n } from "../i18n";
-import { Dialog, DialogBody, DialogContent, DialogSurface, DialogTitle } from "./Drawer";
+import {
+  CloseActions,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+} from "./Drawer";
 import { Tag } from "./ui";
 
 const LOW_DATA_KEY = "foxcam.live.lowData";
@@ -98,6 +105,7 @@ export function LiveDrawer({
               <div className="live-frame offline">{t("live.offline")}</div>
             )}
           </DialogContent>
+          <CloseActions />
         </DialogBody>
       </DialogSurface>
     </Dialog>

@@ -129,3 +129,14 @@ export function DialogContent({
 export function DialogActions({ children }: { children: ReactNode }) {
   return <DrawerFooter className="drawer-actions">{children}</DrawerFooter>;
 }
+
+/** A footer with just Close, for drawers that only show something. */
+export function CloseActions({ onClose }: { onClose?: () => void }) {
+  const close = useContext(CloseContext);
+  const { t } = useI18n();
+  return (
+    <DialogActions>
+      <Button onClick={onClose ?? close}>{t("common.close")}</Button>
+    </DialogActions>
+  );
+}

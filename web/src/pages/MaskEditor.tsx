@@ -48,6 +48,7 @@ import {
   useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
+  type ReactElement,
   type RefObject,
 } from "react";
 
@@ -60,6 +61,7 @@ import {
 } from "../api";
 import {
   Dialog,
+  DialogActions,
   DialogBody,
   DialogContent,
   DialogSurface,
@@ -163,32 +165,37 @@ export function MaskDrawer({
   const name = cameras.data?.find((c) => c.id === cameraId)?.name ?? cameraId;
   const { t, rich } = useI18n();
   const dirty = useRef(false);
-  const [asking, setAsking] = useState(false);
-  const close = () => {
-    if (dirty.current) setAsking(true);
+  // Which close button asks (Escape and the backdrop ask at the one in the title).
+  const [asking, setAsking] = useState<"title" | "footer" | null>(null);
+  const close = (at: "title" | "footer" = "title") => {
+    if (dirty.current) setAsking(at);
     else onClose();
   };
+  const confirmClose = (at: "title" | "footer", button: ReactElement) => (
+    <ConfirmPopover
+      title={t(kind === "censor" ? "mask.discard" : "motion.discard")}
+      confirmLabel={t("mask.discardConfirm")}
+      open={asking === at}
+      onOpenChange={(o) => (o ? close(at) : setAsking(null))}
+      onConfirm={async () => onClose()}
+    >
+      {button}
+    </ConfirmPopover>
+  );
 
   return (
     <Dialog open size="large" onOpenChange={(_, d) => !d.open && close()}>
       <DialogSurface>
         <DialogBody>
           <DialogTitle
-            action={
-              <ConfirmPopover
-                title={t(kind === "censor" ? "mask.discard" : "motion.discard")}
-                confirmLabel={t("mask.discardConfirm")}
-                open={asking}
-                onOpenChange={(o) => (o ? close() : setAsking(false))}
-                onConfirm={async () => onClose()}
-              >
-                <Button
-                  appearance="subtle"
-                  aria-label={t("common.close")}
-                  icon={<Dismiss24Regular />}
-                />
-              </ConfirmPopover>
-            }
+            action={confirmClose(
+              "title",
+              <Button
+                appearance="subtle"
+                aria-label={t("common.close")}
+                icon={<Dismiss24Regular />}
+              />,
+            )}
           >
             <DrawerTitle
               title={t(kind === "censor" ? "camera.censorAreas" : "motion.title")}
@@ -232,6 +239,9 @@ export function MaskDrawer({
               />
             )}
           </DialogContent>
+          <DialogActions>
+            {confirmClose("footer", <Button>{t("common.close")}</Button>)}
+          </DialogActions>
         </DialogBody>
       </DialogSurface>
     </Dialog>

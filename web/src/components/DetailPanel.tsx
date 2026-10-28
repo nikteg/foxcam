@@ -11,6 +11,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useI18n } from "../i18n";
 import { PHONE, useMediaQuery } from "../useMediaQuery";
+import { CloseActions } from "./Drawer";
 
 /** Clicks here don't close the panel: list rows and event cards' picture and title (they
  * pick another item), their checkboxes and stars, the bulk action bar, and anything opened from it (menus, pickers, tooltips, a dialog). */
@@ -90,6 +91,7 @@ export function DetailPanel({
           </DrawerHeaderTitle>
         </DrawerHeader>
         <DrawerBody className="detail-body">{children}</DrawerBody>
+        <CloseActions onClose={onClose} />
       </OverlayDrawer>
     </>
   );

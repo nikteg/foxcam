@@ -27,7 +27,14 @@ import { useIsAdmin } from "../auth";
 import { useI18n, type MessageKey } from "../i18n";
 import { TapoCameraList, TapoNotInstalled, TapoSignIn } from "./TapoAccount";
 import { ActionRow, PasswordInput } from "./ui";
-import { Dialog, DialogBody, DialogContent, DialogSurface, DialogTitle } from "./Drawer";
+import {
+  CloseActions,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+} from "./Drawer";
 
 type Kind = "tapo" | "rtsp" | "file" | "test";
 
@@ -75,6 +82,8 @@ export function AddCameraDialog({ open, onClose }: { open: boolean; onClose: () 
             {kind === "file" && <FileStep back={back} onDone={close} />}
             {kind === "test" && <TestStep back={back} onDone={close} />}
           </DialogContent>
+          {/* The steps have their own buttons (back, add). */}
+          {kind === null && <CloseActions onClose={close} />}
         </DialogBody>
       </DialogSurface>
     </Dialog>
