@@ -7,6 +7,8 @@ Rules, in order:
   waiting for a worker, which are kept until ``unprocessed_max_days``.
 - If ``max_disk_gb`` is set, the oldest unpinned segments are deleted until under the cap.
 
+Segments with a starred detection count as pinned, also when the detection is no match.
+
 Segment rows are kept (``deleted_at`` set) so detection history remains browsable.
 
 The day counts and the disk cap can also be changed in the web UI (runtime_settings.py).
@@ -36,6 +38,12 @@ from ..models import (
 from ..storage import StorageError, get_storage
 
 log = logging.getLogger(__name__)
+
+def _kept():
+    """Segments retention leaves alone: pinned by an event, or with a starred detection."""
+    starred = select(Detection.segment_id).where(Detection.favorite.is_(True))
+    return Segment.pinned.is_(True) | Segment.id.in_(starred)
+
 
 def _remove_files(settings: Settings, seg: Segment) -> None:
     # A compacted segment's footage lives in its archive, which goes once all its
@@ -127,8 +135,7 @@ def _expire_by_age(settings: Settings) -> int:
             cutoff = now - timedelta(days=days)
             hard_cutoff = now - timedelta(days=max(r.unprocessed_max_days, days))
             query = select(Segment).where(
-                Segment.deleted_at.is_(None), Segment.pinned.is_(False),
-                Segment.start_at < cutoff,
+                Segment.deleted_at.is_(None), ~_kept(), Segment.start_at < cutoff,
                 # Unprocessed footage gets extra time, so a GPU box that is offline for a
                 # few days does not lose data.
                 (Segment.start_at < hard_cutoff)
@@ -152,8 +159,7 @@ def _enforce_disk_cap(settings: Settings) -> int:
                         .where(Segment.deleted_at.is_(None))) or 0
         if used <= cap_bytes:
             return 0
-        for seg in s.scalars(select(Segment).where(Segment.deleted_at.is_(None),
-                                                   Segment.pinned.is_(False))
+        for seg in s.scalars(select(Segment).where(Segment.deleted_at.is_(None), ~_kept())
                              .order_by(Segment.start_at)):
             if used <= cap_bytes:
                 break
@@ -194,14 +200,12 @@ def _expire_remote_recordings(settings: Settings) -> int:
         return 0
     cutoff = utcnow() - timedelta(days=days)
     with session_scope() as s:
-        segs = s.scalars(select(Segment).where(Segment.remote_key.is_not(None),
-                                               Segment.pinned.is_(False),
+        segs = s.scalars(select(Segment).where(Segment.remote_key.is_not(None), ~_kept(),
                                                Segment.start_at < cutoff)).all()
         for seg in segs:
             _delete_remote(store, seg.remote_key)
             seg.remote_key = None
-        pinned = select(Segment.archive_id).where(Segment.archive_id.is_not(None),
-                                                  Segment.pinned.is_(True))
+        pinned = select(Segment.archive_id).where(Segment.archive_id.is_not(None), _kept())
         archives = s.scalars(select(Archive).where(Archive.remote_key.is_not(None),
                                                    Archive.id.not_in(pinned),
                                                    Archive.start_at < cutoff)).all()

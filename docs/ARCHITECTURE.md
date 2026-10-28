@@ -256,6 +256,8 @@ Runs every 10 minutes (`pipeline/retention.py`):
 - unpinned segments older than `segments_days` are deleted, **except** segments still waiting for a
   worker, which are kept up to `unprocessed_max_days` (so an offline GPU box does not lose footage);
 - if `max_disk_gb` is set, the oldest unpinned segments are deleted until under the cap;
+- a segment with a starred detection counts as pinned, also when the detection is no match
+  (so starring a near miss on the Detections page keeps its footage);
 - the censored worker input is deleted as soon as its job is done (`delete_derived_after_done`).
 
 Deleted segments keep their database row (`deleted_at`), so detections stay browsable.

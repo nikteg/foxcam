@@ -120,3 +120,26 @@ def test_favorite_events_are_not_expired(settings):
         det.event_id, det.favorite = ev.id, True
     assert retention.run_retention(settings)["events"] == 0
     assert not _deleted(seg_id)  # still pinned by the event
+
+
+@needs_ffmpeg
+def test_starred_detections_keep_their_segment(settings):
+    settings.retention.segments_days = 7
+    now = utcnow().replace(microsecond=0)
+    starred = add_segment(settings, start=now - 10 * DAY)
+    det_id = add_detection(starred, add_job(starred, state=JobState.DONE), 500,
+                           label="person", confidence=0.5, target=False)
+    plain = add_segment(settings, start=now - 11 * DAY)
+    add_detection(plain, add_job(plain, state=JobState.DONE), 500, label="person",
+                  confidence=0.5, target=False)
+    with session_scope() as s:
+        s.get(Detection, det_id).favorite = True
+
+    assert retention.run_retention(settings)["segments_age"] == 1
+    assert not _deleted(starred) and _file(settings, starred).exists()
+    assert _deleted(plain)
+
+    settings.retention.segments_days = 0
+    settings.retention.max_disk_gb = 1e-9  # over the cap: still kept
+    retention.run_retention(settings)
+    assert not _deleted(starred)
