@@ -648,7 +648,9 @@ function SpeedMenu() {
   return (
     <Menu
       inline
-      positioning="above-end"
+      // No taller than the room above the button: a small player (a phone's drawer) cuts
+      // off what overflows it, so the speeds scroll instead.
+      positioning={{ position: "above", align: "end", autoSize: "height" }}
       checkedValues={{ rate: [String(rate)] }}
       onCheckedValueChange={(_, d) => remote.changePlaybackRate(Number(d.checkedItems[0]))}
     >
