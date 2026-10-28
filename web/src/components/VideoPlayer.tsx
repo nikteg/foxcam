@@ -152,7 +152,7 @@ export function VideoPlayer({
         <PlaybackBoxes
           motion={motionOn ? motion : undefined}
           detections={detectionsOn ? detections : undefined}
-          poster={detectionsOn && poster ? posterDetections : undefined}
+          poster={poster ? ((detectionsOn ? posterDetections : undefined) ?? []) : undefined}
         />
       )}
       {!!gaps?.length && <GapNotice gaps={gaps} />}
@@ -683,7 +683,8 @@ const FRAME_MS = 600;
 const DETECTION_HOLD_MS = 1500;
 
 /** The boxes over the playback, inside a `VideoPlayer`: what moved and what detectors
- * found at this moment; until playback starts, the poster's detections. */
+ * found at this moment. `poster`: the video has one, which covers it until playback
+ * starts; meanwhile these detections (the poster's) are drawn instead. */
 function PlaybackBoxes({
   motion,
   detections,
@@ -695,8 +696,9 @@ function PlaybackBoxes({
 }) {
   const time = useMediaState("currentTime");
   const canPlay = useMediaState("canPlay");
-  // Until playback starts the poster (the recording's first moment) covers the video.
+  // Until playback starts a poster covers the video; without one the video shows.
   const started = useMediaState("started");
+  const live = started || !poster;
   const box = useRef<HTMLDivElement>(null);
   // The video's own aspect ratio: the picture is letterboxed inside the player.
   const [aspect, setAspect] = useState<number | null>(null);
@@ -705,8 +707,8 @@ function PlaybackBoxes({
     if (video?.videoWidth) setAspect(video.videoWidth / video.videoHeight);
   }, [canPlay]);
   const ms = time * 1000;
-  const frame = started && motion ? motionAt(motion, ms) : undefined;
-  const found = started ? detectionsAt(detections ?? [], ms) : (poster ?? []);
+  const frame = live && motion ? motionAt(motion, ms) : undefined;
+  const found = live ? detectionsAt(detections ?? [], ms) : poster;
   return (
     <div ref={box} className="player-boxes">
       {aspect && (
