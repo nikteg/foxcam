@@ -173,6 +173,8 @@ export const en = {
   "sun.kind.wrong": "Marked wrong",
   "sun.kind.correct": "Marked correct",
   "sun.kind.unmarked": "Not marked",
+  "sun.curve": "The sun",
+  "sun.curveKey": "line: the last 24 h, band: the whole period",
   "sun.counts": "{ignored} ignored, {kept} kept",
   "sun.summaryOff": "Off: targets count whatever the light.",
   "sun.summary": "Targets seen while the sun is below {limit}° are no match.",

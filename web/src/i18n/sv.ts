@@ -175,6 +175,8 @@ export const sv: Record<MessageKey, string> = {
   "sun.kind.wrong": "Markerad fel",
   "sun.kind.correct": "Markerad rätt",
   "sun.kind.unmarked": "Inte markerad",
+  "sun.curve": "Solen",
+  "sun.curveKey": "linje: senaste dygnet, band: hela perioden",
   "sun.counts": "{ignored} bortsedda, {kept} kvar",
   "sun.summaryOff": "Av: mål räknas oavsett ljus.",
   "sun.summary": "Mål som syns medan solen står under {limit}° räknas inte som träff.",

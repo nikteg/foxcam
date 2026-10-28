@@ -2683,28 +2683,24 @@ h2.panel-heading {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
+.sun-band {
+  fill: var(--colorPaletteMarigoldBorderActive);
+  opacity: 0.22;
+}
 .sun-curve {
   fill: none;
   stroke: var(--colorPaletteMarigoldBorderActive);
-  stroke-width: 1.5;
+  stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;
-  opacity: 0.45;
 }
 .sun-ignored {
   fill: var(--colorNeutralForeground3);
   opacity: 0.14;
 }
 .sun-dot {
-  cursor: pointer;
-}
-.sun-dot circle:not(.sun-hit),
-.sun-dot rect {
   stroke-width: 2;
   paint-order: stroke;
-}
-.sun-hit {
-  fill: transparent;
 }
 .sun-limit line {
   stroke: var(--colorNeutralForeground1);

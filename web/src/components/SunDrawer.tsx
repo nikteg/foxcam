@@ -29,23 +29,31 @@ import { DrawerTitle, Fact, Facts, QueryState } from "./ui";
 import { BoxSkeleton, FieldSkeleton } from "./Skeletons";
 
 const DAYS = [7, 14, 30, 90];
+const DEFAULT_DAYS = 14;
 /** Where the limit starts when switched on: the end of civil twilight is too late for a
  * lit room, sunset is a fair first guess. */
 const FIRST_LIMIT = 0;
+
+/** The chart's data, for prefetching where the drawer is opened from (the request takes a
+ * while, and a chart popping in while the drawer slides in looks laggy). */
+export const sunChartQuery = (cameraId: string, days = DEFAULT_DAYS) => ({
+  queryKey: ["sun", cameraId, days],
+  queryFn: () => api.sunChart(cameraId, days),
+  staleTime: 60_000,
+});
 
 const parse = (text: string) => (text.trim() === "" ? null : Number(text));
 
 export function SunDrawer({ camera, onClose }: { camera: Camera; onClose: () => void }) {
   const { t } = useI18n();
   const client = useQueryClient();
-  const [days, setDays] = useState(14);
+  const [days, setDays] = useState(DEFAULT_DAYS);
   const [limit, setLimit] = useState(camera.sun_limit);
   const [last, setLast] = useState(camera.sun_limit ?? FIRST_LIMIT);
   const [lat, setLat] = useState(camera.latitude?.toString() ?? "");
   const [lon, setLon] = useState(camera.longitude?.toString() ?? "");
   const chart = useQuery({
-    queryKey: ["sun", camera.id, days],
-    queryFn: () => api.sunChart(camera.id, days),
+    ...sunChartQuery(camera.id, days),
     placeholderData: (prev) => prev,
   });
   const save = useMutation({
@@ -182,6 +190,19 @@ function Legend({ detections, limit }: { detections: SunDetection[]; limit: numb
           {t("sun.counts", { ignored: count(kind, true), kept: count(kind, false) })}
         </Fact>
       ))}
+      <Fact
+        label={
+          <span className="row">
+            <svg width="12" height="12" aria-hidden className="sun-key">
+              <rect className="sun-band" x="0" y="2" width="12" height="8" />
+              <line className="sun-curve" x1="1" x2="11" y1="6" y2="6" />
+            </svg>
+            {t("sun.curve")}
+          </span>
+        }
+      >
+        {t("sun.curveKey")}
+      </Fact>
     </Facts>
   );
 }

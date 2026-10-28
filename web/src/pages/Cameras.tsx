@@ -21,7 +21,7 @@ import {
   WeatherSunny20Regular,
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 
 import { api, type Camera } from "../api";
@@ -34,7 +34,7 @@ import { SharePanel } from "../components/ShareDialog";
 import { ProfileDialog, ProfilesSection } from "./Profiles";
 import { useProfiles } from "../components/ProfileSelect";
 import { TapoAccountCard } from "../components/TapoAccount";
-import { SunDrawer } from "../components/SunDrawer";
+import { SunDrawer, sunChartQuery } from "../components/SunDrawer";
 import { decimal } from "../format";
 import {
   Checkbox,
@@ -466,6 +466,9 @@ function DetectionPanel({
     setSelected((cur) => (on ? [...cur, id] : cur.filter((x) => x !== id)));
   const [editingMotion, setEditingMotion] = useState(false);
   const [editingSun, setEditingSun] = useState(false);
+  useEffect(() => {
+    void client.prefetchQuery(sunChartQuery(camera.id));
+  }, [client, camera.id]);
 
   return (
     <>
