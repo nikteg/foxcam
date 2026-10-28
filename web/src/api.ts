@@ -39,6 +39,8 @@ export interface Camera {
   managed: "config" | "ui";
   enabled: boolean;
   segment_seconds_override: number | null;
+  /** The segment length from Settings, used when there is no override. */
+  segment_seconds_default: number;
   /** Detection profiles running on this camera. */
   profiles: string[];
   /** ui = chosen in the web UI, config = config.yaml, default = profiles marked default. */

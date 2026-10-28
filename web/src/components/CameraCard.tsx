@@ -140,51 +140,42 @@ export function CameraCard({
           {!c.enabled && <Tag kind="warn">{t("cameras.disabled")}</Tag>}
         </span>
       )}
-      <Facts>
-        {manage && (
-          <>
-            <Fact label={t("cameras.source")} className="mono">
-              {sourceDetail(c.source_config, t("cameras.synthetic"))}
-            </Fact>
-          </>
-        )}
-        <Fact label={t("camera.lastSegment")}>
-          <Time iso={c.last_segment_at} />
-        </Fact>
-        <Fact label={t("camera.segmentLength")}>
-          {c.segment_seconds} s
-          {manage && c.segment_seconds_override === null && (
-            <span className="muted"> ({t("camera.default")})</span>
-          )}
-        </Fact>
-        {manage ? (
-          <>
-            <Fact label={t("recording.title")}>
+      {/* The Status page's card is only the picture and buttons; the live view has the facts. */}
+      {manage && (
+        <Facts>
+          <Fact label={t("cameras.source")} className="mono">
+            {sourceDetail(c.source_config, t("cameras.synthetic"))}
+          </Fact>
+          <CameraModelFact camera={c} />
+          <Fact label={t("camera.lastSegment")}>
+            <Time iso={c.last_segment_at} />
+          </Fact>
+          <Fact label={t("camera.segmentLength")}>
+            {c.segment_seconds} s
+            {c.segment_seconds_override === null && (
+              <span className="muted"> ({t("camera.default")})</span>
+            )}
+          </Fact>
+          <Fact label={t("recording.title")}>
+            <span className="row wrap tags">
+              {recordingName(c.recording_profile)}
+              {c.burn_masks && c.rects.length > 0 && <Tag>{t("recording.masksBurnedIn")}</Tag>}
+            </span>
+          </Fact>
+          <Fact label={t("camera.censorAreas")}>{c.rects.length}</Fact>
+          <Fact label={t("profiles.title")}>
+            {c.profiles.length ? (
               <span className="row wrap tags">
-                {recordingName(c.recording_profile)}
-                {c.burn_masks && c.rects.length > 0 && <Tag>{t("recording.masksBurnedIn")}</Tag>}
+                {c.profiles.map((id) => (
+                  <ProfileTag key={id} id={id} />
+                ))}
               </span>
-            </Fact>
-            <Fact label={t("camera.censorAreas")}>{c.rects.length}</Fact>
-            <Fact label={t("profiles.title")}>
-              {c.profiles.length ? (
-                <span className="row wrap tags">
-                  {c.profiles.map((id) => (
-                    <ProfileTag key={id} id={id} />
-                  ))}
-                </span>
-              ) : (
-                <span className="muted">{t("cameras.noProfiles")}</span>
-              )}
-            </Fact>
-          </>
-        ) : (
-          <>
-            <CameraModelFact camera={c} />
-            <Fact label={t("camera.viewers")}>{c.viewers}</Fact>
-          </>
-        )}
-      </Facts>
+            ) : (
+              <span className="muted">{t("cameras.noProfiles")}</span>
+            )}
+          </Fact>
+        </Facts>
+      )}
       {manage && (
         <Tooltip
           content={

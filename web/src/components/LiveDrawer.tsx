@@ -186,6 +186,9 @@ function LiveFacts({ camera: c, stream }: { camera: Camera; stream: LiveStream |
           </Fact>
         </>
       )}
+      <Fact label={t("camera.lastSegment")}>
+        <Time iso={c.last_segment_at} />
+      </Fact>
       <Fact label={t("camera.viewers")}>{c.viewers}</Fact>
       <Fact label={t("live.events24h")}>{c.events_24h}</Fact>
       <Fact label={t("live.lastEvent")}>

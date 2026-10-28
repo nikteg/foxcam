@@ -250,7 +250,7 @@ function GeneralPanel({
                 min={5}
                 max={3600}
                 value={segment}
-                placeholder={t("camera.default")}
+                placeholder={String(camera.segment_seconds_default)}
                 onChange={(_, d) => setSegment(d.value)}
               />
             </Field>
