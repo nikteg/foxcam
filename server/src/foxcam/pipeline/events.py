@@ -254,9 +254,9 @@ def _build_clip(settings: Settings, event_id: int) -> bool:
             thumb_rel = Path("clips") / ev.camera_id / f"event-{ev.id}.jpg"
             src = segment_source(settings, s.get(Segment, best.segment_id))
             if src is not None:
+                # Without the box: the web app draws it (thumb_box).
                 ffmpeg.thumbnail(src.path, settings.data_dir / thumb_rel,
-                                 at_s=src.offset_s + best.offset_ms / 1000, width=640,
-                                 box=best.bbox)
+                                 at_s=src.offset_s + best.offset_ms / 1000, width=640)
             else:
                 thumb_rel = None
 
@@ -268,6 +268,7 @@ def _build_clip(settings: Settings, event_id: int) -> bool:
         ev.is_night = (sum(nights) > len(nights) / 2) if nights else None
         ev.clip_path = str(clip_rel)
         ev.thumb_path = str(thumb_rel) if thumb_rel else None
+        ev.thumb_box = best.bbox if thumb_rel and best is not None else None
         ev.clip_start = start
         ev.clip_duration_s = duration
         ev.clip_gaps = footage.clip_gaps(segs, start, duration)

@@ -9,6 +9,7 @@ import { ProfileSelect, useDetectorNames, useSeveralDetectors } from "../compone
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
 import { FrameImage } from "../components/FrameImage";
+import { playerDetections } from "../components/Boxes";
 import { BulkBar, useSelection } from "../components/Bulk";
 import { FavoriteStar } from "../components/Favorite";
 import { Feedback } from "../components/Feedback";
@@ -42,8 +43,16 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detec
     header: t("col.preview"),
     width: 120,
     phone: "thumb",
-    // The frame with the box drawn in; made on first view (lazy: rows in sight only).
-    cell: (d) => <FrameImage className="mini" lazy src={detectionFrameUrl(d, "small")} alt="" />,
+    // The frame with the box over it; made on first view (lazy: rows in sight only).
+    cell: (d) => (
+      <FrameImage
+        className="mini"
+        lazy
+        src={detectionFrameUrl(d, "small")}
+        alt=""
+        boxes={playerDetections([d])}
+      />
+    ),
   },
   {
     id: "ts",
@@ -289,6 +298,12 @@ export function DetectionList() {
 function DetectionDetail({ detection: d }: { detection: Detection }) {
   const routerHref = useRouterHref();
   const { t } = useI18n();
+  // The recording's detections, drawn over its playback (shared with its drawer).
+  const inRecording = useQuery({
+    queryKey: ["detections", { segment: d.segment_id }],
+    queryFn: () => api.detections({ segment: d.segment_id, limit: 500 }),
+    placeholderData: keepPreviousData,
+  });
   return (
     <div className="detail-stack">
       <FrameImage
@@ -298,6 +313,7 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
         width={d.width}
         height={d.height}
         alt={t("detections.frameAlt", { label: d.label })}
+        boxes={playerDetections([d])}
       />
       <Caption1 className="muted">{t("detections.frameNote")}</Caption1>
       <span className="row wrap">
@@ -356,6 +372,9 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
           src={`/api/segments/${d.segment_id}/play`}
           startAt={Math.max(d.offset_ms / 1000 - 1, 0)}
           thumbnails={`/api/segments/${d.segment_id}/thumbnails.vtt`}
+          detections={playerDetections(
+            inRecording.isPlaceholderData ? undefined : inRecording.data,
+          )}
         />
       </div>
       <Button

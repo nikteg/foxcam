@@ -419,6 +419,7 @@ export const en = {
   "player.fullscreen": "Fullscreen",
   "player.exitFullscreen": "Exit fullscreen",
   "player.speed": "Playback speed",
+  "player.showDetections": "Show detections",
   "player.footageMissing": "Footage missing – about {seconds} s",
   "player.footageMissingUnknown": "Footage missing",
   "hourly.showSegments": "Show its segments",

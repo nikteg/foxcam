@@ -53,7 +53,8 @@
 4. **Events** (every 10 s): segments with a match (a detection of a target label at or above
    the match threshold) are merged into events when within `merge_gap_seconds`. After
    `settle_seconds` (and once the post-roll footage exists) a clip is cut from the **original**
-   recordings with pre/post roll, plus a thumbnail with the box drawn. Event segments are pinned.
+   recordings with pre/post roll, plus a thumbnail of the best detection's frame (its box,
+   `thumb_box`, is drawn over it by the web app). Event segments are pinned.
    A gap between two recordings (the recorder stopped and started again) stays a gap in the
    clip, the picture holding there, so clip time is clock time; the player marks it as missing
    footage (`footage.py`), as it does skips inside a recording (below).

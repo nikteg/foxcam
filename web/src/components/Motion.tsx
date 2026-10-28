@@ -6,10 +6,10 @@ import { percent } from "../format";
 import { useI18n } from "../i18n";
 import { NoValue, Tag } from "./ui";
 
-const NO_TIMELINE: VideoTimeline = { motion: [], gaps: [] };
+const NO_TIMELINE: VideoTimeline = { motion: [], detections: [], gaps: [] };
 
-/** Where things moved in an event's clip or an archive, and footage missing from it (that
- *  video's own time); none while another video's is still on screen. */
+/** Where things moved in an event's clip or an archive, what was found and footage missing
+ *  from it (that video's own time); none while another video's is still on screen. */
 export function useVideoTimeline(kind: "events" | "archives", id: number | null): VideoTimeline {
   const q = useQuery({
     queryKey: ["video-timeline", kind, id],

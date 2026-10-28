@@ -392,6 +392,9 @@ class Event(Base):
     # footage.py; None: built before clips kept them).
     clip_gaps: Mapped[list[Any] | None] = mapped_column(JSON)
     thumb_path: Mapped[str | None] = mapped_column(String)
+    # The best detection's box, drawn over the thumbnail by the web app ([x, y, w, h],
+    # 0..1). None: no box, or a thumbnail from before, with the box burned in.
+    thumb_box: Mapped[list[Any] | None] = mapped_column(JSON)
     # Object keys once uploaded to S3 (reset when the clip is rebuilt).
     clip_remote_key: Mapped[str | None] = mapped_column(String)
     thumb_remote_key: Mapped[str | None] = mapped_column(String)

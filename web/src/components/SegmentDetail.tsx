@@ -26,6 +26,7 @@ import {
 } from "./ui";
 import { VideoPlayer, type PlayerHandle } from "./VideoPlayer";
 import { MotionShare } from "./Motion";
+import { playerDetections } from "./Boxes";
 
 /**
  * A recording's detail drawer, for the recording whose id is in `segmentId`. Pass `segment`
@@ -137,6 +138,9 @@ function SegmentDetail({
             poster={s.thumb_url}
             thumbnails={`/api/segments/${s.id}/thumbnails.vtt`}
             motion={motionFrames}
+            detections={playerDetections(
+              detections.isPlaceholderData ? undefined : detections.data,
+            )}
             gaps={shown?.gaps}
           />
         </div>

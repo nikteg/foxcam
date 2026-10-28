@@ -331,7 +331,7 @@ def _moving(settings: Settings) -> Callable[[Detection], bool | None]:
     return moving
 
 
-def detection_dict(d: Detection, moving: bool | None) -> dict[str, Any]:
+def detection_dict(d: Detection, moving: bool | None, match: bool) -> dict[str, Any]:
     return {
         "id": d.id, "segment_id": d.segment_id, "camera_id": d.camera_id, "ts": iso(d.ts),
         "profile_id": d.profile_id, "detector_id": d.detector_id, "event_id": d.event_id,
@@ -349,6 +349,8 @@ def detection_dict(d: Detection, moving: bool | None) -> dict[str, Any]:
         "below_sun_limit": bool(d.below_sun_limit),
         # The box overlapped motion at that moment (None: not measured).
         "moving": moving,
+        # A target that counts (queue.counts_as_match): not still, not wrong, nor its event.
+        "match": bool(match),
         # Detector specifics, e.g. SpeciesNet's box label and top guesses.
         "extra": d.extra or {},
     }
@@ -364,7 +366,7 @@ def detections(settings: Settings, camera_id: str | None = None, label: str | No
                hide_still: bool = False,
                only_favorites: bool = False) -> list[dict[str, Any]]:
     # The recordings' few columns used here, in one query (not their motion data).
-    q = _only(select(Detection), Detection.camera_id, camera_ids) \
+    q = _only(select(Detection, queue.counts_as_match()), Detection.camera_id, camera_ids) \
         .options(selectinload(Detection.segment).options(
             load_only(Segment.is_night, Segment.motion_score, Segment.width,
                       Segment.height))) \
@@ -390,7 +392,7 @@ def detections(settings: Settings, camera_id: str | None = None, label: str | No
         q = q.where(Detection.favorite.is_(True))
     moving = _moving(settings)
     with session_scope() as s:
-        return [detection_dict(d, moving(d)) for d in s.scalars(q)]
+        return [detection_dict(d, moving(d), match) for d, match in s.execute(q)]
 
 
 def set_feedback(settings: Settings, detection_id: int, correct: bool | None) -> bool:
@@ -490,6 +492,8 @@ def events(camera_id: str | None = None, limit: int = 100,
             "clip_url": f"/api/events/{e.id}/clip" if e.clip_path or e.clip_remote_key else None,
             "thumb_url": f"/api/events/{e.id}/thumb" if e.thumb_path or e.thumb_remote_key
             else None,
+            # Drawn over the thumbnail (None: none, or burned into an older one).
+            "thumb_box": e.thumb_box,
             "remote": e.clip_remote_key is not None,
             "clip_duration_s": e.clip_duration_s, "building": e.clip_dirty,
             "clip_error": e.clip_error,
@@ -517,6 +521,47 @@ def event_motion(event_id: int) -> list[list[Any]]:
             return []
         return _motion_in([(g, (g.start_at - ev.clip_start).total_seconds())
                            for g in ev.segments], ev.clip_duration_s or 0)
+
+
+def _detections_in(s, parts: list[tuple[Segment, float]], length_s: float,
+                   where: Any) -> list[dict[str, Any]]:
+    """The detections (``where``) of a video made of recordings, for drawing their boxes
+    over the playback: times (ms) moved like ``_motion_in``'s, cut to its length."""
+    offsets = {seg.id: offset_s for seg, offset_s in parts}
+    if not offsets:
+        return []
+    q = select(Detection, queue.counts_as_match()).where(
+        Detection.segment_id.in_(offsets), Detection.bbox_x.is_not(None), where)
+    out = []
+    for d, match in s.execute(q):
+        at = round(d.offset_ms + offsets[d.segment_id] * 1000)
+        if 0 <= at <= length_s * 1000:
+            out.append({"id": d.id, "at_ms": at, "bbox": d.bbox, "label": d.label,
+                        "confidence": round(d.confidence, 3), "detector_id": d.detector_id,
+                        "match": bool(match)})
+    return sorted(out, key=lambda d: d["at_ms"])
+
+
+def event_detections(event_id: int) -> list[dict[str, Any]]:
+    """The event's detections, in its clip's time."""
+    with session_scope() as s:
+        ev = s.get(Event, event_id)
+        if ev is None or ev.clip_start is None:
+            return []
+        return _detections_in(s, [(g, (g.start_at - ev.clip_start).total_seconds())
+                                  for g in ev.segments], ev.clip_duration_s or 0,
+                              Detection.event_id == event_id)
+
+
+def archive_detections(archive_id: int) -> list[dict[str, Any]]:
+    """The targets found in an archive's recordings, in the archive's time."""
+    with session_scope() as s:
+        arc = s.get(Archive, archive_id)
+        if arc is None:
+            return []
+        segs = s.scalars(select(Segment).where(Segment.archive_id == archive_id)).all()
+        return _detections_in(s, [(g, g.archive_offset_s or 0.0) for g in segs],
+                              arc.duration_s, Detection.is_target.is_(True))
 
 
 def archive_motion(archive_id: int) -> list[list[Any]]:
@@ -576,10 +621,10 @@ def feedback_export(settings: Settings) -> list[dict[str, Any]]:
     """Labelled detections, for building a fine-tuning dataset."""
     moving = _moving(settings)
     with session_scope() as s:
-        rows = s.scalars(select(Detection).where(Detection.feedback.is_not(None))
-                         .order_by(Detection.ts)).all()
-        return [{**detection_dict(d, moving(d)), "segment_path": d.segment.path,
-                 "segment_deleted": d.segment.deleted_at is not None} for d in rows]
+        rows = s.execute(select(Detection, queue.counts_as_match())
+                         .where(Detection.feedback.is_not(None)).order_by(Detection.ts)).all()
+        return [{**detection_dict(d, moving(d), match), "segment_path": d.segment.path,
+                 "segment_deleted": d.segment.deleted_at is not None} for d, match in rows]
 
 
 def latest_segment_id(camera_id: str) -> int | None:

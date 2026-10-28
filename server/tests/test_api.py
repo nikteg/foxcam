@@ -13,6 +13,7 @@ from foxcam.models import (
     SegmentStatus,
     utcnow,
 )
+from sqlalchemy import select
 
 from .conftest import add_detection, add_job, add_segment, app_client, make_video, needs_ffmpeg
 
@@ -323,9 +324,10 @@ def test_detection_frame_has_a_small_preview(settings, client):
         r = client.get(f"/api/detections/{det}/frame.jpg{size}")
         assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg"
         assert "max-age" in r.headers["cache-control"]
-        name = f"{det}-{seg}-500-small.jpg" if size else f"{det}-{seg}-500.jpg"
+        # One picture per moment, without the box (the web app draws it).
+        name = f"{seg}-500-small.jpg" if size else f"{seg}-500.jpg"
         out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=width",
-                              "-of", "csv=p=0", str(settings.thumbs_dir / "detections" / name)],
+                              "-of", "csv=p=0", str(settings.thumbs_dir / "frames" / name)],
                              capture_output=True, text=True, check=True).stdout
         assert int(out.strip()) == width
 
@@ -432,6 +434,41 @@ def test_event_motion_is_in_clip_time(settings):
     assert r.json()["gaps"] == []
 
 
+def test_event_detections_are_in_clip_time(settings):
+    """The event's detections with their boxes, in the clip's clock; another event's are
+    left out, and one marked wrong makes the event's no match."""
+    start = utcnow().replace(microsecond=0)
+    first = add_segment(settings, start=start, seconds=10, with_file=False)
+    second = add_segment(settings, start=start + timedelta(seconds=10), seconds=10,
+                         with_file=False)
+    early = add_detection(first, add_job(first), 1000)
+    late = add_detection(first, add_job(first), 8000)
+    other = add_detection(second, add_job(second), 500, label="cat")
+    later = add_detection(second, add_job(second), 2000)
+    with session_scope() as s:
+        ev = Event(camera_id="cam", label="fox", first_ts=start, last_ts=start,
+                   max_confidence=0.9, clip_dirty=False, clip_path="clips/cam/ev.mp4",
+                   clip_start=start + timedelta(seconds=5), clip_duration_s=10)
+        ev.segments = [s.get(Segment, first), s.get(Segment, second)]
+        s.add(ev)
+        s.flush()
+        for d in (early, late, later):
+            s.get(Detection, d).event_id = ev.id
+        ev_id = ev.id
+    with app_client(settings) as c:
+        found = c.get(f"/api/events/{ev_id}/timeline").json()["detections"]
+        # 1000 ms is before the clip; 8000 -> 3000; the second recording's 2000 -> 7000.
+        assert [(d["id"], d["at_ms"], d["match"]) for d in found] == [(late, 3000, True),
+                                                                      (later, 7000, True)]
+        assert found[0]["bbox"] == [0.4, 0.4, 0.2, 0.2] and found[0]["label"] == "fox"
+        assert other not in [d["id"] for d in found]
+        with session_scope() as s:
+            s.get(Detection, late).feedback = False
+        found = c.get(f"/api/events/{ev_id}/timeline").json()["detections"]
+        assert [d["match"] for d in found] == [False, False]
+        assert c.get(f"/api/detections?segment={second}").json()[0]["match"] is False
+
+
 def test_missing_footage_in_an_event_clip(settings):
     """The gaps between its recordings the clip kept (how much they cost is unknown), and
     the skips inside them, in clip time."""
@@ -531,6 +568,15 @@ def test_archive_motion_is_in_archive_time(settings):
     assert r.json()["motion"] == [[1000, [[0.1, 0.1, 0.2, 0.2]]],
                                   [10500, [[0.2, 0.2, 0.1, 0.1]]]]
     assert r.json()["gaps"] == []
+    with session_scope() as s:
+        seg_id = s.scalars(select(Segment.id).where(Segment.archive_id == arc_id)
+                           .order_by(Segment.archive_offset_s)).all()[1]
+    add_detection(seg_id, add_job(seg_id), 1500)
+    add_detection(seg_id, add_job(seg_id), 1600, label="person", target=False)
+    with app_client(settings) as c:
+        found = c.get(f"/api/archives/{arc_id}/timeline").json()["detections"]
+    # Targets only, at 10 s + 1.5 s.
+    assert [(d["label"], d["at_ms"]) for d in found] == [("fox", 11500)]
 
 
 def test_missing_footage_in_an_archive(settings):

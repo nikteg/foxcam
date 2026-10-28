@@ -1,7 +1,8 @@
 // The app's video player: Vidstack plays the video and keeps its state (keyboard
 // shortcuts, gestures, hiding the controls); the controls are our own, made of Fluent UI
 // parts on a dark theme, with a timeline that previews the server's thumbnail sprites
-// (WebVTT) and can show markers (e.g. where things moved, footage that is missing).
+// (WebVTT) and can show markers (e.g. where things moved, footage that is missing), with
+// boxes over the picture around what moved and what detectors found (components/Boxes.tsx).
 import {
   FluentProvider,
   Button,
@@ -23,6 +24,8 @@ import {
   Play28Filled,
   Run20Filled,
   Run20Regular,
+  ScanObject20Filled,
+  ScanObject20Regular,
   Speaker220Regular,
   SpeakerMute20Regular,
 } from "@fluentui/react-icons";
@@ -47,15 +50,16 @@ import { useEffect, useRef, useState, type ReactNode, type RefObject } from "rea
 
 import "@vidstack/react/player/styles/base.css";
 
-import type { FootageGap, MotionFrame } from "../api";
+import type { FootageGap, MotionFrame, PlayerDetection } from "../api";
 import { useI18n } from "../i18n";
 import { darkTheme } from "../theme";
 import { useMediaQuery } from "../useMediaQuery";
+import { DetectionBoxes, MotionBoxes, PictureBoxes } from "./Boxes";
 
 export type PlayerHandle = MediaPlayerInstance;
 
-/** A stretch of the video to mark on the timeline, in seconds. */
-export type Marker = { from: number; to: number };
+/** A stretch of the video to mark on the timeline, in seconds; `kind` colours it. */
+export type Marker = { from: number; to: number; kind?: "motion" | "detection" };
 
 const RATES = [0.25, 0.5, 1, 1.5, 2, 4, 8];
 /** A double tap at the side seeks this far when there is no marker to jump to. */
@@ -72,6 +76,8 @@ export function VideoPlayer({
   overlay,
   markers,
   motion,
+  detections,
+  posterDetections,
   gaps,
 }: {
   src: string;
@@ -84,25 +90,34 @@ export function VideoPlayer({
   autoPlay?: boolean;
   /** For seeking from outside (e.g. a detection's play button). */
   playerRef?: RefObject<MediaPlayerInstance | null>;
-  /** Drawn over the picture (e.g. `<MotionOverlay>`), under the controls. */
+  /** Drawn over the picture, under the controls. */
   overlay?: ReactNode;
   /** Marked on the timeline; a double tap at the sides jumps between them. */
   markers?: Marker[];
   /** Where things moved: boxes on the picture and marks on the timeline, with a button in
    * the bar to hide them (shown by default). */
   motion?: MotionFrame[];
+  /** What detectors found: boxes on the picture at their moments, the matches marked on
+   * the timeline, with a button in the bar to hide them (shown by default). */
+  detections?: PlayerDetection[];
+  /** Drawn over the poster until playback starts (the detection the poster shows). */
+  posterDetections?: PlayerDetection[];
   /** Footage missing from the video: marked on the timeline (the arrows and double taps
    * jump to them too) and said on the picture while playing there. */
   gaps?: FootageGap[];
 }) {
   const [showMotion, setShowMotion] = useState(true);
+  const [showDetections, setShowDetections] = useState(true);
   const hasMotion = !!motion?.length;
   const motionOn = hasMotion && showMotion;
-  const allMarkers = [
+  const hasDetections = !!(detections?.length || posterDetections?.length);
+  const detectionsOn = hasDetections && showDetections;
+  const timelineMarkers = [
     ...(markers ?? []),
     ...(motionOn ? motionMarkers(motion) : []),
-    ...(gaps ?? []).map(([from, to]) => ({ from, to })),
+    ...(detectionsOn && detections ? detectionMarkers(detections) : []),
   ];
+  const allMarkers = [...timelineMarkers, ...(gaps ?? []).map(([from, to]) => ({ from, to }))];
   const own = useRef<MediaPlayerInstance>(null);
   const ref = playerRef ?? own;
   // One player for every item a drawer shows (remounting it made the drawer jump): another
@@ -133,17 +148,32 @@ export function VideoPlayer({
         {poster && <Poster className="vds-poster player-poster" src={poster} alt="" />}
       </MediaProvider>
       {overlay}
-      {motionOn && <MotionOverlay frames={motion} />}
+      {(motionOn || detectionsOn) && (
+        <PlaybackBoxes
+          motion={motionOn ? motion : undefined}
+          detections={detectionsOn ? detections : undefined}
+          poster={detectionsOn && poster ? posterDetections : undefined}
+        />
+      )}
       {!!gaps?.length && <GapNotice gaps={gaps} />}
       <FrameClock />
       <PictureTaps markers={allMarkers} />
       <PlayerControls
         thumbnails={thumbnails}
-        markers={[...(markers ?? []), ...(motionOn ? motionMarkers(motion) : [])]}
+        markers={timelineMarkers}
         gaps={gaps}
         motion={
           hasMotion
             ? { on: showMotion, toggle: () => setShowMotion(!showMotion), frames: motion }
+            : undefined
+        }
+        detections={
+          hasDetections
+            ? {
+                on: showDetections,
+                toggle: () => setShowDetections(!showDetections),
+                list: detections ?? [],
+              }
             : undefined
         }
       />
@@ -331,12 +361,15 @@ function PlayerControls({
   markers,
   gaps,
   motion,
+  detections,
 }: {
   thumbnails?: string;
   markers?: Marker[];
   gaps?: FootageGap[];
   /** The "show motion" toggle, when the video has motion to show. */
   motion?: { on: boolean; toggle: () => void; frames: MotionFrame[] };
+  /** The "show detections" toggle, when the video has detections to show. */
+  detections?: { on: boolean; toggle: () => void; list: PlayerDetection[] };
 }) {
   const { t } = useI18n();
   const remote = useMediaRemote();
@@ -360,6 +393,7 @@ function PlayerControls({
           src={thumbnails}
           time={(scrub / 100) * duration}
           motion={motion?.on ? motion.frames : undefined}
+          detections={detections?.on ? detections.list : undefined}
         />
       )}
       {waiting && <Spinner className="player-spinner" size="medium" />}
@@ -388,8 +422,8 @@ function PlayerControls({
                 <span className="player-markers" aria-hidden="true">
                   {markers?.map((m) => (
                     <span
-                      key={m.from}
-                      className="player-marker"
+                      key={`${m.kind}-${m.from}`}
+                      className={`player-marker ${m.kind ?? ""}`}
                       style={{
                         left: `${(m.from / duration) * 100}%`,
                         width: `${(Math.max(m.to - m.from, 0) / duration) * 100}%`,
@@ -460,6 +494,17 @@ function PlayerControls({
             <Time type="duration" />
           </span>
           <span className="player-chip player-bar-end">
+            {detections && (
+              <Button
+                appearance="transparent"
+                className={detections.on ? "player-on" : undefined}
+                icon={detections.on ? <ScanObject20Filled /> : <ScanObject20Regular />}
+                aria-label={t("player.showDetections")}
+                title={t("player.showDetections")}
+                aria-pressed={detections.on}
+                onClick={detections.toggle}
+              />
+            )}
             {motion && (
               <Button
                 appearance="transparent"
@@ -504,11 +549,13 @@ function ScrubPicture({
   src,
   time,
   motion,
+  detections,
 }: {
   src: string;
   time: number;
   /** Shown on the picture too, like during playback. */
   motion?: MotionFrame[];
+  detections?: PlayerDetection[];
 }) {
   const thumbs = useThumbnails(src);
   const active = useActiveThumbnail(thumbs, time);
@@ -538,6 +585,7 @@ function ScrubPicture({
           }
         />
         {motion && <MotionBoxes boxes={motionAt(motion, time * 1000)?.[1] ?? []} />}
+        {detections && <DetectionBoxes detections={detectionsAt(detections, time * 1000)} />}
       </div>
     </div>
   );
@@ -595,28 +643,57 @@ function GapNotice({ gaps }: { gaps: FootageGap[] }) {
   );
 }
 
-/** Frames closer than this (ms) are one stretch of motion on the timeline. */
+/** Moments closer than this (ms) are one stretch on the timeline. */
 const MARKER_GAP_MS = 1500;
 
-/** Where things moved, as timeline markers. */
-export function motionMarkers(frames: MotionFrame[]): Marker[] {
+/** Moments (ms) as timeline markers, each lasting `lengthMs`; close ones are one. */
+function stretches(moments: number[], lengthMs: number, kind: Marker["kind"]): Marker[] {
   const spans: Marker[] = [];
-  for (const [at] of frames) {
+  for (const at of moments) {
     const last = spans.at(-1);
-    if (last && at / 1000 - last.to <= MARKER_GAP_MS / 1000) last.to = (at + FRAME_MS) / 1000;
-    else spans.push({ from: at / 1000, to: (at + FRAME_MS) / 1000 });
+    if (last && at / 1000 - last.to <= MARKER_GAP_MS / 1000) last.to = (at + lengthMs) / 1000;
+    else spans.push({ from: at / 1000, to: (at + lengthMs) / 1000, kind });
   }
   return spans;
 }
 
+/** Where things moved, as timeline markers. */
+export function motionMarkers(frames: MotionFrame[]): Marker[] {
+  return stretches(
+    frames.map(([at]) => at),
+    FRAME_MS,
+    "motion",
+  );
+}
+
+/** Where detections that count were, as timeline markers. */
+function detectionMarkers(detections: PlayerDetection[]): Marker[] {
+  const moments = detections.filter((d) => d.match).map((d) => d.at_ms);
+  return stretches(
+    [...new Set(moments)].toSorted((a, b) => a - b),
+    FRAME_MS,
+    "detection",
+  );
+}
+
 /** How long one frame's motion stays on screen (frames are 0.5 s apart at 2 fps). */
 const FRAME_MS = 600;
+/** A detection stays on screen until its detector's next moment, if that comes within
+ * this (ms); else for `FRAME_MS`. Detectors look at 2 frames a second or fewer. */
+const DETECTION_HOLD_MS = 1500;
 
-/** Boxes around what moved, following the playback (inside a `VideoPlayer`). */
-export function MotionOverlay({ frames }: { frames: MotionFrame[] }) {
+/** The boxes over the playback, inside a `VideoPlayer`: what moved and what detectors
+ * found at this moment; until playback starts, the poster's detections. */
+function PlaybackBoxes({
+  motion,
+  detections,
+  poster,
+}: {
+  motion?: MotionFrame[];
+  detections?: PlayerDetection[];
+  poster?: PlayerDetection[];
+}) {
   const time = useMediaState("currentTime");
-  const width = useMediaState("width");
-  const height = useMediaState("height");
   const canPlay = useMediaState("canPlay");
   // Until playback starts the poster (the recording's first moment) covers the video.
   const started = useMediaState("started");
@@ -628,18 +705,16 @@ export function MotionOverlay({ frames }: { frames: MotionFrame[] }) {
     if (video?.videoWidth) setAspect(video.videoWidth / video.videoHeight);
   }, [canPlay]);
   const ms = time * 1000;
-  const frame = started ? motionAt(frames, ms) : undefined;
-  let picture = { left: 0, top: 0, width, height };
-  if (aspect && width && height) {
-    const w = Math.min(width, height * aspect);
-    const h = w / aspect;
-    picture = { left: (width - w) / 2, top: (height - h) / 2, width: w, height: h };
-  }
+  const frame = started && motion ? motionAt(motion, ms) : undefined;
+  const found = started ? detectionsAt(detections ?? [], ms) : (poster ?? []);
   return (
-    <div ref={box} className="motion-overlay" aria-hidden="true">
-      <div className="motion-picture" style={picture}>
-        {frame && <MotionBoxes boxes={frame[1]} />}
-      </div>
+    <div ref={box} className="player-boxes">
+      {aspect && (
+        <PictureBoxes aspect={aspect}>
+          {frame && <MotionBoxes boxes={frame[1]} />}
+          <DetectionBoxes detections={found} />
+        </PictureBoxes>
+      )}
     </div>
   );
 }
@@ -649,18 +724,18 @@ function motionAt(frames: MotionFrame[], ms: number): MotionFrame | undefined {
   return frames.findLast(([at]) => at <= ms && ms < at + FRAME_MS);
 }
 
-/** Boxes around what moved, over a box the size of the picture. */
-function MotionBoxes({ boxes }: { boxes: MotionFrame[1] }) {
-  return boxes.map(([x, y, w, h]) => (
-    <span
-      key={`${x},${y}`}
-      className="motion-box"
-      style={{
-        left: `${x * 100}%`,
-        top: `${y * 100}%`,
-        width: `${w * 100}%`,
-        height: `${h * 100}%`,
-      }}
-    />
-  ));
+/** Each detector's detections at its latest moment at or before `ms`, while on screen. */
+function detectionsAt(detections: PlayerDetection[], ms: number): PlayerDetection[] {
+  const latest = new Map<string | null, number>();
+  for (const d of detections) {
+    if (d.at_ms <= ms && d.at_ms > (latest.get(d.detector_id) ?? -Infinity))
+      latest.set(d.detector_id, d.at_ms);
+  }
+  return detections.filter((d) => {
+    if (latest.get(d.detector_id) !== d.at_ms) return false;
+    const next = detections.find((n) => n.detector_id === d.detector_id && n.at_ms > d.at_ms);
+    const until =
+      next && next.at_ms - d.at_ms <= DETECTION_HOLD_MS ? next.at_ms : d.at_ms + FRAME_MS;
+    return ms < until;
+  });
 }

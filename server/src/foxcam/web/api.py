@@ -687,9 +687,11 @@ def event_sprite_image(event_id: int, settings: Settings = Depends(settings_dep)
 @router.get("/archives/{archive_id}/timeline")
 def archive_timeline(archive_id: int, p: Principal = Depends(principal)) -> dict[str, Any]:
     """For the player's timeline, in the archive's own time: where things moved
-    (``[ms, boxes]`` frames) and footage that is missing (``[from_s, to_s, missing_s]``)."""
+    (``[ms, boxes]`` frames), the targets found (boxes to draw) and footage that is missing
+    (``[from_s, to_s, missing_s]``)."""
     _archive(p, archive_id)
     return {"motion": queries.archive_motion(archive_id),
+            "detections": queries.archive_detections(archive_id),
             "gaps": footage.archive_gaps(archive_id)}
 
 
@@ -735,24 +737,23 @@ async def detection_frame(detection_id: int,
                           size: Literal["full", "small"] = "full",
                           settings: Settings = Depends(settings_dep),
                           p: Principal = Depends(principal)) -> FileResponse:
-    """The original (uncensored) frame at the detection time, with its box drawn in.
-    ``small``: a preview for table rows (cached separately)."""
+    """The original (uncensored) frame at the detection time, without its box (the web
+    app draws it). ``small``: a preview for table rows (cached separately)."""
     with session_scope() as s:
         det = s.get(Detection, detection_id)
         if det is None or not p.can(det.camera_id):
             raise HTTPException(404, "unknown detection")
         src = compaction.segment_source(settings, det.segment)
-        offset_s, bbox, segment_id = det.offset_ms / 1000, det.bbox, det.segment_id
+        offset_s, segment_id = det.offset_ms / 1000, det.segment_id
     if src is None:
         raise HTTPException(410, "recording deleted by retention")
     small = size == "small"
-    # Keyed by the moment too: a re-analysed recording's detections can get the ids of
-    # the ones they replaced.
-    name = f"{detection_id}-{segment_id}-{round(offset_s * 1000)}{'-small' if small else ''}"
-    dst = settings.thumbs_dir / "detections" / f"{name}.jpg"
+    # One picture per moment, whichever detections were found there.
+    name = f"{segment_id}-{round(offset_s * 1000)}{'-small' if small else ''}"
+    dst = settings.thumbs_dir / "frames" / f"{name}.jpg"
     if not dst.exists():
         await asyncio.to_thread(ffmpeg.thumbnail, src.path, dst, src.offset_s + offset_s,
-                                240 if small else 960, bbox)
+                                240 if small else 960)
     # Never changes for a URL: the web app puts the recording and moment in it (``at``).
     return FileResponse(dst, media_type="image/jpeg",
                         headers={"Cache-Control": "private, max-age=86400"})
@@ -917,9 +918,12 @@ def event_clip(event_id: int, download: bool = False,
 @router.get("/events/{event_id}/timeline")
 def event_timeline(event_id: int, p: Principal = Depends(principal)) -> dict[str, Any]:
     """For the player's timeline, in clip time: where things moved (``[ms, boxes]``
-    frames) and footage that is missing (``[from_s, to_s, missing_s]``)."""
+    frames), the event's detections (boxes to draw) and footage that is missing
+    (``[from_s, to_s, missing_s]``)."""
     _event(p, event_id)
-    return {"motion": queries.event_motion(event_id), "gaps": footage.event_gaps(event_id)}
+    return {"motion": queries.event_motion(event_id),
+            "detections": queries.event_detections(event_id),
+            "gaps": footage.event_gaps(event_id)}
 
 
 @router.get("/events/{event_id}/thumb")

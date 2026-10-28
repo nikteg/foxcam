@@ -18,7 +18,15 @@ import { useToast } from "./Toasts";
 export function refreshLabels(client: QueryClient) {
   void client.invalidateQueries({ queryKey: ["events"] }); // shown or hidden as wrong
   // A wrong detection is no match: the recording's and archive's match counts follow.
-  for (const key of ["segments", "segment", "segment-jobs", "archives", "status"]) {
+  // The boxes over clips and archives show whether each is a match too.
+  for (const key of [
+    "segments",
+    "segment",
+    "segment-jobs",
+    "archives",
+    "status",
+    "video-timeline",
+  ]) {
     void client.invalidateQueries({ queryKey: [key] });
   }
   return client.invalidateQueries({ queryKey: ["detections"] });

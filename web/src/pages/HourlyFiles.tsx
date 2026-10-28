@@ -189,6 +189,7 @@ export function ArchivePanel({
                 poster={archive.thumb_url}
                 thumbnails={`/api/archives/${archive.id}/thumbnails.vtt`}
                 motion={timeline.motion}
+                detections={timeline.detections}
                 gaps={timeline.gaps}
               />
             </div>

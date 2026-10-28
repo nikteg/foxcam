@@ -16,6 +16,7 @@ import { ConfidenceBar, Fact, Facts, Light, QueryState, Tag, Time, useRouterHref
 import { VideoPlayer } from "./VideoPlayer";
 import { FeedbackSkeleton, TextSkeleton } from "./Skeletons";
 import { DetectionMotion, useVideoTimeline } from "./Motion";
+import { eventThumbBox, playerDetections } from "./Boxes";
 
 /** The event's detections, with its best one open. */
 const detectionsHref = (e: DetectionEvent) =>
@@ -48,6 +49,14 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
   const shown = !recording.isPlaceholderData ? recording.data : undefined;
   const motion = e.clip_url ? clip.motion : shown?.motion_boxes || [];
   const gaps = e.clip_url ? clip.gaps : shown?.gaps || [];
+  // The boxes: the clip's, or those of the event in the recording shown.
+  const found = e.clip_url
+    ? clip.detections
+    : playerDetections(
+        detections.isPlaceholderData ? undefined : detections.data,
+        best?.segment_id,
+      );
+  const bestBox = best ? playerDetections([best]) : [];
 
   return (
     <div className="detail-stack">
@@ -61,16 +70,19 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
         <VideoPlayer
           title={e.label}
           motion={motion}
+          detections={found}
           gaps={gaps}
           {...(e.clip_url || !best
             ? {
                 src: e.clip_url!,
                 poster: e.thumb_url,
+                posterDetections: eventThumbBox(e),
                 thumbnails: `/api/events/${e.id}/thumbnails.vtt`,
               }
             : {
                 src: `/api/segments/${best.segment_id}/play`,
                 poster: detectionFrameUrl(best),
+                posterDetections: bestBox,
                 startAt: Math.max(best.offset_ms / 1000 - 1, 0),
                 thumbnails: `/api/segments/${best.segment_id}/thumbnails.vtt`,
               })}

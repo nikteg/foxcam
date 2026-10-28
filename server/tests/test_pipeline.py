@@ -122,6 +122,8 @@ def test_fox_segments_merge_into_one_event_with_clip(settings):
         ev = s.query(Event).one()
         assert ev.max_confidence == 0.95 and ev.detection_count == 2
         assert ev.clip_path and not ev.clip_dirty
+        # The thumbnail is the best detection's frame; its box is drawn by the web app.
+        assert ev.thumb_path and ev.thumb_box == [0.4, 0.4, 0.2, 0.2]
         clip = settings.data_dir / ev.clip_path
         pinned = [s.get(Segment, i).pinned for i in segs]
     # Fox from 3.5 s to 4.5 s, ±1 s roll -> clip 2.5..5.5 s, inside segments 1 and 2.

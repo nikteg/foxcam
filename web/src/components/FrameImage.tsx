@@ -1,11 +1,15 @@
 import { SkeletonItem } from "@fluentui/react-components";
 import { useState } from "react";
 
+import type { PlayerDetection } from "../api";
+import { DetectionBoxes, PictureBoxes } from "./Boxes";
+
 /** A picture that keeps its room while it loads (`width`/`height`, e.g. the recording's
  *  size; else the box from `className`, 16:9 by default), shows a skeleton meanwhile and
  *  fades in. `preview`: a smaller copy that is likely cached already (the list's
  *  thumbnail), shown until then. `keepPrevious`: for a picture that is reloaded (a live
- *  snapshot), the next one fades in over the last one instead of after a skeleton. */
+ *  snapshot), the next one fades in over the last one instead of after a skeleton.
+ *  `boxes`: detections drawn over the picture once it has loaded. */
 export function FrameImage({
   src,
   preview,
@@ -15,6 +19,7 @@ export function FrameImage({
   className,
   lazy,
   keepPrevious,
+  boxes,
 }: {
   src: string;
   preview?: string;
@@ -24,9 +29,12 @@ export function FrameImage({
   className?: string;
   lazy?: boolean;
   keepPrevious?: boolean;
+  boxes?: PlayerDetection[];
 }) {
   const [loaded, setLoaded] = useState<string>();
   const [failed, setFailed] = useState<string>();
+  // The loaded picture's own aspect ratio, for the boxes (it may be cropped to fit).
+  const [aspect, setAspect] = useState<number>();
   // The last picture that finished fading in. What lies underneath (skeleton, preview,
   // the previous picture) stays until then: taken away at load, the fade would start
   // from the black background.
@@ -52,10 +60,19 @@ export function FrameImage({
         src={src}
         alt={alt}
         loading={lazy ? "lazy" : undefined}
-        onLoad={() => setLoaded(src)}
+        onLoad={(e) => {
+          setLoaded(src);
+          const img = e.currentTarget;
+          if (img.naturalWidth) setAspect(img.naturalWidth / img.naturalHeight);
+        }}
         onError={() => setFailed(src)}
         onAnimationEnd={() => setShown(src)}
       />
+      {!!boxes?.length && loaded === src && aspect && (
+        <PictureBoxes aspect={aspect} fit="cover">
+          <DetectionBoxes detections={boxes} />
+        </PictureBoxes>
+      )}
     </span>
   );
 }

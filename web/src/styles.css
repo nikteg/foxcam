@@ -875,20 +875,72 @@ div.thumb.placeholder {
   white-space: normal;
 }
 
-/* Motion boxes over the recording player (Show motion). */
-.motion-overlay {
+/* components/Boxes.tsx: boxes over a picture. The frame is the picture's size and place
+   inside the container (contained or covering it, as object-fit does), from its aspect. */
+.picture-boxes {
+  position: absolute;
+  inset: 0;
+  container-type: size;
+  overflow: hidden;
+  pointer-events: none;
+}
+.picture-boxes-frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  aspect-ratio: var(--aspect);
+  width: min(100cqw, 100cqh * var(--aspect));
+}
+.picture-boxes.cover .picture-boxes-frame {
+  width: max(100cqw, 100cqh * var(--aspect));
+}
+/* Over the player's picture, under its controls. */
+.player-boxes {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 1;
 }
-.motion-picture {
-  position: absolute;
-}
 .motion-box {
   position: absolute;
   outline: 2px solid #4aa3ff;
   background: rgb(74 163 255 / 15%);
+}
+/* What a detector found: strong when it counts, faint (dashed) when not. */
+.detection-box {
+  position: absolute;
+  outline: 2px dashed rgb(255 255 255 / 70%);
+}
+.detection-box.match {
+  outline: 2px solid #ff4d4f;
+}
+.detection-box-label {
+  position: absolute;
+  left: -2px;
+  bottom: calc(100% + 2px);
+  padding: 0 4px;
+  border-radius: 2px;
+  background: rgb(0 0 0 / 65%);
+  color: #fff;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.detection-box.match .detection-box-label {
+  background: #d13438;
+}
+.detection-box[data-label="inside"] .detection-box-label {
+  bottom: auto;
+  top: 2px;
+  left: 2px;
+}
+/* Table thumbnails: the box only, thinner. */
+.frame-image.mini .detection-box {
+  outline-width: 1px;
+}
+.frame-image.mini .detection-box-label {
+  display: none;
 }
 /* Mask editor */
 /* Toolbar, picture, then the rest; on phones and in full screen the toolbar comes under
@@ -1909,6 +1961,11 @@ Fluent's text styles would otherwise reset the margins. */
   min-width: 4px;
   border-radius: 3px;
   background: rgb(76 201 255 / 0.85);
+}
+/* Detections over motion: the upper half, so both show where they overlap. */
+.player-marker.detection {
+  bottom: 50%;
+  background: #ff4d4f;
 }
 /* Footage missing: a hatched stretch where the picture holds, or a tick where the video
    goes on after footage the camera never delivered. */

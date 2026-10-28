@@ -334,7 +334,21 @@ export type FootageGap = [fromS: number, toS: number, missingS: number | null];
 /** What a video's timeline marks: where things moved, and footage that is missing. */
 export interface VideoTimeline {
   motion: MotionFrame[];
+  /** Boxes to draw over the playback: the event's detections, the archive's targets. */
+  detections: PlayerDetection[];
   gaps: FootageGap[];
+}
+
+/** A detection's box at a moment of a video (its own time), as the player draws it. */
+export interface PlayerDetection {
+  id: number;
+  at_ms: number;
+  bbox: Rect;
+  label: string;
+  confidence: number;
+  detector_id: string | null;
+  /** A target that counts (not standing still, not marked wrong): drawn strong. */
+  match: boolean;
 }
 
 /** Detections split by the correct / wrong marks. */
@@ -491,6 +505,8 @@ export interface Detection {
   below_sun_limit: boolean;
   /** The box overlapped motion at that moment (null: not measured). */
   moving: boolean | null;
+  /** A target that counts: not standing still, nor it or its event marked wrong. */
+  match: boolean;
   /** Detector specifics. SpeciesNet: `detector_label`/`detector_conf` (the box) and
    *  `classifications`, the classifier's top guesses. */
   extra: DetectionExtra;
@@ -525,6 +541,9 @@ export interface DetectionEvent {
   is_night: boolean | null;
   clip_url: string | null;
   thumb_url: string | null;
+  /** The best detection's box, drawn over the thumbnail (null: none, or burned into an
+   *  older thumbnail). */
+  thumb_box: Rect | null;
   clip_duration_s: number | null;
   /** Clip uploaded to S3 storage. */
   remote: boolean;

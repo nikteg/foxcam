@@ -54,8 +54,10 @@ anything else, and keep the clips.
   AMF) or Apple VideoToolbox when available, also in Docker, with automatic CPU fallback
   ([docs/HARDWARE.md](docs/HARDWARE.md)).
 - **Events with clips.** Sightings close in time become one event with a clip cut from the
-  original footage (with pre/post roll), a thumbnail with the box drawn, a day/night tag and
-  ✅/❌ feedback for building a training set. A detection marked wrong is no match anywhere
+  original footage (with pre/post roll), a thumbnail, a day/night tag and ✅/❌ feedback
+  for building a training set. Detection boxes are drawn over the pictures and the playing
+  video (with label and confidence, marked on the timeline, and a button to hide them),
+  not burned in; only notification images have the box in the picture. A detection marked wrong is no match anywhere
   (counts, events, notifications, archives), and something that stands still (a parked
   car, ten minutes by default) stops making events.
 - **Favorites and bulk actions.** Star events and detections (in the lists and their

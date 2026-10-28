@@ -45,6 +45,7 @@ import {
   DialogSurface,
   DialogTitle,
 } from "./Drawer";
+import { eventThumbBox } from "./Boxes";
 import { FrameImage } from "./FrameImage";
 
 export function EventsGrid({
@@ -122,6 +123,7 @@ export function EventsGrid({
                       className="thumb"
                       lazy
                       src={e.thumb_url}
+                      boxes={eventThumbBox(e)}
                       alt={t("events.thumbAlt", {
                         label: e.label,
                         camera: cameraName(e.camera_id),
@@ -251,6 +253,8 @@ export function EventsGrid({
                       poster={playing.thumb_url}
                       thumbnails={`/api/events/${playing.id}/thumbnails.vtt`}
                       motion={playingTimeline.motion}
+                      detections={playingTimeline.detections}
+                      posterDetections={eventThumbBox(playing)}
                       gaps={playingTimeline.gaps}
                       autoPlay
                     />
