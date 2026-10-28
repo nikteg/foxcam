@@ -29,7 +29,7 @@ import {
   useLabelSuggestions,
   useSuggestionList,
 } from "../components/LabelPicker";
-import { useProfiles } from "../components/ProfileSelect";
+import { useAdminProfiles } from "../components/ProfileSelect";
 import {
   DetectorsEditor,
   fromRows,
@@ -68,7 +68,7 @@ const aliasMap = (rows: AliasRow[]): Record<string, string> =>
 /** Detection profiles: Cameras → Detection profiles (/cameras/profiles). */
 export function ProfilesSection() {
   const { t, rich } = useI18n();
-  const profiles = useProfiles();
+  const profiles = useAdminProfiles();
   const [editing, setEditing] = useState<Profile | null>(null);
   const client = useQueryClient();
   const remove = (p: Profile) =>

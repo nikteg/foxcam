@@ -69,6 +69,8 @@ def profile_list(settings: Settings, viewer: Principal) -> list[dict[str, Any]]:
             waiting[pid] = waiting.get(pid, 0) + 1
     cams = [c for c in settings.all_cameras(include_disabled=True) if viewer.can(c.id)]
     by_camera = {c.id: {p.id for p in profiles.camera_profiles(settings, c.id)} for c in cams}
+    # Picks the profiles of a camera of theirs (CameraSettings → Detection).
+    chooser = any(viewer.can(c.id, CameraRole.EDITOR) for c in cams)
     out = []
     for p in settings.all_profiles(include_disabled=True):
         data = p.model_dump()
@@ -76,13 +78,24 @@ def profile_list(settings: Settings, viewer: Principal) -> list[dict[str, Any]]:
             need = p.detector_requires(spec)
             d["display_name"] = spec.display_name
             d["workers_online"] = [w for w, tags in workers if need <= tags]
-        out.append({
-            **data, "display_name": p.display_name,
-            "cameras": [c for c, ids in by_camera.items() if p.id in ids],
-            # Workers that can run at least one of its detectors.
-            "workers_online": sorted({w for d in data["detectors"] for w in d["workers_online"]}),
-            "waiting_jobs": waiting.get(p.id, 0),
-        })
+        on = [c for c, ids in by_camera.items() if p.id in ids]
+        if viewer.is_admin:
+            out.append({
+                **data, "display_name": p.display_name, "cameras": on,
+                # Workers that can run at least one of its detectors.
+                "workers_online": sorted({w for d in data["detectors"]
+                                          for w in d["workers_online"]}),
+                "waiting_jobs": waiting.get(p.id, 0),
+            })
+        # Everyone else: the profiles on their cameras, and those an editor may choose for
+        # one; only what they need to read events (no workers, tags or thresholds).
+        elif on or (chooser and p.enabled):
+            out.append({
+                "id": p.id, "name": p.name, "display_name": p.display_name,
+                "targets": p.targets, "enabled": p.enabled, "cameras": on,
+                "detectors": [{"id": d["id"], "name": d["name"],
+                               "display_name": d["display_name"]} for d in data["detectors"]],
+            })
     return out
 
 

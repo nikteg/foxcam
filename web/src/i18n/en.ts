@@ -199,7 +199,6 @@ export const en = {
   "dashboard.recordingsStored": "Recordings stored",
   "dashboard.diskFree": "Disk free",
   "dashboard.manage": "Manage cameras",
-  "dashboard.noCameras": "No cameras yet. {link} to start recording.",
   "dashboard.addCameraLink": "Add a camera",
   "dashboard.latestEvents": "Latest events",
   "dashboard.all": "All events",
@@ -231,6 +230,8 @@ export const en = {
   "events.noProfiles":
     "No detection profiles yet, so cameras only record. {link} to say what to look for.",
   "events.noProfilesLink": "Add a profile",
+  "events.noProfilesUser":
+    "Your cameras don't look for anything yet, so they only record. An editor of a camera picks what it looks for in its settings, under Detection.",
   "events.thumbAlt": "{label} on {camera}",
   "events.buildingClip": "Building clip…",
   "events.noThumbnail": "No thumbnail",
@@ -1041,7 +1042,12 @@ export const en = {
   "cameras.intro":
     "Cameras added here start recording within a few seconds; no restart needed. Cameras defined in {file} are shown read-only.",
   "cameras.integrations": "Integrations",
-  "cameras.none": "No cameras yet. Add one to start recording.",
+  "cameras.none":
+    "No cameras yet. Add one to start recording, or ask someone who has a camera to share it with you.",
+  "cameras.noneShared":
+    "No cameras are shared with you yet. Ask someone who has a camera to share it with you, and it shows up here.",
+  "cameras.noneYet":
+    "No cameras yet. {link} to start recording, or ask someone who has a camera to share it with you.",
   "cameras.disabled": "Disabled",
   "cameras.recording": "Recording",
   "cameras.source": "Source",

@@ -24,11 +24,12 @@ import { useCameraName } from "../components/CameraSelect";
 import { EventsGrid } from "../components/EventsGrid";
 import { InstallHint } from "../components/InstallHint";
 import { LiveDrawer } from "../components/LiveDrawer";
-import { SectionLink, Empty, PageTitle, QueryState, RouterLink, Stat } from "../components/ui";
+import { SectionLink, PageTitle, QueryState, Stat } from "../components/ui";
 import { useI18n } from "../i18n";
 import { CameraSettingsDialog } from "./Cameras";
 import { decimal, duration, fileSize } from "../format";
 import { CardsSkeleton, StatsSkeleton } from "../components/Skeletons";
+import { NoCameras } from "../components/NoCameras";
 
 export function Dashboard() {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status, refetchInterval: 10_000 });
@@ -43,7 +44,7 @@ export function Dashboard() {
   const [settingsFor, setSettingsFor] = useState<string | null>(null);
   const [liveFor, setLiveFor] = useState<string | null>(null);
   const settingsCamera = s?.cameras.find((c) => c.id === settingsFor);
-  const { t, rich } = useI18n();
+  const { t } = useI18n();
   const navigate = useNavigate();
 
   return (
@@ -56,72 +57,82 @@ export function Dashboard() {
         </MessageBar>
       )}
 
-      <Subtitle2 as="h2" className="section first">
-        {t("dashboard.overview")}
-      </Subtitle2>
-      <QueryState error={status.error} loading={status.isPending} skeleton={<StatsSkeleton />} />
-      {s && (
+      {/* An account without cameras: how to get one, not empty numbers and lists. */}
+      {s?.cameras.length === 0 ? (
+        <NoCameras />
+      ) : (
         <>
-          <section className="stats">
-            <Stat
-              icon={<Video20Regular />}
-              label={t("dashboard.camerasOnline")}
-              value={`${s.cameras.filter((c) => c.online).length} / ${s.cameras.length}`}
-              onClick={() => void navigate("/cameras")}
-            />
-            <Stat
-              icon={<Alert20Regular />}
-              label={t("dashboard.events24h")}
-              value={s.events_24h}
-              onClick={() => void navigate("/events")}
-            />
-            <Stat
-              icon={<Database20Regular />}
-              label={t("dashboard.recordingsStored")}
-              value={fileSize(s.recordings_bytes)}
-              onClick={() => void navigate("/recordings")}
-            />
-            <Stat
-              icon={<HardDrive20Regular />}
-              label={t("dashboard.diskFree")}
-              value={fileSize(s.disk_free_bytes)}
-              // How long recordings are kept and the disk cap (admins).
-              onClick={isAdmin ? () => void navigate("/settings/retention") : undefined}
-            />
-          </section>
+          <Subtitle2 as="h2" className="section first">
+            {t("dashboard.overview")}
+          </Subtitle2>
+          <QueryState
+            error={status.error}
+            loading={status.isPending}
+            skeleton={<StatsSkeleton />}
+          />
+          {s && (
+            <>
+              <section className="stats">
+                <Stat
+                  icon={<Video20Regular />}
+                  label={t("dashboard.camerasOnline")}
+                  value={`${s.cameras.filter((c) => c.online).length} / ${s.cameras.length}`}
+                  onClick={() => void navigate("/cameras")}
+                />
+                <Stat
+                  icon={<Alert20Regular />}
+                  label={t("dashboard.events24h")}
+                  value={s.events_24h}
+                  onClick={() => void navigate("/events")}
+                />
+                <Stat
+                  icon={<Database20Regular />}
+                  label={t("dashboard.recordingsStored")}
+                  value={fileSize(s.recordings_bytes)}
+                  onClick={() => void navigate("/recordings")}
+                />
+                {s.disk_free_bytes !== null && (
+                  <Stat
+                    icon={<HardDrive20Regular />}
+                    label={t("dashboard.diskFree")}
+                    value={fileSize(s.disk_free_bytes)}
+                    // How long recordings are kept and the disk cap.
+                    onClick={() => void navigate("/settings/retention")}
+                  />
+                )}
+              </section>
+            </>
+          )}
+
+          <Subtitle2 as="h2" className="section">
+            {t("nav.cameras")}
+            <SectionLink to="/cameras" label={t("dashboard.manage")} />
+          </Subtitle2>
+          {status.isPending && <CardsSkeleton count={2} />}
+          <div className="cards">
+            {s?.cameras.map((c) => (
+              <CameraCard
+                key={c.id}
+                camera={c}
+                onLive={() => setLiveFor(c.id)}
+                refreshKey={Math.floor(status.dataUpdatedAt / 10_000)}
+                onSettings={() => setSettingsFor(c.id)}
+              />
+            ))}
+          </div>
+
+          <Subtitle2 as="h2" className="section">
+            {t("dashboard.latestEvents")}
+            <SectionLink to="/events" label={t("dashboard.all")} />
+          </Subtitle2>
+          <QueryState
+            error={events.error}
+            loading={events.isPending}
+            skeleton={<CardsSkeleton />}
+          />
+          {events.data && <EventsGrid events={events.data} />}
         </>
       )}
-
-      <Subtitle2 as="h2" className="section">
-        {t("nav.cameras")}
-        <SectionLink to="/cameras" label={t("dashboard.manage")} />
-      </Subtitle2>
-      {status.isPending && <CardsSkeleton count={2} />}
-      <div className="cards">
-        {s?.cameras.map((c) => (
-          <CameraCard
-            key={c.id}
-            camera={c}
-            onLive={() => setLiveFor(c.id)}
-            refreshKey={Math.floor(status.dataUpdatedAt / 10_000)}
-            onSettings={() => setSettingsFor(c.id)}
-          />
-        ))}
-      </div>
-      {s && s.cameras.length === 0 && (
-        <Empty>
-          {rich("dashboard.noCameras", {
-            link: <RouterLink to="/cameras">{t("dashboard.addCameraLink")}</RouterLink>,
-          })}
-        </Empty>
-      )}
-
-      <Subtitle2 as="h2" className="section">
-        {t("dashboard.latestEvents")}
-        <SectionLink to="/events" label={t("dashboard.all")} />
-      </Subtitle2>
-      <QueryState error={events.error} loading={events.isPending} skeleton={<CardsSkeleton />} />
-      {events.data && <EventsGrid events={events.data} />}
 
       {liveFor && s && (
         <LiveDrawer cameras={s.cameras} cameraId={liveFor} onClose={() => setLiveFor(null)} />
@@ -156,7 +167,7 @@ function DetectionSummary({ status: s }: { status?: Status }) {
       <SectionLink to="/jobs/detection" label={t("dashboard.allJobs")} />
     </Subtitle2>
   );
-  if (!s) {
+  if (!s?.queue) {
     return (
       <>
         {heading}

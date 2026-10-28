@@ -201,7 +201,6 @@ export const sv: Record<MessageKey, string> = {
   "dashboard.recordingsStored": "Lagrade inspelningar",
   "dashboard.diskFree": "Ledigt diskutrymme",
   "dashboard.manage": "Hantera kameror",
-  "dashboard.noCameras": "Inga kameror än. {link} för att börja spela in.",
   "dashboard.addCameraLink": "Lägg till en kamera",
   "dashboard.latestEvents": "Senaste händelser",
   "dashboard.all": "Alla händelser",
@@ -234,6 +233,8 @@ export const sv: Record<MessageKey, string> = {
   "events.noProfiles":
     "Inga detekteringsprofiler än, så kamerorna spelar bara in. {link} för att säga vad som ska letas efter.",
   "events.noProfilesLink": "Lägg till en profil",
+  "events.noProfilesUser":
+    "Dina kameror letar inte efter något än, så de spelar bara in. Den som är redaktör för en kamera väljer vad den letar efter i dess inställningar, under Detektion.",
   "events.thumbAlt": "{label} på {camera}",
   "events.buildingClip": "Skapar klipp…",
   "events.noThumbnail": "Ingen miniatyrbild",
@@ -848,7 +849,12 @@ export const sv: Record<MessageKey, string> = {
   "cameras.intro":
     "Kameror som läggs till här börjar spela in inom några sekunder, utan omstart. Kameror som definieras i {file} visas skrivskyddade.",
   "cameras.integrations": "Integrationer",
-  "cameras.none": "Inga kameror än. Lägg till en för att börja spela in.",
+  "cameras.none":
+    "Inga kameror än. Lägg till en för att börja spela in, eller be någon som har en kamera att dela den med dig.",
+  "cameras.noneShared":
+    "Inga kameror är delade med dig än. Be någon som har en kamera att dela den med dig, så dyker den upp här.",
+  "cameras.noneYet":
+    "Inga kameror än. {link} för att börja spela in, eller be någon som har en kamera att dela den med dig.",
   "cameras.disabled": "Avstängd",
   "cameras.recording": "Spelar in",
   "cameras.source": "Källa",

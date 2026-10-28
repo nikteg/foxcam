@@ -104,10 +104,14 @@ async def status(settings: Settings = Depends(settings_dep),
                  mtx: MediaMtx = Depends(mediamtx_dep),
                  p: Principal = Depends(principal)) -> dict[str, Any]:
     live = await mtx.paths()
+    overview = await asyncio.to_thread(queries.overview, settings, p.camera_ids())
+    if not p.is_admin:
+        # The server's disk and the detection queue are the admins' business.
+        overview.update(disk_free_bytes=None, disk_total_bytes=None, queue=None)
     return {
         "mediamtx_reachable": bool(live) or not settings.all_cameras(),
         "cameras": await asyncio.to_thread(queries.cameras, settings, live, p),
-        **await asyncio.to_thread(queries.overview, settings, p.camera_ids()),
+        **overview,
         # Admins: the compact process (hourly files), see pipeline/compaction.py.
         "compaction": await asyncio.to_thread(compaction.status, settings)
         if p.is_admin else None,

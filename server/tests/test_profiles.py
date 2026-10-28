@@ -258,3 +258,30 @@ def test_target_thresholds_are_saved_from_the_ui(settings):
         bad = c.post("/api/profiles", json={"id": "bad", "targets": ["fox"],
                                              "target_min_confidence": {"fox": 1.5}})
         assert bad.status_code == 422
+
+
+def test_profiles_for_people_who_are_not_admins(two_profiles):
+    """Only the profiles on their cameras (plus, for editors, the ones they may choose),
+    and nothing about workers, tags or thresholds; no disk or queue on the Status page."""
+    from foxcam.models import CameraAccess, CameraRole
+
+    from .conftest import sign_in
+
+    with app_client(two_profiles, email=None) as c:
+        uid = sign_in(c, two_profiles, "nobody@example.org")
+        assert c.get("/api/profiles").json() == []
+        status = c.get("/api/status").json()
+        assert status["cameras"] == [] and status["queue"] is None
+        assert status["disk_free_bytes"] is None
+
+        with session_scope() as s:
+            s.add(CameraAccess(user_id=uid, camera_id="cam", role=CameraRole.VIEWER))
+        [p] = c.get("/api/profiles").json()
+        assert p == {"id": "default", "name": p["name"], "display_name": p["display_name"],
+                     "targets": ["fox"], "enabled": True, "cameras": ["cam"],
+                     "detectors": p["detectors"]}
+        assert set(p["detectors"][0]) == {"id", "name", "display_name"}
+
+        with session_scope() as s:
+            s.get(CameraAccess, ("cam", uid)).role = CameraRole.EDITOR
+        assert [p["id"] for p in c.get("/api/profiles").json()] == ["default", "vehicles"]

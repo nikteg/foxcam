@@ -149,6 +149,18 @@ export interface ProfileInput {
   enabled: boolean;
 }
 
+/** What everyone gets of a profile: those on their cameras, plus (editors) those they
+ * may choose for one. Admins get the whole `Profile`. */
+export interface ProfileSummary {
+  id: string;
+  name: string | null;
+  display_name: string;
+  targets: string[];
+  enabled: boolean;
+  cameras: string[];
+  detectors: { id: string; name: string | null; display_name: string }[];
+}
+
 export interface Profile extends ProfileInput {
   detectors: Detector[];
   managed: "config" | "ui";
@@ -242,11 +254,12 @@ export interface Status {
   cameras: Camera[];
   segments: Record<string, number>;
   recordings_bytes: number;
-  disk_free_bytes: number;
-  disk_total_bytes: number;
+  /** The server's disk and the detection queue; admins only, null for others. */
+  disk_free_bytes: number | null;
+  disk_total_bytes: number | null;
   events_24h: number;
   events_total: number;
-  queue: QueueStats;
+  queue: QueueStats | null;
   /** The compact process (hourly files); admins only, null for others. */
   compaction: CompactionStatus | null;
   /** Detection workers; admins only. */
@@ -1173,7 +1186,9 @@ export const api = {
     }),
   revokeWorkerToken: (id: number) =>
     request<{ status: string }>("DELETE", `/api/workers/tokens/${id}`),
-  profiles: () => request<Profile[]>("GET", "/api/profiles"),
+  profiles: () => request<ProfileSummary[]>("GET", "/api/profiles"),
+  /** The same list as an admin gets it. */
+  adminProfiles: () => request<Profile[]>("GET", "/api/profiles"),
   recordingProfiles: () => request<RecordingProfile[]>("GET", "/api/recording-profiles"),
   setDefaultRecordingProfile: (profile: string | null) =>
     request<{ default: string; default_source: "ui" | "config" }>(

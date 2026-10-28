@@ -9,6 +9,11 @@ export function useProfiles() {
   return useQuery({ queryKey: ["profiles"], queryFn: api.profiles, refetchInterval: 15_000 });
 }
 
+/** The profiles with everything about them (admins; others get `useProfiles`' summary). */
+export function useAdminProfiles() {
+  return useQuery({ queryKey: ["profiles"], queryFn: api.adminProfiles, refetchInterval: 15_000 });
+}
+
 /** Display name for a profile id (falls back to the id for removed profiles). */
 export function useProfileName(): (id: string | null | undefined) => string {
   const { data = [] } = useProfiles();

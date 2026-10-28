@@ -26,6 +26,7 @@ import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
 import { HourlyFiles } from "./HourlyFiles";
 import { MotionShare } from "../components/Motion";
+import { NoCameras, useNoCameras } from "../components/NoCameras";
 import { TableSkeleton } from "../components/Skeletons";
 import { FrameImage } from "../components/FrameImage";
 
@@ -157,7 +158,16 @@ export function Recordings() {
   const { t } = useI18n();
   const stateLabel = useStateLabel();
   const cameraName = useCameraName();
+  const noCameras = useNoCameras();
 
+  if (noCameras) {
+    return (
+      <>
+        <PageTitle title={t("nav.recordings")} />
+        <NoCameras />
+      </>
+    );
+  }
   return (
     <>
       <PageTitle title={t("nav.recordings")} />

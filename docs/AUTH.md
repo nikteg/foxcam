@@ -107,7 +107,11 @@ E-mails in `auth.admin_emails` can always sign up through OAuth and are admins o
 notifications, storage, the Tapo account, users and the configuration.
 
 Everyone else only sees the cameras shared with them, and what those cameras recorded
-(recordings, events, detections, snapshots, live view). Per camera, a user is:
+(recordings, events, detections, snapshots, live view). Of the detection profiles they see
+the ones on those cameras (an editor also the ones they may choose for one), by name and
+targets only: nothing about workers, tags or thresholds, and nothing of the server's disk
+or job queue. An account without cameras gets a note on how to get one instead of empty
+pages. Per camera, a user is:
 
 | Role | Can |
 |---|---|

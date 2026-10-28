@@ -15,6 +15,7 @@ import {
 import { Input, MessageBar, MessageBarBody, Select } from "@fluentui/react-components";
 
 import { ModelsSection } from "../components/ModelsSection";
+import { NoCameras, useNoCameras } from "../components/NoCameras";
 import { MotionSection } from "../components/MotionSection";
 import { ProfileSelect, useProfiles, useSeveralDetectors } from "../components/ProfileSelect";
 import {
@@ -38,12 +39,21 @@ import { CardsSkeleton, TextSkeleton } from "../components/Skeletons";
 export function Events() {
   const { t } = useI18n();
   const isAdmin = useIsAdmin();
+  const noCameras = useNoCameras();
   const tab = useSubPage(
     "/events",
     isAdmin
       ? (["events", "detections", "models", "motion"] as const)
       : (["events", "detections"] as const),
   );
+  if (noCameras) {
+    return (
+      <>
+        <PageTitle title={t("nav.events")} />
+        <NoCameras />
+      </>
+    );
+  }
   return (
     <>
       <PageTitle title={t("nav.events")} />
@@ -117,6 +127,7 @@ function EventList() {
   const cfg = settings.data;
   const { t, rich } = useI18n();
   const canLabel = useCanLabel();
+  const isAdmin = useIsAdmin();
   const selection = useSelection(
     events.data,
     (e) => e.id,
@@ -128,9 +139,13 @@ function EventList() {
       {profiles.data && targets.length === 0 && !profile && (
         <MessageBar>
           <MessageBarBody>
-            {rich("events.noProfiles", {
-              link: <RouterLink to="/cameras/profiles">{t("events.noProfilesLink")}</RouterLink>,
-            })}
+            {isAdmin
+              ? rich("events.noProfiles", {
+                  link: (
+                    <RouterLink to="/cameras/profiles">{t("events.noProfilesLink")}</RouterLink>
+                  ),
+                })
+              : t("events.noProfilesUser")}
           </MessageBarBody>
         </MessageBar>
       )}

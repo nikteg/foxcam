@@ -138,7 +138,9 @@ export function Cameras() {
             loading={cameras.isPending}
             skeleton={<CardsSkeleton count={2} />}
           />
-          {cameras.data?.length === 0 && <Empty>{t("cameras.none")}</Empty>}
+          {cameras.data?.length === 0 && (
+            <Empty>{me?.can_add_cameras ? t("cameras.none") : t("cameras.noneShared")}</Empty>
+          )}
           <div className="cards">
             {cameras.data?.map((c) => (
               <CameraCard
