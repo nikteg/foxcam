@@ -28,7 +28,7 @@ import { api, type Camera } from "../api";
 import { useIsAdmin, hasRole, useMe } from "../auth";
 import { AddCameraDialog } from "../components/AddCameraDialog";
 import { MaskDrawer } from "./MaskEditor";
-import { CameraCard, TapoNameFact } from "../components/CameraCard";
+import { CameraCard, CameraModelFact } from "../components/CameraCard";
 import { LiveDrawer } from "../components/LiveDrawer";
 import { SharePanel } from "../components/ShareDialog";
 import { ProfileDialog, ProfilesSection } from "./Profiles";
@@ -234,9 +234,9 @@ function GeneralPanel({
     >
       <DialogContent className="form-stack">
         {tabs}
-        {tapo?.device_name && (
+        {tapo?.model && (
           <Facts>
-            <TapoNameFact camera={camera} />
+            <CameraModelFact camera={camera} />
           </Facts>
         )}
         {editable ? (

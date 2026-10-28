@@ -136,7 +136,8 @@ async def devices(settings: Settings) -> list[dict[str, Any]]:
     finally:
         await session.aclose()
 
-    await asyncio.to_thread(camera_store.sync_tapo_devices, {c.device_id: c.name for c in cams})
+    await asyncio.to_thread(camera_store.sync_tapo_devices, [
+        {"device_id": c.device_id, "name": c.name, "model": c.model} for c in cams])
     added = {c.source.device_id: c.id for c in settings.all_cameras(include_disabled=True)
              if c.source.type == "tapo_cloud" and c.source.device_id}
     added_by_name = {c.source.device_name: c.id for c in settings.all_cameras(include_disabled=True)

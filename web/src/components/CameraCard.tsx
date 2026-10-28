@@ -37,12 +37,12 @@ export function sourceDetail(source: CameraSource, synthetic: string): string {
   }
 }
 
-/** The camera's name in the Tapo app (Tapo cloud cameras), kept up to date by the server. */
-export function TapoNameFact({ camera }: { camera: Camera }) {
+/** The camera's model as the Tapo account reports it (e.g. C200), when known. */
+export function CameraModelFact({ camera }: { camera: Camera }) {
   const { t } = useI18n();
   const source = camera.source_config;
-  if (source.type !== "tapo_cloud" || !source.device_name) return null;
-  return <Fact label={t("camera.tapoName")}>{source.device_name}</Fact>;
+  if (source.type !== "tapo_cloud" || !source.model) return null;
+  return <Fact label={t("camera.model")}>{source.model}</Fact>;
 }
 
 function useRecordingProfileName(): (id: string) => string {
@@ -180,7 +180,7 @@ export function CameraCard({
           </>
         ) : (
           <>
-            <TapoNameFact camera={c} />
+            <CameraModelFact camera={c} />
             <Fact label={t("camera.viewers")}>{c.viewers}</Fact>
           </>
         )}

@@ -139,16 +139,16 @@ async def call_with_refresh(settings: Settings, session, fn: Callable[[], Awaita
 
 async def _find_device(settings: Settings, session, cam: CameraConfig):
     src = cam.source
-    devices = await call_with_refresh(settings, session, session.devices)
+    devices = await call_with_refresh(settings, session, session.cameras)
     try:
-        await asyncio.to_thread(camera_store.sync_tapo_devices,
-                                {d.device_id: d.name for d in devices})
+        await asyncio.to_thread(camera_store.sync_tapo_devices, [
+            {"device_id": d.device_id, "name": d.name, "model": d.model} for d in devices])
     except Exception:
-        log.exception("[%s] could not update Tapo camera names", cam.id)
+        log.exception("[%s] could not update the Tapo cameras' names and models", cam.id)
     for dev in devices:
         if (src.device_id and dev.device_id == src.device_id) or \
                 (src.device_name and dev.name == src.device_name):
-            return dev
+            return session.device(dev.device_id, name=dev.name)
     names = ", ".join(f"{d.name!r} ({d.device_id})" for d in devices)
     raise RuntimeError(f"[{cam.id}] Tapo device not found. Available: {names}")
 

@@ -28,7 +28,7 @@ def test_stream_quality_can_be_changed_per_camera(settings):
         assert r.status_code == 400
 
 
-def test_tapo_name_follows_the_account_without_restarting(settings):
+def test_tapo_model_and_name_follow_the_account_without_restarting(settings):
     with app_client(settings) as c:
         r = c.post("/api/cameras", json={"name": "Garden", "source": {
             "type": "tapo_cloud", "device_id": "dev1", "device_name": "Garden"}})
@@ -38,11 +38,14 @@ def test_tapo_name_follows_the_account_without_restarting(settings):
         shed_id = r.json()["id"]
         before = _fingerprint(settings, settings.camera(cam_id))
         # Renamed in the Tapo app; the shed camera was only known by name.
-        camera_store.sync_tapo_devices({"dev1": "Back garden", "dev2": "Shed cam"})
+        camera_store.sync_tapo_devices([
+            {"device_id": "dev1", "name": "Back garden", "model": "C200"},
+            {"device_id": "dev2", "name": "Shed cam", "model": "C520WS"}])
         cam = settings.camera(cam_id)
         assert cam.source.device_name == "Back garden"
+        assert cam.source.model == "C200"
         assert cam.name == "Garden"  # Foxcam's own name stays
         assert _fingerprint(settings, cam) == before
         assert settings.camera(shed_id).source.device_id == "dev2"
         cams = {x["id"]: x for x in c.get("/api/cameras").json()}
-        assert cams[cam_id]["source_config"]["device_name"] == "Back garden"
+        assert cams[cam_id]["source_config"]["model"] == "C200"

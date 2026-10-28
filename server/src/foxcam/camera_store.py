@@ -113,23 +113,27 @@ def update_camera(camera_id: str, *, name: str | None = None,
     return cam
 
 
-def sync_tapo_devices(devices: dict[str, str]) -> None:
-    """Keep the Tapo name (and id) of cameras added in the web UI as the Tapo account
-    has them (``devices``: device id -> name), so a camera renamed in the Tapo app shows
-    its new name. Ingest leaves the relay running (see ingest.supervisor._fingerprint)."""
+def sync_tapo_devices(devices: list[dict[str, str]]) -> None:
+    """Keep the id, name and model of Tapo cameras added in the web UI as the Tapo
+    account has them (``devices``: ``device_id``, ``name``, ``model``), so the UI shows
+    the model, and a camera renamed in the Tapo app is still found. Ingest leaves the
+    relay running (see ingest.supervisor._fingerprint)."""
     if not db_ready() or not devices:
         return
-    by_name = {name: dev_id for dev_id, name in devices.items()}
+    by_id = {d["device_id"]: d for d in devices}
+    by_name = {d["name"]: d for d in devices}
     with session_scope() as s:
         for row in s.scalars(select(ManagedCamera)):
             src = row.source
             if src.get("type") != "tapo_cloud":
                 continue
-            dev_id = src.get("device_id") or by_name.get(src.get("device_name"))
-            if dev_id not in devices:
+            dev = by_id.get(src.get("device_id")) or by_name.get(src.get("device_name"))
+            if dev is None:
                 continue
-            if src.get("device_id") != dev_id or src.get("device_name") != devices[dev_id]:
-                row.source = {**src, "device_id": dev_id, "device_name": devices[dev_id]}
+            new = {**src, "device_id": dev["device_id"], "device_name": dev["name"],
+                   "model": dev["model"] or src.get("model")}
+            if new != src:
+                row.source = new
 
 
 def delete_camera(camera_id: str) -> None:

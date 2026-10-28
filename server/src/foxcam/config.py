@@ -50,6 +50,8 @@ class TapoCloudSource(BaseModel):
     type: Literal["tapo_cloud"]
     device_name: str | None = None
     device_id: str | None = None
+    # The camera model (e.g. C200), shown in the UI; kept up to date from the account.
+    model: str | None = None
     resolution: Literal["HD", "VGA"] = "HD"
     # Each relay session is restarted after this many seconds (keeps tokens fresh).
     # Start a fresh relay session after this long (0 = only when the relay ends it).

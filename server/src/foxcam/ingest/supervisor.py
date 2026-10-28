@@ -66,9 +66,12 @@ def _run_ffmpeg_camera(settings: Settings, cam: CameraConfig, stop: threading.Ev
 def _fingerprint(settings: Settings, cam: CameraConfig) -> str:
     # The publish path is part of it: switching processing on/off restarts the publisher.
     source = cam.source.model_dump()
-    if source.get("type") == "tapo_cloud" and source.get("device_id"):
-        # Found by id: the Tapo name is only shown (renamed in the app = no restart).
-        source.pop("device_name", None)
+    if source.get("type") == "tapo_cloud":
+        # Only shown: a model learnt from the account, or a new name in the Tapo app for
+        # a camera found by id, leaves the relay running.
+        source.pop("model", None)
+        if source.get("device_id"):
+            source.pop("device_name", None)
     return json.dumps([source, source_path(settings, cam)], sort_keys=True)
 
 

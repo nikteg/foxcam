@@ -16,7 +16,7 @@ import {
   DialogSurface,
   DialogTitle,
 } from "./Drawer";
-import { TapoNameFact } from "./CameraCard";
+import { CameraModelFact } from "./CameraCard";
 import { Fact, Facts, NoValue, Tag, Time } from "./ui";
 
 const LOW_DATA_KEY = "foxcam.live.lowData";
@@ -154,7 +154,7 @@ function LiveFacts({ camera: c, stream }: { camera: Camera; stream: LiveStream |
   useFactsPolling(c.online && stream?.bitrate_kbit == null);
   return (
     <Facts>
-      <TapoNameFact camera={c} />
+      <CameraModelFact camera={c} />
       {c.online && (
         <>
           <Fact label={t("live.onlineFor")}>

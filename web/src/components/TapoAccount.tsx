@@ -104,6 +104,7 @@ export function TapoCameraList() {
                             type: "tapo_cloud",
                             device_id: d.device_id,
                             device_name: d.name,
+                            model: d.model,
                             resolution: quality[d.device_id] ?? "HD",
                           },
                         })

@@ -162,6 +162,7 @@ export type CameraSource =
       type: "tapo_cloud";
       device_id?: string | null;
       device_name?: string | null;
+      model?: string | null;
       resolution?: "HD" | "VGA";
     }
   | { type: "file"; path: string }
