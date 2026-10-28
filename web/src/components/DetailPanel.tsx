@@ -21,10 +21,10 @@ const KEEP_OPEN =
   "[role=menu], [role=listbox], .fui-Popover, .fui-PopoverSurface, .fui-Tooltip";
 
 /**
- * Detail view for the selected list item: a drawer from the right, like every dialog. Not
- * modal and without a backdrop, so another row of the list can be picked while it is
- * open (the drawer stays, scrolled where it was); a click anywhere else outside it closes
- * it.
+ * Detail view for the selected list item: a drawer from the right, like every dialog, as
+ * wide as the live view's (room for its video or picture). Not modal and without a
+ * backdrop, so another row of the list can be picked while it is open (the drawer stays,
+ * scrolled where it was); a click anywhere else outside it closes it.
  */
 export function DetailPanel({
   open,
@@ -68,7 +68,7 @@ export function DetailPanel({
         open={open && !!host}
         mountNode={host}
         position="end"
-        size={phone ? "full" : "medium"}
+        size={phone ? "full" : "large"}
         modalType="non-modal"
         // Phones: the drawer covers the screen, so it just appears (no slide).
         surfaceMotion={phone ? null : undefined}
