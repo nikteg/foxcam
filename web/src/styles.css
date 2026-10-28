@@ -898,6 +898,21 @@ div.thumb.placeholder {
 }
 .mask-editor > .mask-toolbar {
   order: -1;
+  /* Cards clip; the toolbar's menu opens over what is below (the picture and its
+     controls too). */
+  overflow: visible;
+  position: relative;
+  z-index: 4;
+}
+.mask-toolbar .fui-Toolbar {
+  column-gap: var(--spacingHorizontalXS);
+}
+/* Unsaved / saved / errors: at the far end of the toolbar. */
+.mask-toolbar-status {
+  margin-inline-start: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacingHorizontalXS);
 }
 .mask-editor > .mask-stage-area {
   order: 0;
@@ -1162,8 +1177,10 @@ div.thumb.placeholder {
   width: 112px;
   display: flex;
   flex-direction: column;
-  gap: var(--spacingVerticalXXS);
-  padding: 4px;
+  /* Even space around the picture and its caption (the caption's line height adds some
+     below the text, so the bottom padding is a little smaller). */
+  gap: var(--spacingVerticalXS);
+  padding: 6px 6px 4px;
   border: 1px solid var(--colorNeutralStroke2);
   border-radius: var(--borderRadiusMedium);
   background: var(--colorNeutralBackground1);
@@ -1192,7 +1209,7 @@ div.thumb.placeholder {
 .picture-strip > .picture-choice-skeleton.fui-SkeletonItem {
   flex: 0 0 auto;
   width: 112px;
-  height: 85px;
+  height: 87px;
   border-radius: var(--borderRadiusMedium);
 }
 .picture-choice-live {

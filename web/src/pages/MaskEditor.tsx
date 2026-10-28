@@ -112,6 +112,10 @@ const ARROWS: Record<string, [number, number]> = {
   ArrowUp: [0, -1],
   ArrowDown: [0, 1],
 };
+/** Tabster (Fluent's keyboard navigation) leaves these keys alone inside this element. */
+const ARROWS_TO_EDITOR = JSON.stringify({
+  focusable: { ignoreKeydown: Object.fromEntries(Object.keys(ARROWS).map((k) => [k, true])) },
+});
 const MAX_ZOOM = 8;
 // The magnifier while a finger drags: its size (px) and how much it enlarges.
 const LOUPE = 120;
@@ -694,7 +698,14 @@ function Editor({
   });
 
   const toolbar = (
-    <Card className="mask-toolbar" appearance="filled-alternative" size="small">
+    <Card
+      className="mask-toolbar"
+      appearance="filled-alternative"
+      size="small"
+      // The toolbar moves focus between its buttons with the arrow keys, before our
+      // handler sees them; while an area is selected they move the area instead.
+      data-tabster={selected >= 0 ? ARROWS_TO_EDITOR : undefined}
+    >
       <Toolbar
         aria-label={t(kind === "censor" ? "mask.actions" : "motion.actions")}
         className="wrap"
@@ -767,10 +778,12 @@ function Editor({
             </MenuList>
           </MenuPopover>
         </Menu>
-        {/* On phones the Save button says it (enabled, then a checkmark). */}
-        {dirty && !phone && <Tag kind="warn">{t("mask.unsaved")}</Tag>}
-        {justSaved && !phone && <Tag kind="ok">{t("mask.saved")}</Tag>}
-        {save.error && <Tag kind="bad">{String(save.error.message)}</Tag>}
+        <span className="mask-toolbar-status">
+          {/* On phones the Save button says it (enabled, then a checkmark). */}
+          {dirty && !phone && <Tag kind="warn">{t("mask.unsaved")}</Tag>}
+          {justSaved && !phone && <Tag kind="ok">{t("mask.saved")}</Tag>}
+          {save.error && <Tag kind="bad">{String(save.error.message)}</Tag>}
+        </span>
       </Toolbar>
     </Card>
   );
