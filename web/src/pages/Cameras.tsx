@@ -128,11 +128,14 @@ export function Cameras() {
               </Button>
             </Toolbar>
           )}
-          <InfoBanner id={isAdmin ? "cameras" : "cameras-user"}>
-            {isAdmin
-              ? rich("cameras.intro", { file: <code>config.yaml</code> })
-              : t("cameras.introUser")}
-          </InfoBanner>
+          {/* With no cameras, the empty note below says it all. */}
+          {cameras.data?.length !== 0 && (
+            <InfoBanner id={isAdmin ? "cameras" : "cameras-user"}>
+              {isAdmin
+                ? rich("cameras.intro", { file: <code>config.yaml</code> })
+                : t("cameras.introUser")}
+            </InfoBanner>
+          )}
           <QueryState
             error={cameras.error}
             loading={cameras.isPending}

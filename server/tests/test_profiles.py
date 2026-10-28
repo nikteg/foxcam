@@ -273,6 +273,7 @@ def test_profiles_for_people_who_are_not_admins(two_profiles):
         status = c.get("/api/status").json()
         assert status["cameras"] == [] and status["queue"] is None
         assert status["disk_free_bytes"] is None
+        assert status["mediamtx_reachable"]  # nothing of theirs to watch: no warning
 
         with session_scope() as s:
             s.add(CameraAccess(user_id=uid, camera_id="cam", role=CameraRole.VIEWER))
