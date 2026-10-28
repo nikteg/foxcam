@@ -448,7 +448,7 @@ def segment(segment_id: int, p: Principal = Depends(principal)) -> dict[str, Any
     """One recording, with where things moved (``motion_boxes``) and footage missing in it
     (``gaps``)."""
     seg = _segment(p, segment_id)
-    return {**queries.segment_dict(seg), "motion_boxes": seg.motion_boxes,
+    return {**queries.segment_dict(seg), "motion_boxes": queries.motion_frames(seg.motion_boxes),
             "gaps": footage.segment_gaps(seg)}
 
 
@@ -699,7 +699,7 @@ def event_sprite_image(event_id: int, settings: Settings = Depends(settings_dep)
 @router.get("/archives/{archive_id}/timeline")
 def archive_timeline(archive_id: int, p: Principal = Depends(principal)) -> dict[str, Any]:
     """For the player's timeline, in the archive's own time: where things moved
-    (``[ms, boxes]`` frames), the targets found (boxes to draw) and footage that is missing
+    (``[ms, boxes]`` frames), the detections (boxes to draw) and footage that is missing
     (``[from_s, to_s, missing_s]``)."""
     _archive(p, archive_id)
     return {"motion": queries.archive_motion(archive_id),

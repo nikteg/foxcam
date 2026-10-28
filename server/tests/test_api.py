@@ -575,8 +575,9 @@ def test_archive_motion_is_in_archive_time(settings):
     add_detection(seg_id, add_job(seg_id), 1600, label="person", target=False)
     with app_client(settings) as c:
         found = c.get(f"/api/archives/{arc_id}/timeline").json()["detections"]
-    # Targets only, at 10 s + 1.5 s.
-    assert [(d["label"], d["at_ms"]) for d in found] == [("fox", 11500)]
+    # Every detection (the other label too, no match), at 10 s + 1.5 s and 1.6 s.
+    assert [(d["label"], d["at_ms"], d["match"]) for d in found] == [
+        ("fox", 11500, True), ("person", 11600, False)]
 
 
 def test_missing_footage_in_an_archive(settings):
@@ -671,3 +672,26 @@ def test_one_event_detection_and_archive_by_id(settings):
         for path in ("/api/detections/999999", "/api/events/999999", "/api/archives/999999"):
             assert c.get(path).status_code == 404
         assert c.get("/api/detections/feedback-export").status_code == 200
+
+
+def test_boxes_rounded_and_json_gzipped(settings):
+    """Boxes go out with 4 decimals (stored as they came); JSON is gzipped for clients
+    that take it, the video file is not."""
+    seg = add_segment(settings, seconds=10,
+                      motion_boxes=[[500, [[0.123456789, 0.2, 0.3, 0.4]]]])
+    det = add_detection(seg, add_job(seg), 1000)
+    with session_scope() as s:
+        s.get(Detection, det).bbox_x = 0.881249975413084
+    with app_client(settings) as c:
+        found = c.get(f"/api/detections?segment={seg}&limit=500").json()
+        assert found[0]["bbox"][0] == 0.8812
+        assert c.get(f"/api/segments/{seg}").json()["motion_boxes"] == [
+            [500, [[0.1235, 0.2, 0.3, 0.4]]]]
+        many = [add_detection(seg, add_job(seg), 2000 + i) for i in range(20)]
+        r = c.get(f"/api/detections?segment={seg}&limit=500",
+                  headers={"Accept-Encoding": "gzip"})
+        assert r.headers.get("content-encoding") == "gzip" and len(r.json()) == len(many) + 1
+        r = c.get(f"/api/segments/{seg}/play", headers={"Accept-Encoding": "gzip"})
+        assert r.status_code == 200 and "content-encoding" not in r.headers
+    with session_scope() as s:
+        assert s.get(Detection, det).bbox_x == 0.881249975413084

@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -86,6 +87,10 @@ def create_app(settings: Settings | None = None, background: bool = True) -> Fas
                   dependencies=[Depends(authenticate)],
                   docs_url="/docs" if docs else None, redoc_url="/redoc" if docs else None,
                   openapi_url="/openapi.json" if docs else None)
+    # JSON (the timelines' detections and motion, the long lists), the web app's files and
+    # thumbnail tracks: about a fifth of the size. Video, pictures and partial (range)
+    # responses are left alone (Starlette's own exclusions).
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
