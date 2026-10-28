@@ -384,7 +384,7 @@ function PlayerControls({
           >
             <TimeSlider.Track className="player-track">
               <TimeSlider.Progress className="player-track-progress" />
-              {duration > 0 && (markers?.length || gaps?.length) && (
+              {duration > 0 && !!(markers?.length || gaps?.length) && (
                 <span className="player-markers" aria-hidden="true">
                   {markers?.map((m) => (
                     <span
