@@ -20,6 +20,7 @@ import { byNumber, byString, DataTable, type Column } from "./DataTable";
 import { CameraTag, useCameraName } from "./CameraSelect";
 import { Empty, InfoBanner, QueryState, Stat, Tag, Time } from "./ui";
 import { StatsSkeleton, TableSkeleton, TextSkeleton } from "./Skeletons";
+import { useLinked } from "../useLinked";
 
 interface PeriodRow {
   key: string;
@@ -98,6 +99,7 @@ export function ArchivingSection() {
     queryFn: () => api.archives({ limit: 20 }),
     refetchInterval: 30_000,
   });
+  const selected = useLinked(recent.data, Number(file) || null, "archives", api.archive);
   const c = status.data;
   if (!c) {
     return (
@@ -147,7 +149,6 @@ export function ArchivingSection() {
       size: a.size_bytes,
     })),
   ];
-  const selected = recent.data?.find((a) => a.id === Number(file));
   const last = c.last_built;
   const errorIsNewer = c.last_error && (!last || (c.last_error_at ?? "") > last.at);
 

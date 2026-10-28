@@ -1045,6 +1045,7 @@ export const api = {
   archiving: () => request<CompactionStatus>("GET", "/api/archiving"),
   archives: (q: { camera?: string; day?: string; limit?: number }) =>
     request<ArchiveFile[]>("GET", withQuery("/api/archives", q)),
+  archive: (id: number) => request<ArchiveFile>("GET", `/api/archives/${id}`),
   detections: (q: {
     segment?: number;
     camera?: string;
@@ -1066,6 +1067,7 @@ export const api = {
     feedback?: "correct" | "wrong" | "none";
     limit?: number;
   }) => request<Detection[]>("GET", withQuery("/api/detections", q)),
+  detection: (id: number) => request<Detection>("GET", `/api/detections/${id}`),
   feedback: (id: number, correct: boolean | null) =>
     request<{ status: string }>("POST", `/api/detections/${id}/feedback`, { correct }),
   favorite: (kind: "detections" | "events", id: number, favorite: boolean) =>
@@ -1097,6 +1099,7 @@ export const api = {
     feedback?: "correct" | "wrong" | "none";
     limit?: number;
   }) => request<DetectionEvent[]>("GET", withQuery("/api/events", q)),
+  event: (id: number) => request<DetectionEvent>("GET", `/api/events/${id}`),
   motionReport: (days: number) =>
     request<MotionReport>("GET", withQuery("/api/motion/report", { days })),
   motionBackfill: (days: number) =>

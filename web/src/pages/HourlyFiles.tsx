@@ -23,6 +23,7 @@ import { useVideoTimeline } from "../components/Motion";
 import { VideoPlayer } from "../components/VideoPlayer";
 import { TableSkeleton } from "../components/Skeletons";
 import { FrameImage } from "../components/FrameImage";
+import { useLinked } from "../useLinked";
 
 /** Re-encoded when joined (a camera's recording profile) or kept as the camera sent it. */
 function useHowMade(): (a: ArchiveFile) => string {
@@ -118,7 +119,7 @@ export function HourlyFiles({
     queryFn: () => api.archives({ camera, day, limit: 500 }),
     refetchInterval: 30_000,
   });
-  const selected = archives.data?.find((a) => a.id === selectedId);
+  const selected = useLinked(archives.data, selectedId, "archives", api.archive);
 
   return (
     <>

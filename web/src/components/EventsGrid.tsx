@@ -11,7 +11,7 @@ import { Dismiss24Regular, Info20Regular, Play20Filled } from "@fluentui/react-i
 import { Fragment, useState } from "react";
 import { useSearchParams } from "react-router";
 
-import type { DetectionEvent } from "../api";
+import { api, type DetectionEvent } from "../api";
 import { duration, localDay, localTime } from "../format";
 import { useI18n } from "../i18n";
 import { useCameraName } from "./CameraSelect";
@@ -47,6 +47,7 @@ import {
 } from "./Drawer";
 import { eventThumbBox } from "./Boxes";
 import { FrameImage } from "./FrameImage";
+import { useLinked } from "../useLinked";
 
 export function EventsGrid({
   events,
@@ -67,7 +68,7 @@ export function EventsGrid({
   // (refreshed) list, so marking it right or wrong shows at once.
   const [params, setParams] = useSearchParams();
   const open = params.get("details");
-  const found = events.find((e) => String(e.id) === open) ?? null;
+  const found = useLinked(events, Number(open) || null, "events", api.event) ?? null;
   // The last version seen in the list: an event can leave it while open (marked wrong on
   // the Status page, which hides those), and the drawer stays until it is closed.
   const [seen, setSeen] = useState<DetectionEvent | null>(null);
@@ -89,12 +90,15 @@ export function EventsGrid({
   const manyProfiles = (useProfiles().data?.length ?? 0) > 1;
   const severalDetectors = useSeveralDetectors();
   const detectorNames = useDetectorNames();
-  if (events.length === 0) return <Empty>{t("events.none")}</Empty>;
-
   return (
     <>
+      {events.length === 0 && <Empty>{t("events.none")}</Empty>}
       {/* While some are picked, every card shows its checkbox (not only on hover). */}
-      <div className={`cards ${selection?.chosen.length ? "picking" : ""}`}>
+      {/* The drawer below still opens with none (a link to one the filters leave out). */}
+      <div
+        className={`cards ${selection?.chosen.length ? "picking" : ""}`}
+        hidden={events.length === 0}
+      >
         {events.map((e, i) => (
           <Fragment key={e.id}>
             {byDay && (i === 0 || localDay(events[i - 1]!.first_ts) !== localDay(e.first_ts)) && (

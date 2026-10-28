@@ -268,10 +268,13 @@ def segments(camera_id: str | None = None, day: str | None = None, only_targets:
 
 
 def archives(camera_id: str | None = None, day: str | None = None, limit: int = 200,
-             camera_ids: set[str] | None = None) -> list[dict[str, Any]]:
+             camera_ids: set[str] | None = None,
+             archive_id: int | None = None) -> list[dict[str, Any]]:
     """Hourly files made by compaction, newest first, with their segment counts."""
     q = _only(select(Archive), Archive.camera_id, camera_ids) \
         .order_by(Archive.start_at.desc()).limit(limit)
+    if archive_id is not None:
+        q = q.where(Archive.id == archive_id)
     if camera_id:
         q = q.where(Archive.camera_id == camera_id)
     if day:
@@ -367,7 +370,8 @@ def detections(settings: Settings, camera_id: str | None = None, label: str | No
                only_favorites: bool = False,
                since: datetime | None = None, until: datetime | None = None,
                light: str | None = None,
-               feedback: str | None = None) -> list[dict[str, Any]]:
+               feedback: str | None = None,
+               detection_id: int | None = None) -> list[dict[str, Any]]:
     # The recordings' few columns used here, in one query (not their motion data).
     q = _only(select(Detection, queue.counts_as_match()), Detection.camera_id, camera_ids) \
         .options(selectinload(Detection.segment).options(
@@ -377,6 +381,8 @@ def detections(settings: Settings, camera_id: str | None = None, label: str | No
         .order_by(Detection.ts.desc()).limit(limit)
     if segment_id is not None:
         q = q.where(Detection.segment_id == segment_id)
+    if detection_id is not None:
+        q = q.where(Detection.id == detection_id)
     if camera_id:
         q = q.where(Detection.camera_id == camera_id)
     if label:
@@ -479,11 +485,14 @@ def events(camera_id: str | None = None, limit: int = 100,
            only_favorites: bool = False,
            since: datetime | None = None, until: datetime | None = None,
            light: str | None = None,
-           feedback: str | None = None) -> list[dict[str, Any]]:
+           feedback: str | None = None,
+           event_id: int | None = None) -> list[dict[str, Any]]:
     wrong, correct = _feedback()
     favorite = _favorite()
     q = _only(select(Event, wrong, correct, favorite), Event.camera_id, camera_ids) \
         .order_by(Event.first_ts.desc()).limit(limit)
+    if event_id is not None:
+        q = q.where(Event.id == event_id)
     if hide_wrong:
         q = q.where(~(wrong & ~correct))
     if only_favorites:

@@ -594,6 +594,15 @@ def archives(camera: str | None = None, day: str | None = Query(None, descriptio
     return queries.archives(camera, day, limit, _camera_filter(p, camera))
 
 
+@router.get("/archives/{archive_id:int}")
+def archive(archive_id: int, p: Principal = Depends(principal)) -> dict[str, Any]:
+    """One hourly file, as in the list (for a link to one the list leaves out)."""
+    found = queries.archives(limit=1, camera_ids=_camera_filter(p, None), archive_id=archive_id)
+    if not found:
+        raise HTTPException(404, "unknown hourly file")
+    return found[0]
+
+
 def _archive(p: Principal, archive_id: int) -> Archive:
     with session_scope() as s:
         arc = s.get(Archive, archive_id)
@@ -743,6 +752,17 @@ def detections(camera: str | None = None, label: str | None = None, only_targets
     return queries.detections(settings, camera, label, only_targets, min_confidence, limit, segment,
                               profile, _camera_filter(p, camera), detector, event,
                               hide_still, favorite, _utc(since), _utc(until), light, feedback)
+
+
+@router.get("/detections/{detection_id:int}")
+def detection(detection_id: int, settings: Settings = Depends(settings_dep),
+              p: Principal = Depends(principal)) -> dict[str, Any]:
+    """One detection, as in the list (for a link to one the list's filters leave out)."""
+    found = queries.detections(settings, camera_ids=_camera_filter(p, None), limit=1,
+                               detection_id=detection_id)
+    if not found:
+        raise HTTPException(404, "unknown detection")
+    return found[0]
 
 
 @router.get("/detections/{detection_id}/frame.jpg")
@@ -912,6 +932,15 @@ def events(camera: str | None = None, profile: str | None = None, label: str | N
     return queries.events(camera, limit, profile, label, _camera_filter(p, camera),
                           min_agreement, hide_wrong, favorite, _utc(since), _utc(until), light,
                           feedback)
+
+
+@router.get("/events/{event_id:int}")
+def event(event_id: int, p: Principal = Depends(principal)) -> dict[str, Any]:
+    """One event, as in the list (for a link to one the list's filters leave out)."""
+    found = queries.events(limit=1, camera_ids=_camera_filter(p, None), event_id=event_id)
+    if not found:
+        raise HTTPException(404, "unknown event")
+    return found[0]
 
 
 def _event(p: Principal, event_id: int) -> Event:

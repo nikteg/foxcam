@@ -646,3 +646,28 @@ def test_skips_are_found_where_ingest_left_a_pause(settings, tmp_path):
     skips = footage.find_skips(joined, "cam", start, 7.0)
     assert [round(at, 1) for at, _ in skips] == [2.5, 5.0]
     assert [missing for _, missing in skips] == [11.2, None]
+
+
+def test_one_event_detection_and_archive_by_id(settings):
+    """A link opens what a list's filters leave out: each can be fetched on its own, like
+    in its list; unknown ids are 404, and the export's own path still works."""
+    from foxcam.models import Archive
+
+    start = utcnow().replace(microsecond=0)
+    seg = add_segment(settings, start=start, seconds=10, with_file=False)
+    det = add_detection(seg, add_job(seg), 1000)
+    with session_scope() as s:
+        ev = Event(camera_id="cam", label="fox", first_ts=start, last_ts=start,
+                   max_confidence=0.9, clip_dirty=False)
+        arc = Archive(camera_id="cam", start_at=start, path="archive/cam/a.mp4",
+                      duration_s=20, size_bytes=1)
+        s.add_all([ev, arc])
+        s.flush()
+        ev_id, arc_id = ev.id, arc.id
+    with app_client(settings) as c:
+        assert c.get(f"/api/detections/{det}").json()["id"] == det
+        assert c.get(f"/api/events/{ev_id}").json()["label"] == "fox"
+        assert c.get(f"/api/archives/{arc_id}").json()["id"] == arc_id
+        for path in ("/api/detections/999999", "/api/events/999999", "/api/archives/999999"):
+            assert c.get(path).status_code == 404
+        assert c.get("/api/detections/feedback-export").status_code == 200

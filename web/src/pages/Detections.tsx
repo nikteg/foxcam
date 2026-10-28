@@ -45,6 +45,7 @@ import { useFilters } from "../useFilters";
 import { VideoPlayer } from "../components/VideoPlayer";
 import { DetectionMotion } from "../components/Motion";
 import { TableSkeleton } from "../components/Skeletons";
+import { useLinked } from "../useLinked";
 
 const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detection>[] => [
   {
@@ -172,7 +173,12 @@ export function DetectionList() {
     queryFn: () => api.detections({ ...query, ...periodBounds(period) }),
     refetchInterval: 20_000,
   });
-  const selected = detections.data?.find((d) => String(d.id) === f.selected);
+  const selected = useLinked(
+    detections.data,
+    Number(f.selected) || null,
+    "detections",
+    api.detection,
+  );
   const { t } = useI18n();
   const routerHref = useRouterHref();
   const cameraName = useCameraName();
@@ -324,6 +330,13 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
     queryFn: () => api.detections({ segment: d.segment_id, limit: 500 }),
     placeholderData: keepPreviousData,
   });
+  // Where things moved and footage missing in it (shared with its drawer too).
+  const recording = useQuery({
+    queryKey: ["segment", d.segment_id],
+    queryFn: () => api.segment(d.segment_id),
+    placeholderData: keepPreviousData,
+  });
+  const shown = !recording.isPlaceholderData ? recording.data : undefined;
   return (
     <div className="detail-stack">
       <FrameImage
@@ -392,9 +405,11 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
           src={`/api/segments/${d.segment_id}/play`}
           startAt={Math.max(d.offset_ms / 1000 - 1, 0)}
           thumbnails={`/api/segments/${d.segment_id}/thumbnails.vtt`}
+          motion={shown?.motion_boxes || []}
           detections={playerDetections(
             inRecording.isPlaceholderData ? undefined : inRecording.data,
           )}
+          gaps={shown?.gaps}
         />
       </div>
       <Button
