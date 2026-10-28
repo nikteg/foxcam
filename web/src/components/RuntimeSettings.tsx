@@ -47,6 +47,8 @@ const META: Record<
     kind?: Kind;
     /** kind "choice": the values and their labels. */
     options?: [string, MessageKey][];
+    /** What an empty value means, when not "not set". */
+    empty?: MessageKey;
   }
 > = {
   public_url: { label: "runtime.publicUrl", hint: "runtime.publicUrlHint", kind: "url" },
@@ -184,6 +186,7 @@ const META: Record<
     label: "retention.maxDisk",
     hint: "retention.maxDiskHint",
     unit: "retention.gb",
+    empty: "retention.noCap",
   },
 };
 
@@ -390,11 +393,7 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
                         max={scaled(s.le ?? s.lt, meta.kind)}
                         step="any"
                         value={value}
-                        placeholder={
-                          s.nullable
-                            ? t(meta.kind === "url" ? "runtime.notSet" : "retention.noCap")
-                            : undefined
-                        }
+                        placeholder={s.nullable ? t(meta.empty ?? "runtime.notSet") : undefined}
                         contentAfter={meta.unit ? t(meta.unit) : undefined}
                         onChange={(_, d) => setDraft((v) => ({ ...v, [k]: d.value }))}
                       />
@@ -520,7 +519,7 @@ function shown(
 ): string {
   if (v === null) {
     if (meta.kind === "timezone") return t("runtime.serverTime");
-    return t(meta.kind === "url" ? "runtime.notSet" : "retention.noCap");
+    return t(meta.empty ?? "runtime.notSet");
   }
   if (typeof v === "boolean") return t(v ? "runtime.on" : "runtime.off");
   if (meta.kind === "percent") return `${toPercent(v as number)} %`;

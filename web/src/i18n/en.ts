@@ -587,8 +587,8 @@ export const en = {
   "runtime.source.default": "default",
   "runtime.source.config": "config.yaml",
   "runtime.source.ui": "set here",
-  "runtime.resetToConfig": "Reset to {value} (config.yaml)",
-  "runtime.resetToDefault": "Reset to {value} (default)",
+  "runtime.resetToConfig": "Reset to config.yaml ({value})",
+  "runtime.resetToDefault": "Reset to default ({value})",
   "runtime.timezone": "Time zone",
   "runtime.timezoneHint":
     "The times in notifications, and quiet hours, are in this zone. Not set: the server's own clock, which is UTC in Docker.",
@@ -686,10 +686,10 @@ export const en = {
     "Not yet analysed footage gets this long, so a worker that is offline for a while does not miss anything.",
   "retention.maxDisk": "Max disk use",
   "retention.maxDiskHint":
-    "Recordings use at most this much; the oldest footage outside events goes first. Empty = no cap.",
+    "Recordings use at most this much; the oldest footage outside events goes first. Empty = no limit.",
   "retention.days": "days",
   "retention.gb": "GB",
-  "retention.noCap": "no cap",
+  "retention.noCap": "no limit",
   "retention.freeOf": "{free} of {total}",
   "settings.configuration": "Configuration",
   "settings.storage": "Storage",

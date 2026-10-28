@@ -592,8 +592,8 @@ export const sv: Record<MessageKey, string> = {
   "runtime.source.default": "standard",
   "runtime.source.config": "config.yaml",
   "runtime.source.ui": "ändrad här",
-  "runtime.resetToConfig": "Återställ till {value} (config.yaml)",
-  "runtime.resetToDefault": "Återställ till {value} (standard)",
+  "runtime.resetToConfig": "Återställ till config.yaml ({value})",
+  "runtime.resetToDefault": "Återställ till standard ({value})",
   "runtime.timezone": "Tidszon",
   "runtime.timezoneHint":
     "Tiderna i notiserna, och tysta timmar, är i den här zonen. Inte angiven: serverns egen klocka, som är UTC i Docker.",
