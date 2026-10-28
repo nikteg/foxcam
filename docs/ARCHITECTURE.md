@@ -21,7 +21,7 @@
 |---|---|---|
 | MediaMTX | `foxcam mediamtx mediamtx/mediamtx.yml` (starts `mediamtx` with the internal login, see docs/AUTH.md) | Pulls RTSP cameras, accepts published streams, records segments, serves live view. Configured by the server through its API, including an on-demand `<camera>/low` path per camera (`foxcam transcode` to ~480p while someone watches it in low-data mode). |
 | server | `foxcam serve` | API, web UI and the background pipeline (single process, single SQLite writer). |
-| ingest | `foxcam ingest` | Publishes non-RTSP sources (Tapo cloud, file, test) into MediaMTX. Re-reads the camera list every 5 s. |
+| ingest | `foxcam ingest` | Publishes non-RTSP sources (Tapo cloud, file, test) into MediaMTX. Re-reads the camera list every 5 s. Keeps each Tapo cloud camera's name in the Tapo app (`device_name`, shown as "Name in Tapo") up to date, as does listing the account's cameras; a new name alone does not restart the relay. |
 | compaction | `foxcam compact` | Joins finished segments into hourly files, re-encoding them when the camera's recording profile says so ([below](#archiving-compaction-recording-profiles)). |
 | worker | `foxcam-worker` | Runs anywhere with HTTP access to the server. Leases jobs, runs a detector, posts results. |
 

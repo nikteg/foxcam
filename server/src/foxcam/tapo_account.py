@@ -6,6 +6,7 @@ process picks it up for `tapo_cloud` camera sources. The password is never store
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import secrets
@@ -13,6 +14,7 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+from . import camera_store
 from .config import Settings
 
 log = logging.getLogger(__name__)
@@ -134,6 +136,7 @@ async def devices(settings: Settings) -> list[dict[str, Any]]:
     finally:
         await session.aclose()
 
+    await asyncio.to_thread(camera_store.sync_tapo_devices, {c.device_id: c.name for c in cams})
     added = {c.source.device_id: c.id for c in settings.all_cameras(include_disabled=True)
              if c.source.type == "tapo_cloud" and c.source.device_id}
     added_by_name = {c.source.device_name: c.id for c in settings.all_cameras(include_disabled=True)

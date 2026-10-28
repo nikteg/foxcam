@@ -38,6 +38,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TypeVar
 
+from .. import camera_store
 from ..config import CameraConfig, Settings
 from .supervisor import publish_url
 
@@ -139,6 +140,11 @@ async def call_with_refresh(settings: Settings, session, fn: Callable[[], Awaita
 async def _find_device(settings: Settings, session, cam: CameraConfig):
     src = cam.source
     devices = await call_with_refresh(settings, session, session.devices)
+    try:
+        await asyncio.to_thread(camera_store.sync_tapo_devices,
+                                {d.device_id: d.name for d in devices})
+    except Exception:
+        log.exception("[%s] could not update Tapo camera names", cam.id)
     for dev in devices:
         if (src.device_id and dev.device_id == src.device_id) or \
                 (src.device_name and dev.name == src.device_name):

@@ -132,6 +132,7 @@ export const en = {
 
   // Camera facts
   "camera.name": "Name",
+  "camera.tapoName": "Name in Tapo",
   "camera.segmentLength": "Segment length",
   "camera.segmentLengthSeconds": "Segment length (seconds)",
   "camera.segmentLengthHint": "Leave empty to use the default from Settings → General.",

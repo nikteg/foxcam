@@ -113,6 +113,25 @@ def update_camera(camera_id: str, *, name: str | None = None,
     return cam
 
 
+def sync_tapo_devices(devices: dict[str, str]) -> None:
+    """Keep the Tapo name (and id) of cameras added in the web UI as the Tapo account
+    has them (``devices``: device id -> name), so a camera renamed in the Tapo app shows
+    its new name. Ingest leaves the relay running (see ingest.supervisor._fingerprint)."""
+    if not db_ready() or not devices:
+        return
+    by_name = {name: dev_id for dev_id, name in devices.items()}
+    with session_scope() as s:
+        for row in s.scalars(select(ManagedCamera)):
+            src = row.source
+            if src.get("type") != "tapo_cloud":
+                continue
+            dev_id = src.get("device_id") or by_name.get(src.get("device_name"))
+            if dev_id not in devices:
+                continue
+            if src.get("device_id") != dev_id or src.get("device_name") != devices[dev_id]:
+                row.source = {**src, "device_id": dev_id, "device_name": devices[dev_id]}
+
+
 def delete_camera(camera_id: str) -> None:
     """Removes the camera; its recordings, detections and events are kept."""
     with session_scope() as s:

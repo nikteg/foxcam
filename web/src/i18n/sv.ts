@@ -133,6 +133,7 @@ export const sv: Record<MessageKey, string> = {
 
   // Kamerauppgifter
   "camera.name": "Namn",
+  "camera.tapoName": "Namn i Tapo",
   "camera.segmentLength": "Segmentlängd",
   "camera.segmentLengthSeconds": "Segmentlängd (sekunder)",
   "camera.segmentLengthHint":

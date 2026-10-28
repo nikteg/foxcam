@@ -28,7 +28,7 @@ import { api, type Camera } from "../api";
 import { useIsAdmin, hasRole, useMe } from "../auth";
 import { AddCameraDialog } from "../components/AddCameraDialog";
 import { MaskDrawer } from "./MaskEditor";
-import { CameraCard } from "../components/CameraCard";
+import { CameraCard, TapoNameFact } from "../components/CameraCard";
 import { LiveDrawer } from "../components/LiveDrawer";
 import { SharePanel } from "../components/ShareDialog";
 import { ProfileDialog, ProfilesSection } from "./Profiles";
@@ -39,6 +39,7 @@ import { decimal } from "../format";
 import {
   Checkbox,
   Empty,
+  Facts,
   InfoBanner,
   PageTabs,
   PageTitle,
@@ -233,6 +234,11 @@ function GeneralPanel({
     >
       <DialogContent className="form-stack">
         {tabs}
+        {tapo?.device_name && (
+          <Facts>
+            <TapoNameFact camera={camera} />
+          </Facts>
+        )}
         {editable ? (
           <>
             <Field label={t("camera.name")} required>
