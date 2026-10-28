@@ -118,6 +118,23 @@ export function VideoPlayer({
     ...(detectionsOn && detections ? detectionMarkers(detections) : []),
   ];
   const allMarkers = [...timelineMarkers, ...(gaps ?? []).map(([from, to]) => ({ from, to }))];
+  // One button for both kinds of boxes: both, detections only, motion only, none, both…
+  // (with one kind, on and off).
+  const cycleBoxes = () => {
+    const [motionNext, detectionsNext] = !hasDetections
+      ? [!motionOn, false]
+      : !hasMotion
+        ? [false, !detectionsOn]
+        : motionOn && detectionsOn
+          ? [false, true]
+          : detectionsOn
+            ? [true, false]
+            : motionOn
+              ? [false, false]
+              : [true, true];
+    setShowMotion(motionNext);
+    setShowDetections(detectionsNext);
+  };
   const own = useRef<MediaPlayerInstance>(null);
   const ref = playerRef ?? own;
   // One player for every item a drawer shows (remounting it made the drawer jump): another
@@ -162,20 +179,9 @@ export function VideoPlayer({
         thumbnails={thumbnails}
         markers={timelineMarkers}
         gaps={gaps}
-        motion={
-          hasMotion
-            ? { on: showMotion, toggle: () => setShowMotion(!showMotion), frames: motion }
-            : undefined
-        }
-        detections={
-          hasDetections
-            ? {
-                on: showDetections,
-                toggle: () => setShowDetections(!showDetections),
-                list: detections ?? [],
-              }
-            : undefined
-        }
+        motion={hasMotion ? { on: motionOn, frames: motion } : undefined}
+        detections={hasDetections ? { on: detectionsOn, list: detections ?? [] } : undefined}
+        cycleBoxes={cycleBoxes}
       />
     </MediaPlayer>
   );
@@ -332,11 +338,30 @@ function PictureTaps({ markers }: { markers?: Marker[] }) {
   const player = useMediaPlayer();
   const remote = useMediaRemote();
   const lastTap = useRef(0);
+  const surface = useRef<HTMLDivElement>(null);
+  // Vidstack shows the controls on every touchend on the player while playing, which undid
+  // a tap that hid them: taps on the picture are ours alone.
+  useEffect(() => {
+    const el = surface.current;
+    const stop = (e: TouchEvent) => e.stopPropagation();
+    el?.addEventListener("touchend", stop);
+    return () => el?.removeEventListener("touchend", stop);
+  }, []);
   const jump = (direction: -1 | 1) => player && jumpToMarker(player, markers, direction, SEEK_S);
+  const toggleControls = () => {
+    if (!player) return;
+    if (player.controls.showing) player.controls.hide(0);
+    else {
+      player.controls.show(0);
+      // Hidden again after a while, as after any other touch while playing.
+      if (!player.state.paused) player.controls.hide();
+    }
+  };
   return (
     // Pointer events only; the keyboard works on the player (Vidstack's shortcuts).
     // oxlint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
+      ref={surface}
       className="player-surface"
       onPointerUp={(e) => {
         if (e.button !== 0) return;
@@ -350,7 +375,7 @@ function PictureTaps({ markers }: { markers?: Marker[] }) {
         const box = e.currentTarget.getBoundingClientRect();
         const x = (e.clientX - box.left) / box.width;
         if (second && (x < 1 / 3 || x > 2 / 3)) jump(x < 1 / 3 ? -1 : 1);
-        else if (!second) remote.toggleControls(e.nativeEvent);
+        else if (!second) toggleControls();
       }}
     />
   );
@@ -362,14 +387,17 @@ function PlayerControls({
   gaps,
   motion,
   detections,
+  cycleBoxes,
 }: {
   thumbnails?: string;
   markers?: Marker[];
   gaps?: FootageGap[];
-  /** The "show motion" toggle, when the video has motion to show. */
-  motion?: { on: boolean; toggle: () => void; frames: MotionFrame[] };
-  /** The "show detections" toggle, when the video has detections to show. */
-  detections?: { on: boolean; toggle: () => void; list: PlayerDetection[] };
+  /** The motion, when the video has some to show, and whether its boxes are on. */
+  motion?: { on: boolean; frames: MotionFrame[] };
+  /** The detections, when the video has some to show, and whether their boxes are on. */
+  detections?: { on: boolean; list: PlayerDetection[] };
+  /** The boxes button: to the next of both, detections, motion, none. */
+  cycleBoxes: () => void;
 }) {
   const { t } = useI18n();
   const remote = useMediaRemote();
@@ -494,27 +522,8 @@ function PlayerControls({
             <Time type="duration" />
           </span>
           <span className="player-chip player-bar-end">
-            {detections && (
-              <Button
-                appearance="transparent"
-                className={detections.on ? "player-on" : undefined}
-                icon={detections.on ? <ScanObject20Filled /> : <ScanObject20Regular />}
-                aria-label={t("player.showDetections")}
-                title={t("player.showDetections")}
-                aria-pressed={detections.on}
-                onClick={detections.toggle}
-              />
-            )}
-            {motion && (
-              <Button
-                appearance="transparent"
-                className={motion.on ? "player-on" : undefined}
-                icon={motion.on ? <Run20Filled /> : <Run20Regular />}
-                aria-label={t("recordings.showMotion")}
-                title={t("recordings.showMotion")}
-                aria-pressed={motion.on}
-                onClick={motion.toggle}
-              />
+            {(detections || motion) && (
+              <BoxesButton detections={detections?.on} motion={motion?.on} onClick={cycleBoxes} />
             )}
             <Button
               appearance="transparent"
@@ -588,6 +597,43 @@ function ScrubPicture({
         {detections && <DetectionBoxes detections={detectionsAt(detections, time * 1000)} />}
       </div>
     </div>
+  );
+}
+
+/** The boxes over the picture, one button: each press goes on to the next of both,
+ * detections, motion and none. Its icons are the kinds the video has, filled when shown.
+ * `detections` / `motion`: undefined when the video has none. */
+function BoxesButton({
+  detections,
+  motion,
+  onClick,
+}: {
+  detections?: boolean;
+  motion?: boolean;
+  onClick: () => void;
+}) {
+  const { t } = useI18n();
+  const label = t(
+    detections && motion
+      ? "player.boxesBoth"
+      : detections
+        ? "player.boxesDetections"
+        : motion
+          ? "player.boxesMotion"
+          : "player.boxesOff",
+  );
+  return (
+    <Button
+      appearance="transparent"
+      className="player-boxes-button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+    >
+      {detections !== undefined &&
+        (detections ? <ScanObject20Filled className="player-on" /> : <ScanObject20Regular />)}
+      {motion !== undefined && (motion ? <Run20Filled className="player-on" /> : <Run20Regular />)}
+    </Button>
   );
 }
 
