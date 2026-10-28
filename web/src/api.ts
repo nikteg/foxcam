@@ -1017,7 +1017,7 @@ export const api = {
     request<VideoTimeline>("GET", `/api/${kind}/${id}/timeline`),
   segmentJobs: (id: number) => request<SegmentJob[]>("GET", `/api/segments/${id}/jobs`),
   /** A link to one file that works for 10 minutes without signing in (Safari, iOS app). */
-  downloadLink: (path: string) => request<{ url: string }>("POST", "/api/download-links", { path }),
+  downloadToken: () => request<{ token: string | null }>("POST", "/api/download-token"),
   /** Detection again on every recording starting in [start, end) (ISO times). */
   reanalyseRange: (body: { camera?: string; start: string; end: string }) =>
     request<{ queued: number; skipped: number; detections_removed: number }>(

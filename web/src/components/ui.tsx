@@ -69,8 +69,9 @@ const ios =
 /** A download link styled as a button. In a home screen app a file opens in a full-screen
  * viewer with no way back, so there:
  * - on iOS it opens in Safari (``x-safari-https://``), which has a download manager, with a
- *   short-lived signed link (Safari does not share the app's sign-in; the server's
- *   download_links.py). The link is fetched ahead, so the tap is a plain link;
+ *   short-lived signed token (Safari does not share the app's sign-in; the server's
+ *   download_links.py). One token serves every button and is fetched ahead, so the tap is
+ *   a plain link (iOS may not open Safari after waiting for a request);
  * - elsewhere it opens in a new window. */
 export function DownloadButton({
   href,
@@ -85,19 +86,18 @@ export function DownloadButton({
 }) {
   const url = new URL(href, location.origin);
   const toSafari = standalone && ios && url.origin === location.origin;
-  const link = useQuery({
-    queryKey: ["download-link", url.pathname],
-    queryFn: () => api.downloadLink(url.pathname),
+  const token = useQuery({
+    queryKey: ["download-token"],
+    queryFn: api.downloadToken,
     enabled: toSafari,
     // Valid 10 minutes: renewed before then.
     staleTime: 8 * 60_000,
     refetchInterval: 8 * 60_000,
   });
   let target = href;
-  if (toSafari && link.data) {
-    const signed = new URL(link.data.url, location.origin);
-    url.searchParams.forEach((v, k) => signed.searchParams.set(k, v));
-    target = `x-safari-${signed.href}`;
+  if (toSafari && token.data) {
+    if (token.data.token) url.searchParams.set("dl", token.data.token);
+    target = `x-safari-${url.href}`;
   }
   return (
     <Button

@@ -83,9 +83,11 @@ itself is shown once; revoke it on the Account page. Workers use their own token
 
 The iPhone / iPad home screen app opens downloads (recordings, archives, clips, the
 training-set export) in Safari, which does not share the app's sign-in. So the app asks for
-a link first (`POST /api/download-links` with the file's path): it carries a `dl=` signature
-for the signed-in user, that one file and 10 minutes, and acts as that user for that GET
-only, so the camera access checks still apply. Links of a disabled account stop working.
+a token once per page (`POST /api/download-token`) and adds it to its download links as
+`dl=`. It is signed for the signed-in user and 10 minutes (the app renews it), and acts as
+that user for GETs of downloadable files only, so the camera access checks still apply. A
+`dl=` token goes before a session cookie, since Safari may hold an expired one. Tokens of
+a disabled account stop working.
 
 ## Who may create an account
 
