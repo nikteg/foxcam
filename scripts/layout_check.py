@@ -22,17 +22,9 @@ from pathlib import Path
 
 MIN_GAP = 8  # px; Fluent's spacingVerticalS
 VIEWPORTS = {"phone": {"width": 390, "height": 844}, "desktop": {"width": 1280, "height": 800}}
-PAGES = [
-    "/", "/events", "/events/detections", "/events/models", "/events/motion",
-    "/recordings", "/recordings/segments",
-    "/jobs/preparation", "/jobs/archiving", "/jobs/detection", "/jobs/detection-workers",
-    "/cameras", "/cameras/profiles", "/cameras/integrations",
-    "/settings/general", "/settings/detection", "/settings/retention", "/settings/users",
-    "/settings/notifications", "/settings/storage", "/settings/configuration",
-    "/settings/danger", "/account",
-]
 
-# The in-page check (a function returning problems as strings).
+# The in-page check and the list of pages ({"list": true}); the same file runs the
+# whole check from Chrome DevTools MCP.
 CHECK = (Path(__file__).with_name("layout_check.js")).read_text()
 
 
@@ -66,14 +58,14 @@ def main() -> int:
                     print(f"sign-in failed: {r.status} {r.text()[:200]}", file=sys.stderr)
                     return 2
             page = context.new_page()
-            for path in args.page or PAGES:
+            for path in args.page or page.evaluate(CHECK, {"list": True}):
                 page.goto(url + path, wait_until="networkidle")
                 page.wait_for_timeout(300)  # late layout (fonts, images)
                 if "/login" in page.url and path != "/login":
                     print(f"{label} {path}: not signed in (set FOXCAM_LAYOUT_EMAIL/PASSWORD)")
                     found += 1
                     continue
-                for problem in page.evaluate(CHECK, MIN_GAP):
+                for problem in page.evaluate(CHECK, {"here": True, "minGap": MIN_GAP}):
                     print(f"{label} {path}: {problem}")
                     found += 1
             context.close()

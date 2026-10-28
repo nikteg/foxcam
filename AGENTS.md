@@ -81,8 +81,8 @@ iPad and desktop, in light and dark theme, and as an iOS home screen app.
   banners, fields, cards) in a `.form-stack` (its gap spaces them), or use the classes that
   space themselves: `h2.section` for a page-level heading, `className="block"` on a
   `MessageBar` above content. `h2.panel-heading` is for headings inside a `.form-stack`.
-  A block touching the next one is the most common mistake here: `mise run layout-check`
-  finds it.
+  A block touching the next one is the most common mistake here: the layout check
+  (`scripts/layout_check.js`) finds it.
 - Secondary actions are secondary: small or subtle buttons (e.g. "Reset to default"), smaller
   buttons in cards. Links that act as buttons look like buttons.
 - Icons are one colour, without backgrounds.
@@ -144,10 +144,11 @@ iPad and desktop, in light and dark theme, and as an iOS home screen app.
 ## Checks before committing
 
 - `mise run check` (lint, types, format, tests) and `mise run build`.
-- UI changes: `mise run layout-check` against a running server (FOXCAM_SERVER,
-  FOXCAM_LAYOUT_EMAIL/PASSWORD). It opens every page at phone and desktop width and reports
-  blocks closer than 8 px and anything wider than the screen; fix what it reports. Where
-  Playwright cannot start a browser, run `scripts/layout_check.js` in the page with a browser
-  tool instead.
-- Look at UI changes in a browser at phone and desktop widths when possible, and say so when
-  you could not.
+- UI changes: the layout check against a running server. It opens every page at phone and
+  desktop width and reports blocks closer than 8 px and anything wider than the screen; fix
+  what it reports. Agents run `scripts/layout_check.js` with Chrome DevTools (MCP), signed
+  in on any page (`evaluate_script` `sourcePath`, the `ui-check` skill); in a terminal it's
+  `mise run layout-check` (Playwright; FOXCAM_SERVER, FOXCAM_LAYOUT_EMAIL/PASSWORD).
+- Look at UI changes in a browser at phone and desktop widths when possible (agents: Chrome
+  DevTools MCP, not Playwright, which can't start in the sandbox), and say so when you
+  could not.
