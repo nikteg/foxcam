@@ -8,7 +8,7 @@ import type { SunChartData, SunDetection } from "../api";
 import { decimal, localTime } from "../format";
 import { useI18n } from "../i18n";
 
-const HEIGHT = 260;
+export const HEIGHT = 260;
 const PAD = { top: 12, right: 44, bottom: 26, left: 36 };
 /** Pointer this close to the limit line (px) grabs it. */
 const GRAB = 18;

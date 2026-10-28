@@ -133,3 +133,67 @@ export function FieldSkeleton() {
     </Skeleton>
   );
 }
+
+/** Label / value facts (`Facts`) while they load. */
+export function FactsSkeleton({ rows = 4 }: { rows?: number }) {
+  const { t } = useI18n();
+  return (
+    <Skeleton aria-label={t("common.loading")} className="skeleton-facts">
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="skeleton-fact">
+          {/* As long as real labels and values, not stretched across a wide card. */}
+          <SkeletonItem size={12} style={{ width: "7em", flex: "none" }} />
+          <SkeletonItem size={12} style={{ width: FACT_WIDTHS[i % FACT_WIDTHS.length] }} />
+        </div>
+      ))}
+    </Skeleton>
+  );
+}
+
+const FACT_WIDTHS = ["14em", "9em", "18em", "11em"];
+
+/** A list of options to pick one of (a `RadioGroup`) while it loads. */
+export function ChoicesSkeleton({ count = 3 }: { count?: number }) {
+  const { t } = useI18n();
+  return (
+    <Skeleton aria-label={t("common.loading")} className="skeleton-lines">
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="skeleton-choice">
+          <SkeletonItem shape="circle" size={20} />
+          <SkeletonItem size={16} style={{ width: WIDTHS[i % WIDTHS.length] }} />
+        </div>
+      ))}
+    </Skeleton>
+  );
+}
+
+/** A picture (16:9) or a chart (`height` in px) while it loads. */
+export function BoxSkeleton({ height }: { height?: number }) {
+  const { t } = useI18n();
+  return (
+    <Skeleton aria-label={t("common.loading")}>
+      <SkeletonItem
+        shape="rectangle"
+        className="skeleton-thumb"
+        style={height ? { height, aspectRatio: "auto" } : undefined}
+      />
+    </Skeleton>
+  );
+}
+
+/** The Correct / Wrong buttons (`Feedback` with labels) while the detection loads. Spans:
+ *  they sit in a row of buttons. */
+export function FeedbackSkeleton() {
+  const { t } = useI18n();
+  return (
+    <>
+      <SkeletonItem
+        as="span"
+        size={32}
+        className="skeleton-button"
+        aria-label={t("common.loading")}
+      />
+      <SkeletonItem as="span" size={32} className="skeleton-button" />
+    </>
+  );
+}

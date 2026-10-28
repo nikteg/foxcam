@@ -4,7 +4,7 @@ import {
   Card,
   Field,
   Select,
-  Spinner,
+  SkeletonItem,
   Switch,
   Toolbar,
   ToolbarButton,
@@ -32,6 +32,7 @@ import {
 import { ConfirmPopover } from "../components/ConfirmPopover";
 import { DrawerTitle, QueryState, Tag } from "../components/ui";
 import { useI18n } from "../i18n";
+import { BoxSkeleton } from "../components/Skeletons";
 
 /** Normalized (0..1) rectangle; independent of the stream resolution. */
 interface Box {
@@ -113,7 +114,16 @@ export function MaskDrawer({
               <span className="only-touch">{t("mask.helpTouch")}</span>{" "}
               {t(kind === "censor" ? "mask.helpCommon" : "motion.help")}
             </Caption1>
-            <QueryState error={mask.error} loading={mask.isPending} />
+            <QueryState
+              error={mask.error}
+              loading={mask.isPending}
+              skeleton={
+                <>
+                  <BoxSkeleton height={48} />
+                  <BoxSkeleton />
+                </>
+              }
+            />
             {/* Remount when the saved state changes so the editor starts from it. */}
             {mask.data && (
               <Editor
@@ -355,9 +365,11 @@ function Editor({
           onLoad={() => setSnapshotLoaded(true)}
         />
         {!snapshotLoaded && (
-          <div className="stage-placeholder">
-            <Spinner size="small" label={t("mask.loadingSnapshot")} />
-          </div>
+          <SkeletonItem
+            shape="rectangle"
+            className="stage-placeholder"
+            aria-label={t("mask.loadingSnapshot")}
+          />
         )}
         <div
           ref={overlay}

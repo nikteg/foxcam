@@ -27,6 +27,7 @@ import {
 import { Navigate } from "react-router";
 
 import { useI18n } from "../i18n";
+import { CardsSkeleton } from "../components/Skeletons";
 
 // Language and theme are in the top bar; everything here is for admins.
 type SubPage =
@@ -252,7 +253,11 @@ export function Settings() {
           <InfoBanner id="configuration">
             {rich("settings.configIntro", { file: <code>config.yaml</code> })}
           </InfoBanner>
-          <QueryState error={settings.error} loading={settings.isPending} />
+          <QueryState
+            error={settings.error}
+            loading={settings.isPending}
+            skeleton={<CardsSkeleton thumb={false} />}
+          />
         </>
       )}
       {tab === "configuration" && cfg && (

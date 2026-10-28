@@ -14,6 +14,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import { useI18n } from "../i18n";
 import { Fact, Facts, QueryState } from "./ui";
+import { FactsSkeleton } from "./Skeletons";
 
 /** S3-compatible object storage: what is uploaded, progress and a connection test. */
 export function StorageCard() {
@@ -39,7 +40,7 @@ export function StorageCard() {
           )
         }
       />
-      <QueryState error={storage.error} loading={storage.isPending} />
+      <QueryState error={storage.error} loading={storage.isPending} skeleton={<FactsSkeleton />} />
       {s && !s.enabled && (
         <Text className="muted">
           {rich("storage.disabledHint", {

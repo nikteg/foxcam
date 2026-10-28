@@ -60,7 +60,7 @@ import {
   DialogSurface,
   DialogTitle,
 } from "../components/Drawer";
-import { CardsSkeleton } from "../components/Skeletons";
+import { CardsSkeleton, ChoicesSkeleton } from "../components/Skeletons";
 
 export function Cameras() {
   const { t, rich } = useI18n();
@@ -376,7 +376,7 @@ function RecordingPanel({
       <DialogContent className="form-stack">
         {tabs}
         <Body1 className="muted">{t("recording.help")}</Body1>
-        <QueryState error={list.error} loading={list.isPending} />
+        <QueryState error={list.error} loading={list.isPending} skeleton={<ChoicesSkeleton />} />
         <RadioGroup value={selected} onChange={(_, d) => setSelected(d.value)}>
           {profiles.map((p) => (
             <Radio
