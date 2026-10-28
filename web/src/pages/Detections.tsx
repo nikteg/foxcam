@@ -8,6 +8,7 @@ import { CameraSelect, CameraTag, useCameraName } from "../components/CameraSele
 import { ProfileSelect, useDetectorNames, useSeveralDetectors } from "../components/ProfileSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
+import { FrameImage } from "../components/FrameImage";
 import { BulkBar, useSelection } from "../components/Bulk";
 import { FavoriteStar } from "../components/Favorite";
 import { Feedback } from "../components/Feedback";
@@ -42,7 +43,7 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detec
     width: 120,
     phone: "thumb",
     // The frame with the box drawn in; made on first view (lazy: rows in sight only).
-    cell: (d) => <img className="mini" loading="lazy" src={detectionFrameUrl(d, "small")} alt="" />,
+    cell: (d) => <FrameImage className="mini" lazy src={detectionFrameUrl(d, "small")} alt="" />,
   },
   {
     id: "ts",
@@ -290,9 +291,12 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
   const { t } = useI18n();
   return (
     <div className="detail-stack">
-      <img
+      <FrameImage
         className="detail-media"
         src={detectionFrameUrl(d)}
+        preview={detectionFrameUrl(d, "small")}
+        width={d.width}
+        height={d.height}
         alt={t("detections.frameAlt", { label: d.label })}
       />
       <Caption1 className="muted">{t("detections.frameNote")}</Caption1>

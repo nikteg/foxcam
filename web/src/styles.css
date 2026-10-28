@@ -572,8 +572,7 @@ button.fui-CompoundButton {
 .fui-CardPreview > a {
   display: block;
 }
-img.thumb,
-div.thumb {
+.thumb {
   width: 100%;
   height: auto;
   aspect-ratio: 16 / 9;
@@ -709,6 +708,46 @@ div.thumb.placeholder {
   border-radius: var(--borderRadiusMedium);
   background: #000;
   display: block;
+}
+/* components/FrameImage.tsx: the skeleton, then the preview, then the frame, stacked. */
+.frame-image {
+  display: block;
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+}
+.frame-image > * {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.frame-image > img {
+  object-fit: cover;
+  display: block;
+}
+/* A table thumbnail that could not load (recording gone): an empty box, not nothing. */
+.frame-image.mini {
+  background: var(--colorNeutralBackground4);
+}
+.frame-image-skeleton.fui-SkeletonItem {
+  border-radius: 0;
+}
+.frame-image > img:not(.frame-image-preview) {
+  opacity: 0;
+  transition: opacity 0.15s ease-out;
+}
+.frame-image > img.loaded {
+  opacity: 1;
+}
+.frame-image.crossfade > img {
+  transition-duration: 0.4s;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Not none: the end of the fade is what lets the previous snapshot go. */
+  .frame-image > img:not(.frame-image-preview) {
+    transition-duration: 1ms;
+  }
 }
 .detection-list {
   list-style: none;

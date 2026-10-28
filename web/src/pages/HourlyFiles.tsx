@@ -22,6 +22,7 @@ import { useI18n, type I18n } from "../i18n";
 import { useVideoTimeline } from "../components/Motion";
 import { VideoPlayer } from "../components/VideoPlayer";
 import { TableSkeleton } from "../components/Skeletons";
+import { FrameImage } from "../components/FrameImage";
 
 /** Re-encoded when joined (a camera's recording profile) or kept as the camera sent it. */
 function useHowMade(): (a: ArchiveFile) => string {
@@ -41,7 +42,7 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Archi
     header: t("col.preview"),
     width: 120,
     phone: "thumb",
-    cell: (r) => r.thumb_url && <img className="mini" loading="lazy" src={r.thumb_url} alt="" />,
+    cell: (r) => r.thumb_url && <FrameImage className="mini" lazy src={r.thumb_url} alt="" />,
   },
   {
     id: "start",

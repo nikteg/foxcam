@@ -45,6 +45,7 @@ import {
   DialogSurface,
   DialogTitle,
 } from "./Drawer";
+import { FrameImage } from "./FrameImage";
 
 export function EventsGrid({
   events,
@@ -117,9 +118,9 @@ export function EventsGrid({
                     aria-label={t("events.openDetails", { label: e.label })}
                     title={t("events.showDetectionsHint")}
                   >
-                    <img
+                    <FrameImage
                       className="thumb"
-                      loading="lazy"
+                      lazy
                       src={e.thumb_url}
                       alt={t("events.thumbAlt", {
                         label: e.label,

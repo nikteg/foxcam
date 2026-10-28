@@ -339,6 +339,10 @@ def detection_dict(d: Detection, moving: bool | None) -> dict[str, Any]:
         "bbox": d.bbox, "is_target": d.is_target, "model": d.model, "worker_id": d.worker_id,
         "feedback": d.feedback, "favorite": bool(d.favorite),
         "is_night": d.segment.is_night if d.segment else None,
+        # The recording's picture size, which the frame has too: the web app keeps room
+        # for the frame before it has loaded.
+        "width": d.segment.width if d.segment else None,
+        "height": d.segment.height if d.segment else None,
         # Standing still for the profile's still_minutes: no match.
         "still": bool(d.still),
         # Seen while the sun was below the camera's limit: no match.
@@ -362,7 +366,8 @@ def detections(settings: Settings, camera_id: str | None = None, label: str | No
     # The recordings' few columns used here, in one query (not their motion data).
     q = _only(select(Detection), Detection.camera_id, camera_ids) \
         .options(selectinload(Detection.segment).options(
-            load_only(Segment.is_night, Segment.motion_score))) \
+            load_only(Segment.is_night, Segment.motion_score, Segment.width,
+                      Segment.height))) \
         .where(Detection.confidence >= min_confidence) \
         .order_by(Detection.ts.desc()).limit(limit)
     if segment_id is not None:

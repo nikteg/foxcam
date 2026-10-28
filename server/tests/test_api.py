@@ -31,6 +31,7 @@ def test_worker_protocol_end_to_end(settings, client):
         derived = settings.derived_dir / "x.mp4"
         make_video(derived)
         seg.derived_path = str(derived.relative_to(settings.data_dir))
+        seg.width, seg.height = 1280, 720
     add_job(seg_id)
 
     job = client.post("/api/worker/lease", json={"worker_id": "gpu", "info": {"m": 1}}).json()
@@ -52,6 +53,7 @@ def test_worker_protocol_end_to_end(settings, client):
     dets = client.get("/api/detections", params={"segment": seg_id}).json()
     assert [(d["label"], d["is_target"], d["bbox"]) for d in dets] == [
         ("fox", True, [0.1, 0.2, 0.3, 0.4])]
+    assert (dets[0]["width"], dets[0]["height"]) == (1280, 720)  # the recording's size
     assert client.get("/api/queue").json()["workers"][0]["id"] == "gpu"
 
 

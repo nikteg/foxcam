@@ -21,6 +21,7 @@ import { useI18n } from "../i18n";
 import { ProfileTag } from "./ProfileSelect";
 import { useRoleName } from "./ShareDialog";
 import { ConfigTag, Dot, Fact, Facts, Light, Tag, Time, useRouterHref, useSourceLabel } from "./ui";
+import { FrameImage } from "./FrameImage";
 
 export function sourceDetail(source: CameraSource, synthetic: string): string {
   switch (source.type) {
@@ -108,12 +109,12 @@ export function CameraCard({
           aria-label={t("dashboard.openLive", { name: c.name })}
           onClick={onLive}
         >
-          <img
+          <FrameImage
             className="thumb"
-            loading="lazy"
+            lazy
+            keepPrevious
             src={`${snapshotUrl(c.id)}?t=${refreshKey}`}
             alt={t("dashboard.snapshotAlt", { name: c.name })}
-            onError={(e) => (e.currentTarget.style.visibility = "hidden")}
           />
           <span className="thumb-overlay play" aria-hidden="true">
             <Play20Filled />

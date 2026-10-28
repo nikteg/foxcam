@@ -482,6 +482,9 @@ export interface Detection {
   /** Starred (shared by everyone). */
   favorite: boolean;
   is_night: boolean | null;
+  /** The recording's picture size (the frame's too); null when it was not probed. */
+  width: number | null;
+  height: number | null;
   /** Standing still for the profile's still_minutes: no match. */
   still: boolean;
   /** Seen while the sun was below the camera's limit: no match. */

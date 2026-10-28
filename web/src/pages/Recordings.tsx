@@ -27,6 +27,7 @@ import { useFilters } from "../useFilters";
 import { HourlyFiles } from "./HourlyFiles";
 import { MotionShare } from "../components/Motion";
 import { TableSkeleton } from "../components/Skeletons";
+import { FrameImage } from "../components/FrameImage";
 
 const SEGMENT_STATES = ["new", "queued", "done", "private", "failed"] as const;
 
@@ -40,7 +41,7 @@ const columns = (
     header: t("col.preview"),
     width: 120,
     phone: "thumb",
-    cell: (r) => r.thumb_url && <img className="mini" loading="lazy" src={r.thumb_url} alt="" />,
+    cell: (r) => r.thumb_url && <FrameImage className="mini" lazy src={r.thumb_url} alt="" />,
   },
   {
     id: "start",
