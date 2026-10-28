@@ -30,7 +30,7 @@ from .models import (
     MaskVersion,
     utcnow,
 )
-from .web.queries import _redact_url, save_camera_state, save_motion
+from .web.queries import _redact_url, save_camera_state, save_motion, save_sun
 
 CONFIG_FORMAT_VERSION = 1
 
@@ -86,6 +86,9 @@ def _camera_state(cam: CameraConfig, st: CameraState | None,
         "burn_masks": bool(st and st.burn_masks),
         "motion_sensitivity": st.motion_sensitivity if st else None,
         "motion_rects": (st.motion_rects if st else None) or [],
+        "sun_limit": st.sun_limit if st else None,
+        "latitude": st.latitude if st else None,
+        "longitude": st.longitude if st else None,
     }
 
 
@@ -230,6 +233,7 @@ def _camera_settings(settings: Settings, items: list[dict[str, Any]],
         try:
             save_camera_state(cid, item.get("mask") or [], bool(item.get("private")))
             save_motion(cid, item.get("motion_sensitivity"), item.get("motion_rects") or [])
+            save_sun(cid, item.get("sun_limit"), item.get("latitude"), item.get("longitude"))
             recording.set_burn_masks(cid, bool(item.get("burn_masks")))
             recording.set_camera_recording_profile(settings, cid, rec)
             profiles.set_camera_profiles(settings, cid, chosen)

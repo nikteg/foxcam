@@ -54,6 +54,8 @@ const META: Record<
     hint: "runtime.timezoneHint",
     kind: "timezone",
   },
+  "location.latitude": { label: "runtime.latitude", hint: "runtime.latitudeHint" },
+  "location.longitude": { label: "runtime.longitude", hint: "runtime.longitudeHint" },
   segment_seconds: {
     label: "runtime.segmentSeconds",
     hint: "runtime.segmentSecondsHint",

@@ -39,7 +39,7 @@ from ..models import (
     utcnow,
 )
 from ..profiles import eligible_profiles
-from . import still
+from . import daylight, still
 
 
 class LeaseError(Exception):
@@ -191,7 +191,8 @@ def complete(settings: Settings, job_id: int, token: str, detections: list[Detec
         # their own boxes moving between looks counts as motion (pipeline/still.py).
         s.add_all(added)
         still.mark(settings, s, added)
-        hit = any(d.is_target and not d.still for d in added)
+        daylight.mark(settings, s, added)
+        hit = any(d.is_target and not d.still and not d.below_sun_limit for d in added)
         job.state = JobState.DONE
         job.finished_at = utcnow()
         job.model = model
@@ -249,10 +250,11 @@ def in_wrong_event():
 
 
 def counts_as_match():
-    """A target detection that is a match: not standing still, and neither it nor its
-    event is marked wrong."""
+    """A target detection that is a match: not standing still, not seen while the sun was
+    below the camera's limit, and neither it nor its event is marked wrong."""
     return (Detection.is_target.is_(True) & Detection.feedback.is_not(False)
-            & Detection.still.is_not(True) & ~in_wrong_event())
+            & Detection.still.is_not(True) & Detection.below_sun_limit.is_not(True)
+            & ~in_wrong_event())
 
 
 def refresh_event_matches(settings: Settings, s, event_id: int) -> None:

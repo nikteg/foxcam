@@ -46,6 +46,43 @@ export interface Camera {
   motion_sensitivity: MotionSensitivity | null;
   /** Areas whose movement is ignored. */
   motion_rects: Rect[];
+  /** Targets seen while the sun is lower than this (degrees) are no match; null = off. */
+  sun_limit: number | null;
+  /** Where the camera is, for the sun; null = the location in Settings. */
+  latitude: number | null;
+  longitude: number | null;
+}
+
+/** The sun over a camera's last days, and its target detections then (choosing a limit). */
+export interface SunChartData {
+  limit: number | null;
+  /** false: neither the camera nor Settings has a location (nothing else is filled in). */
+  located: boolean;
+  /** UTC time of the first `sun` value; one every `step_minutes`. */
+  start: string;
+  step_minutes: number;
+  /** Elevation in degrees. */
+  sun: number[];
+  detections: SunDetection[];
+}
+
+export interface SunDetection {
+  id: number;
+  ts: string;
+  label: string;
+  event_id: number | null;
+  segment_id: number;
+  confidence: number;
+  elevation: number;
+  /** Marked correct / wrong, itself or through its event; null = not marked. */
+  feedback: boolean | null;
+  still: boolean;
+}
+
+export interface SunSetting {
+  limit: number | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export type MotionSensitivity = "low" | "medium" | "high";
@@ -445,6 +482,8 @@ export interface Detection {
   is_night: boolean | null;
   /** Standing still for the profile's still_minutes: no match. */
   still: boolean;
+  /** Seen while the sun was below the camera's limit: no match. */
+  below_sun_limit: boolean;
   /** The box overlapped motion at that moment (null: not measured). */
   moving: boolean | null;
   /** Detector specifics. SpeciesNet: `detector_label`/`detector_conf` (the box) and
@@ -1035,6 +1074,10 @@ export const api = {
       "DELETE",
       `/api/profiles/${encodeURIComponent(id)}`,
     ),
+  sunChart: (cameraId: string, days: number) =>
+    request<SunChartData>("GET", `/api/cameras/${encodeURIComponent(cameraId)}/sun?days=${days}`),
+  setSun: (cameraId: string, body: SunSetting) =>
+    request<{ changed: number }>("PUT", `/api/cameras/${encodeURIComponent(cameraId)}/sun`, body),
   setCameraProfiles: (cameraId: string, profiles: string[] | null) =>
     request<{ profiles: string[] }>(
       "PUT",

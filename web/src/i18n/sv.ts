@@ -125,6 +125,38 @@ export const sv: Record<MessageKey, string> = {
   "motion.summary":
     "Känslighet: {sensitivity} – {n} {n:ignorerat område|ignorerade områden}. Används av profiler som kräver rörelse eller hoppar över inspelningar utan.",
   "motion.edit": "Redigera rörelsedetektering",
+  "sun.title": "Solgräns",
+  "sun.help":
+    "En kamera bakom ett fönster ser det upplysta rummet speglas i rutan när det är mörkare ute än inne. Mål som syns medan solen står under gränsen sparas, men räknas inte som träff: ingen händelse, ingen notis.",
+  "sun.enabled": "Bortse från mål när solen står lågt",
+  "sun.limit": "Solgräns",
+  "sun.limitHint":
+    "Grader över horisonten; under 0 är efter solnedgången. Dra också i linjen i diagrammet.",
+  "sun.period": "Detektioner från",
+  "sun.days": "de senaste {n} dagarna",
+  "sun.noLocation":
+    "Var står kameran? Fyll i latitud och longitud nedan, eller en plats för alla kameror under Inställningar → Allmänt.",
+  "sun.latitude": "Latitud",
+  "sun.longitude": "Longitud",
+  "sun.locationHint":
+    "Kamerans egen plats, t.ex. 57.7 och 12.0. Tomt: platsen under Inställningar → Allmänt.",
+  "sun.chartLabel": "Solens höjd under dygnet, med {n} {n:detektion|detektioner}",
+  "sun.elevation": "solen på {value}°",
+  "sun.kind.wrong": "Markerad fel",
+  "sun.kind.correct": "Markerad rätt",
+  "sun.kind.unmarked": "Inte markerad",
+  "sun.counts": "{ignored} bortsedda, {kept} kvar",
+  "sun.summaryOff": "Av: mål räknas oavsett ljus.",
+  "sun.summary": "Mål som syns medan solen står under {limit}° räknas inte som träff.",
+  "sun.edit": "Ställ in solgräns",
+  "detections.belowSun": "låg sol",
+  "detections.belowSunHint": "Syntes medan solen stod under kamerans solgräns: ingen träff.",
+  "runtime.group.location": "Plats",
+  "runtime.latitude": "Latitud",
+  "runtime.latitudeHint":
+    "Var kamerorna står, för solen (natt, och varje kameras solgräns). En kamera kan ha en egen.",
+  "runtime.longitude": "Longitud",
+  "runtime.longitudeHint": "Öster är positivt, t.ex. 12.0 för västra Sverige.",
   "camera.viewers": "Tittare",
 
   // Statussidan

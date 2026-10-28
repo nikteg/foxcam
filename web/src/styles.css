@@ -2275,3 +2275,106 @@ h2.panel-heading {
   display: flex;
   margin-top: var(--spacingVerticalM);
 }
+
+/* Sun limit chart (components/SunChart.tsx) */
+.sun-chart {
+  position: relative;
+  width: 100%;
+  /* Its width comes from the drawer, never from the chart drawn at that width. */
+  contain: inline-size;
+  user-select: none;
+}
+.sun-chart svg {
+  display: block;
+  overflow: visible;
+}
+.sun-grid {
+  stroke: var(--colorNeutralStroke3);
+  stroke-width: 1;
+}
+.sun-horizon {
+  stroke: var(--colorNeutralStroke1);
+  stroke-width: 1;
+}
+.sun-axis {
+  fill: var(--colorNeutralForeground3);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.sun-curve {
+  fill: none;
+  stroke: var(--colorPaletteMarigoldBorderActive);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  opacity: 0.45;
+}
+.sun-ignored {
+  fill: var(--colorNeutralForeground3);
+  opacity: 0.14;
+}
+.sun-dot {
+  cursor: pointer;
+}
+.sun-dot circle:not(.sun-hit),
+.sun-dot rect {
+  stroke-width: 2;
+  paint-order: stroke;
+}
+.sun-hit {
+  fill: transparent;
+}
+.sun-limit line {
+  stroke: var(--colorNeutralForeground1);
+  stroke-width: 2;
+}
+.sun-limit circle {
+  fill: var(--colorNeutralForeground1);
+  stroke: var(--colorNeutralBackground1);
+  stroke-width: 2;
+}
+.sun-limit text {
+  fill: var(--colorNeutralForeground1);
+  font-size: 12px;
+  font-weight: 600;
+}
+.sun-grab {
+  fill: transparent;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.sun-tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 12px));
+  pointer-events: none;
+  padding: 6px 10px;
+  border-radius: var(--borderRadiusMedium);
+  background: var(--colorNeutralBackground1);
+  box-shadow: var(--shadow8);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.sun-controls {
+  align-items: flex-start;
+}
+.sun-controls > * {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+.sun-controls .fui-Input,
+.sun-controls .fui-Select {
+  min-width: 0;
+  width: 100%;
+}
+.sun-key {
+  flex: none;
+}
+.sun-key.wrong {
+  fill: var(--colorPaletteRedBackground3);
+}
+.sun-key.correct {
+  fill: var(--colorPaletteGreenBackground3);
+}
+.sun-key.unmarked {
+  fill: var(--colorBrandBackground);
+}

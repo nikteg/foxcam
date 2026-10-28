@@ -330,3 +330,41 @@ def test_preprocessing_status_shows_the_waiting_and_the_pace(settings, monkeypat
         p = client.get("/api/preparation").json()
     assert p["waiting"] == 1 and [g["id"] for g in p["segments"]] == [older]
     assert p["done_last_hour"] == 1 and p["avg_seconds_last_hour"] is not None
+
+
+def test_targets_below_the_sun_limit_are_no_match(settings):
+    from foxcam.models import Detection
+    from foxcam.pipeline import daylight
+    from foxcam.web import queries
+
+    day, night = datetime(2026, 6, 21, 11), datetime(2026, 6, 21, 23)  # UTC, at 58° N
+    segs = [add_segment(settings, start=t, with_file=False) for t in (day, night)]
+    dets = []
+    for seg_id in segs:
+        add_job(seg_id, state="done")
+        dets.append(add_detection(seg_id, seg_id, 500))
+        with session_scope() as s:
+            s.get(Segment, seg_id).has_target = True
+    events.assign_events(settings)
+
+    def state() -> list[tuple[bool, bool]]:
+        with session_scope() as s:
+            return [(s.get(Detection, d).event_id is not None, s.get(Segment, g).has_target)
+                    for d, g in zip(dets, segs)]
+
+    # A limit without a location ignores nothing.
+    queries.save_sun("cam", -3.0, None, None)
+    assert daylight.apply(settings, "cam") == 0
+    assert state() == [(True, True), (True, True)]
+    # The night one leaves its event (which goes) and its recording has no match.
+    queries.save_sun("cam", -3.0, 58.0, 12.0)
+    assert daylight.apply(settings, "cam") == 1
+    assert state() == [(True, True), (False, False)]
+    with session_scope() as s:
+        assert s.query(Event).count() == 1
+    chart = daylight.chart(settings, "cam", 90)
+    assert chart["located"] and chart["limit"] == -3.0 and chart["sun"]
+    # Off again: it forms an event again.
+    queries.save_sun("cam", None, 58.0, 12.0)
+    assert daylight.apply(settings, "cam") == 1
+    assert state() == [(True, True), (True, True)]

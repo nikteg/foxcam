@@ -38,6 +38,10 @@ anything else, and keep the clips.
   on quiet cameras). Per camera: sensitivity and areas to ignore, like trees in the wind.
   Events → Motion shows, from your own recordings and correct/wrong marks, where each
   option would help before you turn it on.
+- **Sun limit.** A camera behind a window sees the lit room reflected in it after dark.
+  Per camera, targets seen while the sun is below a limit are kept but count as no match;
+  a chart of the sun's height through the day, with the camera's detections and your
+  correct/wrong marks on it, shows where to put the limit.
 - **Privacy built in.** Draw censor rectangles per camera; they are burned into the pixels
   before a worker sees a frame, and optionally into recordings and live view as well.
   Private cameras are never sent anywhere.

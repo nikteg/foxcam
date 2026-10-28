@@ -47,7 +47,20 @@ def camera_state(camera_id: str) -> dict[str, Any]:
                 "burn_masks": bool(st and st.burn_masks),
                 # None = motion.sensitivity
                 "motion_sensitivity": st.motion_sensitivity if st else None,
-                "motion_rects": (st.motion_rects if st else None) or []}
+                "motion_rects": (st.motion_rects if st else None) or [],
+                # Degrees; None = off (pipeline/daylight.py).
+                "sun_limit": st.sun_limit if st else None,
+                # None = location.latitude / longitude.
+                "latitude": st.latitude if st else None,
+                "longitude": st.longitude if st else None}
+
+
+def save_sun(camera_id: str, limit: float | None, latitude: float | None,
+             longitude: float | None) -> None:
+    with session_scope() as s:
+        st = s.get(CameraState, camera_id) or CameraState(camera_id=camera_id)
+        s.add(st)
+        st.sun_limit, st.latitude, st.longitude = limit, latitude, longitude
 
 
 def save_motion(camera_id: str, sensitivity: str | None, rects: list[list[float]]) -> None:
@@ -322,6 +335,8 @@ def detection_dict(d: Detection, moving: bool | None) -> dict[str, Any]:
         "feedback": d.feedback, "is_night": d.segment.is_night if d.segment else None,
         # Standing still for the profile's still_minutes: no match.
         "still": bool(d.still),
+        # Seen while the sun was below the camera's limit: no match.
+        "below_sun_limit": bool(d.below_sun_limit),
         # The box overlapped motion at that moment (None: not measured).
         "moving": moving,
         # Detector specifics, e.g. SpeciesNet's box label and top guesses.

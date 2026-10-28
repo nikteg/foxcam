@@ -13,11 +13,10 @@ import logging
 
 from sqlalchemy import delete, select
 
-from .. import sprites
 from ..config import Settings
 from ..db import session_scope
-from ..models import Detection, Event, Job, JobState, Segment, SegmentStatus, utcnow
-from .events import refresh_models
+from ..models import Detection, Job, JobState, Segment, SegmentStatus
+from .events import refresh_event
 
 log = logging.getLogger(__name__)
 
@@ -47,7 +46,7 @@ def reanalyse_segment(settings: Settings, segment_id: int) -> int:
         s.execute(delete(Job).where(Job.segment_id == segment_id))
         s.flush()
         for event_id in events:
-            _refresh_event(settings, s, event_id, seg)
+            refresh_event(settings, s, event_id)
         if seg.derived_path:
             (settings.data_dir / seg.derived_path).unlink(missing_ok=True)
         seg.derived_path = None
@@ -58,34 +57,3 @@ def reanalyse_segment(settings: Settings, segment_id: int) -> int:
         log.info("recording %s queued for detection again (%d detection(s) removed)",
                  segment_id, len(dets))
         return len(dets)
-
-
-def _refresh_event(settings: Settings, s, event_id: int, seg: Segment) -> None:
-    """Recompute an event from its remaining detections, or remove it if none are left."""
-    ev = s.get(Event, event_id)
-    if ev is None:
-        return
-    left = s.scalars(select(Detection).where(Detection.event_id == event_id)).all()
-    if not left:
-        for rel in (ev.clip_path, ev.thumb_path):
-            if rel:
-                (settings.data_dir / rel).unlink(missing_ok=True)
-        sprites.remove(settings, "clip", ev.id)
-        segments = list(ev.segments)
-        s.delete(ev)
-        s.flush()
-        for g in segments:  # unpin footage no other event keeps
-            if not s.scalar(select(Event.id).where(Event.segments.contains(g)).limit(1)):
-                g.pinned = False
-        return
-    best = max(left, key=lambda d: d.confidence)
-    ev.first_ts = min(d.ts for d in left)
-    ev.last_ts = max(d.ts for d in left)
-    ev.max_confidence = best.confidence
-    ev.best_detection_id = best.id
-    ev.detection_count = len(left)
-    refresh_models(settings, s, ev)
-    if not any(d.segment_id == seg.id for d in left) and seg in ev.segments:
-        ev.segments.remove(seg)
-    ev.clip_dirty = True
-    ev.updated_at = utcnow()

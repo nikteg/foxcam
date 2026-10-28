@@ -123,6 +123,38 @@ export const en = {
   "motion.summary":
     "Sensitivity: {sensitivity} – {n} ignored {n:area|areas}. Used by profiles that require motion or skip recordings without it.",
   "motion.edit": "Edit motion detection",
+  "sun.title": "Sun limit",
+  "sun.help":
+    "A camera behind a window sees the lit room reflected in it once it is darker outside than inside. Targets seen while the sun is below the limit are kept, but are no match: no event, no notification.",
+  "sun.enabled": "Ignore targets when the sun is low",
+  "sun.limit": "Sun limit",
+  "sun.limitHint":
+    "Degrees above the horizon; below 0 is after sunset. Drag the line in the chart too.",
+  "sun.period": "Detections from",
+  "sun.days": "the last {n} days",
+  "sun.noLocation":
+    "Where is the camera? Enter its latitude and longitude below, or a location for all cameras in Settings → General.",
+  "sun.latitude": "Latitude",
+  "sun.longitude": "Longitude",
+  "sun.locationHint":
+    "The camera's own location, e.g. 57.7 and 12.0. Empty: the location in Settings → General.",
+  "sun.chartLabel": "The sun's height through the day, with {n} {n:detection|detections}",
+  "sun.elevation": "sun at {value}°",
+  "sun.kind.wrong": "Marked wrong",
+  "sun.kind.correct": "Marked correct",
+  "sun.kind.unmarked": "Not marked",
+  "sun.counts": "{ignored} ignored, {kept} kept",
+  "sun.summaryOff": "Off: targets count whatever the light.",
+  "sun.summary": "Targets seen while the sun is below {limit}° are no match.",
+  "sun.edit": "Set sun limit",
+  "detections.belowSun": "sun low",
+  "detections.belowSunHint": "Seen while the sun was below the camera's sun limit: no match.",
+  "runtime.group.location": "Location",
+  "runtime.latitude": "Latitude",
+  "runtime.latitudeHint":
+    "Where the cameras are, for the sun (night, and each camera's sun limit). A camera can have its own.",
+  "runtime.longitude": "Longitude",
+  "runtime.longitudeHint": "East is positive, e.g. 12.0 for western Sweden.",
   "camera.viewers": "Viewers",
 
   // Status page

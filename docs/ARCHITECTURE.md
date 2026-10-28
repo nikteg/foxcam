@@ -57,7 +57,7 @@
    A gap between two recordings (the recorder stopped and started again) stays a gap in the
    clip, the picture holding there, so clip time is clock time; the player marks it as missing
    footage (`footage.py`), as it does skips inside a recording (below).
-   Two kinds of target detection join no event:
+   Three kinds of target detection join no event:
    - **marked wrong** (❌ on the Detections page): a wrong detection is no match anywhere,
      not in counts, "with a match", the Status page, notifications or archives. An event
      counts as wrong once one of its detections is marked wrong and none correct;
@@ -67,6 +67,13 @@
      parked car neither keeps an event open forever nor pins its footage, and a stump
      never makes one. It counts again once it moves; its arrival counts. The Detections
      page hides these unless *Show standing still* is ticked.
+   - **below the sun limit**: a camera's `sun_limit` (Cameras → Settings → Detection →
+     Sun limit, degrees of sun elevation; off by default) marks targets seen while the sun
+     is lower `below_sun_limit`, and they are no match (`pipeline/daylight.py`): a window
+     reflecting the lit room after dark. The sun is computed for the camera's own
+     latitude/longitude, else `location` (Settings → General). Changing the limit or the
+     location marks the camera's detections again at once: those now below leave their
+     events (an event left empty goes), those above form events again, quietly.
 5. **Retention** (every 10 min): see below.
 6. **Upload** (every 30 s, only with `storage.s3.enabled`): see [Object storage](#object-storage-s3).
 7. **Notify** (every 5 s): new events and finished clips are queued per matching channel in

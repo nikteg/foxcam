@@ -50,6 +50,10 @@ const GENERAL: SettingsGroup[] = [
     keys: ["compaction.enabled", "compaction.delay_minutes"],
   },
   {
+    title: "runtime.group.location",
+    keys: ["location.latitude", "location.longitude"],
+  },
+  {
     title: "runtime.group.live",
     keys: [
       "mediamtx.low_data.enabled",

@@ -4,7 +4,8 @@ Target detections (per detection profile, e.g. foxes) are merged into an event w
 same camera, profile and label when within ``merge_gap_seconds``; a fox and a car seen at
 the same time become two events. A target standing still (the profile's
 ``still_minutes``, pipeline/still.py) is no match and joins no event, so a parked car
-neither keeps one open forever nor pins its footage; it counts again once it moves.
+neither keeps one open forever nor pins its footage; it counts again once it moves. Nor
+does one seen while the sun is below the camera's limit (pipeline/daylight.py).
 Detections of the profile's different detectors (models)
 join the same event; ``Event.detectors`` / ``agreement`` say which and how many saw it,
 so notification channels can wait for several models to agree (``min_agreement``). Once an event has been quiet for
@@ -27,7 +28,7 @@ from .. import ffmpeg, footage, notify, sprites
 from ..config import Settings
 from ..db import session_scope
 from ..models import Detection, Event, Segment, event_segments, utcnow
-from . import still
+from . import daylight, still
 from .compaction import segment_source
 from .queue import counts_as_match, refresh_match
 
@@ -82,8 +83,10 @@ def _assign_events(settings: Settings, quiet: bool) -> int:
             event.detection_count += len(dets)
             refresh_models(settings, s, event)
             # New events notify at once; a later rise above a channel's min_confidence, or
-            # another model agreeing (min_agreement), too - once per channel.
-            notify.enqueue(s, settings, event, "event.new")
+            # another model agreeing (min_agreement), too - once per channel. Quiet: not
+            # even when older detections join an event that was there.
+            if not quiet:
+                notify.enqueue(s, settings, event, "event.new")
             seg = s.get(Segment, segment_id)
             if seg not in event.segments:
                 event.segments.append(seg)
@@ -108,6 +111,39 @@ def refresh_models(settings: Settings, s, event: Event) -> None:
     event.confirmed = not confirming or bool(confirming & set(event.detectors))
 
 
+def refresh_event(settings: Settings, s, event_id: int) -> None:
+    """Recompute an event from the detections it has left (after some were removed or no
+    longer count), or remove it when none are left."""
+    ev = s.get(Event, event_id)
+    if ev is None:
+        return
+    left = s.scalars(select(Detection).where(Detection.event_id == event_id)).all()
+    kept = {d.segment_id for d in left}
+    dropped = [g for g in ev.segments if g.id not in kept]
+    if not left:
+        for rel in (ev.clip_path, ev.thumb_path):
+            if rel:
+                (settings.data_dir / rel).unlink(missing_ok=True)
+        sprites.remove(settings, "clip", ev.id)
+        s.delete(ev)
+    else:
+        best = max(left, key=lambda d: d.confidence)
+        ev.first_ts = min(d.ts for d in left)
+        ev.last_ts = max(d.ts for d in left)
+        ev.max_confidence = best.confidence
+        ev.best_detection_id = best.id
+        ev.detection_count = len(left)
+        refresh_models(settings, s, ev)
+        for g in dropped:
+            ev.segments.remove(g)
+        ev.clip_dirty = True
+        ev.updated_at = utcnow()
+    s.flush()
+    for g in dropped:  # unpin footage no other event keeps
+        if not s.scalar(select(Event.id).where(Event.segments.contains(g)).limit(1)):
+            g.pinned = False
+
+
 def rebuild_events(settings: Settings) -> dict[str, int]:
     """All events again from the detections, with the profiles' current rules (standing
     still is decided again with today's still_minutes, also for older detections). The
@@ -122,6 +158,7 @@ def rebuild_events(settings: Settings) -> dict[str, int]:
             targets = s.scalars(select(Detection).where(Detection.is_target.is_(True))
                                 .order_by(Detection.ts)).all()
             still.mark(settings, s, list(targets))
+            daylight.mark(settings, s, list(targets))
             for seg in s.scalars(select(Segment).where(Segment.id.in_(
                     select(Detection.segment_id).where(Detection.is_target.is_(True))))):
                 refresh_match(settings, seg)
