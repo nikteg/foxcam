@@ -18,6 +18,7 @@ function Lines({ widths }: { widths: string[] }) {
   return (
     <div className="skeleton-lines">
       {widths.map((w, i) => (
+        // oxlint-disable-next-line react/no-array-index-key -- a fixed list, never reordered
         <SkeletonItem key={i} size={16} style={{ width: w }} />
       ))}
     </div>

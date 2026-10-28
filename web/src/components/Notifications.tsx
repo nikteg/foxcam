@@ -27,7 +27,7 @@ import { api, type Channel, type ChannelInput, type ChannelType, type Delivery }
 import { percent } from "../format";
 import { ConfirmPopover } from "./ConfirmPopover";
 import { DataTable, type Column } from "./DataTable";
-import { useI18n, type MessageKey } from "../i18n";
+import { useI18n, type I18n, type MessageKey } from "../i18n";
 import { CameraTag } from "./CameraSelect";
 import { ProfileTag } from "./ProfileSelect";
 import {
@@ -276,51 +276,53 @@ function ChannelCard({
   );
 }
 
+const statusKind = { sent: "done", failed: "failed", pending: "pending", skipped: "warn" } as const;
+
+const deliveryColumns = (t: I18n["t"], channelName: (id: string) => string): Column<Delivery>[] => [
+  {
+    id: "time",
+    header: t("notify.col.time"),
+    width: 130,
+    cell: (d) => <Time iso={d.sent_at ?? d.created_at} relative />,
+  },
+  {
+    id: "channel",
+    header: t("notify.col.channel"),
+    width: 150,
+    cell: (d) =>
+      d.user !== null ? t("notify.personalOf", { name: d.user }) : channelName(d.channel_id),
+  },
+  { id: "event", header: t("notify.col.event"), width: 110, cell: (d) => d.label ?? "–" },
+  {
+    id: "camera",
+    header: t("common.camera"),
+    width: 150,
+    cell: (d) => d.camera_id && <CameraTag id={d.camera_id} />,
+  },
+  {
+    id: "trigger",
+    header: t("notify.col.when"),
+    width: 140,
+    cell: (d) => t(TRIGGER_LABELS[d.kind]),
+  },
+  {
+    id: "state",
+    header: t("col.state"),
+    width: 110,
+    cell: (d) => (
+      <Tag kind={statusKind[d.status]} title={d.error ?? undefined}>
+        {t(`notify.status.${d.status}` as MessageKey)}
+      </Tag>
+    ),
+  },
+];
+
 function Deliveries({ channelName }: { channelName: (id: string) => string }) {
   const { t } = useI18n();
   const { data = [] } = useQuery({
     queryKey: ["notifications", "deliveries"],
     queryFn: api.deliveries,
   });
-  const statusKind = { sent: "done", failed: "failed", pending: "pending", skipped: "warn" };
-  const columns: Column<Delivery>[] = [
-    {
-      id: "time",
-      header: t("notify.col.time"),
-      width: 130,
-      cell: (d) => <Time iso={d.sent_at ?? d.created_at} relative />,
-    },
-    {
-      id: "channel",
-      header: t("notify.col.channel"),
-      width: 150,
-      cell: (d) =>
-        d.user !== null ? t("notify.personalOf", { name: d.user }) : channelName(d.channel_id),
-    },
-    { id: "event", header: t("notify.col.event"), width: 110, cell: (d) => d.label ?? "–" },
-    {
-      id: "camera",
-      header: t("common.camera"),
-      width: 150,
-      cell: (d) => d.camera_id && <CameraTag id={d.camera_id} />,
-    },
-    {
-      id: "trigger",
-      header: t("notify.col.when"),
-      width: 140,
-      cell: (d) => t(TRIGGER_LABELS[d.kind]),
-    },
-    {
-      id: "state",
-      header: t("col.state"),
-      width: 110,
-      cell: (d) => (
-        <Tag kind={statusKind[d.status]} title={d.error ?? undefined}>
-          {t(`notify.status.${d.status}` as MessageKey)}
-        </Tag>
-      ),
-    },
-  ];
   return (
     <>
       <Text weight="semibold" className="section-sub">
@@ -330,7 +332,7 @@ function Deliveries({ channelName }: { channelName: (id: string) => string }) {
         ariaLabel={t("notify.recent")}
         items={data}
         getRowId={(d) => d.id}
-        columns={columns}
+        columns={deliveryColumns(t, channelName)}
       />
     </>
   );

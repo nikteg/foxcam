@@ -3,6 +3,7 @@
 // from index.html, see vite.config.ts); when it is not this page's, offer to reload.
 import { useSyncExternalStore } from "react";
 
+// oxlint-disable-next-line no-underscore-dangle -- set by Vite (vite.config.ts define)
 declare const __BUILD_ID__: string;
 
 let newer = false;

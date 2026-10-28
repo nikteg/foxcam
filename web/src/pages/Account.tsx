@@ -40,7 +40,7 @@ import {
 } from "../components/Drawer";
 import { Checkbox, Empty, PageTitle, PasswordInput, Tag, Time } from "../components/ui";
 import { useRoleName } from "../components/ShareDialog";
-import { useI18n } from "../i18n";
+import { useI18n, type I18n } from "../i18n";
 import { useToast } from "../components/Toasts";
 
 export function Account() {
@@ -293,6 +293,72 @@ function MyCameras() {
 
 const EXPIRY_DAYS = [null, 30, 90, 365] as const;
 
+const apiKeyColumns = (
+  t: I18n["t"],
+  onRevoke: (id: number) => Promise<unknown>,
+): Column<ApiKey>[] => [
+  {
+    id: "name",
+    header: t("apiKeys.name"),
+    width: 160,
+    cell: (k) => <Text weight="semibold">{k.name}</Text>,
+  },
+  {
+    id: "scopes",
+    header: t("apiKeys.colScopes"),
+    width: 180,
+    cell: (k) => (
+      <span className="chips">
+        {k.scopes.map((sc) => (
+          <Tag key={sc} kind={sc === "admin" ? "target" : undefined}>
+            {t(`apiKeys.scope.${sc}`)}
+          </Tag>
+        ))}
+      </span>
+    ),
+  },
+  { id: "key", header: t("apiKeys.colKey"), width: 120, cell: (k) => <code>{k.prefix}…</code> },
+  {
+    id: "used",
+    header: t("apiKeys.colLastUsed"),
+    width: 140,
+    cell: (k) =>
+      k.last_used_at ? (
+        <Time iso={k.last_used_at} relative />
+      ) : (
+        <span className="muted">{t("apiKeys.never")}</span>
+      ),
+  },
+  {
+    id: "expiry",
+    header: t("apiKeys.expiry"),
+    width: 180,
+    cell: (k) =>
+      k.expires_at ? (
+        <Time iso={k.expires_at} />
+      ) : (
+        <span className="muted">{t("apiKeys.noExpiry")}</span>
+      ),
+  },
+  {
+    id: "actions",
+    header: "",
+    width: 120,
+    phone: "nolabel",
+    cell: (k) => (
+      <ConfirmPopover
+        title={t("apiKeys.revokeConfirm", { name: k.name })}
+        confirmLabel={t("apiKeys.revoke")}
+        onConfirm={() => onRevoke(k.id)}
+      >
+        <Button size="small" icon={<Delete20Regular />}>
+          {t("apiKeys.revoke")}
+        </Button>
+      </ConfirmPopover>
+    ),
+  },
+];
+
 /** Keys for scripts and other programs, acting as this user. */
 function ApiKeys() {
   const { t, rich } = useI18n();
@@ -303,68 +369,6 @@ function ApiKeys() {
     mutationFn: api.revokeApiKey,
     onSuccess: () => client.invalidateQueries({ queryKey: ["api-keys"] }),
   });
-  const columns: Column<ApiKey>[] = [
-    {
-      id: "name",
-      header: t("apiKeys.name"),
-      width: 160,
-      cell: (k) => <Text weight="semibold">{k.name}</Text>,
-    },
-    {
-      id: "scopes",
-      header: t("apiKeys.colScopes"),
-      width: 180,
-      cell: (k) => (
-        <span className="chips">
-          {k.scopes.map((sc) => (
-            <Tag key={sc} kind={sc === "admin" ? "target" : undefined}>
-              {t(`apiKeys.scope.${sc}`)}
-            </Tag>
-          ))}
-        </span>
-      ),
-    },
-    { id: "key", header: t("apiKeys.colKey"), width: 120, cell: (k) => <code>{k.prefix}…</code> },
-    {
-      id: "used",
-      header: t("apiKeys.colLastUsed"),
-      width: 140,
-      cell: (k) =>
-        k.last_used_at ? (
-          <Time iso={k.last_used_at} relative />
-        ) : (
-          <span className="muted">{t("apiKeys.never")}</span>
-        ),
-    },
-    {
-      id: "expiry",
-      header: t("apiKeys.expiry"),
-      width: 180,
-      cell: (k) =>
-        k.expires_at ? (
-          <Time iso={k.expires_at} />
-        ) : (
-          <span className="muted">{t("apiKeys.noExpiry")}</span>
-        ),
-    },
-    {
-      id: "actions",
-      header: "",
-      width: 120,
-      phone: "nolabel",
-      cell: (k) => (
-        <ConfirmPopover
-          title={t("apiKeys.revokeConfirm", { name: k.name })}
-          confirmLabel={t("apiKeys.revoke")}
-          onConfirm={() => revoke.mutateAsync(k.id)}
-        >
-          <Button size="small" icon={<Delete20Regular />}>
-            {t("apiKeys.revoke")}
-          </Button>
-        </ConfirmPopover>
-      ),
-    },
-  ];
   return (
     <>
       <Subtitle2 as="h2" className="section">
@@ -379,7 +383,7 @@ function ApiKeys() {
           ariaLabel={t("apiKeys.title")}
           items={keys.data}
           getRowId={(k) => k.id}
-          columns={columns}
+          columns={apiKeyColumns(t, revoke.mutateAsync)}
         />
       )}
       <div className="section-actions">

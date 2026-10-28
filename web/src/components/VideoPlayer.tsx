@@ -755,6 +755,7 @@ function PlaybackBoxes({
   useEffect(() => {
     const video = box.current?.closest(".video-player")?.querySelector("video");
     if (video?.videoWidth) setAspect(video.videoWidth / video.videoHeight);
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- the size is known once it can play
   }, [canPlay]);
   const ms = time * 1000;
   const frame = live && motion ? motionAt(motion, ms) : undefined;

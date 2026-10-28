@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api, type PushDevice, type PushOverview } from "../api";
-import { useI18n } from "../i18n";
+import { useI18n, type I18n } from "../i18n";
 import { ConfirmPopover } from "./ConfirmPopover";
 import { DataTable, type Column } from "./DataTable";
 import { draftFromRules, NotificationRulesFields, rulesFromDraft } from "./NotificationRulesFields";
@@ -33,6 +33,58 @@ export function PersonalNotifications() {
   );
 }
 
+const deviceColumns = (
+  t: I18n["t"],
+  thisDevice: string | null,
+  onRemove: (id: number) => Promise<unknown>,
+): Column<PushDevice>[] => [
+  {
+    id: "name",
+    header: t("push.device"),
+    width: 180,
+    cell: (d) => (
+      <span className="row wrap">
+        <Text weight="semibold">{d.name ?? "?"}</Text>
+        {d.endpoint_id === thisDevice && <Tag kind="brand">{t("push.thisDevice")}</Tag>}
+      </span>
+    ),
+  },
+  {
+    id: "added",
+    header: t("push.added"),
+    width: 140,
+    cell: (d) => <Time iso={d.created_at} relative />,
+  },
+  {
+    id: "sent",
+    header: t("push.lastSent"),
+    width: 140,
+    cell: (d) =>
+      d.last_sent_at ? (
+        <Time iso={d.last_sent_at} relative />
+      ) : (
+        <span className="muted">{t("apiKeys.never")}</span>
+      ),
+  },
+  {
+    id: "actions",
+    header: "",
+    width: 120,
+    phone: "nolabel",
+    cell: (d) => (
+      <ConfirmPopover
+        title={t("push.removeTitle", { name: d.name ?? "?" })}
+        body={t("push.removeBody")}
+        onConfirm={() => onRemove(d.id)}
+      >
+        <Button size="small" icon={<Delete20Regular />}>
+          {t("common.remove")}
+        </Button>
+      </ConfirmPopover>
+    ),
+  },
+];
+
 function PushSettings({ data }: { data: PushOverview }) {
   const { t } = useI18n();
   const client = useQueryClient();
@@ -51,54 +103,6 @@ function PushSettings({ data }: { data: PushOverview }) {
         [["push"], ["push-endpoint"]].map((queryKey) => client.invalidateQueries({ queryKey })),
       ),
   });
-
-  const columns: Column<PushDevice>[] = [
-    {
-      id: "name",
-      header: t("push.device"),
-      width: 180,
-      cell: (d) => (
-        <span className="row wrap">
-          <Text weight="semibold">{d.name ?? "?"}</Text>
-          {d.endpoint_id === thisDevice && <Tag kind="brand">{t("push.thisDevice")}</Tag>}
-        </span>
-      ),
-    },
-    {
-      id: "added",
-      header: t("push.added"),
-      width: 140,
-      cell: (d) => <Time iso={d.created_at} relative />,
-    },
-    {
-      id: "sent",
-      header: t("push.lastSent"),
-      width: 140,
-      cell: (d) =>
-        d.last_sent_at ? (
-          <Time iso={d.last_sent_at} relative />
-        ) : (
-          <span className="muted">{t("apiKeys.never")}</span>
-        ),
-    },
-    {
-      id: "actions",
-      header: "",
-      width: 120,
-      phone: "nolabel",
-      cell: (d) => (
-        <ConfirmPopover
-          title={t("push.removeTitle", { name: d.name ?? "?" })}
-          body={t("push.removeBody")}
-          onConfirm={() => remove.mutateAsync(d.id)}
-        >
-          <Button size="small" icon={<Delete20Regular />}>
-            {t("common.remove")}
-          </Button>
-        </ConfirmPopover>
-      ),
-    },
-  ];
 
   return (
     <div className="form-stack">
@@ -121,7 +125,7 @@ function PushSettings({ data }: { data: PushOverview }) {
           ariaLabel={t("push.devices")}
           items={data.devices}
           getRowId={(d) => d.id}
-          columns={columns}
+          columns={deviceColumns(t, thisDevice, remove.mutateAsync)}
         />
       )}
       <RulesForm data={data} />

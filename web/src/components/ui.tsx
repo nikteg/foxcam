@@ -691,6 +691,7 @@ export function PageTabs<T extends string>({
     if (left < bar.scrollLeft) bar.scrollTo({ left, behavior: "smooth" });
     else if (right > bar.scrollLeft + bar.clientWidth)
       bar.scrollTo({ left: right - bar.clientWidth, behavior: "smooth" });
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- when another tab opens
   }, [current]);
   return (
     <TabList

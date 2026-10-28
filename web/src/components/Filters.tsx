@@ -12,14 +12,15 @@ export const PERIOD_KEYS = ["period", "from", "to"] as const;
 
 type PeriodValues = Record<(typeof PERIOD_KEYS)[number], string>;
 
+// datetime-local values ("YYYY-MM-DDTHH:MM") are read as local time.
+const iso = (local: string) => (local ? new Date(local).toISOString() : undefined);
+
 /** A period filter as API bounds (UTC ISO). Relative periods count back from when it is
  *  called, so call it in the query function: each refetch moves along. */
 export function periodBounds(f: PeriodValues): { since?: string; until?: string } {
   const hours = PERIOD_HOURS[f.period];
   if (hours) return { since: new Date(Date.now() - hours * 3_600_000).toISOString() };
   if (f.period !== "custom") return {};
-  // datetime-local values ("YYYY-MM-DDTHH:MM") are read as local time.
-  const iso = (local: string) => (local ? new Date(local).toISOString() : undefined);
   return { since: iso(f.from), until: iso(f.to) };
 }
 

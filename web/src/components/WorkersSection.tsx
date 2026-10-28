@@ -6,7 +6,7 @@ import { useState } from "react";
 import { api, type Worker, type WorkerToken } from "../api";
 import { ConfirmPopover } from "./ConfirmPopover";
 import { DataTable, type Column } from "./DataTable";
-import { useI18n } from "../i18n";
+import { useI18n, type I18n } from "../i18n";
 import { TagsPicker } from "./LabelPicker";
 import { Dot, DrawerTitle, Empty, Tag, Time } from "./ui";
 import {
@@ -39,6 +39,126 @@ function mergeRows(workers: Worker[], tokens: WorkerToken[]): Row[] {
   );
 }
 
+/** What the row buttons do. */
+interface RowActions {
+  tag: (token: WorkerToken) => void;
+  revoke: (token: WorkerToken) => Promise<unknown>;
+  remove: (workerId: string) => Promise<unknown>;
+}
+
+const workerColumns = (t: I18n["t"], on: RowActions): Column<Row>[] => [
+  {
+    id: "worker",
+    header: t("col.worker"),
+    width: 200,
+    cell: ({ id, worker: w, token: tok }) => (
+      <span className="row">
+        <Dot ok={!!w?.online} />
+        <Text weight="semibold" wrap={false}>
+          {id}
+        </Text>
+        {tok && (
+          <Tag kind="ok" title={t("workers.hasToken")}>
+            {t("workers.tokenBadge")}
+          </Tag>
+        )}
+      </span>
+    ),
+  },
+  {
+    id: "info",
+    header: t("queue.info"),
+    width: 320,
+    cell: ({ worker: w, token: tok }) => (
+      // One chip per key so values wrap as units, never mid-word.
+      <span className="chips mono">
+        {[...new Set([...(tok?.tags ?? []), ...(w?.tags ?? [])])].map((tag) => (
+          <Tag key={`tag-${tag}`}>{tag}</Tag>
+        ))}
+        {!w && tok?.detector && (
+          <span>
+            <span className="muted">detector=</span>
+            {tok.detector}
+          </span>
+        )}
+        {Object.entries(w?.info ?? {}).map(([k, v]) => (
+          <span key={k}>
+            <span className="muted">{k}=</span>
+            {String(v)}
+          </span>
+        ))}
+      </span>
+    ),
+  },
+  {
+    id: "seen",
+    header: t("queue.lastSeen"),
+    width: 140,
+    cell: ({ worker: w }) =>
+      w ? (
+        <Time iso={w.last_seen} relative />
+      ) : (
+        <span className="muted">{t("workers.neverConnected")}</span>
+      ),
+  },
+  {
+    id: "job",
+    header: t("queue.currentJob"),
+    width: 100,
+    cell: ({ worker: w }) => w?.current_job_id ?? "–",
+  },
+  {
+    id: "done",
+    header: t("queue.doneCount"),
+    width: 80,
+    cell: ({ worker: w }) => w?.jobs_done ?? 0,
+  },
+  {
+    id: "failed",
+    header: t("queue.failedCount"),
+    width: 80,
+    cell: ({ worker: w }) => w?.jobs_failed ?? 0,
+  },
+  {
+    id: "actions",
+    header: "",
+    width: 300,
+    phone: "nolabel",
+    cell: ({ worker: w, token: tok }) => (
+      <span className="row nowrap-actions">
+        {tok && (
+          <Button size="small" icon={<Tag16Regular />} onClick={() => on.tag(tok)}>
+            {t("workers.editTags")}
+          </Button>
+        )}
+        {tok && (
+          <ConfirmPopover
+            title={t("workers.revokeTitle", { name: tok.name })}
+            body={t("workers.revokeBody")}
+            confirmLabel={t("workers.revoke")}
+            onConfirm={() => on.revoke(tok)}
+          >
+            <Button size="small" icon={<Key16Regular />}>
+              {t("workers.revoke")}
+            </Button>
+          </ConfirmPopover>
+        )}
+        {w && !w.online && (
+          <ConfirmPopover
+            title={t("workers.removeTitle", { name: w.id })}
+            body={t("queue.removeWorkerHint")}
+            onConfirm={() => on.remove(w.id)}
+          >
+            <Button size="small" icon={<Delete16Regular />}>
+              {t("common.remove")}
+            </Button>
+          </ConfirmPopover>
+        )}
+      </span>
+    ),
+  },
+];
+
 export function WorkersSection({ workers }: { workers: Worker[] }) {
   const { t } = useI18n();
   const client = useQueryClient();
@@ -58,119 +178,6 @@ export function WorkersSection({ workers }: { workers: Worker[] }) {
     },
   });
   const rows = mergeRows(workers, tokens.data ?? []);
-  const columns: Column<Row>[] = [
-    {
-      id: "worker",
-      header: t("col.worker"),
-      width: 200,
-      cell: ({ id, worker: w, token: tok }) => (
-        <span className="row">
-          <Dot ok={!!w?.online} />
-          <Text weight="semibold" wrap={false}>
-            {id}
-          </Text>
-          {tok && (
-            <Tag kind="ok" title={t("workers.hasToken")}>
-              {t("workers.tokenBadge")}
-            </Tag>
-          )}
-        </span>
-      ),
-    },
-    {
-      id: "info",
-      header: t("queue.info"),
-      width: 320,
-      cell: ({ worker: w, token: tok }) => (
-        // One chip per key so values wrap as units, never mid-word.
-        <span className="chips mono">
-          {[...new Set([...(tok?.tags ?? []), ...(w?.tags ?? [])])].map((tag) => (
-            <Tag key={`tag-${tag}`}>{tag}</Tag>
-          ))}
-          {!w && tok?.detector && (
-            <span>
-              <span className="muted">detector=</span>
-              {tok.detector}
-            </span>
-          )}
-          {Object.entries(w?.info ?? {}).map(([k, v]) => (
-            <span key={k}>
-              <span className="muted">{k}=</span>
-              {String(v)}
-            </span>
-          ))}
-        </span>
-      ),
-    },
-    {
-      id: "seen",
-      header: t("queue.lastSeen"),
-      width: 140,
-      cell: ({ worker: w }) =>
-        w ? (
-          <Time iso={w.last_seen} relative />
-        ) : (
-          <span className="muted">{t("workers.neverConnected")}</span>
-        ),
-    },
-    {
-      id: "job",
-      header: t("queue.currentJob"),
-      width: 100,
-      cell: ({ worker: w }) => w?.current_job_id ?? "–",
-    },
-    {
-      id: "done",
-      header: t("queue.doneCount"),
-      width: 80,
-      cell: ({ worker: w }) => w?.jobs_done ?? 0,
-    },
-    {
-      id: "failed",
-      header: t("queue.failedCount"),
-      width: 80,
-      cell: ({ worker: w }) => w?.jobs_failed ?? 0,
-    },
-    {
-      id: "actions",
-      header: "",
-      width: 300,
-      phone: "nolabel",
-      cell: ({ worker: w, token: tok }) => (
-        <span className="row nowrap-actions">
-          {tok && (
-            <Button size="small" icon={<Tag16Regular />} onClick={() => setTagging(tok)}>
-              {t("workers.editTags")}
-            </Button>
-          )}
-          {tok && (
-            <ConfirmPopover
-              title={t("workers.revokeTitle", { name: tok.name })}
-              body={t("workers.revokeBody")}
-              confirmLabel={t("workers.revoke")}
-              onConfirm={() => revoke(tok)}
-            >
-              <Button size="small" icon={<Key16Regular />}>
-                {t("workers.revoke")}
-              </Button>
-            </ConfirmPopover>
-          )}
-          {w && !w.online && (
-            <ConfirmPopover
-              title={t("workers.removeTitle", { name: w.id })}
-              body={t("queue.removeWorkerHint")}
-              onConfirm={() => remove.mutateAsync(w.id)}
-            >
-              <Button size="small" icon={<Delete16Regular />}>
-                {t("common.remove")}
-              </Button>
-            </ConfirmPopover>
-          )}
-        </span>
-      ),
-    },
-  ];
-
   return (
     <>
       {auth.data && (
@@ -193,7 +200,7 @@ export function WorkersSection({ workers }: { workers: Worker[] }) {
           ariaLabel={t("queue.workers")}
           items={rows}
           getRowId={(r) => r.id}
-          columns={columns}
+          columns={workerColumns(t, { tag: setTagging, revoke, remove: remove.mutateAsync })}
         />
       )}
       {rows.length === 0 && <Empty>{t("queue.noWorkers")}</Empty>}

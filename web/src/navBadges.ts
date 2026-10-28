@@ -72,6 +72,7 @@ export function useNavBadges(onEvents: boolean): Record<string, NavBadge[]> {
     const mark = () => localStorage.setItem(SEEN_KEY, String(Date.now()));
     mark();
     return mark; // and when leaving
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- again on each refetch
   }, [onEvents, updated]);
   const seen = seenAt();
   const newEvents = onEvents
