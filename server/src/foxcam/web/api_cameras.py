@@ -106,10 +106,9 @@ class CameraPatch(BaseModel):
     tapo_resolution: Literal["HD", "VGA"] | None = None
 
 
-def may_add_cameras(p: Principal = Depends(principal),
-                    settings: Settings = Depends(settings_dep)) -> Principal:
-    if not (p.is_admin or settings.auth.users_can_add_cameras):
-        raise HTTPException(403, "only admins can add cameras")
+def may_add_cameras(p: Principal = Depends(principal)) -> Principal:
+    if not (p.is_admin or p.can_add_cameras):
+        raise HTTPException(403, "this account may not add cameras (ask an admin)")
     return p
 
 

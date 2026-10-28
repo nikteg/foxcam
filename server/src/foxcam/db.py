@@ -40,6 +40,12 @@ def init_db(settings: Settings) -> Engine:
     with _init_lock(settings):
         Base.metadata.create_all(engine)
         _add_missing_columns(engine)
+        # One-off (2026-10-29): accounts from before User.can_add_cameras get the default.
+        # Remove once production has run it.
+        with engine.begin() as conn:
+            conn.execute(text("UPDATE user_account SET can_add_cameras = :v "
+                              "WHERE can_add_cameras IS NULL"),
+                         {"v": settings.auth.users_can_add_cameras})
         _optimize(engine)
     _engine = engine
     _SessionLocal = sessionmaker(engine, expire_on_commit=False)

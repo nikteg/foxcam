@@ -16,7 +16,7 @@ from ..worker_tokens import Identity
 SESSION_COOKIE = "ms_session"
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 # Everyone is an admin when auth is turned off (auth.enabled: false).
-OPEN_ACCESS = Principal(user_id=None, is_admin=True)
+OPEN_ACCESS = Principal(user_id=None, is_admin=True, can_add_cameras=True)
 _UNSET = object()
 
 

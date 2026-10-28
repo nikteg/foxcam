@@ -163,7 +163,7 @@ def auth_state(settings: Settings, p: Principal | None) -> dict[str, Any]:
         "user": _me(settings, p) if p else None,
         "signed_in": p is not None,
         "is_admin": bool(p and p.is_admin),
-        "can_add_cameras": bool(p and (p.is_admin or a.users_can_add_cameras)),
+        "can_add_cameras": bool(p and (p.is_admin or p.can_add_cameras)),
     }
 
 

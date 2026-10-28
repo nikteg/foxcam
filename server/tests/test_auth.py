@@ -200,6 +200,24 @@ def test_users_cannot_add_cameras_when_turned_off(settings):
         assert r.status_code == 403
 
 
+def test_adding_cameras_is_a_permission_per_account(settings):
+    """New accounts get auth.users_can_add_cameras; an admin turns it off for one."""
+    with app_client(settings) as admin, app_client(settings, email="user@example.org",
+                                                   admin=False) as c:
+        [uid] = [u["id"] for u in admin.get("/api/users").json()
+                 if u["email"] == "user@example.org"]
+        assert c.get("/api/auth/state").json()["can_add_cameras"] is True
+        r = admin.patch(f"/api/users/{uid}", json={"can_add_cameras": False})
+        assert r.json()["can_add_cameras"] is False
+        assert c.get("/api/auth/state").json()["can_add_cameras"] is False
+        r = c.post("/api/cameras/probe", json={"source": {"type": "rtsp",
+                                                          "url": "rtsp://example.org/x"}})
+        assert r.status_code == 403
+        assert c.patch("/api/users/1", json={"can_add_cameras": True}).status_code == 403
+        admin.patch(f"/api/users/{uid}", json={"can_add_cameras": True})
+        assert c.get("/api/auth/state").json()["can_add_cameras"] is True
+
+
 def test_invite_link_creates_an_account_with_cameras(settings):
     with app_client(settings) as admin, app_client(settings, email=None) as guest:
         assert guest.post("/api/auth/register", json={

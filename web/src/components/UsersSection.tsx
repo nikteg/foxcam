@@ -116,7 +116,8 @@ function UserCard({
   const { t } = useI18n();
   const client = useQueryClient();
   const update = useMutation({
-    mutationFn: (body: { is_admin?: boolean; disabled?: boolean }) => api.updateUser(u.id, body),
+    mutationFn: (body: { is_admin?: boolean; disabled?: boolean; can_add_cameras?: boolean }) =>
+      api.updateUser(u.id, body),
     onSuccess: () => client.invalidateQueries({ queryKey: ["users"] }),
   });
   return (
@@ -162,6 +163,15 @@ function UserCard({
             disabled={update.isPending}
             onChange={(_, d) => update.mutate({ is_admin: d.checked === true })}
           />
+          {/* Admins always may. */}
+          {!u.is_admin && (
+            <Checkbox
+              label={t("users.canAddCameras")}
+              checked={u.can_add_cameras}
+              disabled={update.isPending}
+              onChange={(_, d) => update.mutate({ can_add_cameras: d.checked === true })}
+            />
+          )}
           <Checkbox
             label={t("users.disabled")}
             checked={u.disabled}

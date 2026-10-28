@@ -69,6 +69,8 @@ class Principal:
     api_key_id: int | None = None
     scopes: frozenset[str] | None = None  # None = a browser session: everything
     all_cameras: bool = False
+    # May add cameras of their own (User.can_add_cameras; admins always).
+    can_add_cameras: bool = False
 
     def role(self, camera_id: str) -> str | None:
         if self.is_admin or self.all_cameras:
@@ -131,6 +133,7 @@ def _iso(dt: datetime | None) -> str | None:
 def user_info(u: User, providers: list[str] | None = None) -> dict[str, Any]:
     return {"id": u.id, "email": u.email, "name": u.name, "display_name": u.name or u.email,
             "is_admin": u.is_admin, "disabled": u.disabled,
+            "can_add_cameras": u.is_admin or bool(u.can_add_cameras),
             "email_verified": bool(u.email_verified), "has_password": u.password_hash is not None,
             "providers": providers if providers is not None else [],
             "created_at": _iso(u.created_at), "last_login_at": _iso(u.last_login_at)}
@@ -162,7 +165,7 @@ def _new_user(s, settings: Settings, email: str, pw_hash: str | None, name: str 
     if s.scalar(select(User).where(User.email == email)) is not None:
         raise AccountError("an account with this e-mail already exists", 409)
     u = User(email=email, name=(name or "").strip() or None, password_hash=pw_hash,
-             email_verified=email_verified,
+             email_verified=email_verified, can_add_cameras=settings.auth.users_can_add_cameras,
              is_admin=is_admin or (email_verified and _admin_by_config(settings, email)))
     s.add(u)
     s.flush()
@@ -238,7 +241,8 @@ def _admins_left(s, without: int) -> int:
 
 
 def update_user(user_id: int, *, name: str | None = None, is_admin: bool | None = None,
-                disabled: bool | None = None) -> dict[str, Any]:
+                disabled: bool | None = None,
+                can_add_cameras: bool | None = None) -> dict[str, Any]:
     with session_scope() as s:
         u = s.get(User, user_id)
         if u is None:
@@ -250,6 +254,8 @@ def update_user(user_id: int, *, name: str | None = None, is_admin: bool | None 
             u.name = name.strip() or None
         if is_admin is not None:
             u.is_admin = is_admin
+        if can_add_cameras is not None:
+            u.can_add_cameras = can_add_cameras
         if disabled is not None:
             u.disabled = disabled
             if disabled:
@@ -345,7 +351,7 @@ def _principal(s, u: User) -> Principal:
         select(CameraAccess.camera_id, CameraAccess.role)
         .where(CameraAccess.user_id == u.id)).all())
     return Principal(user_id=u.id, email=u.email, name=u.name, is_admin=u.is_admin,
-                     cameras=cams)
+                     cameras=cams, can_add_cameras=u.is_admin or bool(u.can_add_cameras))
 
 
 def principal_for(user_id: int) -> Principal:
@@ -639,7 +645,8 @@ def oauth_user(settings: Settings, provider: str, subject: str, email: str | Non
                 raise AccountError("there is no account for this e-mail; ask for an invite "
                                    "link", 403)
             u = User(email=email, name=(name or "").strip() or None, email_verified=True,
-                     is_admin=_admin_by_config(settings, email))
+                     is_admin=_admin_by_config(settings, email),
+                     can_add_cameras=settings.auth.users_can_add_cameras)
             s.add(u)
             s.flush()
             s.add(OAuthIdentity(user_id=u.id, provider=provider, subject=subject, email=email))

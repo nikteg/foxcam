@@ -849,6 +849,8 @@ export interface User {
   display_name: string;
   is_admin: boolean;
   disabled: boolean;
+  /** May add cameras of their own (always for admins). */
+  can_add_cameras: boolean;
   has_password: boolean;
   /** Linked OAuth providers (ids). */
   providers: string[];
@@ -981,8 +983,10 @@ export const api = {
   users: () => request<User[]>("GET", "/api/users"),
   createUser: (body: { email: string; name: string; password: string | null; is_admin: boolean }) =>
     request<User>("POST", "/api/users", body),
-  updateUser: (id: number, body: { name?: string; is_admin?: boolean; disabled?: boolean }) =>
-    request<User>("PATCH", `/api/users/${id}`, body),
+  updateUser: (
+    id: number,
+    body: { name?: string; is_admin?: boolean; disabled?: boolean; can_add_cameras?: boolean },
+  ) => request<User>("PATCH", `/api/users/${id}`, body),
   setUserPassword: (id: number, password: string) =>
     request<{ status: string }>("PUT", `/api/users/${id}/password`, { password }),
   deleteUser: (id: number) => request<{ status: string }>("DELETE", `/api/users/${id}`),

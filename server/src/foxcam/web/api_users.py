@@ -36,6 +36,7 @@ class UserPatch(BaseModel):
     name: str | None = Field(default=None, max_length=80)
     is_admin: bool | None = None
     disabled: bool | None = None
+    can_add_cameras: bool | None = None
 
 
 class PasswordIn(BaseModel):
@@ -63,7 +64,8 @@ def update_user(user_id: int, body: UserPatch,
         raise HTTPException(409, "you cannot disable yourself or remove your own admin role")
     try:
         return accounts.update_user(user_id, name=body.name, is_admin=body.is_admin,
-                                    disabled=body.disabled)
+                                    disabled=body.disabled,
+                                    can_add_cameras=body.can_add_cameras)
     except AccountError as e:
         raise _error(e) from e
 

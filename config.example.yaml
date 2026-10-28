@@ -198,7 +198,8 @@ auth:
   # a password).
   admin_emails: []
   session_days: 30
-  # Users may add their own cameras (they own them and decide who else sees them).
+  # New accounts may add their own cameras (they own them and decide who else sees them).
+  # Admins change it per account in Settings → Users.
   users_can_add_cameras: true
   # Sign in with Google / Microsoft / GitHub / any OpenID Connect provider. Register the
   # redirect URL <how you open the UI>/api/auth/oauth/<id>/callback at the provider.

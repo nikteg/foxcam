@@ -1259,6 +1259,7 @@ export const en = {
   "users.introClosed": "Only admins add accounts (auth.registration: closed).",
   "users.admin": "Admin",
   "users.disabled": "Disabled",
+  "users.canAddCameras": "Can add cameras",
   "users.signIn": "Signs in with",
   "users.lastLogin": "Last sign-in",
   "users.setPassword": "Set password",

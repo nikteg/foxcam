@@ -1267,6 +1267,7 @@ export const sv: Record<MessageKey, string> = {
   "users.introClosed": "Bara administratörer lägger till konton (auth.registration: closed).",
   "users.admin": "Administratör",
   "users.disabled": "Avstängd",
+  "users.canAddCameras": "Får lägga till kameror",
   "users.signIn": "Loggar in med",
   "users.lastLogin": "Senaste inloggning",
   "users.setPassword": "Ange lösenord",

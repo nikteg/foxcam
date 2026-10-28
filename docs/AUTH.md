@@ -119,8 +119,9 @@ pages. Per camera, a user is:
 | `editor` | + censor areas, private flag, detection profiles, recording profile, name, segment length, enable/disable, ✅/❌ feedback |
 | `owner` | + share the camera and remove it |
 
-Whoever adds a camera owns it (`auth.users_can_add_cameras: false` reserves that for
-admins). Cameras from `config.yaml` have no owner: admins share them. Adding Tapo cloud
+Whoever adds a camera owns it. Adding cameras is a permission per account: new accounts
+get `auth.users_can_add_cameras` (false reserves it for admins), and an admin turns it on
+or off for an account in **Settings → Users** ("Can add cameras"). Admins always can. Cameras from `config.yaml` have no owner: admins share them. Adding Tapo cloud
 cameras is admin-only, since the Tapo account is the server's.
 
 ## Sharing
