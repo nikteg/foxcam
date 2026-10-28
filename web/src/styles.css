@@ -47,7 +47,7 @@ html[data-theme="light"] body {
   background: var(--colorNeutralBackground2);
   color: var(--colorNeutralForeground1);
 }
-.facts dd.mono,
+.facts .mono,
 div.mono {
   word-break: break-all;
 }
@@ -600,35 +600,48 @@ div.thumb.placeholder {
   place-items: center;
   color: var(--colorNeutralForeground3);
 }
-/* Label / value rows (components/ui.tsx Facts). */
+/* Label / value rows (components/ui.tsx Fact). Each label and value is one box, centred
+   in a row at least one line box tall (the height of tags and small buttons), so a value
+   of any kind lines up with its label; a taller one (wrapped text, chips on two rows)
+   starts at the top. Don't align single kinds of value here: make them fit the line. */
 .facts {
+  --fact-line: 24px;
   display: grid;
   /* Labels as wide as they need, up to 40 %: short ones stay on one line, long ones wrap
      instead of pushing the values aside. */
   grid-template-columns: fit-content(40%) minmax(0, 1fr);
-  align-items: baseline;
+  align-items: start;
   gap: var(--spacingVerticalS) var(--spacingHorizontalL);
   margin: 0;
   font-size: var(--fontSizeBase300);
+}
+.facts dt,
+.facts dd {
+  display: flex;
+  align-items: center;
+  min-height: var(--fact-line);
+  margin: 0;
+  min-width: 0;
 }
 .facts dt {
   color: var(--colorNeutralForeground3);
 }
 .facts dd {
-  margin: 0;
   overflow-wrap: anywhere;
+}
+.facts dd > * {
+  min-width: 0;
+}
+/* An icon-only button (they all have an aria-label) first in a value: its icon, not its
+   padding, lines up with the text of the other values. */
+.facts dd > .fui-Button[aria-label]:first-child,
+.facts dd > .row:first-child > .fui-Button[aria-label]:first-child {
+  margin-inline-start: -2px;
 }
 .light {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-}
-/* In a facts list (aligned on the text baseline) an icon or bar would sit too high: centre
-   the value in its row instead. */
-.facts dd:has(> .light, > .conf-cell) {
-  display: flex;
-  align-items: center;
-  align-self: center;
 }
 /* Detail drawer title: what was seen, and where and when under it. */
 .detail-title {
@@ -963,11 +976,12 @@ div.thumb.placeholder {
   top: 2px;
   left: 2px;
 }
-/* Table thumbnails: the box only, thinner. */
-.frame-image.mini .detection-box {
+/* Table thumbnails: the box only, thinner (on phones the same picture is a card's full
+   width and keeps its label). */
+.data-table .frame-image.mini .detection-box {
   outline-width: 1px;
 }
-.frame-image.mini .detection-box-label {
+.data-table .frame-image.mini .detection-box-label {
   display: none;
 }
 /* Mask editor */

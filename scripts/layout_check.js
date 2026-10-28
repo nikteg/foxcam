@@ -1,5 +1,6 @@
 // Layout check: the layout problems the eye keeps missing (AGENTS.md → Web UI → Layout),
-// as strings. Blocks closer than minGap px, and anything wider than the screen.
+// as strings. Blocks closer than minGap px, anything wider than the screen, and facts whose
+// value is not level with its label.
 //
 // - Chrome DevTools MCP, signed in on any page of the app: evaluate_script with sourcePath
 //   set to this file (absolute path). It opens every page in PAGES in two same-origin
@@ -86,6 +87,33 @@ async ({ here = false, list = false, pages = null, minGap = 8 } = {}) => {
       if (gap < minGap) {
         problems.push(`${gap < 0 ? "overlaps" : `only ${Math.round(gap)} px`} between ` +
           `${name(outer[i - 1])} and ${name(outer[i])}`);
+      }
+    }
+    // 3. Facts (components/ui.tsx Fact): a one-line value centred on its label, and an
+    //    icon-only button's icon where text starts.
+    for (const dt of main.querySelectorAll(".facts dt")) {
+      const dd = dt.nextElementSibling;
+      const label = dt.firstElementChild;
+      const value = dd?.firstElementChild;
+      if (!label || !value || !visible(dt) || !visible(value)) continue;
+      const l = label.getBoundingClientRect();
+      const v = value.getBoundingClientRect();
+      const line = parseFloat(getComputedStyle(dt).minHeight) || 24;
+      if (v.height <= line + 1 && l.height <= line + 1) {
+        const off = (v.top + v.bottom) / 2 - (l.top + l.bottom) / 2;
+        if (Math.abs(off) > 1.5) {
+          problems.push(`fact value ${Math.round(Math.abs(off))} px ${off < 0 ? "above" : "below"}` +
+            ` its label "${dt.innerText.trim()}": ${name(value)}`);
+        }
+      }
+      const icon = dd.querySelector(":scope > .fui-Button[aria-label]:first-child svg, " +
+        ":scope > .row:first-child > .fui-Button[aria-label]:first-child svg");
+      if (icon) {
+        const inset = icon.getBoundingClientRect().left - dd.getBoundingClientRect().left;
+        if (Math.abs(inset) > 1) {
+          problems.push(`icon ${Math.round(inset)} px in from where the other values start` +
+            ` ("${dt.innerText.trim()}")`);
+        }
       }
     }
     return problems;

@@ -71,7 +71,10 @@ iPad and desktop, in light and dark theme, and as an iOS home screen app.
   column's `phone` option puts a picture on top or buttons under the facts). No hand-made
   tables, and no CSS that restyles table cells to look like facts.
 - Label/value facts use the shared `Fact` component; groups of values (cameras, labels,
-  tags) are `Tag`s in a `chips` wrapper, not comma-separated text.
+  tags) are `Tag`s in a `chips` wrapper, not comma-separated text. `Fact` centres any
+  value up to one line box (24 px) on its label: no alignment CSS for a kind of value;
+  something taller than a tag or small button doesn't belong on one fact line. The
+  layout check reports a value that is not level with its label.
 - Camera and profile names are `CameraTag` / `ProfileTag` in tables, facts and lists
   (titles stay text), never `<Tag>{cameraName(id)}</Tag>` by hand.
 - Do a layout pass on every change: no values wrapped mid-word, no cropped tags, even

@@ -39,6 +39,7 @@ import {
 } from "@fluentui/react-icons";
 import {
   Fragment,
+  isValidElement,
   useEffect,
   useId,
   useRef,
@@ -441,15 +442,30 @@ export function Fact({
   children,
 }: {
   label: ReactNode;
-  /** On the value, e.g. "mono" or "row wrap". */
+  /** On the value's box, e.g. "mono" or "row wrap". */
   className?: string;
   labelClassName?: string;
   children?: ReactNode;
 }) {
+  // Every row is one line box tall (styles.css .facts) with the value centred in it, so
+  // text, tags, buttons and bars all line up with the label without CSS of their own.
+  // The value is one box: a single element as it is, anything else (text, or text next
+  // to elements) in a span, so it wraps as text and keeps its spaces.
+  const empty =
+    children === null || children === undefined || children === false || children === "";
+  const single = isValidElement(children) && children.type !== Fragment;
   return (
     <>
-      <dt className={labelClassName}>{label}</dt>
-      <dd className={className}>{children}</dd>
+      <dt className={labelClassName}>
+        <span>{label}</span>
+      </dt>
+      <dd className={single || empty ? className : undefined}>
+        {empty ? null : single ? (
+          children
+        ) : (
+          <span className={className ? `fact-text ${className}` : "fact-text"}>{children}</span>
+        )}
+      </dd>
     </>
   );
 }
