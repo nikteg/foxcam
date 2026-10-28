@@ -2331,11 +2331,6 @@ h2.panel-heading {
   top: 16px;
   left: 16px;
   z-index: 1;
-  background: var(--colorNeutralBackground1);
-  border-radius: var(--borderRadiusMedium);
-}
-.dt-card > .dt-select .fui-Checkbox__indicator {
-  margin: 4px;
 }
 /* Event cards: the checkbox over the picture's corner; shown on hover and focus, on touch
    screens (no hover), and on every card once one is picked. */
@@ -2344,16 +2339,21 @@ h2.panel-heading {
 }
 .event-pick {
   position: absolute;
-  top: 8px;
-  left: 8px;
+  top: 4px;
+  left: 4px;
   z-index: 1;
-  background: var(--colorNeutralBackground1);
-  border-radius: var(--borderRadiusMedium);
   opacity: 0;
   transition: opacity 0.15s;
 }
-.event-pick .fui-Checkbox__indicator {
-  margin: 4px;
+/* A plain checkbox on the picture: the box itself filled (else the photo shows through),
+   with a soft shadow to stand out on light pictures. */
+.event-pick input:not(:checked) ~ .fui-Checkbox__indicator,
+.dt-card > .dt-select input:not(:checked) ~ .fui-Checkbox__indicator {
+  background-color: var(--colorNeutralBackground1);
+}
+.event-pick .fui-Checkbox__indicator,
+.dt-card > .dt-select .fui-Checkbox__indicator {
+  box-shadow: var(--shadow4);
 }
 .event-card:hover .event-pick,
 .event-card:focus-within .event-pick,
