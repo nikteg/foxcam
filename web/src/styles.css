@@ -2494,7 +2494,8 @@ h2.panel-heading {
 }
 .dt-card-thumb .mini {
   width: 100%;
-  aspect-ratio: 21 / 9;
+  /* The whole frame, not a strip of it (a FrameImage with the recording's size uses that). */
+  aspect-ratio: 16 / 9;
   margin: 0;
 }
 /* A column whose cell came out empty (e.g. no error): leave the fact out. */
@@ -2526,10 +2527,6 @@ h2.panel-heading {
 .skeleton-thumb.fui-SkeletonItem {
   height: auto;
   aspect-ratio: 16 / 9;
-}
-.skeleton-wide-thumb.fui-SkeletonItem {
-  height: auto;
-  aspect-ratio: 21 / 9;
 }
 .skeleton-table {
   display: flex;

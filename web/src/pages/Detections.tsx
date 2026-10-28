@@ -58,6 +58,8 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detec
         className="mini"
         lazy
         src={detectionFrameUrl(d, "small")}
+        width={d.width}
+        height={d.height}
         alt=""
         boxes={playerDetections([d])}
       />

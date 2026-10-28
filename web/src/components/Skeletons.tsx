@@ -44,7 +44,7 @@ export function TableSkeleton({
       <Skeleton aria-label={t("common.loading")} className="dt-cards">
         {Array.from({ length: Math.min(rows, 4) }, (_, i) => (
           <div key={i} className="dt-card">
-            {thumb && <SkeletonItem shape="rectangle" className="skeleton-wide-thumb" />}
+            {thumb && <SkeletonItem shape="rectangle" className="skeleton-thumb" />}
             <div className="skeleton-facts">
               {Array.from({ length: Math.min(columns, 4) }, (_cell, j) => (
                 <div key={j} className="skeleton-fact">
