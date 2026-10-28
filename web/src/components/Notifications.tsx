@@ -23,14 +23,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import {
-  api,
-  type Channel,
-  type ChannelInput,
-  type ChannelType,
-  type Delivery,
-  type ProbeResult,
-} from "../api";
+import { api, type Channel, type ChannelInput, type ChannelType, type Delivery } from "../api";
 import { percent } from "../format";
 import { ConfirmPopover } from "./ConfirmPopover";
 import { DataTable, type Column } from "./DataTable";
@@ -59,6 +52,7 @@ import {
   DialogTitle,
 } from "./Drawer";
 import { CardsSkeleton } from "./Skeletons";
+import { useToast } from "./Toasts";
 import {
   draftFromRules,
   NotificationRulesFields,
@@ -156,8 +150,12 @@ function ChannelCard({
   onRemove: () => Promise<unknown>;
 }) {
   const { t } = useI18n();
-  const [result, setResult] = useState<ProbeResult | null>(null);
-  const test = useMutation({ mutationFn: () => api.testChannel(c.id), onSuccess: setResult });
+  const toast = useToast();
+  const test = useMutation({
+    mutationFn: () => api.testChannel(c.id),
+    onSuccess: (r) => (r.ok ? toast.success(t("notify.testOk")) : toast.error(r.detail)),
+    onError: (e) => toast.error(e),
+  });
   const target = c.type === "ntfy" ? `${c.server.replace(/\/$/, "")}/${c.topic}` : (c.url ?? "");
 
   return (
@@ -248,11 +246,6 @@ function ChannelCard({
           {c.include_image && IMAGE_TYPES.has(c.type) ? t("common.yes") : t("common.no")}
         </Fact>
       </Facts>
-      {result && (
-        <MessageBar intent={result.ok ? "success" : "error"}>
-          <MessageBarBody>{result.ok ? t("notify.testOk") : result.detail}</MessageBarBody>
-        </MessageBar>
-      )}
       <CardFooter className="wrap">
         <Button
           size="small"

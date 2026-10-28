@@ -1,21 +1,15 @@
-import {
-  Button,
-  MessageBar,
-  MessageBarBody,
-  Subtitle2,
-  Switch,
-  Text,
-} from "@fluentui/react-components";
+import { Button, Subtitle2, Switch, Text } from "@fluentui/react-components";
 import { Delete20Regular, Save20Regular, Send20Regular } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { api, type ProbeResult, type PushDevice, type PushOverview } from "../api";
+import { api, type PushDevice, type PushOverview } from "../api";
 import { useI18n } from "../i18n";
 import { ConfirmPopover } from "./ConfirmPopover";
 import { DataTable, type Column } from "./DataTable";
 import { draftFromRules, NotificationRulesFields, rulesFromDraft } from "./NotificationRulesFields";
 import { PushToggleButton, PushToggleMessage, usePushToggle, useThisDevice } from "./PushToggle";
+import { useToast } from "./Toasts";
 import { InfoBanner, Tag, Time } from "./ui";
 
 /** The browser's time zone: the user's quiet hours and message times are in it. */
@@ -44,8 +38,12 @@ function PushSettings({ data }: { data: PushOverview }) {
   const client = useQueryClient();
   const push = usePushToggle(data.devices, data.key);
   const thisDevice = useThisDevice();
-  const [result, setResult] = useState<ProbeResult | null>(null);
-  const test = useMutation({ mutationFn: api.testPush, onSuccess: setResult });
+  const toast = useToast();
+  const test = useMutation({
+    mutationFn: api.testPush,
+    onSuccess: (r) => (r.ok ? toast.success(t("notify.testOk")) : toast.error(r.detail)),
+    onError: (e) => toast.error(e),
+  });
   const remove = useMutation({
     mutationFn: api.removePushDevice,
     onSettled: () =>
@@ -105,11 +103,6 @@ function PushSettings({ data }: { data: PushOverview }) {
   return (
     <div className="form-stack">
       <PushToggleMessage push={push} />
-      {result && (
-        <MessageBar intent={result.ok ? "success" : "error"}>
-          <MessageBarBody>{result.ok ? t("notify.testOk") : result.detail}</MessageBarBody>
-        </MessageBar>
-      )}
       <div className="row wrap">
         <PushToggleButton push={push} />
         {data.devices.length > 0 && (
@@ -142,9 +135,14 @@ function RulesForm({ data }: { data: PushOverview }) {
   const client = useQueryClient();
   const [enabled, setEnabled] = useState(data.rules.enabled);
   const [rules, setRules] = useState(() => draftFromRules(data.rules));
+  const toast = useToast();
   const save = useMutation({
     mutationFn: () => api.savePushRules({ enabled, ...rulesFromDraft(rules), timezone: ZONE }),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["push"] }),
+    onSuccess: () => {
+      toast.success(t("account.saved"));
+      return client.invalidateQueries({ queryKey: ["push"] });
+    },
+    onError: (e) => toast.error(e),
   });
   return (
     <form
@@ -165,11 +163,6 @@ function RulesForm({ data }: { data: PushOverview }) {
         onChange={setRules}
         quietHint={t("push.quietHint", { zone: ZONE })}
       />
-      {save.error && (
-        <MessageBar intent="error">
-          <MessageBarBody>{save.error.message}</MessageBarBody>
-        </MessageBar>
-      )}
       <div>
         <Button
           type="submit"
