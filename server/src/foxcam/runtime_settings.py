@@ -59,6 +59,8 @@ EDITABLE: tuple[str, ...] = (
     "retention.events_days",
     "retention.max_disk_gb",
     "notifications.timezone",
+    "location.latitude",
+    "location.longitude",
 )
 
 # Part of MediaMTX's path settings: pushed to it when they change (mediamtx.sync_paths).

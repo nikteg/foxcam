@@ -18,6 +18,7 @@ import {
   Delete20Regular,
   EyeOff20Regular,
   Run20Regular,
+  WeatherSunny20Regular,
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
@@ -33,6 +34,8 @@ import { SharePanel } from "../components/ShareDialog";
 import { ProfileDialog, ProfilesSection } from "./Profiles";
 import { useProfiles } from "../components/ProfileSelect";
 import { TapoAccountCard } from "../components/TapoAccount";
+import { SunDrawer } from "../components/SunDrawer";
+import { decimal } from "../format";
 import {
   Checkbox,
   Empty,
@@ -462,6 +465,7 @@ function DetectionPanel({
   const toggle = (id: string, on: boolean) =>
     setSelected((cur) => (on ? [...cur, id] : cur.filter((x) => x !== id)));
   const [editingMotion, setEditingMotion] = useState(false);
+  const [editingSun, setEditingSun] = useState(false);
 
   return (
     <>
@@ -513,6 +517,20 @@ function DetectionPanel({
         {editingMotion && (
           <MaskDrawer cameraId={camera.id} kind="motion" onClose={() => setEditingMotion(false)} />
         )}
+        <Subtitle2 as="h3" className="panel-heading">
+          {t("sun.title")}
+        </Subtitle2>
+        <Caption1 className="muted">
+          {camera.sun_limit === null
+            ? t("sun.summaryOff")
+            : t("sun.summary", { limit: decimal(camera.sun_limit) })}
+        </Caption1>
+        <div>
+          <Button size="small" icon={<WeatherSunny20Regular />} onClick={() => setEditingSun(true)}>
+            {t("sun.edit")}
+          </Button>
+        </div>
+        {editingSun && <SunDrawer camera={camera} onClose={() => setEditingSun(false)} />}
         {save.error && (
           <MessageBar intent="error">
             <MessageBarBody>{save.error.message}</MessageBarBody>

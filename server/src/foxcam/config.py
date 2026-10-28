@@ -502,8 +502,8 @@ class NotificationsConfig(BaseModel):
 
 
 class LocationConfig(BaseModel):
-    latitude: float | None = None
-    longitude: float | None = None
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
     # ISO 3166-1 alpha-3, passed to workers as a hint (SpeciesNet geofencing).
     country: str | None = None
 

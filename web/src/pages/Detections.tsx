@@ -67,6 +67,9 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detec
       <span className="row">
         <Text weight="semibold">{d.label}</Text>
         {d.still && <Tag title={t("detections.stillHint")}>{t("detections.still")}</Tag>}
+        {d.below_sun_limit && (
+          <Tag title={t("detections.belowSunHint")}>{t("detections.belowSun")}</Tag>
+        )}
       </span>
     ),
     compare: byString((d) => d.label),

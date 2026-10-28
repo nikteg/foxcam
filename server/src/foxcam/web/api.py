@@ -47,7 +47,7 @@ from ..models import (
     event_segments,
     utcnow,
 )
-from ..pipeline import compaction, motion_report, preprocess, queue, runner, uploader
+from ..pipeline import compaction, daylight, motion_report, preprocess, queue, runner, uploader
 from ..pipeline.events import rebuild_events as rebuild_all_events
 from ..pipeline.reanalyse import ReanalyseError, reanalyse_segment
 from ..storage import StorageError, boto3_available, get_storage
@@ -196,6 +196,10 @@ async def update_runtime_settings(body: RuntimeChange,
             await mtx.sync_paths()
         except Exception as e:  # noqa: BLE001 - saved; applied at the next sync
             log.warning("could not update MediaMTX: %s", e)
+    if changed & {"location.latitude", "location.longitude"}:
+        # The sun is somewhere else now for cameras without a location of their own.
+        for cam in settings.all_cameras(include_disabled=True):
+            await asyncio.to_thread(daylight.apply, settings, cam.id)
     return await asyncio.to_thread(_runtime_view, settings)
 
 
@@ -322,6 +326,40 @@ def put_motion(camera_id: str, body: MotionBody, settings: Settings = Depends(se
     camera_for(p, settings, camera_id, CameraRole.EDITOR)
     queries.save_motion(camera_id, body.sensitivity, body.rects)
     return queries.camera_state(camera_id)
+
+
+class SunBody(BaseModel):
+    # Targets seen while the sun is lower than this (degrees) are no match; None = off.
+    limit: float | None = Field(default=None, ge=-90, le=90)
+    # Where the camera is; None = location.latitude / longitude (Settings).
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+
+
+@router.get("/cameras/{camera_id}/sun")
+def get_sun(camera_id: str, days: int = Query(14, ge=1, le=90),
+            settings: Settings = Depends(settings_dep),
+            p: Principal = Depends(principal)) -> dict[str, Any]:
+    """The sun's elevation over the last ``days`` days where the camera is, its target
+    detections in that time (with their elevation and feedback), and its limit."""
+    camera_for(p, settings, camera_id)
+    data = daylight.chart(settings, camera_id, days)
+    return {**data, "start": queries.iso(data["start"]),
+            "detections": [{**d, "ts": queries.iso(d["ts"])} for d in data["detections"]]}
+
+
+@router.put("/cameras/{camera_id}/sun")
+async def put_sun(camera_id: str, body: SunBody, settings: Settings = Depends(settings_dep),
+                  p: Principal = Depends(principal)) -> dict[str, Any]:
+    """Marks the camera's detections again: those now below the limit leave their events,
+    and those above it form events again (quietly)."""
+    camera_for(p, settings, camera_id, CameraRole.EDITOR)
+    if (body.latitude is None) != (body.longitude is None):
+        raise HTTPException(422, "give both latitude and longitude, or neither")
+    await asyncio.to_thread(queries.save_sun, camera_id, body.limit, body.latitude,
+                            body.longitude)
+    changed = await asyncio.to_thread(daylight.apply, settings, camera_id)
+    return {**queries.camera_state(camera_id), "changed": changed}
 
 
 @router.get("/segments")

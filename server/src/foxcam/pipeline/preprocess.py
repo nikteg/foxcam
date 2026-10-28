@@ -14,7 +14,7 @@ import logging
 import threading
 import time
 from collections import deque
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -25,7 +25,7 @@ from ..config import Settings
 from ..db import session_scope
 from ..models import CameraState, Job, JobState, MaskVersion, Segment, SegmentStatus, utcnow
 from ..profiles import camera_profiles
-from . import motion
+from . import daylight, motion
 from .compaction import playable_file
 from .queue import settle_segment
 
@@ -40,14 +40,9 @@ def _vaapi_device(settings: Settings) -> str | None:
 
 
 def sun_elevation(settings: Settings, seg: Segment) -> float | None:
-    loc = settings.location
-    if loc.latitude is None or loc.longitude is None:
-        return None
-    from astral import Observer
-    from astral.sun import elevation
-
-    return float(elevation(Observer(loc.latitude, loc.longitude),
-                           seg.start_at.replace(tzinfo=UTC)))
+    with session_scope() as s:
+        where = daylight.place(settings, s, seg.camera_id)
+    return None if where is None else daylight.elevation(where, seg.start_at)
 
 
 def current_mask(camera_id: str) -> tuple[bool, MaskVersion | None]:

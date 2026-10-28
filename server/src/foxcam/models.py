@@ -59,6 +59,12 @@ class CameraState(Base):
     # movement is ignored (normalized [x, y, w, h], e.g. trees in the wind).
     motion_sensitivity: Mapped[str | None] = mapped_column(String)
     motion_rects: Mapped[list[Any] | None] = mapped_column(JSON)
+    # Targets seen while the sun is below this many degrees are no match (e.g. a window
+    # that reflects the lit room after dark, pipeline/daylight.py). None = off.
+    sun_limit: Mapped[float | None] = mapped_column(Float)
+    # Where the camera is, for the sun; None = location.latitude / longitude.
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
 
 
 class ManagedCamera(Base):
@@ -335,6 +341,9 @@ class Detection(Base):
     # A target standing still for its profile's still_minutes (pipeline/still.py): kept
     # for the record, but no match. None = not checked (off, or no motion measured).
     still: Mapped[bool | None] = mapped_column(Boolean)
+    # Seen while the sun was below the camera's sun_limit (pipeline/daylight.py): kept,
+    # but no match.
+    below_sun_limit: Mapped[bool | None] = mapped_column(Boolean)
     model: Mapped[str | None] = mapped_column(String)
     worker_id: Mapped[str | None] = mapped_column(String)
     extra: Mapped[dict[str, Any] | None] = mapped_column(JSON)

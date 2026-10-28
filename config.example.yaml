@@ -239,7 +239,8 @@ auth:
 #       url: tgram://${TELEGRAM_BOT_TOKEN:-}/${TELEGRAM_CHAT_ID:-}
 
 location:
-  # Used for sun elevation (day/night fallback) and as a hint to workers (SpeciesNet geofence).
+  # Used for sun elevation (day/night fallback, cameras' sun limit) and as a hint to workers
+  # (SpeciesNet geofence). Also in Settings → General; a camera can have its own.
   latitude: null
   longitude: null
   country: SWE
