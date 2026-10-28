@@ -730,23 +730,35 @@ div.thumb.placeholder {
 .frame-image.mini {
   background: var(--colorNeutralBackground4);
 }
-.frame-image-skeleton.fui-SkeletonItem {
+/* Over Fluent's own size and position (a 16 px line). */
+.frame-image > .frame-image-skeleton.fui-SkeletonItem {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   border-radius: 0;
 }
 .frame-image > img:not(.frame-image-preview) {
   opacity: 0;
-  transition: opacity 0.15s ease-out;
 }
+/* An animation, not a transition: it always runs (also for a picture loaded before the
+   first paint), and its end is what takes the layers underneath away. */
 .frame-image > img.loaded {
   opacity: 1;
+  animation: frame-image-in 0.15s ease-out;
 }
-.frame-image.crossfade > img {
-  transition-duration: 0.4s;
+.frame-image.crossfade > img.loaded {
+  animation-duration: 0.4s;
+}
+@keyframes frame-image-in {
+  from {
+    opacity: 0;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  /* Not none: the end of the fade is what lets the previous snapshot go. */
-  .frame-image > img:not(.frame-image-preview) {
-    transition-duration: 1ms;
+  /* Not none: the end of the fade is what takes the layers underneath away. */
+  .frame-image > img.loaded {
+    animation-duration: 1ms;
   }
 }
 .detection-list {

@@ -27,19 +27,21 @@ export function FrameImage({
 }) {
   const [loaded, setLoaded] = useState<string>();
   const [failed, setFailed] = useState<string>();
-  // The picture underneath while the next one fades in over it.
+  // The last picture that finished fading in. What lies underneath (skeleton, preview,
+  // the previous picture) stays until then: taken away at load, the fade would start
+  // from the black background.
   const [shown, setShown] = useState<string>();
-  const done = loaded === src || failed === src;
-  const previous = keepPrevious && shown !== src ? shown : undefined;
-  const waiting = !done && !previous;
+  const covered = shown === src;
+  const previous = keepPrevious && !covered ? shown : undefined;
+  const under = !covered && !previous;
   return (
     // Spans: it may sit in a button (a card's picture).
     <span
       className={`frame-image ${keepPrevious ? "crossfade" : ""} ${className ?? ""}`}
       style={{ aspectRatio: width && height ? `${width} / ${height}` : undefined }}
     >
-      {waiting && <SkeletonItem as="span" className="frame-image-skeleton" />}
-      {waiting && preview && (
+      {under && failed !== src && <SkeletonItem as="span" className="frame-image-skeleton" />}
+      {under && preview && (
         <img key={preview} className="frame-image-preview" src={preview} alt="" />
       )}
       {previous && <img key={previous} className="loaded" src={previous} alt="" />}
@@ -52,7 +54,7 @@ export function FrameImage({
         loading={lazy ? "lazy" : undefined}
         onLoad={() => setLoaded(src)}
         onError={() => setFailed(src)}
-        onTransitionEnd={() => setShown(src)}
+        onAnimationEnd={() => setShown(src)}
       />
     </span>
   );
