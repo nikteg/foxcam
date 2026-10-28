@@ -15,9 +15,11 @@ FROM bluenviron/mediamtx:1.21.2 AS mediamtx
 FROM python:3.12-slim
 # ffmpeg with VAAPI / QSV / NVENC / Vulkan support, plus the user-space video drivers:
 # mesa (AMD, VAAPI), Intel media driver + oneVPL runtime (Intel VAAPI / Quick Sync, amd64).
-# NVIDIA's libraries come from the host via the NVIDIA Container Toolkit.
+# NVIDIA's libraries come from the host via the NVIDIA Container Toolkit. A font for the
+# labels on the boxes in notification pictures (ffmpeg's drawtext).
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg mesa-va-drivers vainfo \
+       fonts-dejavu-core \
     && if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
          apt-get install -y --no-install-recommends intel-media-va-driver libvpl2 \
            libmfx-gen1.2; \

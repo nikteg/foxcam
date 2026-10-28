@@ -408,7 +408,8 @@ def texts(settings: Settings, data: dict[str, Any],
 
 
 def event_image(settings: Settings, event_id: int) -> Path | None:
-    """Frame of the event's best detection with its box, censor areas blacked out."""
+    """Frame of the event's best detection with its box and label, censor areas blacked
+    out."""
     from .pipeline.compaction import segment_source  # deferred: pipeline imports notify
 
     with session_scope() as s:
@@ -423,11 +424,11 @@ def event_image(settings: Settings, event_id: int) -> Path | None:
         mask = s.get(MaskVersion, seg.mask_version_id) if seg.mask_version_id else None
         src, offset, box = footage.path, footage.offset_s + det.offset_ms / 1000, det.bbox
         rects = mask.rects if mask else []
-        det_id = det.id
+        det_id, label = det.id, f"{det.label} {round(det.confidence * 100)}%"
     dst = settings.thumbs_dir / "notify" / f"event-{event_id}-{det_id}.jpg"
     if not dst.exists():
         try:
-            ffmpeg.thumbnail(src, dst, offset, 960, box, masks=rects)
+            ffmpeg.thumbnail(src, dst, offset, 960, box, masks=rects, label=label)
         except Exception as e:  # noqa: BLE001 - send without image rather than not at all
             log.warning("notification image for event %s failed: %s", event_id, e)
             return None

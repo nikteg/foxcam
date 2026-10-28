@@ -121,17 +121,46 @@ THUMB_WINDOW_S = 1.0
 
 
 def thumbnail(src: Path, dst: Path, at_s: float = 0.0, width: int = 480,
-              box: Rect | None = None, masks: list[Rect] | None = None) -> None:
+              box: Rect | None = None, masks: list[Rect] | None = None,
+              label: str | None = None) -> None:
+    """The frame on screen at ``at_s``, ``width`` wide. ``box``: drawn in red, with
+    ``label`` (e.g. "fox 94%") on a red tag above it like the web app's; without the tag
+    when ffmpeg can't draw text (no drawtext filter or no font)."""
     dst.parent.mkdir(parents=True, exist_ok=True)
     vf = []
     for x, y, w, h in masks or []:  # censor areas, e.g. for images leaving the server
         vf.append(f"drawbox=x=iw*{x:.5f}:y=ih*{y:.5f}:w=iw*{w:.5f}:h=ih*{h:.5f}"
                   ":color=black:t=fill")
+    tag = None
     if box:
         x, y, w, h = box
         vf.append(f"drawbox=x=iw*{x:.5f}:y=ih*{y:.5f}:w=iw*{w:.5f}:h=ih*{h:.5f}"
                   ":color=red@0.9:t=4")
-    vf.append(f"scale={width}:-2")
+        if label:
+            tag = _box_tag(x, y, label, width)
+    if tag:
+        try:
+            _grab(src, dst, at_s, [*vf, f"scale={width}:-2", tag])
+            return
+        except FfmpegError as e:
+            log.info("thumbnail without the box's label (%s)", e)
+    _grab(src, dst, at_s, [*vf, f"scale={width}:-2"])
+
+
+def _box_tag(x: float, y: float, label: str, width: int) -> str | None:
+    """drawtext for a box's label on the picture scaled to ``width``: white on red, at the
+    box's top left corner just above it (inside it at the top of the picture). Only
+    letters, digits, spaces, '.', '-' and '%' are kept: nothing the filter syntax reads."""
+    text = re.sub(r"[^\w .%-]", "", label).strip()
+    if not text:
+        return None
+    size, pad = max(width // 36, 10), max(width // 240, 2)
+    return (f"drawtext=text='{text}':expansion=none:font=Sans:fontcolor=white"
+            f":fontsize={size}:box=1:boxcolor=red@0.9:boxborderw={pad}"
+            f":x=W*{x:.5f}+{pad}:y=max(H*{y:.5f}-th-{2 * pad}\\,{pad})")
+
+
+def _grab(src: Path, dst: Path, at_s: float, vf: list[str]) -> None:
     # The picture on screen at ``at_s``: the last frame at or before it, as sampling picks
     # (``sample``). A seek gives the first frame at or after it: up to a frame later
     # (older cloud-relay recordings, stamped on arrival in bunches: a quarter second).

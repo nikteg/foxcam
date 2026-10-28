@@ -22,7 +22,8 @@ and the latest deliveries) or in `config.yaml`. Each channel chooses:
 - **Quiet hours** (e.g. `23:00-06:00`, in the time zone set under Settings → Notifications,
   `notifications.timezone` in the config) and a **cooldown**
   (at most one *event starts* per camera per N minutes).
-- **Image**: the frame of the best detection with its box, **censor areas blacked out**,
+- **Image**: the frame of the best detection with its box and label (e.g. "fox 94%"),
+  **censor areas blacked out**,
   so masked areas never leave the server through a notification either.
 
 Delivery goes through an outbox: if a service is down, Foxcam retries with backoff

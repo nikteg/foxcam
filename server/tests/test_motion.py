@@ -232,3 +232,12 @@ def test_sampled_frames_show_their_moment(tmp_path):
     thumb = tmp_path / "thumb.jpg"
     ffmpeg.thumbnail(src, thumb, 0.55, 96)
     assert source_frames(thumb, 1) == [5]
+
+
+def test_box_label_is_safe_for_the_filter():
+    """The label on a notification picture's box: nothing ffmpeg's filter syntax would
+    read (':' ',' quotes), kept inside the picture, and none for an empty label."""
+    tag = ffmpeg._box_tag(0.3, 0.0, "fox's: 94%,", 960)
+    assert "text='foxs 94%'" in tag and "expansion=none" in tag
+    assert "y=max(H*0.00000-th-8\\,4)" in tag
+    assert ffmpeg._box_tag(0.3, 0.2, "::", 960) is None
