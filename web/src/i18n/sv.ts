@@ -143,6 +143,7 @@ export const sv: Record<MessageKey, string> = {
   "motion.tab": "Rörelse",
   "motion.help":
     "Rörelse i de här områdena ignoreras, som träd i vinden eller en trafikerad väg. Flimrande ljus och kameraskakningar räknas redan bort. Maskerade områden räknas aldrig heller. Ändringar gäller bara nya inspelningar.",
+  "motion.showCensor": "Visa de maskerade områdena",
   "motion.actions": "Åtgärder för rörelseområden",
   "motion.discard": "Slänga de osparade rörelseändringarna?",
   "motion.sensitivity": "Känslighet",
@@ -538,9 +539,9 @@ export const sv: Record<MessageKey, string> = {
 
   // Maskeringsredigeraren
   "mask.helpMouse":
-    "Dra på bilden för att rita en rektangel, eller tryck på Lägg till. Dra en rektangel för att flytta den och dess hörn för att ändra storlek; piltangenterna flyttar den markerade (Skift: längre) och {key} tar bort den.",
+    "Dra på bilden för att rita en rektangel, eller tryck på Lägg till. Dra en rektangel för att flytta den och dess hörn för att ändra storlek; kanterna fäster mot bildens och varandras (håll ner Alt för att slippa). Ctrl eller ⌘ och scrolla zoomar. Piltangenterna flyttar den markerade (Skift: längre) och {key} tar bort den.",
   "mask.helpTouch":
-    "Dra på bilden för att rita en rektangel, eller tryck på Lägg till. Tryck på en för att markera den och dra sedan i den eller dess hörn; en liten rektangels hörn sitter strax utanför den.",
+    "Dra på bilden för att rita en rektangel, eller tryck på Lägg till. Tryck på en för att markera den och dra sedan i den eller dess hörn; en liten rektangels hörn sitter strax utanför den. Nyp med två fingrar för att zooma in på små områden, och använd helskärm (⋯) för mer plats.",
   "mask.helpCommon":
     "De här områdena svärtas i allt som skickas till arbetarna. Ändringar gäller bara nya segment.",
   "mask.actions": "Åtgärder för maskerade områden",
@@ -556,6 +557,13 @@ export const sv: Record<MessageKey, string> = {
   "mask.pictureFailed": "Bilden gick inte att läsa in.",
   "mask.live": "Live",
   "mask.night": "Natt",
+  "mask.zoomIn": "Zooma in",
+  "mask.zoomOut": "Zooma ut",
+  "mask.zoomFit": "Hela bilden",
+  "mask.fullscreen": "Helskärm",
+  "mask.exitFullscreen": "Lämna helskärm",
+  "mask.removeArea": "Ta bort område {n}",
+  "mask.showMotion": "Visa rörelseområdena",
   "mask.newSnapshot": "Ny ögonblicksbild",
   "mask.unsaved": "Osparade ändringar",
   "mask.saved": "Sparat",

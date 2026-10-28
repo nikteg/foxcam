@@ -141,6 +141,7 @@ export const en = {
   "motion.tab": "Motion",
   "motion.help":
     "Movement in these areas is ignored, like trees in the wind or a busy road. Flickering lights and camera shake are left out already. Censor areas never count either. Changes apply to new recordings only.",
+  "motion.showCensor": "Show the censor areas",
   "motion.actions": "Motion area actions",
   "motion.discard": "Discard the unsaved motion changes?",
   "motion.sensitivity": "Sensitivity",
@@ -532,9 +533,9 @@ export const en = {
 
   // Censor-area editor
   "mask.helpMouse":
-    "Drag on the picture to draw a rectangle, or press Add. Drag a rectangle to move it and its corners to resize it; the arrow keys move the selected one (Shift: further) and {key} removes it.",
+    "Drag on the picture to draw a rectangle, or press Add. Drag a rectangle to move it and its corners to resize it; edges snap to the picture's and each other's (hold Alt to not snap). Ctrl or ⌘ and scroll zooms. The arrow keys move the selected one (Shift: further) and {key} removes it.",
   "mask.helpTouch":
-    "Drag on the picture to draw a rectangle, or tap Add. Tap one to select it, then drag it or its corners; a small one's corners sit just outside it.",
+    "Drag on the picture to draw a rectangle, or tap Add. Tap one to select it, then drag it or its corners; a small one's corners sit just outside it. Pinch with two fingers to zoom in on small areas, and use full screen (⋯) for more room.",
   "mask.helpCommon":
     "These areas are blacked out in everything sent to the workers. Changes apply to new segments only.",
   "mask.actions": "Censor area actions",
@@ -550,6 +551,13 @@ export const en = {
   "mask.pictureFailed": "Could not load that picture.",
   "mask.live": "Live",
   "mask.night": "Night",
+  "mask.zoomIn": "Zoom in",
+  "mask.zoomOut": "Zoom out",
+  "mask.zoomFit": "Whole picture",
+  "mask.fullscreen": "Full screen",
+  "mask.exitFullscreen": "Leave full screen",
+  "mask.removeArea": "Remove area {n}",
+  "mask.showMotion": "Show the motion areas",
   "mask.newSnapshot": "New snapshot",
   "mask.unsaved": "Unsaved changes",
   "mask.saved": "Saved",

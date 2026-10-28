@@ -891,33 +891,53 @@ div.thumb.placeholder {
   background: rgb(74 163 255 / 15%);
 }
 /* Mask editor */
-.mask-toolbar {
-  margin-bottom: var(--spacingVerticalM);
+/* Toolbar, picture, then the rest; on phones and in full screen the toolbar comes under
+   the picture, within thumb reach. */
+.mask-editor > * {
+  order: 2;
+}
+.mask-editor > .mask-toolbar {
+  order: -1;
+}
+.mask-editor > .mask-stage-area {
+  order: 0;
+}
+.mask-editor.fullscreen > .mask-toolbar {
+  order: 1;
 }
 .mask-options {
   display: flex;
   gap: var(--spacingHorizontalL);
   flex-wrap: wrap;
-  margin-top: var(--spacingVerticalM);
 }
+/* The picture: as wide as fits (and not taller than most of the screen). Zoomed in, the
+   canvas gets wider than the viewport, which scrolls. */
 .mask-stage {
   position: relative;
-  display: inline-block;
-  max-width: 100%;
+  width: min(100%, calc(75vh * var(--aspect)));
   user-select: none;
   -webkit-user-select: none;
 }
-.mask-stage img {
-  display: block;
-  max-width: 100%;
-  max-height: 75vh;
+.mask-viewport {
+  width: 100%;
+  aspect-ratio: var(--aspect);
+  overflow: hidden;
   border-radius: var(--borderRadiusMedium);
-}
-.mask-stage.loading {
-  min-width: min(640px, 100%);
-  aspect-ratio: 16 / 9;
   background: #000;
-  border-radius: var(--borderRadiusMedium);
+  overscroll-behavior: contain;
+}
+.mask-viewport.zoomed {
+  overflow: auto;
+}
+.mask-canvas {
+  position: relative;
+  aspect-ratio: var(--aspect);
+  overflow: clip;
+}
+.mask-canvas > img {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .mask-stage.loading .overlay {
   display: none;
@@ -927,6 +947,43 @@ div.thumb.placeholder {
   inset: 0;
   display: grid;
   place-items: center;
+}
+.zoom-controls {
+  position: absolute;
+  right: var(--spacingHorizontalS);
+  bottom: var(--spacingVerticalS);
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--borderRadiusMedium);
+  background: var(--colorNeutralBackground1);
+  box-shadow: var(--shadow4);
+  z-index: 2;
+}
+.zoom-controls .fui-Button {
+  min-width: 0;
+}
+/* Full screen: the picture as large as the window allows (a fixed layer, since iOS
+   Safari can only show videos in real full screen). */
+.mask-editor.fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--colorNeutralBackground1);
+  padding: max(var(--spacingVerticalM), env(safe-area-inset-top))
+    max(var(--spacingHorizontalM), env(safe-area-inset-right))
+    max(var(--spacingVerticalM), env(safe-area-inset-bottom))
+    max(var(--spacingHorizontalM), env(safe-area-inset-left));
+}
+.mask-editor.fullscreen > .mask-stage-area {
+  flex: 1;
+  min-height: 0;
+  container-type: size;
+  display: grid;
+  place-items: center;
+}
+.mask-editor.fullscreen .mask-stage {
+  width: min(100cqw, calc(100cqh * var(--aspect)));
 }
 .overlay {
   position: absolute;
@@ -950,12 +1007,95 @@ div.thumb.placeholder {
 .mrect.selected {
   outline: 2px dashed #fff;
 }
+/* The other kind of areas, for context: faint, dashed, not touchable. */
+.mrect.other {
+  pointer-events: none;
+  outline: 1px dashed rgb(255 255 255 / 70%);
+}
+.mrect.other.censor {
+  background: rgb(0 0 0 / 40%);
+}
+.mrect.other.motion {
+  background: rgb(74 163 255 / 12%);
+  outline-color: rgb(74 163 255 / 80%);
+}
+/* A box's number (as in the list under the picture), on its top edge. */
+.mrect-number {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -50%);
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: var(--colorBrandBackground);
+  color: #fff;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+.mrect.motion .mrect-number {
+  background: #1f6fc4;
+}
 .overlay.preview .mrect {
   background: #000;
   outline: none;
 }
-.overlay.preview .handle {
+.overlay.preview .handle,
+.overlay.preview .mrect-number,
+.overlay.preview .mrect.other {
   display: none;
+}
+.mask-list-size {
+  color: var(--colorNeutralForeground3);
+  font-variant-numeric: tabular-nums;
+}
+.fui-InteractionTag[class*="brand"] .mask-list-size {
+  color: inherit;
+}
+/* The magnifier beside a dragging finger. */
+.loupe {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: var(--shadow16);
+  background: #000;
+  pointer-events: none;
+  z-index: 3;
+}
+.loupe-content {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.loupe-content > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+.loupe-cross::before,
+.loupe-cross::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: #fff;
+  box-shadow: 0 0 2px #000;
+}
+.loupe-cross::before {
+  width: 16px;
+  height: 1px;
+  transform: translate(-50%, -50%);
+}
+.loupe-cross::after {
+  width: 1px;
+  height: 16px;
+  transform: translate(-50%, -50%);
 }
 /* Handles: --hx/--hy push them outside a small box (MaskEditor.tsx handleOffset), so its
    middle stays free for moving. They only show; the editor finds what a press hits. */
@@ -1153,11 +1293,10 @@ div.thumb.placeholder {
     flex-direction: column;
   }
   .mask-stage {
-    display: block;
-  }
-  .mask-stage img {
     width: 100%;
-    max-height: none;
+  }
+  .mask-editor > .mask-toolbar {
+    order: 1;
   }
 }
 
