@@ -137,7 +137,7 @@ function EventList() {
   return (
     <>
       {profiles.data && targets.length === 0 && !profile && (
-        <MessageBar>
+        <MessageBar className="block">
           <MessageBarBody>
             {isAdmin
               ? rich("events.noProfiles", {

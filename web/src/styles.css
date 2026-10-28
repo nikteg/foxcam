@@ -1823,6 +1823,10 @@ Fluent's text styles would otherwise reset the margins. */
   margin-top: calc(-1 * var(--spacingVerticalM));
   margin-inline-start: calc(-1 * var(--spacingHorizontalMNudge));
 }
+/* Under a banner (e.g. a new version is out) they keep the banner's spacing. */
+.fui-MessageBar.block ~ .page-tabs {
+  margin-top: 0;
+}
 /* Sub-page tabs (and the tabs in drawers) scroll sideways when they do not fit, instead of
    squeezing or wrapping; no scrollbar, a swipe is enough. */
 .page-tabs,
