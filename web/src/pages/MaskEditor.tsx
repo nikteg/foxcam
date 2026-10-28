@@ -13,6 +13,7 @@ import {
   MenuTrigger,
   Portal,
   Select,
+  SkeletonItem,
   Spinner,
   Switch,
   Toolbar,
@@ -69,6 +70,7 @@ import { FrameImage } from "../components/FrameImage";
 import { DrawerTitle, InfoBanner, QueryState, Tag } from "../components/ui";
 import { decimal, localWeekdayTime } from "../format";
 import { useI18n } from "../i18n";
+import { BoxSkeleton } from "../components/Skeletons";
 import { PHONE, useMediaQuery } from "../useMediaQuery";
 import {
   CORNERS,
@@ -199,7 +201,16 @@ export function MaskDrawer({
               </span>
               <span className="only-touch">{t("mask.helpTouch")}</span>
             </InfoBanner>
-            <QueryState error={mask.error} loading={mask.isPending} />
+            <QueryState
+              error={mask.error}
+              loading={mask.isPending}
+              skeleton={
+                <>
+                  <BoxSkeleton height={48} />
+                  <BoxSkeleton />
+                </>
+              }
+            />
             {/* Remount when the saved state changes so the editor starts from it. */}
             {mask.data && (
               <Editor
@@ -842,9 +853,17 @@ function Editor({
               </div>
             </div>
           </div>
-          {loadedSrc !== snapshot && (
-            <div className={loadedSrc ? "stage-loading" : "stage-placeholder"}>
-              <Spinner size={loadedSrc ? "tiny" : "small"} label={t("mask.loadingSnapshot")} />
+          {!loadedSrc && (
+            <SkeletonItem
+              shape="rectangle"
+              className="stage-placeholder"
+              aria-label={t("mask.loadingSnapshot")}
+            />
+          )}
+          {/* Another picture on its way: the previous one stays, with a note on it. */}
+          {loadedSrc && loadedSrc !== snapshot && (
+            <div className="stage-loading">
+              <Spinner size="tiny" label={t("mask.loadingSnapshot")} />
             </div>
           )}
           <div className="zoom-controls">
@@ -1059,7 +1078,10 @@ function PicturePicker({
           </span>
           <Caption1>{t("mask.live")}</Caption1>
         </button>
-        {moments.isPending && <Spinner size="tiny" />}
+        {moments.isPending &&
+          [0, 1, 2].map((i) => (
+            <SkeletonItem key={i} shape="rectangle" className="picture-choice-skeleton" />
+          ))}
         {moments.data?.map((m) => (
           <button
             key={m.at}

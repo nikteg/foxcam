@@ -24,8 +24,9 @@ import {
   DialogSurface,
   DialogTitle,
 } from "./Drawer";
-import { kindOf, snap, SunChart, type Kind } from "./SunChart";
+import { HEIGHT as CHART_HEIGHT, kindOf, snap, SunChart, type Kind } from "./SunChart";
 import { DrawerTitle, Fact, Facts, QueryState } from "./ui";
+import { BoxSkeleton, FieldSkeleton } from "./Skeletons";
 
 const DAYS = [7, 14, 30, 90];
 /** Where the limit starts when switched on: the end of civil twilight is too late for a
@@ -76,7 +77,16 @@ export function SunDrawer({ camera, onClose }: { camera: Camera; onClose: () => 
               onChange={(_, d) => setOn(d.checked)}
               label={t("sun.enabled")}
             />
-            <QueryState error={chart.error} loading={chart.isPending} />
+            <QueryState
+              error={chart.error}
+              loading={chart.isPending}
+              skeleton={
+                <>
+                  <FieldSkeleton />
+                  <BoxSkeleton height={CHART_HEIGHT} />
+                </>
+              }
+            />
             {chart.data && !chart.data.located && (
               <MessageBar intent="warning">
                 <MessageBarBody>{t("sun.noLocation")}</MessageBarBody>

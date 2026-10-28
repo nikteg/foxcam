@@ -8,7 +8,7 @@ import type { SunChartData, SunDetection } from "../api";
 import { decimal, localTime } from "../format";
 import { useI18n } from "../i18n";
 
-const HEIGHT = 260;
+export const HEIGHT = 260;
 const PAD = { top: 12, right: 44, bottom: 26, left: 36 };
 /** Pointer this close to the limit line (px) grabs it. */
 const GRAB = 18;
@@ -138,14 +138,16 @@ export function SunChart({
               {String(h % 24).padStart(2, "0")}
             </text>
           ))}
-          {days.map((points, i) => (
-            <polyline
-              // oxlint-disable-next-line react/no-array-index-key -- days in time order
-              key={i}
-              className="sun-curve"
-              points={points.map(([m, e]) => `${x(m)},${y(e)}`).join(" ")}
-            />
-          ))}
+          {/* One path for all days: its stroke is painted once, so where days overlap the
+              translucency doesn't add up into bands. */}
+          <path
+            className="sun-curve"
+            d={days
+              .map((points) =>
+                points.map(([m, e], j) => `${j ? "L" : "M"}${x(m)},${y(e)}`).join(""),
+              )
+              .join("")}
+          />
           {dots.map((d) => {
             const kind = kindOf(d);
             const cx = x(minuteOfDay(new Date(d.ts)));

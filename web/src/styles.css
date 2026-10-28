@@ -942,11 +942,12 @@ div.thumb.placeholder {
 .mask-stage.loading .overlay {
   display: none;
 }
-.stage-placeholder {
+/* Over Fluent's own size and position. */
+.mask-stage > .stage-placeholder.fui-SkeletonItem {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  width: 100%;
+  height: 100%;
 }
 .zoom-controls {
   position: absolute;
@@ -1187,6 +1188,12 @@ div.thumb.placeholder {
   align-items: center;
   justify-content: center;
   white-space: nowrap;
+}
+.picture-strip > .picture-choice-skeleton.fui-SkeletonItem {
+  flex: 0 0 auto;
+  width: 112px;
+  height: 85px;
+  border-radius: var(--borderRadiusMedium);
 }
 .picture-choice-live {
   display: grid;
@@ -1767,8 +1774,10 @@ Fluent's text styles would otherwise reset the margins. */
   pointer-events: none;
   opacity: 0;
 }
+/* Fades in once loaded (not from black at once); goes at once when playback starts. */
 .player-poster[data-visible] {
   opacity: 1;
+  transition: opacity 0.15s ease-out;
 }
 /* Takes the taps and clicks on the picture (PictureTaps). */
 .player-surface {
@@ -2043,6 +2052,7 @@ Fluent's text styles would otherwise reset the margins. */
 }
 @media (prefers-reduced-motion: reduce) {
   .player-controls,
+  .player-poster[data-visible],
   .player-track,
   .player-thumb,
   .player-preview {
@@ -2457,6 +2467,16 @@ h2.panel-heading {
   display: flex;
   flex-direction: column;
   gap: var(--spacingVerticalS);
+}
+.skeleton-button.fui-SkeletonItem {
+  width: 96px;
+  border-radius: var(--borderRadiusMedium);
+}
+.skeleton-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--spacingHorizontalS);
+  min-height: 32px;
 }
 .skeleton-fact {
   display: flex;

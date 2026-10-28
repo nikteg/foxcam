@@ -14,6 +14,7 @@ import { Feedback } from "./Feedback";
 import { ProfileTag, useDetectorNames, useProfiles, useSeveralDetectors } from "./ProfileSelect";
 import { ConfidenceBar, Fact, Facts, Light, QueryState, Tag, Time, useRouterHref } from "./ui";
 import { VideoPlayer } from "./VideoPlayer";
+import { FeedbackSkeleton, TextSkeleton } from "./Skeletons";
 import { DetectionMotion, useVideoTimeline } from "./Motion";
 
 /** The event's detections, with its best one open. */
@@ -50,7 +51,9 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
 
   return (
     <div className="detail-stack">
-      <QueryState error={detections.error} loading={detections.isPending} />
+      {/* Only the feedback and the motion wait for the detections: placeholders of their
+          size meanwhile, so nothing below moves when they arrive. */}
+      {detections.error && <QueryState error={detections.error} loading={false} />}
       {/* The event's clip (with pre- and post-roll; its poster is the best frame with the
           box); until it is cut, the recording from just before the best detection. */}
       {/* One player in both cases: switching events keeps it (and the drawer's scroll). */}
@@ -74,7 +77,11 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
         />
       )}
       <span className="row wrap">
-        {best && <Feedback detection={best} withLabels />}
+        {best ? (
+          <Feedback detection={best} withLabels />
+        ) : (
+          detections.isPending && <FeedbackSkeleton />
+        )}
         <FavoriteStar
           kind="events"
           id={e.id}
@@ -101,9 +108,9 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
         <Fact label={t("col.light")}>
           <Light night={e.is_night} long />
         </Fact>
-        {best && (
+        {(best || detections.isPending) && (
           <Fact label={t("detections.motion")}>
-            <DetectionMotion detection={best} />
+            {best ? <DetectionMotion detection={best} /> : <TextSkeleton lines={1} />}
           </Fact>
         )}
         <Fact label={t("nav.detections")}>{e.detection_count}</Fact>

@@ -62,6 +62,7 @@ import {
   DialogSurface,
   DialogTitle,
 } from "./Drawer";
+import { CardsSkeleton } from "./Skeletons";
 
 const TYPE_LABELS: Record<ChannelType, MessageKey> = {
   ntfy: "notify.type.ntfy",
@@ -107,7 +108,11 @@ export function Notifications() {
         </Button>
       </Toolbar>
       <InfoBanner id="notifications">{t("notify.intro")}</InfoBanner>
-      <QueryState error={overview.error} loading={overview.isPending} />
+      <QueryState
+        error={overview.error}
+        loading={overview.isPending}
+        skeleton={<CardsSkeleton count={2} thumb={false} />}
+      />
       {data && !data.public_url && (
         <MessageBar intent="info" className="block">
           <MessageBarBody>
