@@ -2077,7 +2077,13 @@ Fluent's text styles would otherwise reset the margins. */
   display: block;
   width: var(--thumbnail-width, 160px);
   height: var(--thumbnail-height, 90px);
-  max-width: 180px;
+  /* Vidstack scales the tile to fit these only when all four are lengths (a min of
+     "auto" or a missing max reads as no limit): else a bigger tile is cropped to the
+     max-width (a square of a wide picture). */
+  min-width: 0;
+  min-height: 0;
+  max-width: 150px;
+  max-height: 100px;
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 0.3);
   border-radius: var(--borderRadiusMedium);
