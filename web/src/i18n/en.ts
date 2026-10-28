@@ -693,7 +693,7 @@ export const en = {
 
   // Notifications
   "notify.intro":
-    "Get a push message (ntfy), call a webhook (Home Assistant, n8n, your own code) or notify ~100 other services via Apprise when an event starts or its clip is ready.",
+    "Get a push message (in the Foxcam app or through ntfy), call a webhook (Home Assistant, n8n, your own code) or notify ~100 other services via Apprise when an event starts or its clip is ready.",
   "notify.add": "Add channel",
   "notify.none": "No notification channels yet.",
   "notify.noPublicUrl":
@@ -703,6 +703,19 @@ export const en = {
   "notify.type.ntfy": "ntfy push",
   "notify.type.webhook": "Webhook",
   "notify.type.apprise": "Apprise (Telegram, Discord, Pushover, …)",
+  "notify.type.webpush": "Web push",
+  "notify.webpushHint":
+    "Sends to Foxcam itself, no other app needed. After saving, press “Turn on here” on each phone, iPad or computer that should get them (on iPhone and iPad: in Foxcam on the Home Screen). No picture.",
+  "notify.devices": "Devices",
+  "notify.thisDevice": "{name} (this device)",
+  "notify.noDevices": "None yet",
+  "notify.pushOn": "Turn on here",
+  "notify.pushOff": "Turn off here",
+  "notify.pushIosHint":
+    "To get these on this iPhone or iPad: add Foxcam to the Home Screen (Share → Add to Home Screen), open it from there and turn them on here.",
+  "notify.pushUnsupported": "This browser can't receive push notifications.",
+  "notify.pushDenied":
+    "Notifications are blocked for Foxcam on this device. Allow them in the system settings (iPhone: Settings → Notifications → Foxcam) and try again.",
   "notify.disabled": "Disabled",
   "notify.target": "Sends to",
   "notify.when": "When",

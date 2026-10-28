@@ -434,11 +434,13 @@ class ChannelConfig(BaseModel):
     - ``webhook``: POST JSON to any URL (Home Assistant, n8n, your code), optionally signed.
     - ``apprise``: any of ~100 services (Telegram, Discord, Pushover, Gotify, Slack, e-mail,
       …) through an Apprise URL. Needs the ``notify`` extra.
+    - ``webpush``: straight to the web app (home screen app on iOS, any browser elsewhere);
+      each device turns it on in Settings → Notifications. No picture.
     """
 
     id: str = Field(pattern=PROFILE_ID, max_length=40)
     name: str | None = None
-    type: Literal["ntfy", "webhook", "apprise"]
+    type: Literal["ntfy", "webhook", "apprise", "webpush"]
     enabled: bool = True
     # event.new = as soon as an event starts; event.clip = when its clip is ready.
     # (Not called "on": YAML reads a bare `on:` key as the boolean true.)

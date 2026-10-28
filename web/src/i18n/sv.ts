@@ -696,7 +696,7 @@ export const sv: Record<MessageKey, string> = {
   "settings.storage": "Lagring",
   "settings.notifications": "Aviseringar",
   "notify.intro":
-    "Få en push-notis (ntfy), anropa en webhook (Home Assistant, n8n, egen kod) eller avisera ~100 andra tjänster via Apprise när en händelse börjar eller dess klipp är klart.",
+    "Få en push-notis (i Foxcam-appen eller via ntfy), anropa en webhook (Home Assistant, n8n, egen kod) eller avisera ~100 andra tjänster via Apprise när en händelse börjar eller dess klipp är klart.",
   "notify.add": "Lägg till kanal",
   "notify.none": "Inga aviseringskanaler än.",
   "notify.noPublicUrl":
@@ -706,6 +706,19 @@ export const sv: Record<MessageKey, string> = {
   "notify.type.ntfy": "ntfy-push",
   "notify.type.webhook": "Webhook",
   "notify.type.apprise": "Apprise (Telegram, Discord, Pushover, …)",
+  "notify.type.webpush": "Webbpush",
+  "notify.webpushHint":
+    "Skickar till Foxcam självt, ingen annan app behövs. Tryck på ”Slå på här” efter att du sparat, på varje telefon, iPad eller dator som ska få dem (på iPhone och iPad: i Foxcam på hemskärmen). Ingen bild.",
+  "notify.devices": "Enheter",
+  "notify.thisDevice": "{name} (den här enheten)",
+  "notify.noDevices": "Inga än",
+  "notify.pushOn": "Slå på här",
+  "notify.pushOff": "Stäng av här",
+  "notify.pushIosHint":
+    "För att få dem på den här iPhonen eller iPaden: lägg till Foxcam på hemskärmen (Dela → Lägg till på hemskärmen), öppna den därifrån och slå på dem här.",
+  "notify.pushUnsupported": "Den här webbläsaren kan inte ta emot push-notiser.",
+  "notify.pushDenied":
+    "Notiser är blockerade för Foxcam på den här enheten. Tillåt dem i systeminställningarna (iPhone: Inställningar → Notiser → Foxcam) och försök igen.",
   "notify.disabled": "Avstängd",
   "notify.target": "Skickar till",
   "notify.when": "När",

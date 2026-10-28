@@ -1,4 +1,4 @@
-"""Notification channels (ntfy, webhooks, Apprise) and recent deliveries."""
+"""Notification channels (ntfy, webhooks, Apprise, web push) and recent deliveries."""
 
 from __future__ import annotations
 
@@ -8,9 +8,10 @@ from typing import Any, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from .. import notify
+from .. import notify, webpush
+from ..accounts import Principal
 from ..config import PROFILE_ID, Settings
-from .deps import require_admin, settings_dep
+from .deps import principal, require_admin, settings_dep
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"],
                    dependencies=[Depends(require_admin)])
@@ -19,7 +20,7 @@ router = APIRouter(prefix="/api/notifications", tags=["notifications"],
 class ChannelIn(BaseModel):
     id: str = Field(pattern=PROFILE_ID, max_length=40)
     name: str | None = Field(default=None, max_length=80)
-    type: Literal["ntfy", "webhook", "apprise"]
+    type: Literal["ntfy", "webhook", "apprise", "webpush"]
     enabled: bool = True
     when: list[Literal["event.new", "event.clip"]] = ["event.new"]
     cameras: list[str] | None = None
@@ -64,11 +65,18 @@ def overview(settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
         apprise_ok = True
     except ImportError:
         apprise_ok = False
+    channels = []
+    for c in notify.all_channels(settings, True):
+        data = notify.public_channel(c)
+        if c.type == "webpush":
+            data["devices"] = notify.devices(c.id)
+        channels.append(data)
     return {
-        "channels": [notify.public_channel(c) for c in notify.all_channels(settings, True)],
+        "channels": channels,
         "public_url": settings.public_url,
         "timezone": settings.notifications.timezone,
         "apprise": apprise_ok,
+        "webpush_key": webpush.public_key(settings),
     }
 
 
@@ -113,3 +121,34 @@ async def test_channel(channel_id: str, settings: Settings = Depends(settings_de
     if ch is None:
         raise HTTPException(404, "unknown channel")
     return await asyncio.to_thread(notify.test, settings, ch)
+
+
+class DeviceIn(BaseModel):
+    """A browser's PushSubscription (its toJSON()), and what to call the device."""
+
+    endpoint: str = Field(max_length=2000)
+    keys: dict[str, str]
+    name: str | None = Field(default=None, max_length=80)
+
+
+@router.post("/channels/{channel_id}/devices", status_code=201)
+def add_device(channel_id: str, body: DeviceIn, p: Principal = Depends(principal),
+               settings: Settings = Depends(settings_dep)) -> dict:
+    ch = notify.channel(settings, channel_id)
+    if ch is None:
+        raise HTTPException(404, "unknown channel")
+    try:
+        device_id = notify.add_device(ch, body.endpoint, body.keys.get("p256dh", ""),
+                                      body.keys.get("auth", ""), body.name, p.user_id)
+    except notify.NotifyError as e:
+        raise _error(e) from e
+    return {"id": device_id, "endpoint_id": notify.endpoint_id(body.endpoint)}
+
+
+@router.delete("/channels/{channel_id}/devices/{device_id}")
+def remove_device(channel_id: str, device_id: int) -> dict[str, str]:
+    try:
+        notify.remove_device(channel_id, device_id)
+    except notify.NotifyError as e:
+        raise _error(e) from e
+    return {"status": "ok"}

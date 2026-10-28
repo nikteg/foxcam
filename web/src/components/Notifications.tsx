@@ -16,6 +16,8 @@ import {
 import {
   Add20Regular,
   Alert20Regular,
+  AlertOff20Regular,
+  AlertOn20Regular,
   Delete20Regular,
   Edit20Regular,
   Send20Regular,
@@ -33,6 +35,7 @@ import {
   type ProbeResult,
 } from "../api";
 import { percent } from "../format";
+import { currentEndpointId, deviceName, PushDenied, pushSupport, subscribe } from "../push";
 import { ConfirmPopover } from "./ConfirmPopover";
 import { DataTable, type Column } from "./DataTable";
 import { useI18n, type MessageKey } from "../i18n";
@@ -68,7 +71,10 @@ const TYPE_LABELS: Record<ChannelType, MessageKey> = {
   ntfy: "notify.type.ntfy",
   webhook: "notify.type.webhook",
   apprise: "notify.type.apprise",
+  webpush: "notify.type.webpush",
 };
+/** Types that can send the detection frame (iOS web push can't show one). */
+const IMAGE_TYPES = new Set<ChannelType>(["ntfy", "apprise"]);
 const TRIGGERS: NotifyTrigger[] = ["event.new", "event.clip"];
 const TRIGGER_LABELS: Record<NotifyTrigger, MessageKey> = {
   "event.new": "notify.on.new",
@@ -87,7 +93,8 @@ function toggle<T>(list: T[] | null, all: T[], value: T, checked: boolean): T[] 
   return next.length === 0 || next.length === all.length ? null : next;
 }
 
-/** Notification channels (ntfy, webhooks, Apprise) with a test button and recent deliveries. */
+/** Notification channels (ntfy, webhooks, Apprise, web push) with a test button and recent
+ * deliveries. */
 export function Notifications() {
   const client = useQueryClient();
   const { t, rich } = useI18n();
@@ -123,11 +130,12 @@ export function Notifications() {
         </MessageBar>
       )}
       {data?.channels.length === 0 && <Empty>{t("notify.none")}</Empty>}
-      <div className="cards">
+      <div className="cards block">
         {data?.channels.map((ch) => (
           <ChannelCard
             key={ch.id}
             channel={ch}
+            pushKey={data.webpush_key}
             onEdit={() => setEditing(ch)}
             onRemove={() =>
               api
@@ -155,10 +163,12 @@ export function Notifications() {
 
 function ChannelCard({
   channel: c,
+  pushKey,
   onEdit,
   onRemove,
 }: {
   channel: Channel;
+  pushKey: string;
   onEdit: () => void;
   onRemove: () => Promise<unknown>;
 }) {
@@ -166,6 +176,9 @@ function ChannelCard({
   const [result, setResult] = useState<ProbeResult | null>(null);
   const test = useMutation({ mutationFn: () => api.testChannel(c.id), onSuccess: setResult });
   const target = c.type === "ntfy" ? `${c.server.replace(/\/$/, "")}/${c.topic}` : (c.url ?? "");
+  const thisDevice = useQuery({ queryKey: ["push-endpoint"], queryFn: currentEndpointId });
+  const push = usePushToggle(c, pushKey, thisDevice.data ?? null);
+  const pushHere = c.type === "webpush" && push.support === "ok";
 
   return (
     <Card>
@@ -186,9 +199,31 @@ function ChannelCard({
         }
       />
       <Facts>
-        <Fact label={t("notify.target")} className="mono">
-          {target}
-        </Fact>
+        {c.type === "webpush" ? (
+          <Fact label={t("notify.devices")}>
+            {c.devices?.length ? (
+              <span className="chips">
+                {c.devices.map((d) => (
+                  <Tag
+                    key={d.id}
+                    kind={d.endpoint_id === thisDevice.data ? "brand" : undefined}
+                    title={d.user ?? undefined}
+                  >
+                    {d.endpoint_id === thisDevice.data
+                      ? t("notify.thisDevice", { name: d.name ?? "?" })
+                      : (d.name ?? "?")}
+                  </Tag>
+                ))}
+              </span>
+            ) : (
+              t("notify.noDevices")
+            )}
+          </Fact>
+        ) : (
+          <Fact label={t("notify.target")} className="mono">
+            {target}
+          </Fact>
+        )}
         <Fact label={t("notify.when")}>
           <span className="chips">
             {c.when.map((o) => (
@@ -252,15 +287,39 @@ function ChannelCard({
           </>
         )}
         <Fact label={t("notify.image")}>
-          {c.include_image && c.type !== "webhook" ? t("common.yes") : t("common.no")}
+          {c.include_image && IMAGE_TYPES.has(c.type) ? t("common.yes") : t("common.no")}
         </Fact>
       </Facts>
+      {c.type === "webpush" && push.support !== "ok" && (
+        <Caption1 className="muted">
+          {push.support === "ios-browser" ? t("notify.pushIosHint") : t("notify.pushUnsupported")}
+        </Caption1>
+      )}
+      {pushHere && push.change.error && (
+        <MessageBar intent="error">
+          <MessageBarBody>
+            {push.change.error instanceof PushDenied
+              ? t("notify.pushDenied")
+              : push.change.error.message}
+          </MessageBarBody>
+        </MessageBar>
+      )}
       {result && (
         <MessageBar intent={result.ok ? "success" : "error"}>
           <MessageBarBody>{result.ok ? t("notify.testOk") : result.detail}</MessageBarBody>
         </MessageBar>
       )}
       <CardFooter className="wrap">
+        {pushHere && (
+          <Button
+            size="small"
+            icon={push.on ? <AlertOff20Regular /> : <AlertOn20Regular />}
+            disabled={push.change.isPending}
+            onClick={() => push.change.mutate()}
+          >
+            {push.on ? t("notify.pushOff") : t("notify.pushOn")}
+          </Button>
+        )}
         <Button
           size="small"
           icon={<Send20Regular />}
@@ -288,6 +347,25 @@ function ChannelCard({
       </CardFooter>
     </Card>
   );
+}
+
+/** Turning a web push channel on or off for the device the page is open on. */
+function usePushToggle(c: Channel, pushKey: string, thisDevice: string | null) {
+  const client = useQueryClient();
+  const mine = c.devices?.find((d) => d.endpoint_id === thisDevice);
+  const change = useMutation({
+    mutationFn: async () => {
+      if (mine) return api.removePushDevice(c.id, mine.id);
+      const sub = await subscribe(pushKey);
+      return api.addPushDevice(c.id, { ...sub, name: deviceName() });
+    },
+    onSettled: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: ["notifications"] }),
+        client.invalidateQueries({ queryKey: ["push-endpoint"] }),
+      ]),
+  });
+  return { support: pushSupport(), on: !!mine, change };
 }
 
 function Deliveries({ channelName }: { channelName: (id: string) => string }) {
@@ -538,6 +616,11 @@ function ChannelDialog({
                   </Field>
                 </>
               )}
+              {type === "webpush" && (
+                <MessageBar intent="info">
+                  <MessageBarBody>{t("notify.webpushHint")}</MessageBarBody>
+                </MessageBar>
+              )}
               {type === "apprise" && (
                 <>
                   {!appriseInstalled && (
@@ -656,7 +739,7 @@ function ChannelDialog({
                   onChange={(_, d) => setCooldown(d.value)}
                 />
               </Field>
-              {type !== "webhook" && (
+              {IMAGE_TYPES.has(type) && (
                 <Switch
                   label={t("notify.includeImage")}
                   checked={image}

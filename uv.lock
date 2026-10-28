@@ -820,6 +820,7 @@ version = "0.1.0"
 source = { editable = "server" }
 dependencies = [
     { name = "astral" },
+    { name = "cryptography" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or (platform_machine == 'x86_64' and sys_platform == 'darwin' and extra == 'extra-13-foxcam-worker-speciesnet') or (platform_machine != 'x86_64' and extra == 'extra-13-foxcam-worker-speciesnet' and extra == 'extra-13-foxcam-worker-ultralytics') or (sys_platform != 'darwin' and extra == 'extra-13-foxcam-worker-speciesnet' and extra == 'extra-13-foxcam-worker-ultralytics')" },
@@ -854,6 +855,7 @@ requires-dist = [
     { name = "apprise", marker = "extra == 'notify'", specifier = ">=1.9" },
     { name = "astral", specifier = ">=3.2" },
     { name = "boto3", marker = "extra == 's3'", specifier = ">=1.35" },
+    { name = "cryptography", specifier = ">=42" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "numpy", specifier = ">=1.26" },

@@ -13,6 +13,8 @@ dependencies = [
     "httpx>=0.27",
     "astral>=3.2",
     "numpy>=1.26",
+    # Web push: VAPID signatures and message encryption (webpush.py).
+    "cryptography>=42",
 ]
 
 [project.optional-dependencies]

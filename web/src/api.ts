@@ -702,7 +702,7 @@ export interface StorageStatus {
   last_error?: string | null;
 }
 
-export type ChannelType = "ntfy" | "webhook" | "apprise";
+export type ChannelType = "ntfy" | "webhook" | "apprise" | "webpush";
 export type NotifyTrigger = "event.new" | "event.clip";
 
 /** A notification channel as sent to the server (secrets: empty = keep stored value). */
@@ -740,6 +740,19 @@ export interface Channel extends Omit<ChannelInput, "token" | "password" | "secr
   has_token: boolean;
   has_password: boolean;
   has_secret: boolean;
+  /** Web push channels: the devices that turned it on. */
+  devices?: PushDevice[];
+}
+
+export interface PushDevice {
+  id: number;
+  name: string | null;
+  /** Who turned it on. */
+  user: string | null;
+  /** Matches push.ts currentEndpointId() on that device. */
+  endpoint_id: string;
+  created_at: string;
+  last_sent_at: string | null;
 }
 
 export interface NotificationsOverview {
@@ -747,6 +760,8 @@ export interface NotificationsOverview {
   public_url: string | null;
   timezone: string | null;
   apprise: boolean;
+  /** The server's public key that browsers subscribe with. */
+  webpush_key: string;
 }
 
 export interface Delivery {
@@ -1143,6 +1158,17 @@ export const api = {
     ),
   deleteChannel: (id: string) =>
     request<{ status: string }>("DELETE", `/api/notifications/channels/${encodeURIComponent(id)}`),
+  addPushDevice: (channelId: string, body: PushSubscriptionJSON & { name: string }) =>
+    request<{ id: number; endpoint_id: string }>(
+      "POST",
+      `/api/notifications/channels/${encodeURIComponent(channelId)}/devices`,
+      body,
+    ),
+  removePushDevice: (channelId: string, deviceId: number) =>
+    request<{ status: string }>(
+      "DELETE",
+      `/api/notifications/channels/${encodeURIComponent(channelId)}/devices/${deviceId}`,
+    ),
   testChannel: (id: string) =>
     request<ProbeResult>("POST", `/api/notifications/channels/${encodeURIComponent(id)}/test`),
   requeue: (jobId: number) =>
