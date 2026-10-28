@@ -23,13 +23,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 
-import { api, type ApiKey, type ApiKeyScope, type PushOverview } from "../api";
+import { api, type ApiKey, type ApiKeyScope } from "../api";
 import { AUTH_KEY, useMe } from "../auth";
 import { CopyBlock } from "../components/AddWorkerDialog";
 import { AppearanceSection } from "../components/AppearanceSection";
 import { ConfirmPopover } from "../components/ConfirmPopover";
 import { DataTable, type Column } from "../components/DataTable";
-import { PushToggleButton, PushToggleMessage, usePushToggle } from "../components/PushToggle";
+import { PersonalNotifications } from "../components/PersonalNotifications";
 import {
   Dialog,
   DialogActions,
@@ -58,14 +58,17 @@ export function Account() {
         </MessageBar>
       )}
       {!user ? (
-        <Body1 className="muted">{t("account.authOff")}</Body1>
+        <>
+          <Body1 className="muted">{t("account.authOff")}</Body1>
+          <PersonalNotifications />
+        </>
       ) : (
         <>
           <ProfileForm />
           <PasswordForm />
           <LinkedAccounts />
           <MyCameras />
-          <PushChannels />
+          <PersonalNotifications />
           <ApiKeys />
         </>
       )}
@@ -282,44 +285,6 @@ function MyCameras() {
         ))}
       </div>
     </>
-  );
-}
-
-/** Web push channels this user may turn on for the device they're on. */
-function PushChannels() {
-  const { t } = useI18n();
-  const push = useQuery({ queryKey: ["push"], queryFn: api.push });
-  if (!push.data?.channels.length) return null;
-  return (
-    <>
-      <Subtitle2 as="h2" className="section">
-        {t("account.notifications")}
-      </Subtitle2>
-      <div className="cards">
-        {push.data.channels.map((ch) => (
-          <PushChannelCard key={ch.id} channel={ch} pushKey={push.data.key} />
-        ))}
-      </div>
-    </>
-  );
-}
-
-function PushChannelCard({
-  channel: ch,
-  pushKey,
-}: {
-  channel: PushOverview["channels"][number];
-  pushKey: string;
-}) {
-  const push = usePushToggle(ch.id, ch.devices, pushKey);
-  return (
-    <Card size="small">
-      <CardHeader
-        header={<Text weight="semibold">{ch.name}</Text>}
-        action={<PushToggleButton push={push} />}
-      />
-      <PushToggleMessage push={push} />
-    </Card>
   );
 }
 

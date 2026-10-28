@@ -697,7 +697,7 @@ export const sv: Record<MessageKey, string> = {
   "settings.storage": "Lagring",
   "settings.notifications": "Aviseringar",
   "notify.intro":
-    "Få en push-notis (i Foxcam-appen eller via ntfy), anropa en webhook (Home Assistant, n8n, egen kod) eller avisera ~100 andra tjänster via Apprise när en händelse börjar eller dess klipp är klart.",
+    "Delade kanaler: få en push-notis via ntfy, anropa en webhook (Home Assistant, n8n, egen kod) eller avisera ~100 andra tjänster via Apprise när en händelse börjar eller dess klipp är klart. Var och ens egna push-notiser i Foxcam-appen finns på deras kontosida.",
   "notify.add": "Lägg till kanal",
   "notify.none": "Inga aviseringskanaler än.",
   "notify.noPublicUrl":
@@ -707,12 +707,6 @@ export const sv: Record<MessageKey, string> = {
   "notify.type.ntfy": "ntfy-push",
   "notify.type.webhook": "Webhook",
   "notify.type.apprise": "Apprise (Telegram, Discord, Pushover, …)",
-  "notify.type.webpush": "Webbpush",
-  "notify.webpushHint":
-    "Skickar till Foxcam självt, ingen annan app behövs. Tryck på ”Slå på här” efter att du sparat, på varje telefon, iPad eller dator som ska få dem (på iPhone och iPad: i Foxcam på hemskärmen). Ingen bild.",
-  "notify.devices": "Enheter",
-  "notify.thisDevice": "{name} (den här enheten)",
-  "notify.noDevices": "Inga än",
   "notify.pushOn": "Slå på här",
   "notify.pushOff": "Stäng av här",
   "notify.pushIosHint":
@@ -720,10 +714,20 @@ export const sv: Record<MessageKey, string> = {
   "notify.pushUnsupported": "Den här webbläsaren kan inte ta emot push-notiser.",
   "notify.pushDenied":
     "Notiser är blockerade för Foxcam på den här enheten. Tillåt dem i systeminställningarna (iPhone: Inställningar → Notiser → Foxcam) och försök igen.",
-  "notify.openToUsers": "Användare kan slå på den",
-  "notify.openToUsersHint":
-    "Användare som inte är administratörer kan slå på den för sina egna enheter på sin kontosida. De får bara händelser från kameror de kan se.",
-  "notify.openToUsersTag": "Öppen för användare",
+  "notify.personalOf": "{name}s egna",
+  "push.intro":
+    "Få en push-notis på den här telefonen eller datorn när något syns i dina kameror. Slå på det här på varje enhet; på iPhone och iPad, öppna Foxcam från hemskärmen först. Nedan väljer du vilka händelser.",
+  "push.device": "Enhet",
+  "push.devices": "Dina enheter",
+  "push.thisDevice": "den här enheten",
+  "push.added": "Tillagd",
+  "push.lastSent": "Senast aviserad",
+  "push.removeTitle": "Sluta avisera {name}?",
+  "push.removeBody": "Den får inga fler aviseringar förrän det slås på igen där.",
+  "push.rules": "Vad du vill bli aviserad om",
+  "push.enabled": "Aviseringar på",
+  "push.quietHint":
+    "Inga aviseringar i det här tidsfönstret (t.ex. 23:00 – 06:00), i din tidszon ({zone}). Lämna tomt för inget.",
   "notify.disabled": "Avstängd",
   "notify.target": "Skickar till",
   "notify.when": "När",

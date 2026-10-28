@@ -1,4 +1,4 @@
-"""Notification channels (ntfy, webhooks, Apprise, web push) and recent deliveries."""
+"""Notification channels (ntfy, webhooks, Apprise) and recent deliveries."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from .. import notify, webpush
+from .. import notify
 from ..config import PROFILE_ID, Settings
 from .deps import require_admin, settings_dep
 
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/notifications", tags=["notifications"],
 class ChannelIn(BaseModel):
     id: str = Field(pattern=PROFILE_ID, max_length=40)
     name: str | None = Field(default=None, max_length=80)
-    type: Literal["ntfy", "webhook", "apprise", "webpush"]
+    type: Literal["ntfy", "webhook", "apprise"]
     enabled: bool = True
     when: list[Literal["event.new", "event.clip"]] = ["event.new"]
     cameras: list[str] | None = None
@@ -38,7 +38,6 @@ class ChannelIn(BaseModel):
     password: str | None = None
     priority: int = Field(default=3, ge=1, le=5)
     tags: list[str] = []
-    open_to_users: bool = False
     url: str | None = None
     secret: str | None = None
     headers: dict[str, str] = {}
@@ -65,18 +64,11 @@ def overview(settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
         apprise_ok = True
     except ImportError:
         apprise_ok = False
-    channels = []
-    for c in notify.all_channels(settings, True):
-        data = notify.public_channel(c)
-        if c.type == "webpush":
-            data["devices"] = notify.devices(c.id)
-        channels.append(data)
     return {
-        "channels": channels,
+        "channels": [notify.public_channel(c) for c in notify.all_channels(settings, True)],
         "public_url": settings.public_url,
         "timezone": settings.notifications.timezone,
         "apprise": apprise_ok,
-        "webpush_key": webpush.public_key(settings),
     }
 
 

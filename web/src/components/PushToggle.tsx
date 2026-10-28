@@ -6,31 +6,25 @@ import { api } from "../api";
 import { useI18n } from "../i18n";
 import { currentEndpointId, deviceName, PushDenied, pushSupport, subscribe } from "../push";
 
-/** This device's push subscription id (null: none), shared by every toggle on the page. */
+/** This device's push subscription id (null: none). */
 export function useThisDevice(): string | null {
   return useQuery({ queryKey: ["push-endpoint"], queryFn: currentEndpointId }).data ?? null;
 }
 
-/** Turning a web push channel on or off for the device the page is open on. */
-export function usePushToggle(
-  channelId: string,
-  devices: { id: number; endpoint_id: string }[],
-  pushKey: string,
-) {
+/** Turning the user's own notifications on or off for the device the page is open on. */
+export function usePushToggle(devices: { id: number; endpoint_id: string }[], pushKey: string) {
   const client = useQueryClient();
   const thisDevice = useThisDevice();
   const mine = devices.find((d) => d.endpoint_id === thisDevice);
   const change = useMutation({
     mutationFn: async () => {
-      if (mine) return api.removePushDevice(channelId, mine.id);
+      if (mine) return api.removePushDevice(mine.id);
       const sub = await subscribe(pushKey);
-      return api.addPushDevice(channelId, { ...sub, name: deviceName() });
+      return api.addPushDevice({ ...sub, name: deviceName() });
     },
     onSettled: () =>
       Promise.all(
-        [["notifications"], ["push"], ["push-endpoint"]].map((queryKey) =>
-          client.invalidateQueries({ queryKey }),
-        ),
+        [["push"], ["push-endpoint"]].map((queryKey) => client.invalidateQueries({ queryKey })),
       ),
   });
   return { support: pushSupport(), on: !!mine, change };

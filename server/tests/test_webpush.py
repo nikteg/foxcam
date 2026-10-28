@@ -1,10 +1,12 @@
-"""Web push: message encryption and signatures, delivery to devices, the device API."""
+"""Web push: message encryption and signatures, each user's own notifications and devices."""
 
 from __future__ import annotations
 
 import base64
 import json
 import struct
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import httpx
 from cryptography.exceptions import InvalidSignature
@@ -14,10 +16,10 @@ from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from foxcam import notify, webpush
 from foxcam.db import session_scope
-from foxcam.models import CameraAccess, CameraRole, PushSubscription
+from foxcam.models import CameraAccess, CameraRole, Event, PushDevice
 
 from .conftest import app_client, sign_in
-from .test_notify import _channel, _fox_event, _notes
+from .test_notify import _fox_event, _notes
 
 
 class Browser:
@@ -117,13 +119,29 @@ def test_key_pair_is_made_once(settings):
     assert (settings.data_dir / webpush.KEY_FILE).stat().st_mode & 0o777 == 0o600
 
 
-def test_events_are_pushed_to_every_device(settings):
-    ch = _channel(settings, id="app", type="webpush", when=["event.new", "event.clip"])
+def _device(owner: str, browser: Browser, name: str | None = None) -> int:
+    sub = browser.subscription()
+    return notify.add_device(owner, sub["endpoint"], sub["keys"]["p256dh"],
+                             sub["keys"]["auth"], name)
+
+
+def _users(settings) -> tuple[int, int, int]:
+    """An admin, a viewer of camera "cam", and a user who sees no cameras."""
+    with app_client(settings, email="admin@example.org") as c:
+        admin = sign_in(c, settings, "admin@example.org", admin=True)
+        viewer = sign_in(c, settings, "viewer@example.org")
+        stranger = sign_in(c, settings, "stranger@example.org")
+    with session_scope() as s:
+        s.add(CameraAccess(user_id=viewer, camera_id="cam", role=CameraRole.VIEWER))
+    return admin, viewer, stranger
+
+
+def test_events_are_pushed_to_every_device_of_the_user(settings):
+    settings.auth.enabled = False  # one implicit admin: the "open" owner
     phone, ipad = Browser("https://web.push.apple.com/a"), Browser("https://fcm.googleapis.com/b")
-    for b, name in ((phone, "iPhone"), (ipad, "iPad")):
-        sub = b.subscription()
-        notify.add_device(ch, sub["endpoint"], sub["keys"]["p256dh"], sub["keys"]["auth"],
-                          name, None)
+    _device(notify.OPEN, phone, "iPhone")
+    _device(notify.OPEN, ipad, "iPad")
+    notify.save_personal_rules(notify.OPEN, {"when": ["event.new", "event.clip"]})
     event_id = _fox_event(settings)
     service = PushService()
     assert notify.deliver_pending(settings, service.client()) == 1
@@ -136,68 +154,113 @@ def test_events_are_pushed_to_every_device(settings):
         assert msg["title"] == "Fox – Cam"
         assert msg["url"] == f"/events?camera=cam&details={event_id}"
         assert msg["tag"] == f"event-{event_id}"
-    assert _notes() == [("app", "event.new", "sent", None)]
-    assert all(d["last_sent_at"] for d in notify.devices("app"))
+    assert _notes() == [("user:open", "event.new", "sent", None)]
+    assert all(d["last_sent_at"] for d in notify.devices(notify.OPEN))
+
+
+def test_each_user_gets_only_their_cameras_and_their_own_rules(settings):
+    admin, viewer, stranger = _users(settings)
+    browsers = {uid: Browser(f"https://push.example.com/{uid}") for uid in (admin, viewer,
+                                                                             stranger)}
+    for uid, b in browsers.items():
+        _device(str(uid), b)
+    notify.save_personal_rules(str(admin), {"labels": ["cat"]})  # the admin wants cats only
+    _fox_event(settings)
+    service = PushService()
+    assert notify.deliver_pending(settings, service.client()) == 1
+    assert [str(r.url) for r in service.requests] == [browsers[viewer].endpoint]
+    assert _notes() == [(f"user:{viewer}", "event.new", "sent", None)]
+
+
+def test_turned_off_quiet_hours_and_time_zone_are_per_user(settings):
+    _, viewer, _ = _users(settings)
+    _device(str(viewer), Browser())
+    notify.save_personal_rules(str(viewer), {"enabled": False})
+    event_id = _fox_event(settings)
+    assert _notes() == []
+    # Quiet hours around now in the user's own zone: skipped, not sent.
+    now = datetime.now(ZoneInfo("Pacific/Auckland"))
+    quiet = f"{now - timedelta(hours=1):%H:%M}-{now + timedelta(hours=1):%H:%M}"
+    notify.save_personal_rules(str(viewer), {"quiet_hours": quiet,
+                                             "timezone": "Pacific/Auckland"})
+    with session_scope() as s:
+        notify.enqueue(s, settings, s.get(Event, event_id), "event.new")
+    assert [n[2:] for n in _notes()] == [("skipped", "quiet hours")]
 
 
 def test_devices_that_unsubscribed_are_forgotten(settings):
-    ch = _channel(settings, id="app", type="webpush")
-    sub = Browser().subscription()
-    notify.add_device(ch, sub["endpoint"], sub["keys"]["p256dh"], sub["keys"]["auth"], None,
-                      None)
+    settings.auth.enabled = False
+    _device(notify.OPEN, Browser())
     _fox_event(settings)
     assert notify.deliver_pending(settings, PushService(410).client()) == 0
-    assert notify.devices("app") == []
+    assert notify.devices(notify.OPEN) == []
     [(_, _, status, error)] = _notes()
     assert status == "pending" and "turned notifications off" in error
 
 
-def test_a_channel_without_devices_says_so(settings):
-    ch = _channel(settings, id="app", type="webpush")
-    result = notify.test(settings, ch)
-    assert not result["ok"] and "no device" in result["detail"]
+def test_open_devices_stop_once_sign_in_is_on(settings):
+    _device(notify.OPEN, Browser())  # turned on while sign-in was off
+    _fox_event(settings)
+    assert _notes() == []
 
 
-def test_device_api(settings, monkeypatch):
+def test_access_is_checked_again_when_sending(settings):
+    _, viewer, _ = _users(settings)
+    _device(str(viewer), Browser())
+    _fox_event(settings)
+    with session_scope() as s:
+        s.query(CameraAccess).delete()
+    assert notify.deliver_pending(settings, PushService().client()) == 0
+    [(_, _, status, error)] = _notes()
+    assert status == "failed" and "no longer allowed" in error
+
+
+def test_personal_api(settings, monkeypatch):
     browser = Browser()
-    with app_client(settings) as c:
-        body = {"id": "app", "type": "webpush", "name": "This app"}
-        assert c.post("/api/notifications/channels", json=body).status_code == 201
-        overview = c.get("/api/notifications").json()
-        assert len(webpush.unb64url(overview["webpush_key"])) == 65
-        assert overview["channels"][0]["devices"] == []
+    with app_client(settings, email="user@example.org", admin=False) as c:
+        r = c.get("/api/push").json()
+        assert len(webpush.unb64url(r["key"])) == 65 and r["devices"] == []
+        assert r["rules"]["enabled"] and r["rules"]["when"] == ["event.new"]
 
-        r = c.post("/api/push/channels/app/devices",
-                   json={**browser.subscription(), "name": "iPhone"})
+        r = c.post("/api/push/devices", json={**browser.subscription(), "name": "iPhone"})
         assert r.status_code == 201
         assert r.json()["endpoint_id"] == notify.endpoint_id(browser.endpoint)
-        # Subscribing again (new keys after a reinstall) updates the same device.
-        assert c.post("/api/push/channels/app/devices",
-                      json={**browser.subscription(), "name": "iPhone"}).status_code == 201
-        [device] = c.get("/api/notifications").json()["channels"][0]["devices"]
-        assert device["name"] == "iPhone" and device["endpoint_id"] == r.json()["endpoint_id"]
-        listed = json.dumps(c.get("/api/notifications").json())
+        # Again (new keys after a reinstall): the same device.
+        assert c.post("/api/push/devices", json=browser.subscription()).status_code == 201
+        [device] = c.get("/api/push").json()["devices"]
+        assert device["endpoint_id"] == r.json()["endpoint_id"]
+        listed = json.dumps(c.get("/api/push").json())
         assert browser.endpoint not in listed and browser.p256dh not in listed
-
         bad = {**browser.subscription(), "keys": {"p256dh": "x", "auth": "y"}}
-        assert c.post("/api/push/channels/app/devices", json=bad).status_code == 400
-        assert c.post("/api/push/channels/nope/devices",
-                      json=browser.subscription()).status_code == 404
-        ntfy = {"id": "phone", "type": "ntfy", "topic": "t"}
-        assert c.post("/api/notifications/channels", json=ntfy).status_code == 201
-        assert c.post("/api/push/channels/phone/devices",
-                      json=browser.subscription()).status_code == 404
+        assert c.post("/api/push/devices", json=bad).status_code == 400
 
-        assert c.delete(f"/api/push/channels/app/devices/{device['id']}"
-                        ).status_code == 200
-        assert c.delete(f"/api/push/channels/app/devices/{device['id']}"
-                        ).status_code == 400
+        rules = {"when": ["event.clip"], "labels": ["fox"], "quiet_hours": "22:00-06:00",
+                 "timezone": "Europe/Stockholm"}
+        assert c.put("/api/push/rules", json=rules).json()["labels"] == ["fox"]
+        assert c.get("/api/push").json()["rules"]["timezone"] == "Europe/Stockholm"
+        assert c.put("/api/push/rules", json={"timezone": "Mars/Base"}).status_code == 400
+        assert c.put("/api/push/rules", json={"when": []}).status_code == 400
 
-        # Removing the channel forgets its devices.
-        c.post("/api/push/channels/app/devices", json=browser.subscription())
-        assert c.delete("/api/notifications/channels/app").status_code == 200
-        with session_scope() as s:
-            assert s.query(PushSubscription).count() == 0
+        sent = []
+        monkeypatch.setattr(webpush, "send", lambda *a, **k: sent.append(a))
+        assert c.post("/api/push/test").json()["ok"] and len(sent) == 1
+
+        assert c.delete(f"/api/push/devices/{device['id']}").status_code == 200
+        assert c.delete(f"/api/push/devices/{device['id']}").status_code == 400
+        assert c.post("/api/push/test").json() == {
+            "ok": False, "detail": "no device has notifications turned on"}
+        # Not the admin routes.
+        assert c.get("/api/notifications").status_code == 403
+
+
+def test_users_cannot_touch_each_others_devices(settings):
+    _, viewer, _ = _users(settings)
+    theirs = _device(str(viewer), Browser())
+    with app_client(settings, email="other@example.org", admin=False) as c:
+        assert c.get("/api/push").json()["devices"] == []
+        assert c.delete(f"/api/push/devices/{theirs}").status_code == 400
+    with session_scope() as s:
+        assert s.query(PushDevice).count() == 1
 
 
 def test_b64url_round_trip():
@@ -205,54 +268,3 @@ def test_b64url_round_trip():
     assert webpush.unb64url(webpush.b64url(data)) == data
     assert "=" not in webpush.b64url(data)
     assert webpush.b64url(data) == base64.urlsafe_b64encode(data).decode().rstrip("=")
-
-
-def test_users_turn_on_open_channels_for_their_own_devices(settings):
-    _channel(settings, id="admins", type="webpush")
-    _channel(settings, id="family", type="webpush", open_to_users=True)
-    mine, theirs = Browser("https://push.example.com/mine"), Browser("https://push.example.com/b")
-    with app_client(settings, email="user@example.org", admin=False) as c:
-        r = c.get("/api/push").json()
-        assert [ch["id"] for ch in r["channels"]] == ["family"] and len(r["key"]) == 87
-        assert c.post("/api/push/channels/admins/devices",
-                      json=mine.subscription()).status_code == 404
-        assert c.post("/api/push/channels/family/devices",
-                      json={**mine.subscription(), "name": "iPhone"}).status_code == 201
-        # Admin routes stay closed.
-        assert c.get("/api/notifications").status_code == 403
-
-        # Someone else's device: listed for admins, not removable (or shown) here.
-        ch = notify.channel(settings, "family")
-        other = theirs.subscription()
-        other_id = notify.add_device(ch, other["endpoint"], other["keys"]["p256dh"],
-                                     other["keys"]["auth"], "iPad", None)
-        [device] = c.get("/api/push").json()["channels"][0]["devices"]
-        assert device["name"] == "iPhone" and set(device) == {"id", "name", "endpoint_id"}
-        assert c.delete(f"/api/push/channels/family/devices/{other_id}").status_code == 400
-        assert c.delete(f"/api/push/channels/family/devices/{device['id']}").status_code == 200
-        assert [d["name"] for d in notify.devices("family")] == ["iPad"]
-
-
-def test_devices_only_get_cameras_their_user_can_see(settings, monkeypatch):
-    ch = _channel(settings, id="family", type="webpush", open_to_users=True)
-    with app_client(settings, email="admin@example.org") as c:
-        viewer = sign_in(c, settings, "viewer@example.org")
-        stranger = sign_in(c, settings, "stranger@example.org")
-    with session_scope() as s:
-        s.add(CameraAccess(user_id=viewer, camera_id="cam", role=CameraRole.VIEWER))
-    browsers = {uid: Browser(f"https://push.example.com/{uid}") for uid in (viewer, stranger)}
-    for uid, b in browsers.items():
-        sub = b.subscription()
-        notify.add_device(ch, sub["endpoint"], sub["keys"]["p256dh"], sub["keys"]["auth"],
-                          None, uid)
-    _fox_event(settings)
-    service = PushService()
-    assert notify.deliver_pending(settings, service.client()) == 1
-    assert [str(r.url) for r in service.requests] == [browsers[viewer].endpoint]
-
-    # Nobody on the channel may see the camera: nothing goes out, and that is no failure.
-    with session_scope() as s:
-        s.query(CameraAccess).delete()
-    sent = []
-    monkeypatch.setattr(webpush, "send", lambda *a, **k: sent.append(a))
-    assert notify.test(settings, ch)["ok"] and sent == []

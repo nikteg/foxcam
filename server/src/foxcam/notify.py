@@ -1,7 +1,9 @@
-"""Event notifications: webhooks, ntfy, web push, and ~100 more services through Apprise.
+"""Event notifications: webhooks, ntfy, and ~100 more services through Apprise (shared
+channels), and each user's own web push notifications (personal).
 
 Channels come from ``config.yaml`` (``notifications.channels``, read-only in the UI) or are
-added in the web UI. When an event starts (``event.new``) or its clip is ready
+added in the web UI. Personal notifications go to the devices a user turned on, with rules the
+user sets on their Account page, and only for cameras they can see. When an event starts (``event.new``) or its clip is ready
 (``event.clip``), every matching channel gets a row in the ``notification`` outbox; the
 background loop sends it and retries with backoff when the service is unreachable.
 See docs/NOTIFICATIONS.md.
@@ -26,7 +28,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from . import ffmpeg, webpush
-from .config import ChannelConfig, Settings
+from .config import ChannelConfig, NotificationRules, PersonalRules, Settings
 from .db import db_ready, session_scope
 from .models import (
     CameraAccess,
@@ -36,8 +38,9 @@ from .models import (
     MaskVersion,
     Notification,
     NotificationChannel,
+    NotificationPrefs,
     NotificationStatus,
-    PushSubscription,
+    PushDevice,
     Segment,
     User,
     utcnow,
@@ -48,7 +51,7 @@ log = logging.getLogger(__name__)
 MAX_ATTEMPTS = 6  # ~30 s, 1, 2, 4, 8 min between tries
 TIMEOUT = 20
 SECRET_FIELDS = ("token", "password", "secret")
-IMAGE_TYPES = ("ntfy", "apprise")  # web push can't show a picture on iOS
+IMAGE_TYPES = ("ntfy", "apprise")  # webhooks get a link
 # ntfy turns tags that are emoji short codes into emojis.
 LABEL_EMOJI = {"fox": "fox_face", "red fox": "fox_face", "cat": "cat", "dog": "dog",
                "person": "bust_in_silhouette", "car": "car", "truck": "truck",
@@ -122,33 +125,57 @@ def delete_channel(channel_id: str) -> None:
         s.delete(row)
         s.execute(delete(Notification).where(Notification.channel_id == channel_id,
                                              Notification.status == NotificationStatus.PENDING))
-        s.execute(delete(PushSubscription).where(PushSubscription.channel_id == channel_id))
 
 
-# --- web push devices ----------------------------------------------------------------
+# --- personal notifications (web push) ------------------------------------------------
+
+OPEN = "open"  # the owner when sign-in is turned off (everyone is the same admin)
+PERSONAL = "user:"  # outbox channel_id of a user's own notifications: user:<owner>
+
+
+def owner_key(user_id: int | None) -> str:
+    return OPEN if user_id is None else str(user_id)
 
 
 def endpoint_id(endpoint: str) -> str:
-    """Lets a browser recognise its own subscription without the UI ever seeing endpoints."""
+    """Lets a browser recognise its own device without the UI ever seeing endpoints."""
     return hashlib.sha256(endpoint.encode()).hexdigest()[:16]
 
 
-def devices(channel_id: str) -> list[dict[str, Any]]:
+def personal_rules(owner: str) -> PersonalRules:
     with session_scope() as s:
-        rows = s.execute(select(PushSubscription, User.name, User.email)
-                         .join(User, User.id == PushSubscription.user_id, isouter=True)
-                         .where(PushSubscription.channel_id == channel_id)
-                         .order_by(PushSubscription.created_at)).all()
-        return [{"id": d.id, "name": d.name, "user": name or email, "user_id": d.user_id,
-                 "endpoint_id": endpoint_id(d.endpoint), "created_at": _iso(d.created_at),
-                 "last_sent_at": _iso(d.last_sent_at)} for d, name, email in rows]
+        row = s.get(NotificationPrefs, owner)
+        return PersonalRules.model_validate(row.config if row else {})
 
 
-def add_device(ch: ChannelConfig, endpoint: str, p256dh: str, auth: str, name: str | None,
-               user_id: int | None) -> int:
-    """Subscribe a browser to a web push channel (again: same endpoint, fresh keys)."""
-    if ch.type != "webpush":
-        raise NotifyError("only web push channels have devices")
+def save_personal_rules(owner: str, data: dict[str, Any]) -> PersonalRules:
+    try:
+        rules = PersonalRules.model_validate(data)
+    except ValidationError as e:
+        first = e.errors()[0]
+        loc = ".".join(str(p) for p in first["loc"])
+        raise NotifyError(f"{loc + ': ' if loc else ''}{first['msg']}") from e
+    with session_scope() as s:
+        row = s.get(NotificationPrefs, owner)
+        if row is None:
+            s.add(NotificationPrefs(owner=owner, config=rules.model_dump()))
+        else:
+            row.config = rules.model_dump()
+    return rules
+
+
+def devices(owner: str) -> list[dict[str, Any]]:
+    with session_scope() as s:
+        rows = s.scalars(select(PushDevice).where(PushDevice.owner == owner)
+                         .order_by(PushDevice.created_at)).all()
+        return [{"id": d.id, "name": d.name, "endpoint_id": endpoint_id(d.endpoint),
+                 "created_at": _iso(d.created_at), "last_sent_at": _iso(d.last_sent_at)}
+                for d in rows]
+
+
+def add_device(owner: str, endpoint: str, p256dh: str, auth: str, name: str | None) -> int:
+    """Turn notifications on for a browser. The same browser again (new keys after a
+    reinstall, or another user signed in on it) updates its one row."""
     if not endpoint.startswith("https://"):
         raise NotifyError("a push endpoint is an https URL")
     try:
@@ -157,42 +184,33 @@ def add_device(ch: ChannelConfig, endpoint: str, p256dh: str, auth: str, name: s
     except ValueError:
         raise NotifyError("the browser's push keys are not valid") from None
     with session_scope() as s:
-        row = s.scalar(select(PushSubscription).where(PushSubscription.channel_id == ch.id,
-                                                      PushSubscription.endpoint == endpoint))
+        row = s.scalar(select(PushDevice).where(PushDevice.endpoint == endpoint))
         if row is None:
-            row = PushSubscription(channel_id=ch.id, endpoint=endpoint)
+            row = PushDevice(endpoint=endpoint)
             s.add(row)
-        row.p256dh, row.auth, row.name, row.user_id = p256dh, auth, name, user_id
+        row.owner, row.p256dh, row.auth, row.name = owner, p256dh, auth, name
         s.flush()
         return row.id
 
 
-def remove_device(channel_id: str, device_id: int, user_id: int | None = None) -> None:
-    """`user_id`: only that user's own device (None: any, for admins)."""
+def remove_device(owner: str, device_id: int) -> None:
     with session_scope() as s:
-        row = s.get(PushSubscription, device_id)
-        if row is None or row.channel_id != channel_id or \
-                (user_id is not None and row.user_id != user_id):
+        row = s.get(PushDevice, device_id)
+        if row is None or row.owner != owner:
             raise NotifyError("unknown device")
         s.delete(row)
 
 
-def push_channels(settings: Settings, is_admin: bool) -> list[ChannelConfig]:
-    """The web push channels this user may turn on: all for admins, else the open ones."""
-    return [c for c in all_channels(settings) if c.type == "webpush"
-            and (is_admin or c.open_to_users)]
-
-
-def _may_see(s: Session, user_id: int | None, camera_id: str) -> bool:
-    """Whether a device's user may get an event from this camera (as in the web UI)."""
-    if user_id is None:
-        return True  # added with sign-in turned off: everyone sees everything
-    user = s.get(User, user_id)
+def _may_see(s: Session, settings: Settings, owner: str, camera_id: str) -> bool:
+    """Whether a user may get an event from this camera (as in the web UI)."""
+    if owner == OPEN:
+        return not settings.auth.enabled  # devices from before sign-in was turned on: no
+    user = s.get(User, int(owner))
     if user is None or user.disabled:
         return False
     if user.is_admin:
         return True
-    role = s.scalar(select(CameraAccess.role).where(CameraAccess.user_id == user_id,
+    role = s.scalar(select(CameraAccess.role).where(CameraAccess.user_id == user.id,
                                                     CameraAccess.camera_id == camera_id))
     return role is not None and CameraRole.at_least(role, CameraRole.VIEWER)
 
@@ -211,19 +229,20 @@ def public_channel(ch: ChannelConfig) -> dict[str, Any]:
 # --- enqueueing ----------------------------------------------------------------------
 
 
-def _local(settings: Settings, dt: datetime) -> datetime:
-    """A stored (naive UTC) time in notifications.timezone, else the server's own zone."""
-    tz = ZoneInfo(settings.notifications.timezone) if settings.notifications.timezone else None
-    return dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz)
+def _local(settings: Settings, dt: datetime, zone: str | None = None) -> datetime:
+    """A stored (naive UTC) time in `zone`, else notifications.timezone, else the server's."""
+    zone = zone or settings.notifications.timezone
+    return dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo(zone) if zone else None)
 
 
-def _in_quiet_hours(settings: Settings, quiet: str, now: datetime) -> bool:
-    local = _local(settings, now).time()
+def _in_quiet_hours(settings: Settings, quiet: str, now: datetime,
+                    zone: str | None = None) -> bool:
+    local = _local(settings, now, zone).time()
     start, end = (time.fromisoformat(t) for t in quiet.split("-"))
     return start <= local < end if start < end else local >= start or local < end
 
 
-def _matches(ch: ChannelConfig, event: Event, kind: str) -> bool:
+def _matches(ch: NotificationRules, event: Event, kind: str) -> bool:
     if kind not in ch.when:
         return False
     if ch.cameras is not None and event.camera_id not in ch.cameras:
@@ -247,32 +266,51 @@ def marked_wrong(s: Session, event_id: int) -> bool:
     return False in marks and True not in marks
 
 
+def _recipients(s: Session, settings: Settings,
+                ) -> list[tuple[str, NotificationRules, str | None]]:
+    """(outbox channel id, rules, time zone): every enabled channel, and every user with a
+    device whose own notifications are on."""
+    out: list[tuple[str, NotificationRules, str | None]] = [
+        (ch.id, ch, None) for ch in all_channels(settings)]
+    owners = s.scalars(select(PushDevice.owner).distinct()).all()
+    saved = {p.owner: p.config for p in s.scalars(
+        select(NotificationPrefs).where(NotificationPrefs.owner.in_(owners)))}
+    for owner in owners:
+        rules = PersonalRules.model_validate(saved.get(owner, {}))
+        if rules.enabled:
+            out.append((PERSONAL + owner, rules, rules.timezone))
+    return out
+
+
 def enqueue(s: Session, settings: Settings, event: Event, kind: str) -> int:
-    """Queue `kind` for every matching channel (once per channel and event)."""
+    """Queue `kind` for every matching channel and user (once each per event)."""
     now = utcnow()
     queued = 0
     if event.quiet or (event.id is not None and marked_wrong(s, event.id)):
         return 0
-    for ch in all_channels(settings):
-        if not _matches(ch, event, kind):
+    for key, rules, zone in _recipients(s, settings):
+        if not _matches(rules, event, kind):
+            continue
+        if key.startswith(PERSONAL) and \
+                not _may_see(s, settings, key.removeprefix(PERSONAL), event.camera_id):
             continue
         exists = s.scalar(select(Notification.id).where(
-            Notification.channel_id == ch.id, Notification.event_id == event.id,
+            Notification.channel_id == key, Notification.event_id == event.id,
             Notification.kind == kind))
         if exists:
             continue
         status, reason = NotificationStatus.PENDING, None
-        if ch.quiet_hours and _in_quiet_hours(settings, ch.quiet_hours, now):
+        if rules.quiet_hours and _in_quiet_hours(settings, rules.quiet_hours, now, zone):
             status, reason = NotificationStatus.SKIPPED, "quiet hours"
-        elif ch.cooldown_minutes and kind == "event.new" and s.scalar(
+        elif rules.cooldown_minutes and kind == "event.new" and s.scalar(
                 select(func.count()).select_from(Notification).where(
-                    Notification.channel_id == ch.id, Notification.camera_id == event.camera_id,
+                    Notification.channel_id == key, Notification.camera_id == event.camera_id,
                     Notification.kind == "event.new",
                     Notification.status.in_([NotificationStatus.PENDING,
                                               NotificationStatus.SENT]),
-                    Notification.created_at >= now - timedelta(minutes=ch.cooldown_minutes))):
+                    Notification.created_at >= now - timedelta(minutes=rules.cooldown_minutes))):
             status, reason = NotificationStatus.SKIPPED, "cooldown"
-        s.add(Notification(channel_id=ch.id, event_id=event.id, camera_id=event.camera_id,
+        s.add(Notification(channel_id=key, event_id=event.id, camera_id=event.camera_id,
                            kind=kind, status=status, error=reason))
         queued += status == NotificationStatus.PENDING
     return queued
@@ -285,9 +323,9 @@ def _iso(dt: datetime | None) -> str | None:
     return dt.isoformat(timespec="seconds") + "Z" if dt else None
 
 
-def _when(settings: Settings, dt: datetime) -> str:
+def _when(settings: Settings, dt: datetime, zone: str | None = None) -> str:
     """"14:05:09", with the day when it was not today (a backlog sends old events late)."""
-    local, today = _local(settings, dt), _local(settings, utcnow()).date()
+    local, today = _local(settings, dt, zone), _local(settings, utcnow(), zone).date()
     if local.date() == today:
         return local.strftime("%H:%M:%S")
     if local.date() == today - timedelta(days=1):
@@ -342,13 +380,14 @@ def payload(settings: Settings, event_id: int, kind: str) -> dict[str, Any]:
     return data
 
 
-def texts(settings: Settings, data: dict[str, Any]) -> tuple[str, str]:
+def texts(settings: Settings, data: dict[str, Any],
+          zone: str | None = None) -> tuple[str, str]:
     """Title ("Fox – Garden") and a few lines of facts about the event."""
     ev = data["event"]
     title = f"{ev['label'].capitalize()} – {ev['camera_name']}"
     first = datetime.fromisoformat(ev["first_ts"].rstrip("Z"))
     last = datetime.fromisoformat(ev["last_ts"].rstrip("Z")) if ev.get("last_ts") else first
-    head = [_when(settings, first), f"{round(ev['confidence'] * 100)} % sure"]
+    head = [_when(settings, first, zone), f"{round(ev['confidence'] * 100)} % sure"]
     if ev["is_night"]:
         head.append("night")
     lines = [" – ".join(head), f"Profile: {ev['profile_name']}"]
@@ -442,11 +481,12 @@ def send_ntfy(ch: ChannelConfig, settings: Settings, data: dict[str, Any],
         raise NotifyError(f"ntfy answered {r.status_code}: {r.text.strip()[:200]}")
 
 
-def send_webpush(ch: ChannelConfig, settings: Settings, data: dict[str, Any],
-                 client: httpx.Client) -> None:
-    """To every device that turned the channel on. Sent when it reached at least one; devices
-    whose subscription is gone are forgotten."""
-    title, body = texts(settings, data)
+def send_personal(settings: Settings, owner: str, data: dict[str, Any],
+                  client: httpx.Client) -> None:
+    """To every device of the user. Sent when it reached at least one; devices whose
+    subscription is gone are forgotten."""
+    rules = personal_rules(owner)
+    title, body = texts(settings, data, rules.timezone)
     ev = data["event"]
     message = {"title": title, "body": body,
                # Opened in the app on tap; relative, so it works without public_url.
@@ -455,17 +495,13 @@ def send_webpush(ch: ChannelConfig, settings: Settings, data: dict[str, Any],
                # The clip-ready notification replaces the event's first one.
                "tag": f"event-{ev['id']}"}
     with session_scope() as s:
-        devices = s.scalars(select(PushSubscription)
-                            .where(PushSubscription.channel_id == ch.id)).all()
-        if not devices:
-            raise NotifyError("no device has turned this channel on yet")
-        # Each device only gets events from cameras its user can see (the test without any
-        # event has no camera).
+        # Access can change while a notification waits: check again.
+        if ev["id"] and not _may_see(s, settings, owner, ev["camera_id"]):
+            raise NotifyError("no longer allowed to see this camera")
         targets = [(d.id, d.name, webpush.Device(d.endpoint, d.p256dh, d.auth))
-                   for d in devices
-                   if not ev["id"] or _may_see(s, d.user_id, ev["camera_id"])]
+                   for d in s.scalars(select(PushDevice).where(PushDevice.owner == owner))]
     if not targets:
-        return  # nobody on this channel may see this camera
+        raise NotifyError("no device has notifications turned on")
     sent, gone, errors = [], [], []
     for device_id, name, device in targets:
         try:
@@ -477,11 +513,11 @@ def send_webpush(ch: ChannelConfig, settings: Settings, data: dict[str, Any],
             errors.append(f"{name or 'device'}: {e}")
     with session_scope() as s:
         if gone:
-            s.execute(delete(PushSubscription).where(PushSubscription.id.in_(gone)))
-        for row in s.scalars(select(PushSubscription).where(PushSubscription.id.in_(sent))):
+            s.execute(delete(PushDevice).where(PushDevice.id.in_(gone)))
+        for row in s.scalars(select(PushDevice).where(PushDevice.id.in_(sent))):
             row.last_sent_at = utcnow()
     if errors and sent:
-        log.warning("web push via %s reached %d device(s), not: %s", ch.id, len(sent),
+        log.warning("web push to user %s reached %d device(s), not: %s", owner, len(sent),
                     "; ".join(errors))
     if not sent:
         raise NotifyError("; ".join(errors) or "every device has turned notifications off")
@@ -529,8 +565,6 @@ def send(ch: ChannelConfig, settings: Settings, data: dict[str, Any], image: Pat
             send_ntfy(ch, settings, data, image if ch.include_image else None, client)
         elif ch.type == "webhook":
             send_webhook(ch, data, client)
-        elif ch.type == "webpush":
-            send_webpush(ch, settings, data, client)
         else:
             send_apprise(ch, settings, data, image if ch.include_image else None)
     except httpx.HTTPError as e:
@@ -555,24 +589,13 @@ def deliver_pending(settings: Settings, client: httpx.Client | None = None,
                         .order_by(Notification.id).limit(limit)).all()
     sent = 0
     for note_id, channel_id, event_id, kind in due:
-        ch = channel(settings, channel_id)
-        error = None
         with session_scope() as s:
             # Marked wrong while it waited: not sent.
             if event_id is not None and marked_wrong(s, event_id):
                 note = s.get(Notification, note_id)
                 note.status, note.error = NotificationStatus.SKIPPED, "marked wrong"
                 continue
-        if ch is None or not ch.enabled:
-            error = "channel removed or disabled"
-        else:
-            try:
-                data = payload(settings, event_id, kind)
-                image = event_image(settings, event_id) if ch.include_image and \
-                    ch.type in IMAGE_TYPES else None
-                send(ch, settings, data, image, client)
-            except NotifyError as e:
-                error = str(e)
+        error, final = _deliver(settings, channel_id, event_id, kind, client)
         with session_scope() as s:
             note = s.get(Notification, note_id)
             if note is None:
@@ -581,8 +604,7 @@ def deliver_pending(settings: Settings, client: httpx.Client | None = None,
             if error is None:
                 note.status, note.sent_at, note.error = NotificationStatus.SENT, utcnow(), None
                 sent += 1
-            elif ch is None or not ch.enabled or note.attempts >= MAX_ATTEMPTS \
-                    or error == "event no longer exists":
+            elif final or note.attempts >= MAX_ATTEMPTS or error == "event no longer exists":
                 note.status, note.error = NotificationStatus.FAILED, error[:500]
             else:
                 note.error = error[:500]
@@ -592,38 +614,89 @@ def deliver_pending(settings: Settings, client: httpx.Client | None = None,
     return sent
 
 
+def _deliver(settings: Settings, channel_id: str, event_id: int, kind: str,
+             client: httpx.Client | None) -> tuple[str | None, bool]:
+    """Send one outbox row: (error or None, whether retrying is pointless)."""
+    if channel_id.startswith(PERSONAL):
+        owner = channel_id.removeprefix(PERSONAL)
+        if not personal_rules(owner).enabled:
+            return "turned off", True
+        own = client is None
+        client = client or httpx.Client(timeout=TIMEOUT, follow_redirects=True)
+        try:
+            send_personal(settings, owner, payload(settings, event_id, kind), client)
+        except NotifyError as e:
+            return str(e), str(e) == "no longer allowed to see this camera"
+        finally:
+            if own:
+                client.close()
+        return None, False
+    ch = channel(settings, channel_id)
+    if ch is None or not ch.enabled:
+        return "channel removed or disabled", True
+    try:
+        data = payload(settings, event_id, kind)
+        image = event_image(settings, event_id) if ch.include_image and \
+            ch.type in IMAGE_TYPES else None
+        send(ch, settings, data, image, client)
+    except NotifyError as e:
+        return str(e), False
+    return None, False
+
+
+def _test_data(settings: Settings, event_id: int | None) -> dict[str, Any]:
+    """A test message: about `event_id`, else made up."""
+    if event_id is not None:
+        return payload(settings, event_id, "test")
+    now = _iso(utcnow())
+    return {"type": "test", "sent_at": now,
+            "event": {"id": 0, "camera_id": "test", "camera_name": "Test camera",
+                      "profile_id": "default", "profile_name": "Test", "label": "fox",
+                      "confidence": 0.9, "first_ts": now, "last_ts": now,
+                      "detection_count": 1, "is_night": False, "clip_ready": False,
+                      "clip_duration_s": None, "detectors": [], "detector_names": [],
+                      "agreement": 1},
+            "links": {"event": None,
+                      "events": f"{settings.public_url}/events" if settings.public_url
+                      else None, "thumbnail": None, "clip": None}}
+
+
 def test(settings: Settings, ch: ChannelConfig) -> dict[str, Any]:
     """Send a test notification now, based on the latest event if there is one."""
     with session_scope() as s:
         latest = s.scalar(select(Event.id).order_by(Event.first_ts.desc()).limit(1))
-    if latest is not None:
-        data = payload(settings, latest, "test")
-        image = event_image(settings, latest) if ch.type in IMAGE_TYPES else None
-    else:
-        now = _iso(utcnow())
-        data = {"type": "test", "sent_at": now,
-                "event": {"id": 0, "camera_id": "test", "camera_name": "Test camera",
-                          "profile_id": "default", "profile_name": "Test", "label": "fox",
-                          "confidence": 0.9, "first_ts": now, "last_ts": now,
-                          "detection_count": 1, "is_night": False, "clip_ready": False,
-                          "clip_duration_s": None, "detectors": [], "detector_names": [],
-                          "agreement": 1},
-                "links": {"event": None,
-                          "events": f"{settings.public_url}/events" if settings.public_url
-                          else None, "thumbnail": None, "clip": None}}
-        image = None
+    image = event_image(settings, latest) if latest is not None and \
+        ch.type in IMAGE_TYPES else None
     try:
-        send(ch, settings, data, image)
+        send(ch, settings, _test_data(settings, latest), image)
     except NotifyError as e:
         return {"ok": False, "detail": str(e)}
     return {"ok": True, "detail": f"sent to {ch.display_name}"}
+
+
+def test_personal(settings: Settings, owner: str) -> dict[str, Any]:
+    """A test to the user's devices, about the latest event they may see."""
+    with session_scope() as s:
+        latest = next((ev_id for ev_id, cam in s.execute(
+            select(Event.id, Event.camera_id).order_by(Event.first_ts.desc()).limit(200))
+            if _may_see(s, settings, owner, cam)), None)
+    try:
+        with httpx.Client(timeout=TIMEOUT, follow_redirects=True) as client:
+            send_personal(settings, owner, _test_data(settings, latest), client)
+    except NotifyError as e:
+        return {"ok": False, "detail": str(e)}
+    return {"ok": True, "detail": "sent"}
 
 
 def deliveries(limit: int = 50) -> list[dict[str, Any]]:
     with session_scope() as s:
         rows = s.execute(select(Notification, Event.label).join(Event, isouter=True)
                          .order_by(Notification.id.desc()).limit(limit)).all()
+        users = {str(u.id): u.name or u.email for u in s.scalars(select(User))}
         return [{"id": n.id, "channel_id": n.channel_id, "event_id": n.event_id,
+                 # A user's own notifications: whose.
+                 "user": users.get(n.channel_id.removeprefix(PERSONAL), "–")
+                 if n.channel_id.startswith(PERSONAL) else None,
                  "camera_id": n.camera_id, "label": label, "kind": n.kind,
                  "status": n.status, "attempts": n.attempts, "error": n.error,
                  "created_at": _iso(n.created_at), "sent_at": _iso(n.sent_at)}

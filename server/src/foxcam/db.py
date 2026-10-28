@@ -39,6 +39,7 @@ def init_db(settings: Settings) -> Engine:
     # at a time creates and migrates it, the others then find it ready.
     with _init_lock(settings):
         _adopt_old_database(settings)
+        _drop_old_tables(engine)
         Base.metadata.create_all(engine)
         added = _add_missing_columns(engine)
         _backfill(engine, added)
@@ -75,6 +76,17 @@ def _init_lock(settings: Settings) -> Iterator[None]:
             yield
         finally:
             fcntl.flock(f, fcntl.LOCK_UN)
+
+
+# Tables no longer in the schema. push_subscription: web push devices belonged to channels
+# before they belonged to users (push_device).
+_OLD_TABLES = ("push_subscription",)
+
+
+def _drop_old_tables(engine: Engine) -> None:
+    with engine.begin() as conn:
+        for table in _OLD_TABLES:
+            conn.execute(text(f'DROP TABLE IF EXISTS "{table}"'))
 
 
 def _add_missing_columns(engine: Engine) -> set[str]:

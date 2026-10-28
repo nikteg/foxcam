@@ -446,23 +446,32 @@ class Notification(Base):
     sent_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
-class PushSubscription(Base):
-    """A browser or home screen app that gets a web push channel's notifications (webpush.py).
+class PushDevice(Base):
+    """A browser or home screen app that gets its user's own notifications (webpush.py).
     The endpoint is the push service's URL for that one device; whoever has it (and the keys)
     can send it notifications, so it is never sent back to the UI."""
 
-    __tablename__ = "push_subscription"
-    __table_args__ = (UniqueConstraint("channel_id", "endpoint"),)
+    __tablename__ = "push_device"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    channel_id: Mapped[str] = mapped_column(String, index=True)
-    endpoint: Mapped[str] = mapped_column(String)
+    # Whose: notify.owner_key (the user id, or "open" when sign-in is turned off).
+    owner: Mapped[str] = mapped_column(String, index=True)
+    endpoint: Mapped[str] = mapped_column(String, unique=True)
     p256dh: Mapped[str] = mapped_column(String)  # the browser's public key (base64url)
     auth: Mapped[str] = mapped_column(String)  # its auth secret (base64url)
-    name: Mapped[str | None] = mapped_column(String)  # "iPhone", "Chrome on Mac"…
-    user_id: Mapped[int | None] = mapped_column(Integer)
+    name: Mapped[str | None] = mapped_column(String)  # "iPhone", "Chrome – Mac"…
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     last_sent_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class NotificationPrefs(Base):
+    """A user's own notification rules (config.PersonalRules); none saved = the defaults."""
+
+    __tablename__ = "notification_prefs"
+
+    owner: Mapped[str] = mapped_column(String, primary_key=True)  # as PushDevice.owner
+    config: Mapped[dict[str, Any]] = mapped_column(JSON)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 
 class User(Base):

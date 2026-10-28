@@ -694,7 +694,7 @@ export const en = {
 
   // Notifications
   "notify.intro":
-    "Get a push message (in the Foxcam app or through ntfy), call a webhook (Home Assistant, n8n, your own code) or notify ~100 other services via Apprise when an event starts or its clip is ready.",
+    "Shared channels: get a push message through ntfy, call a webhook (Home Assistant, n8n, your own code) or notify ~100 other services via Apprise when an event starts or its clip is ready. Everyone's own push notifications in the Foxcam app are on their Account page.",
   "notify.add": "Add channel",
   "notify.none": "No notification channels yet.",
   "notify.noPublicUrl":
@@ -704,12 +704,6 @@ export const en = {
   "notify.type.ntfy": "ntfy push",
   "notify.type.webhook": "Webhook",
   "notify.type.apprise": "Apprise (Telegram, Discord, Pushover, …)",
-  "notify.type.webpush": "Web push",
-  "notify.webpushHint":
-    "Sends to Foxcam itself, no other app needed. After saving, press “Turn on here” on each phone, iPad or computer that should get them (on iPhone and iPad: in Foxcam on the Home Screen). No picture.",
-  "notify.devices": "Devices",
-  "notify.thisDevice": "{name} (this device)",
-  "notify.noDevices": "None yet",
   "notify.pushOn": "Turn on here",
   "notify.pushOff": "Turn off here",
   "notify.pushIosHint":
@@ -717,10 +711,20 @@ export const en = {
   "notify.pushUnsupported": "This browser can't receive push notifications.",
   "notify.pushDenied":
     "Notifications are blocked for Foxcam on this device. Allow them in the system settings (iPhone: Settings → Notifications → Foxcam) and try again.",
-  "notify.openToUsers": "Users can turn it on",
-  "notify.openToUsersHint":
-    "Users who aren't admins can turn it on for their own devices on their Account page. They only get events from cameras they can see.",
-  "notify.openToUsersTag": "Open to users",
+  "notify.personalOf": "{name}'s own",
+  "push.intro":
+    "Get a push notification on this phone or computer when something is seen on your cameras. Turn it on here on each device; on iPhone and iPad, open Foxcam from the Home Screen first. Below you choose which events.",
+  "push.device": "Device",
+  "push.devices": "Your devices",
+  "push.thisDevice": "this device",
+  "push.added": "Added",
+  "push.lastSent": "Last notified",
+  "push.removeTitle": "Stop notifying {name}?",
+  "push.removeBody": "It gets no more notifications until it is turned on again there.",
+  "push.rules": "What to notify about",
+  "push.enabled": "Notifications on",
+  "push.quietHint":
+    "No notifications in this window (e.g. 23:00 – 06:00), in your time zone ({zone}). Leave empty for none.",
   "notify.disabled": "Disabled",
   "notify.target": "Sends to",
   "notify.when": "When",

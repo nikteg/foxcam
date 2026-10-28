@@ -1,10 +1,11 @@
 # Notifications and webhooks
 
-Foxcam can tell you when something is seen:
+Foxcam can tell you when something is seen. Everyone can get their own push notifications
+in the Foxcam app ([below](#your-own-notifications-web-push)); admins also set up shared
+channels:
 
 | Channel | Use it for | Image |
 |---|---|---|
-| **web push** | push notifications from Foxcam itself: the iPhone/iPad home screen app, or any browser | – |
 | **ntfy** | push notifications to your phone via [ntfy](https://ntfy.sh) (ntfy.sh or self-hosted) | ✅ attached |
 | **webhook** | Home Assistant, Node-RED, n8n, Zapier, your own code: a JSON `POST` per event | link only |
 | **Apprise** | ~100 services: Telegram, Discord, Slack, Pushover, Gotify, Signal, Matrix, e-mail, … | ✅ where supported |
@@ -70,43 +71,38 @@ notifications:
 many of them have seen the event. Each event notifies a channel at most once per trigger,
 so a second model joining an event never sends it again.
 
-## Web push
+## Your own notifications (web push)
 
-Notifications straight from Foxcam, without another app. Add a **Web push** channel (no
-settings beyond the usual filters), then on each phone, iPad or computer that should get
-them open **Settings → Notifications** and press **Turn on here** on the channel's card. The
-card lists the devices that have turned it on; **Turn off here** stops them on this one.
+Notifications straight from Foxcam to your own phone or computer, without another app. They
+are not a channel: everyone sets up their own on their **Account** page, and only gets
+events from cameras they can see (admins: all of them).
 
-Only admins see Settings. To let other users get them too, turn on **Users can turn it on**
-(`open_to_users: true`): the channel then shows up on their **Account** page, where they
-turn it on for their own devices. Each device only gets events from cameras its user can
-see, and an admin's test is held to the same rule.
+- **Turn on here** turns them on for the device you are using; do it on each device. The
+  page lists your devices (and when each was last notified); **Remove** stops one.
+- **What to notify about**: the same rules as a channel (when, cameras, profiles, labels,
+  how sure, quiet hours, cooldown), just for you. Quiet hours and the times in messages are
+  in your browser's time zone, saved with the rules.
+- **Send test** sends one to all your devices, about the latest event you can see.
 
-- **iPhone and iPad** (iOS 16.4 or later): only the home screen app can get them. In Safari
-  use Share → **Add to Home Screen**, open Foxcam from there, and turn them on in it.
-- **Android, Mac, Windows, Linux**: Chrome, Edge, Firefox and Safari can all get them, also
-  from a normal tab.
+Where it works:
+
+- **iPhone and iPad** (iOS 16.4 or later): only in the home screen app. In Safari use Share →
+  **Add to Home Screen**, open Foxcam from there, and turn them on in it.
+- **Android, Mac, Windows, Linux**: Chrome, Edge, Firefox and Safari, also in a normal tab.
 - Needs HTTPS (or `localhost`), like any web push.
 
 The text is the same as ntfy's. Tapping it opens the event in Foxcam; the "clip ready"
-notification replaces the event's first one. There is no picture: iOS doesn't show images
-in web push notifications.
+notification replaces the event's first one. There is no picture: iOS doesn't show images in
+web push notifications.
+
+Access is checked again when a notification is sent, so someone whose access to a camera was
+taken away while it waited doesn't get it. Admins see everyone's deliveries in the list under
+Settings → Notifications, but not their rules or devices.
 
 The server signs its messages with a key pair it makes on first use
 (`<data_dir>/webpush-vapid-key.pem`). Keep it with your backups: browsers subscribe to that
 key, so a new one means turning notifications on again on every device. A device that
 removed the app or blocked notifications is forgotten the next time a send to it fails.
-
-`config.yaml`:
-
-```yaml
-notifications:
-  channels:
-    - id: app
-      type: webpush
-      when: [event.new, event.clip]
-      open_to_users: true  # on users' Account pages too
-```
 
 ## ntfy
 

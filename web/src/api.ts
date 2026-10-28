@@ -721,14 +721,11 @@ export interface StorageStatus {
   last_error?: string | null;
 }
 
-export type ChannelType = "ntfy" | "webhook" | "apprise" | "webpush";
+export type ChannelType = "ntfy" | "webhook" | "apprise";
 export type NotifyTrigger = "event.new" | "event.clip";
 
-/** A notification channel as sent to the server (secrets: empty = keep stored value). */
-export interface ChannelInput {
-  id: string;
-  name: string | null;
-  type: ChannelType;
+/** Which events to notify about: a channel's, or a user's own (config.NotificationRules). */
+export interface NotificationRules {
   enabled: boolean;
   when: NotifyTrigger[];
   cameras: string[] | null;
@@ -739,6 +736,18 @@ export interface ChannelInput {
   min_agreement: number;
   quiet_hours: string | null;
   cooldown_minutes: number;
+}
+
+/** A user's own notifications; quiet hours and times in this zone (null: the server's). */
+export interface PersonalRules extends NotificationRules {
+  timezone: string | null;
+}
+
+/** A notification channel as sent to the server (secrets: empty = keep stored value). */
+export interface ChannelInput extends NotificationRules {
+  id: string;
+  name: string | null;
+  type: ChannelType;
   include_image: boolean;
   server: string;
   topic: string | null;
@@ -747,8 +756,6 @@ export interface ChannelInput {
   password: string | null;
   priority: number;
   tags: string[];
-  /** Web push: users who aren't admins can turn it on too (only their cameras). */
-  open_to_users: boolean;
   url: string | null;
   secret: string | null;
   headers: Record<string, string>;
@@ -761,30 +768,24 @@ export interface Channel extends Omit<ChannelInput, "token" | "password" | "secr
   has_token: boolean;
   has_password: boolean;
   has_secret: boolean;
-  /** Web push channels: the devices that turned it on. */
-  devices?: PushDevice[];
 }
 
+/** A device that gets the signed-in user's own notifications. */
 export interface PushDevice {
   id: number;
   name: string | null;
-  /** Who turned it on. */
-  user: string | null;
-  user_id: number | null;
   /** Matches push.ts currentEndpointId() on that device. */
   endpoint_id: string;
   created_at: string;
   last_sent_at: string | null;
 }
 
-/** The web push channels the signed-in user may turn on, with their own devices on them. */
+/** The signed-in user's own notifications: their rules and devices. */
 export interface PushOverview {
+  /** The server's public key that browsers subscribe with. */
   key: string;
-  channels: {
-    id: string;
-    name: string;
-    devices: { id: number; name: string | null; endpoint_id: string }[];
-  }[];
+  rules: PersonalRules;
+  devices: PushDevice[];
 }
 
 export interface NotificationsOverview {
@@ -792,13 +793,13 @@ export interface NotificationsOverview {
   public_url: string | null;
   timezone: string | null;
   apprise: boolean;
-  /** The server's public key that browsers subscribe with. */
-  webpush_key: string;
 }
 
 export interface Delivery {
   id: number;
   channel_id: string;
+  /** A user's own notifications (channel_id user:…): whose. */
+  user: string | null;
   event_id: number;
   camera_id: string;
   label: string | null;
@@ -1202,17 +1203,12 @@ export const api = {
   deleteChannel: (id: string) =>
     request<{ status: string }>("DELETE", `/api/notifications/channels/${encodeURIComponent(id)}`),
   push: () => request<PushOverview>("GET", "/api/push"),
-  addPushDevice: (channelId: string, body: PushSubscriptionJSON & { name: string }) =>
-    request<{ id: number; endpoint_id: string }>(
-      "POST",
-      `/api/push/channels/${encodeURIComponent(channelId)}/devices`,
-      body,
-    ),
-  removePushDevice: (channelId: string, deviceId: number) =>
-    request<{ status: string }>(
-      "DELETE",
-      `/api/push/channels/${encodeURIComponent(channelId)}/devices/${deviceId}`,
-    ),
+  savePushRules: (rules: PersonalRules) => request<PersonalRules>("PUT", "/api/push/rules", rules),
+  addPushDevice: (body: PushSubscriptionJSON & { name: string }) =>
+    request<{ id: number; endpoint_id: string }>("POST", "/api/push/devices", body),
+  removePushDevice: (deviceId: number) =>
+    request<{ status: string }>("DELETE", `/api/push/devices/${deviceId}`),
+  testPush: () => request<ProbeResult>("POST", "/api/push/test"),
   testChannel: (id: string) =>
     request<ProbeResult>("POST", `/api/notifications/channels/${encodeURIComponent(id)}/test`),
   requeue: (jobId: number) =>

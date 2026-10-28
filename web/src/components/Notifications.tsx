@@ -21,7 +21,7 @@ import {
   Send20Regular,
 } from "@fluentui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import {
   api,
@@ -29,20 +29,16 @@ import {
   type ChannelInput,
   type ChannelType,
   type Delivery,
-  type NotifyTrigger,
   type ProbeResult,
 } from "../api";
 import { percent } from "../format";
 import { ConfirmPopover } from "./ConfirmPopover";
 import { DataTable, type Column } from "./DataTable";
 import { useI18n, type MessageKey } from "../i18n";
-import { LabelPicker, useLabelSuggestions, useSuggestionList } from "./LabelPicker";
 import { CameraTag } from "./CameraSelect";
-import { ProfileTag, useProfiles } from "./ProfileSelect";
+import { ProfileTag } from "./ProfileSelect";
 import {
-  Checkbox,
   ConfigTag,
-  DateTimeInput,
   Empty,
   Fact,
   Facts,
@@ -63,36 +59,28 @@ import {
   DialogTitle,
 } from "./Drawer";
 import { CardsSkeleton } from "./Skeletons";
-import { PushToggleButton, PushToggleMessage, usePushToggle, useThisDevice } from "./PushToggle";
+import {
+  draftFromRules,
+  NotificationRulesFields,
+  rulesFromDraft,
+  TRIGGER_LABELS,
+} from "./NotificationRulesFields";
 
 const TYPE_LABELS: Record<ChannelType, MessageKey> = {
   ntfy: "notify.type.ntfy",
   webhook: "notify.type.webhook",
   apprise: "notify.type.apprise",
-  webpush: "notify.type.webpush",
 };
-/** Types that can send the detection frame (iOS web push can't show one). */
+/** Types that can send the detection frame (webhooks get a link). */
 const IMAGE_TYPES = new Set<ChannelType>(["ntfy", "apprise"]);
-const TRIGGERS: NotifyTrigger[] = ["event.new", "event.clip"];
-const TRIGGER_LABELS: Record<NotifyTrigger, MessageKey> = {
-  "event.new": "notify.on.new",
-  "event.clip": "notify.on.clip",
-};
-
 const splitList = (text: string) =>
   text
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
 
-/** Add or remove `value` from a filter list; null means "all". */
-function toggle<T>(list: T[] | null, all: T[], value: T, checked: boolean): T[] | null {
-  const next = checked ? [...(list ?? []), value] : (list ?? all).filter((x) => x !== value);
-  return next.length === 0 || next.length === all.length ? null : next;
-}
-
-/** Notification channels (ntfy, webhooks, Apprise, web push) with a test button and recent
- * deliveries. */
+/** Notification channels (ntfy, webhooks, Apprise) with a test button and recent deliveries.
+ * Everyone's own push notifications are on their Account page. */
 export function Notifications() {
   const client = useQueryClient();
   const { t, rich } = useI18n();
@@ -133,7 +121,6 @@ export function Notifications() {
           <ChannelCard
             key={ch.id}
             channel={ch}
-            pushKey={data.webpush_key}
             onEdit={() => setEditing(ch)}
             onRemove={() =>
               api
@@ -161,12 +148,10 @@ export function Notifications() {
 
 function ChannelCard({
   channel: c,
-  pushKey,
   onEdit,
   onRemove,
 }: {
   channel: Channel;
-  pushKey: string;
   onEdit: () => void;
   onRemove: () => Promise<unknown>;
 }) {
@@ -174,8 +159,6 @@ function ChannelCard({
   const [result, setResult] = useState<ProbeResult | null>(null);
   const test = useMutation({ mutationFn: () => api.testChannel(c.id), onSuccess: setResult });
   const target = c.type === "ntfy" ? `${c.server.replace(/\/$/, "")}/${c.topic}` : (c.url ?? "");
-  const thisDevice = useThisDevice();
-  const push = usePushToggle(c.id, c.devices ?? [], pushKey);
 
   return (
     <Card>
@@ -191,37 +174,14 @@ function ChannelCard({
           <span className="row wrap tags">
             <Tag>{t(TYPE_LABELS[c.type])}</Tag>
             {c.managed === "config" && <ConfigTag />}
-            {c.type === "webpush" && c.open_to_users && <Tag>{t("notify.openToUsersTag")}</Tag>}
             {!c.enabled && <Tag kind="warn">{t("notify.disabled")}</Tag>}
           </span>
         }
       />
       <Facts>
-        {c.type === "webpush" ? (
-          <Fact label={t("notify.devices")}>
-            {c.devices?.length ? (
-              <span className="chips">
-                {c.devices.map((d) => (
-                  <Tag
-                    key={d.id}
-                    kind={d.endpoint_id === thisDevice ? "brand" : undefined}
-                    title={d.user ?? undefined}
-                  >
-                    {d.endpoint_id === thisDevice
-                      ? t("notify.thisDevice", { name: d.name ?? "?" })
-                      : (d.name ?? "?")}
-                  </Tag>
-                ))}
-              </span>
-            ) : (
-              t("notify.noDevices")
-            )}
-          </Fact>
-        ) : (
-          <Fact label={t("notify.target")} className="mono">
-            {target}
-          </Fact>
-        )}
+        <Fact label={t("notify.target")} className="mono">
+          {target}
+        </Fact>
         <Fact label={t("notify.when")}>
           <span className="chips">
             {c.when.map((o) => (
@@ -288,14 +248,12 @@ function ChannelCard({
           {c.include_image && IMAGE_TYPES.has(c.type) ? t("common.yes") : t("common.no")}
         </Fact>
       </Facts>
-      {c.type === "webpush" && <PushToggleMessage push={push} />}
       {result && (
         <MessageBar intent={result.ok ? "success" : "error"}>
           <MessageBarBody>{result.ok ? t("notify.testOk") : result.detail}</MessageBarBody>
         </MessageBar>
       )}
       <CardFooter className="wrap">
-        {c.type === "webpush" && <PushToggleButton push={push} />}
         <Button
           size="small"
           icon={<Send20Regular />}
@@ -343,7 +301,8 @@ function Deliveries({ channelName }: { channelName: (id: string) => string }) {
       id: "channel",
       header: t("notify.col.channel"),
       width: 150,
-      cell: (d) => channelName(d.channel_id),
+      cell: (d) =>
+        d.user !== null ? t("notify.personalOf", { name: d.user }) : channelName(d.channel_id),
     },
     { id: "event", header: t("notify.col.event"), width: 110, cell: (d) => d.label ?? "–" },
     {
@@ -395,29 +354,10 @@ function ChannelDialog({
 }) {
   const { t } = useI18n();
   const client = useQueryClient();
-  const cameras = useQuery({ queryKey: ["cameras"], queryFn: api.cameras });
-  const profiles = useProfiles();
   const [type, setType] = useState<ChannelType>(channel?.type ?? "ntfy");
   const [id, setId] = useState(channel?.id ?? "");
   const [name, setName] = useState(channel?.name ?? "");
-  const [when, setWhen] = useState<NotifyTrigger[]>(channel?.when ?? ["event.new"]);
-  const [cams, setCams] = useState<string[] | null>(channel?.cameras ?? null);
-  const [profs, setProfs] = useState<string[] | null>(channel?.profiles ?? null);
-  const [labels, setLabels] = useState<string[]>(channel?.labels ?? []);
-  const labelData = useLabelSuggestions();
-  const profileTargets = useMemo(
-    () => ({
-      labels: [...new Set((profiles.data ?? []).flatMap((p) => p.targets))],
-      source: t("labels.profileTarget"),
-    }),
-    [profiles.data, t],
-  );
-  const labelSuggestions = useSuggestionList(labelData.data, profileTargets);
-  const [minConf, setMinConf] = useState(String(Math.round((channel?.min_confidence ?? 0) * 100)));
-  const [minAgreement, setMinAgreement] = useState(String(channel?.min_agreement ?? 1));
-  const [quietFrom, setQuietFrom] = useState(channel?.quiet_hours?.split("-")[0] ?? "");
-  const [quietTo, setQuietTo] = useState(channel?.quiet_hours?.split("-")[1] ?? "");
-  const [cooldown, setCooldown] = useState(String(channel?.cooldown_minutes ?? 0));
+  const [rules, setRules] = useState(() => draftFromRules(channel));
   const [image, setImage] = useState(channel?.include_image ?? true);
   const [enabled, setEnabled] = useState(channel?.enabled ?? true);
   const [server, setServer] = useState(channel?.server ?? "https://ntfy.sh");
@@ -425,7 +365,6 @@ function ChannelDialog({
   const [token, setToken] = useState("");
   const [priority, setPriority] = useState(String(channel?.priority ?? 3));
   const [tags, setTags] = useState(channel?.tags.join(", ") ?? "");
-  const [openToUsers, setOpenToUsers] = useState(channel?.open_to_users ?? false);
   const [url, setUrl] = useState(channel?.type === "apprise" ? "" : (channel?.url ?? ""));
   const [secret, setSecret] = useState("");
   const [headers, setHeaders] = useState(
@@ -439,14 +378,7 @@ function ChannelDialog({
     name: name.trim() || null,
     type,
     enabled,
-    when,
-    cameras: cams,
-    profiles: profs,
-    labels: labels.length ? labels : null,
-    min_confidence: Math.min(Math.max(Number(minConf) / 100, 0), 1),
-    min_agreement: Math.min(Math.max(Math.round(Number(minAgreement)) || 1, 1), 10),
-    quiet_hours: quietFrom && quietTo ? `${quietFrom}-${quietTo}` : null,
-    cooldown_minutes: Math.max(Number(cooldown) || 0, 0),
+    ...rulesFromDraft(rules),
     include_image: image,
     server: server.trim() || "https://ntfy.sh",
     topic: topic.trim() || null,
@@ -455,7 +387,6 @@ function ChannelDialog({
     password: null,
     priority: Number(priority),
     tags: splitList(tags),
-    open_to_users: openToUsers,
     url: url.trim() || null,
     secret: secret || null,
     headers: Object.fromEntries(
@@ -473,8 +404,6 @@ function ChannelDialog({
       onClose();
     },
   });
-  const camIds = (cameras.data ?? []).map((c) => c.id);
-  const profIds = (profiles.data ?? []).map((p) => p.id);
   const keepHint = channel ? t("notify.keepSecret") : undefined;
 
   return (
@@ -575,20 +504,6 @@ function ChannelDialog({
                   </Field>
                 </>
               )}
-              {type === "webpush" && (
-                <>
-                  <MessageBar intent="info">
-                    <MessageBarBody>{t("notify.webpushHint")}</MessageBarBody>
-                  </MessageBar>
-                  <Field hint={t("notify.openToUsersHint")}>
-                    <Switch
-                      label={t("notify.openToUsers")}
-                      checked={openToUsers}
-                      onChange={(_, d) => setOpenToUsers(d.checked)}
-                    />
-                  </Field>
-                </>
-              )}
               {type === "apprise" && (
                 <>
                   {!appriseInstalled && (
@@ -610,103 +525,7 @@ function ChannelDialog({
                 </>
               )}
 
-              <Field label={t("notify.when")}>
-                <div className="row wrap">
-                  {TRIGGERS.map((tr) => (
-                    <Checkbox
-                      key={tr}
-                      label={t(TRIGGER_LABELS[tr])}
-                      checked={when.includes(tr)}
-                      onChange={(_, d) =>
-                        setWhen((cur) => (d.checked ? [...cur, tr] : cur.filter((x) => x !== tr)))
-                      }
-                    />
-                  ))}
-                </div>
-              </Field>
-              <Field label={t("nav.cameras")} hint={t("notify.allHint")}>
-                <div className="row wrap">
-                  {(cameras.data ?? []).map((c) => (
-                    <Checkbox
-                      key={c.id}
-                      label={c.name}
-                      checked={cams === null || cams.includes(c.id)}
-                      onChange={(_, d) => setCams(toggle(cams, camIds, c.id, d.checked === true))}
-                    />
-                  ))}
-                </div>
-              </Field>
-              {profIds.length > 1 && (
-                <Field label={t("profiles.title")}>
-                  <div className="row wrap">
-                    {(profiles.data ?? []).map((p) => (
-                      <Checkbox
-                        key={p.id}
-                        label={p.display_name}
-                        checked={profs === null || profs.includes(p.id)}
-                        onChange={(_, d) =>
-                          setProfs(toggle(profs, profIds, p.id, d.checked === true))
-                        }
-                      />
-                    ))}
-                  </div>
-                </Field>
-              )}
-              <Field label={t("notify.labels")} hint={t("notify.labelsHint")}>
-                <LabelPicker
-                  value={labels}
-                  onChange={setLabels}
-                  suggestions={labelSuggestions}
-                  placeholder="fox"
-                  ariaLabel={t("notify.labels")}
-                />
-              </Field>
-              <Field label={t("notify.notifyFrom")} hint={t("notify.notifyFromHint")}>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={minConf}
-                  contentAfter="%"
-                  onChange={(_, d) => setMinConf(d.value)}
-                />
-              </Field>
-              <Field label={t("notify.minAgreement")} hint={t("notify.minAgreementHint")}>
-                <Input
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={minAgreement}
-                  onChange={(_, d) => setMinAgreement(d.value)}
-                />
-              </Field>
-              <Field label={t("notify.quietHours")} hint={t("notify.quietHint")}>
-                <div className="row wrap">
-                  <DateTimeInput
-                    type="time"
-                    value={quietFrom}
-                    placeholder={t("notify.quietFrom")}
-                    aria-label={t("notify.quietFrom")}
-                    onChange={setQuietFrom}
-                  />
-                  <span>–</span>
-                  <DateTimeInput
-                    type="time"
-                    value={quietTo}
-                    placeholder={t("notify.quietTo")}
-                    aria-label={t("notify.quietTo")}
-                    onChange={setQuietTo}
-                  />
-                </div>
-              </Field>
-              <Field label={t("notify.cooldownMinutes")} hint={t("notify.cooldownHint")}>
-                <Input
-                  type="number"
-                  min={0}
-                  value={cooldown}
-                  onChange={(_, d) => setCooldown(d.value)}
-                />
-              </Field>
+              <NotificationRulesFields value={rules} onChange={setRules} />
               {IMAGE_TYPES.has(type) && (
                 <Switch
                   label={t("notify.includeImage")}
@@ -730,7 +549,7 @@ function ChannelDialog({
               <Button
                 type="submit"
                 appearance="primary"
-                disabled={!id.trim() || when.length === 0 || save.isPending}
+                disabled={!id.trim() || rules.when.length === 0 || save.isPending}
               >
                 {t("common.save")}
               </Button>

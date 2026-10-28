@@ -427,21 +427,9 @@ NOTIFY_TRIGGERS = ("event.new", "event.clip")
 _HHMM = r"([01]\d|2[0-3]):[0-5]\d"
 
 
-class ChannelConfig(BaseModel):
-    """Where to send event notifications (see docs/NOTIFICATIONS.md).
+class NotificationRules(BaseModel):
+    """Which events to notify about: shared by channels and each user's own notifications."""
 
-    - ``ntfy``: push via an ntfy server (ntfy.sh or self-hosted), image attached.
-    - ``webhook``: POST JSON to any URL (Home Assistant, n8n, your code), optionally signed.
-    - ``apprise``: any of ~100 services (Telegram, Discord, Pushover, Gotify, Slack, e-mail,
-      …) through an Apprise URL. Needs the ``notify`` extra.
-    - ``webpush``: straight to the web app (home screen app on iOS, any browser elsewhere);
-      each device turns it on in Settings → Notifications (admins) or on the Account page
-      (users, with ``open_to_users``). No picture.
-    """
-
-    id: str = Field(pattern=PROFILE_ID, max_length=40)
-    name: str | None = None
-    type: Literal["ntfy", "webhook", "apprise", "webpush"]
     enabled: bool = True
     # event.new = as soon as an event starts; event.clip = when its clip is ready.
     # (Not called "on": YAML reads a bare `on:` key as the boolean true.)
@@ -457,6 +445,21 @@ class ChannelConfig(BaseModel):
     quiet_hours: str | None = Field(default=None, pattern=rf"^{_HHMM}-{_HHMM}$")
     # At most one notification per camera within this many minutes.
     cooldown_minutes: float = Field(default=0, ge=0)
+
+
+class ChannelConfig(NotificationRules):
+    """A shared place to send event notifications (see docs/NOTIFICATIONS.md). Each user's
+    own push notifications are not channels: see notify.py (personal notifications).
+
+    - ``ntfy``: push via an ntfy server (ntfy.sh or self-hosted), image attached.
+    - ``webhook``: POST JSON to any URL (Home Assistant, n8n, your code), optionally signed.
+    - ``apprise``: any of ~100 services (Telegram, Discord, Pushover, Gotify, Slack, e-mail,
+      …) through an Apprise URL. Needs the ``notify`` extra.
+    """
+
+    id: str = Field(pattern=PROFILE_ID, max_length=40)
+    name: str | None = None
+    type: Literal["ntfy", "webhook", "apprise"]
     # Attach the frame with the detection box (censor areas blacked out).
     include_image: bool = True
     # ntfy
@@ -467,9 +470,6 @@ class ChannelConfig(BaseModel):
     password: str | None = None
     priority: int = Field(default=3, ge=1, le=5)
     tags: list[str] = []
-    # webpush: users who aren't admins can turn it on for their own devices too; each device
-    # only gets events from cameras its user can see.
-    open_to_users: bool = False
     # webhook (url) / apprise (url)
     url: str | None = None
     # webhook: HMAC-SHA256 of the body in X-Foxcam-Signature: sha256=<hex>
@@ -498,6 +498,15 @@ def _time_zone(name: str | None) -> str | None:
     except (ZoneInfoNotFoundError, ValueError):
         raise ValueError(f"unknown time zone '{name}' (e.g. Europe/Stockholm)") from None
     return name
+
+
+class PersonalRules(NotificationRules):
+    """One user's own notifications (web push to their devices), set on their Account page.
+    Only cameras they can see, whatever the filters say."""
+
+    # Quiet hours and the times in messages: the zone of the browser the rules were saved
+    # in. None = notifications.timezone.
+    timezone: Annotated[str | None, AfterValidator(_time_zone)] = None
 
 
 class NotificationsConfig(BaseModel):

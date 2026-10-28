@@ -1,12 +1,13 @@
-"""Web push for everyone signed in: the channels you may turn on, and your devices on them.
+"""Your own notifications: web push to your devices, with your own rules.
 
-Admins manage channels in api_notify.py; here anyone turns a web push channel on or off for
-the device they are using (admins on every web push channel, others on the ones that are
-open to users). Each device only gets events from cameras its user can see (notify.py).
+Anyone signed in turns notifications on for the device they are using and chooses which
+events (Account page). Admins only manage the shared channels (api_notify.py); they don't
+see or change anyone's own notifications. Each user only gets cameras they can see.
 """
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,7 +15,7 @@ from pydantic import BaseModel, Field
 
 from .. import notify, webpush
 from ..accounts import Principal
-from ..config import ChannelConfig, Settings
+from ..config import Settings
 from .deps import principal, settings_dep
 
 router = APIRouter(prefix="/api/push", tags=["notifications"])
@@ -28,44 +29,50 @@ class DeviceIn(BaseModel):
     name: str | None = Field(default=None, max_length=80)
 
 
-def _channel(settings: Settings, p: Principal, channel_id: str) -> ChannelConfig:
-    ch = next((c for c in notify.push_channels(settings, p.is_admin) if c.id == channel_id),
-              None)
-    if ch is None:
-        raise HTTPException(404, "unknown channel")
-    return ch
+def _owner(p: Principal) -> str:
+    return notify.owner_key(p.user_id)
+
+
+def _error(e: notify.NotifyError) -> HTTPException:
+    return HTTPException(400, str(e))
 
 
 @router.get("")
 def overview(p: Principal = Depends(principal),
              settings: Settings = Depends(settings_dep)) -> dict[str, Any]:
-    channels = []
-    for ch in notify.push_channels(settings, p.is_admin):
-        mine = [d for d in notify.devices(ch.id) if d["user_id"] == p.user_id]
-        channels.append({"id": ch.id, "name": ch.display_name,
-                         "devices": [{k: d[k] for k in ("id", "name", "endpoint_id")}
-                                     for d in mine]})
-    return {"key": webpush.public_key(settings), "channels": channels}
+    return {"key": webpush.public_key(settings),
+            "rules": notify.personal_rules(_owner(p)).model_dump(),
+            "devices": notify.devices(_owner(p))}
 
 
-@router.post("/channels/{channel_id}/devices", status_code=201)
-def add_device(channel_id: str, body: DeviceIn, p: Principal = Depends(principal),
-               settings: Settings = Depends(settings_dep)) -> dict:
-    ch = _channel(settings, p, channel_id)
+@router.put("/rules")
+def save_rules(body: dict[str, Any], p: Principal = Depends(principal)) -> dict[str, Any]:
     try:
-        device_id = notify.add_device(ch, body.endpoint, body.keys.get("p256dh", ""),
-                                      body.keys.get("auth", ""), body.name, p.user_id)
+        return notify.save_personal_rules(_owner(p), body).model_dump()
     except notify.NotifyError as e:
-        raise HTTPException(400, str(e)) from e
+        raise _error(e) from e
+
+
+@router.post("/devices", status_code=201)
+def add_device(body: DeviceIn, p: Principal = Depends(principal)) -> dict:
+    try:
+        device_id = notify.add_device(_owner(p), body.endpoint, body.keys.get("p256dh", ""),
+                                      body.keys.get("auth", ""), body.name)
+    except notify.NotifyError as e:
+        raise _error(e) from e
     return {"id": device_id, "endpoint_id": notify.endpoint_id(body.endpoint)}
 
 
-@router.delete("/channels/{channel_id}/devices/{device_id}")
-def remove_device(channel_id: str, device_id: int, p: Principal = Depends(principal),
-                  settings: Settings = Depends(settings_dep)) -> dict[str, str]:
-    _channel(settings, p, channel_id)
+@router.delete("/devices/{device_id}")
+def remove_device(device_id: int, p: Principal = Depends(principal)) -> dict[str, str]:
     try:
-        notify.remove_device(channel_id, device_id, None if p.is_admin else p.user_id)
+        notify.remove_device(_owner(p), device_id)
     except notify.NotifyError as e:
-        raise HTTPException(400, str(e)) from e
+        raise _error(e) from e
     return {"status": "ok"}
+
+
+@router.post("/test")
+async def test(p: Principal = Depends(principal),
+               settings: Settings = Depends(settings_dep)) -> dict:
+    return await asyncio.to_thread(notify.test_personal, settings, _owner(p))

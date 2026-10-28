@@ -76,10 +76,11 @@ anything else, and keep the clips.
   as viewer, editor or owner, and API keys with scopes for scripts and Home Assistant.
 - **Tapo cloud cameras.** Stream cameras you can't reach on the LAN (say, at the summer
   house) through the TP-Link cloud, kept alive with the same heartbeats the Tapo app sends.
-- **Notifications and webhooks.** Push to your phone from Foxcam itself (web push, also the
-  iOS home screen app) or with ntfy, call Home Assistant or any webhook (HMAC-signed JSON),
-  or notify Telegram, Discord, Pushover and ~100 more via Apprise, with an image of the
-  detection, quiet hours and per-camera cooldown.
+- **Notifications and webhooks.** Everyone gets their own push notifications from Foxcam
+  itself (web push, also the iOS home screen app), with their own rules and only their
+  cameras. Shared channels push with ntfy, call Home Assistant or any webhook (HMAC-signed
+  JSON), or notify Telegram, Discord, Pushover and ~100 more via Apprise, with an image of
+  the detection, quiet hours and per-camera cooldown.
 - **Optional S3.** Copy clips and recordings to AWS S3, Cloudflare R2, Backblaze B2,
   MinIO…, served through short-lived signed links.
 
@@ -311,7 +312,7 @@ and more without a restart; resetting a value brings back config.yaml's
 | `retention` | how long to keep footage, events and unprocessed segments; disk cap |
 | `compaction` | joining finished segments into hourly files (period, delay, on/off) |
 | `storage.s3` | S3-compatible bucket for clips and recordings |
-| `notifications` | web push / ntfy / webhook / Apprise channels, filters, quiet hours ([guide](docs/NOTIFICATIONS.md)) |
+| `notifications` | ntfy / webhook / Apprise channels, filters, quiet hours ([guide](docs/NOTIFICATIONS.md)) |
 | `public_url` | how you open the UI; used for links in notifications |
 | `auth` | accounts: registration (invite / open / closed), admin e-mails, OAuth providers ([guide](docs/AUTH.md)) |
 | `location` | coordinates (sun elevation) and country (SpeciesNet geofencing) |
@@ -358,7 +359,7 @@ encoders work here), `worker-token`, `remove-cameras` and `reset`.
 | [Worker protocol](docs/WORKER_PROTOCOL.md) | HTTP API for workers and SaaS adapters |
 | [Models](docs/MODELS.md) | detection models compared on fox footage |
 | [Hardware encoding](docs/HARDWARE.md) | Quick Sync, NVENC, AMD, VideoToolbox; Docker GPU setup |
-| [Notifications](docs/NOTIFICATIONS.md) | web push, ntfy, webhooks (payload, signatures, Home Assistant) and Apprise |
+| [Notifications](docs/NOTIFICATIONS.md) | your own web push, ntfy, webhooks (payload, signatures, Home Assistant) and Apprise |
 | [Authentication](docs/AUTH.md) | accounts, OAuth, camera sharing and what is protected how |
 | [Roadmap](docs/ROADMAP.md) | planned work |
 
