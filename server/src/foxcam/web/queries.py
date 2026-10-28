@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+import zlib
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any
@@ -531,8 +532,7 @@ def events(camera_id: str | None = None, limit: int = 100,
             "detectors": e.detectors or [], "agreement": e.agreement or 1,
             "confirmed": e.confirmed is not False,
             "clip_url": f"/api/events/{e.id}/clip" if e.clip_path or e.clip_remote_key else None,
-            "thumb_url": f"/api/events/{e.id}/thumb" if e.thumb_path or e.thumb_remote_key
-            else None,
+            "thumb_url": event_thumb_url(e),
             # Drawn over the thumbnail (None: none, or burned into an older one).
             "thumb_box": rect(e.thumb_box),
             "remote": e.clip_remote_key is not None,
@@ -543,6 +543,16 @@ def events(camera_id: str | None = None, limit: int = 100,
 
 #: Decimals of the box coordinates (0..1) sent to the web app: under a pixel at 4K.
 BOX_DECIMALS = 4
+
+
+def event_thumb_url(e: Event) -> str | None:
+    """An event's thumbnail, versioned by its box: the picture is made again when a better
+    detection comes in (and event ids are reused when events are rebuilt), and a URL that
+    stayed the same would keep showing the old picture under the new box."""
+    if not (e.thumb_path or e.thumb_remote_key):
+        return None
+    url = f"/api/events/{e.id}/thumb"
+    return f"{url}?v={zlib.crc32(repr(rect(e.thumb_box)).encode()):08x}" if e.thumb_box else url
 
 
 def rect(box: list[float] | None) -> list[float] | None:
