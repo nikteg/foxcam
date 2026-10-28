@@ -94,12 +94,14 @@ export function BulkBar<T>({
   selection,
   items,
   getId,
+  isFavorite,
 }: {
   kind: "detections" | "events";
   selection: Selection<T>;
   /** The whole list, in screen order ("Select all"). */
   items: T[];
   getId: (item: T) => number;
+  isFavorite: (item: T) => boolean;
 }) {
   const { t } = useI18n();
   const phone = useMediaQuery(PHONE);
@@ -119,6 +121,8 @@ export function BulkBar<T>({
     );
   };
   const selectable = items.filter(selection.canSelect);
+  // All picked ones starred: the star button takes them off; some: the menu can too.
+  const starred = chosen.filter(isFavorite).length;
   const mutation = useMutation({
     mutationFn: ({ changes }: { changes: BulkChanges; done: MessageKey }) =>
       api.bulk(kind, chosen.map(getId), changes),
@@ -154,9 +158,13 @@ export function BulkBar<T>({
       {action(t("feedback.wrong"), <DismissCircle20Regular />, () =>
         apply({ feedback: false }, "bulk.markedWrong"),
       )}
-      {action(t("favorite.label"), <Star20Regular />, () =>
-        apply({ favorite: true }, "bulk.starred"),
-      )}
+      {starred === chosen.length
+        ? action(t("favorite.unstar"), <StarOff20Regular />, () =>
+            apply({ favorite: false }, "bulk.unstarred"),
+          )
+        : action(t("favorite.label"), <Star20Regular />, () =>
+            apply({ favorite: true }, "bulk.starred"),
+          )}
       <Menu positioning="above-end">
         <MenuTrigger disableButtonEnhancement>
           <Button
@@ -178,12 +186,14 @@ export function BulkBar<T>({
                 {t("bulk.selectAll", { count: selectable.length })}
               </MenuItem>
             )}
-            <MenuItem
-              icon={<StarOff20Regular />}
-              onClick={() => apply({ favorite: false }, "bulk.unstarred")}
-            >
-              {t("favorite.remove")}
-            </MenuItem>
+            {starred > 0 && starred < chosen.length && (
+              <MenuItem
+                icon={<StarOff20Regular />}
+                onClick={() => apply({ favorite: false }, "bulk.unstarred")}
+              >
+                {t("favorite.remove")}
+              </MenuItem>
+            )}
             <MenuItem
               icon={<Eraser20Regular />}
               onClick={() => apply({ feedback: null }, "bulk.feedbackCleared")}

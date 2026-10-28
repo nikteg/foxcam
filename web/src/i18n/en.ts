@@ -61,6 +61,7 @@ export const en = {
   "favorite.add": "Add to favorites",
   "favorite.remove": "Remove from favorites",
   "favorite.filter": "Favorites",
+  "favorite.unstar": "Unfavorite",
   "col.favorite": "Favorite",
   "bulk.toolbar": "Selected items",
   "bulk.selected": "{count} selected",

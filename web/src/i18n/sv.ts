@@ -62,6 +62,7 @@ export const sv: Record<MessageKey, string> = {
   "favorite.add": "Lägg till i favoriter",
   "favorite.remove": "Ta bort från favoriter",
   "favorite.filter": "Favoriter",
+  "favorite.unstar": "Ta bort favorit",
   "col.favorite": "Favorit",
   "bulk.toolbar": "Markerade",
   "bulk.selected": "{count} markerade",

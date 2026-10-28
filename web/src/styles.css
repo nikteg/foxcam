@@ -2284,6 +2284,31 @@ h2.panel-heading {
   color: var(--colorPaletteMarigoldForeground1);
   opacity: 0.7;
 }
+/* Fluent shows a pressed toggle with a gray background (and a thick border): a starred
+   star looks like an unstarred one, except for the star itself. */
+.fui-ToggleButton.favorite-star.favorite-on:enabled {
+  background: var(--colorSubtleBackground);
+}
+.fui-ToggleButton.favorite-star.favorite-on:enabled:hover {
+  background: var(--colorSubtleBackgroundHover);
+}
+.fui-ToggleButton.favorite-star.favorite-on:enabled:hover:active {
+  background: var(--colorSubtleBackgroundPressed);
+}
+.fui-ToggleButton.favorite-star.labelled.favorite-on:enabled {
+  background: var(--colorNeutralBackground1);
+  border-color: var(--colorNeutralStroke1);
+  border-width: var(--strokeWidthThin);
+  color: var(--colorNeutralForeground1);
+}
+.fui-ToggleButton.favorite-star.labelled.favorite-on:enabled:hover {
+  background: var(--colorNeutralBackground1Hover);
+  border-color: var(--colorNeutralStroke1Hover);
+}
+.fui-ToggleButton.favorite-star.labelled.favorite-on:enabled:hover:active {
+  background: var(--colorNeutralBackground1Pressed);
+  border-color: var(--colorNeutralStroke1Pressed);
+}
 
 /* Bulk selection (components/Bulk.tsx). Picked rows and cards: the brand's light tint. */
 .data-table div.dt-row.checked {

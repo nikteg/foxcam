@@ -278,6 +278,7 @@ export function DetectionList() {
           selection={selection}
           items={detections.data}
           getId={(d) => d.id}
+          isFavorite={(d) => d.favorite}
         />
       )}
     </>

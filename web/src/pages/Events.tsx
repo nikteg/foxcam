@@ -157,7 +157,13 @@ function EventList() {
       <QueryState error={events.error} loading={events.isPending} skeleton={<CardsSkeleton />} />
       {events.data && <EventsGrid events={events.data} byDay selection={selection} />}
       {events.data && (
-        <BulkBar kind="events" selection={selection} items={events.data} getId={(e) => e.id} />
+        <BulkBar
+          kind="events"
+          selection={selection}
+          items={events.data}
+          getId={(e) => e.id}
+          isFavorite={(e) => e.favorite}
+        />
       )}
     </>
   );

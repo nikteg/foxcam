@@ -40,7 +40,10 @@ export function FavoriteStar({
     <ToggleButton
       size={withLabel ? "medium" : "small"}
       appearance={withLabel ? "secondary" : "subtle"}
-      className="favorite-star"
+      // Starred: only the star turns yellow (styles.css), no "pressed" gray background.
+      className={["favorite-star", withLabel && "labelled", on && "favorite-on"]
+        .filter(Boolean)
+        .join(" ")}
       checked={on}
       icon={on ? <Star20Filled className="star-icon" /> : <Star20Regular />}
       disabled={!canLabel(cameraId)}
