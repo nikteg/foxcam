@@ -172,7 +172,7 @@ export function CameraCard({
           </>
         ) : (
           <>
-            <Fact label={t("camera.viewers")}>{c.readers}</Fact>
+            <Fact label={t("camera.viewers")}>{c.viewers}</Fact>
           </>
         )}
       </Facts>

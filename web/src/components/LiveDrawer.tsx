@@ -1,10 +1,11 @@
 // Live view of one camera in a wide drawer (opened from a camera card's picture), with the
-// low-data switch and the HLS fallback in the title row.
+// low-data switch and the HLS fallback in the title row, and the stream's facts under it.
 import { Button, Switch } from "@fluentui/react-components";
 import { Open20Regular } from "@fluentui/react-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import type { Camera } from "../api";
+import type { Camera, LiveStream } from "../api";
+import { decimal, duration } from "../format";
 import { useI18n } from "../i18n";
 import {
   CloseActions,
@@ -14,7 +15,7 @@ import {
   DialogSurface,
   DialogTitle,
 } from "./Drawer";
-import { Tag } from "./ui";
+import { Fact, Facts, NoValue, Tag, Time } from "./ui";
 
 const LOW_DATA_KEY = "foxcam.live.lowData";
 
@@ -104,10 +105,71 @@ export function LiveDrawer({
             ) : (
               <div className="live-frame offline">{t("live.offline")}</div>
             )}
+            <LiveFacts camera={c} stream={(low && c.low_stream) || c.stream} />
           </DialogContent>
           <CloseActions />
         </DialogBody>
       </DialogSurface>
     </Dialog>
+  );
+}
+
+/** The current time, again every second (a running "online for"). */
+function useNow(): number {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
+/** 2400 -> "2.4 Mbit/s", 850 -> "850 kbit/s". */
+function bitrate(kbit: number): string {
+  return kbit >= 1000 ? `${decimal(kbit / 1000)} Mbit/s` : `${Math.round(kbit)} kbit/s`;
+}
+
+/** What the camera is sending right now (the stream being watched), and its recent events. */
+function LiveFacts({ camera: c, stream }: { camera: Camera; stream: LiveStream | null }) {
+  const { t } = useI18n();
+  const now = useNow();
+  return (
+    <Facts>
+      {c.online && (
+        <>
+          <Fact label={t("live.onlineFor")}>
+            {c.online_since ? (
+              duration((now - new Date(c.online_since).getTime()) / 1000)
+            ) : (
+              <NoValue />
+            )}
+          </Fact>
+          <Fact label={t("live.stream")}>
+            {stream && (stream.codecs.length > 0 || stream.width) ? (
+              <span className="chips">
+                {stream.width && stream.height && (
+                  <Tag>
+                    {stream.width} × {stream.height}
+                  </Tag>
+                )}
+                {stream.codecs.map((codec) => (
+                  <Tag key={codec}>{codec}</Tag>
+                ))}
+              </span>
+            ) : (
+              <NoValue />
+            )}
+          </Fact>
+          <Fact label={t("live.bitrate")}>
+            {stream?.bitrate_kbit != null ? bitrate(stream.bitrate_kbit) : <NoValue />}
+          </Fact>
+        </>
+      )}
+      <Fact label={t("camera.viewers")}>{c.viewers}</Fact>
+      <Fact label={t("live.events24h")}>{c.events_24h}</Fact>
+      <Fact label={t("live.lastEvent")}>
+        <Time iso={c.last_event_at} relative />
+      </Fact>
+    </Facts>
   );
 }

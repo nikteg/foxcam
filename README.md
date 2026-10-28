@@ -69,7 +69,8 @@ anything else, and keep the clips.
   cards (Shift for a range) and mark them correct, wrong or favorite at once, or run
   detection again on their recordings.
 - **A UI for every screen.** Live view (WebRTC/HLS, with a ~480p *low data* mode for
-  mobile connections), events, detections, recordings, worker queue, camera management and
+  mobile connections, and the stream's uptime, resolution, codecs, bitrate, viewers and
+  recent events under it), events, detections, recordings, worker queue, camera management and
   settings, on phone, tablet and desktop, light or dark, in English and Swedish. On an
   iPhone or iPad, add it to the home screen and it runs full screen like an app, with a
   bottom tab bar, a refresh button and downloads handed to Safari.

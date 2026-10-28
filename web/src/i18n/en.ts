@@ -213,6 +213,11 @@ export const en = {
   "live.lowDataHint":
     "Watch a ~480p stream that uses about a tenth of the bandwidth. It is transcoded on the server only while you watch.",
   "live.lowDataTag": "WebRTC 480p",
+  "live.onlineFor": "Online for",
+  "live.stream": "Stream",
+  "live.bitrate": "Bitrate",
+  "live.events24h": "Events (24 h)",
+  "live.lastEvent": "Latest event",
 
   // Events
   "events.openDetails": "Details of {label}",

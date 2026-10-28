@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import zlib
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import case, exists, func, select, true
@@ -15,6 +16,7 @@ from .. import recording
 from ..accounts import Principal
 from ..config import Settings
 from ..db import session_scope
+from ..mediamtx import low_path
 from ..models import (
     Archive,
     CameraState,
@@ -93,6 +95,7 @@ def cameras(settings: Settings, live: dict[str, dict[str, Any]],
             p: Principal) -> list[dict[str, Any]]:
     """The cameras `p` may see, with the user's role on each."""
     out = []
+    recent = _recent_events()
     with session_scope() as s:
         for cam in settings.all_cameras(include_disabled=True):
             if not p.can(cam.id):
@@ -100,6 +103,7 @@ def cameras(settings: Settings, live: dict[str, dict[str, Any]],
             last = s.scalars(select(Segment).where(Segment.camera_id == cam.id)
                              .order_by(Segment.start_at.desc()).limit(1)).first()
             path = live.get(cam.id, {})
+            events_24h, last_event = recent.get(cam.id, (0, None))
             out.append({
                 "id": cam.id, "name": cam.display_name, "source": cam.source.type,
                 "source_config": _public_source(cam.source.model_dump()),
@@ -111,10 +115,12 @@ def cameras(settings: Settings, live: dict[str, dict[str, Any]],
                 **_low_urls(settings, cam.id),
                 "segment_seconds": settings.segment_seconds_for(cam.id),
                 "online": bool(path.get("ready")),
-                "online_since": path.get("readyTime"),
-                "readers": len(path.get("readers") or []),
-                "bytes_received": path.get("bytesReceived"),
-                "tracks": path.get("tracks") or [],
+                "online_since": _mediamtx_time(path.get("readyTime")),
+                "viewers": sum(_viewers(live.get(name)) for name in (cam.id, low_path(cam.id))),
+                "stream": _stream(path),
+                "low_stream": _stream(live.get(low_path(cam.id))),
+                "events_24h": events_24h,
+                "last_event_at": iso(last_event),
                 "last_segment_at": iso(last.start_at) if last else None,
                 "last_is_night": last.is_night if last else None,
                 "profiles": [p.id for p in camera_profiles(settings, cam.id)],
@@ -123,6 +129,56 @@ def cameras(settings: Settings, live: dict[str, dict[str, Any]],
                 **camera_state(cam.id),
             })
     return out
+
+
+def _recent_events() -> dict[str, tuple[int, datetime | None]]:
+    """Per camera: its events in the last 24 hours and when the latest one ended, events
+    marked wrong left out (like the Status page)."""
+    wrong, correct = _feedback()
+    since = utcnow() - timedelta(hours=24)
+    with session_scope() as s:
+        rows = s.execute(select(Event.camera_id,
+                                func.coalesce(func.sum(case((Event.last_ts >= since, 1),
+                                                            else_=0)), 0),
+                                func.max(Event.last_ts))
+                         .where(~(wrong & ~correct)).group_by(Event.camera_id)).all()
+    return {camera_id: (n, last) for camera_id, n, last in rows}
+
+
+def _mediamtx_time(value: str | None) -> str | None:
+    """MediaMTX's times (local, with an offset, nanoseconds) as the API's UTC."""
+    if not value:
+        return None
+    try:
+        # Microseconds are enough (and all older Pythons take).
+        t = datetime.fromisoformat(re.sub(r"(\.\d{6})\d+", r"\1", value))
+    except ValueError:
+        return None
+    if t.tzinfo is not None:
+        t = t.astimezone(UTC).replace(tzinfo=None)
+    return iso(t)
+
+
+# Readers that are people watching. RTSP readers are left out: those are the server's own
+# (the low-data transcode, processing), and an HLS muxer counts once however many watch.
+VIEWER_READERS = {"webRTCSession", "hlsMuxer"}
+
+
+def _viewers(path: dict[str, Any] | None) -> int:
+    return sum(1 for r in (path or {}).get("readers") or [] if r.get("type") in VIEWER_READERS)
+
+
+def _stream(path: dict[str, Any] | None) -> dict[str, Any] | None:
+    """What a live path carries: codecs, picture size, bitrate (mediamtx.py); None while
+    nothing is published on it."""
+    if not path or not path.get("ready"):
+        return None
+    tracks = path.get("tracks2") or [{"codec": c} for c in path.get("tracks") or []]
+    video = next((t.get("codecProps") or {} for t in tracks
+                  if (t.get("codecProps") or {}).get("width")), {})
+    return {"codecs": [t.get("codec") for t in tracks if t.get("codec")],
+            "width": video.get("width"), "height": video.get("height"),
+            "bitrate_kbit": path.get("bitrate_kbit")}
 
 
 def _recording(settings: Settings, cam) -> dict[str, Any]:

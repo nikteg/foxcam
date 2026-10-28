@@ -215,6 +215,11 @@ export const sv: Record<MessageKey, string> = {
   "live.lowDataHint":
     "Visa en ström i ~480p som drar ungefär en tiondel av bandbredden. Den kodas om på servern bara medan du tittar.",
   "live.lowDataTag": "WebRTC 480p",
+  "live.onlineFor": "Uppkopplad i",
+  "live.stream": "Ström",
+  "live.bitrate": "Bithastighet",
+  "live.events24h": "Händelser (24 h)",
+  "live.lastEvent": "Senaste händelse",
 
   // Händelser
   "events.openDetails": "Detaljer för {label}",

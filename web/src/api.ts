@@ -20,10 +20,16 @@ export interface Camera {
   hls_low_url: string | null;
   segment_seconds: number;
   online: boolean;
+  /** UTC; when the live stream last came up. */
   online_since: string | null;
-  readers: number;
-  bytes_received: number | null;
-  tracks: string[];
+  /** People watching live (WebRTC sessions; HLS counts once), main and low-data streams. */
+  viewers: number;
+  /** The live stream (null while offline), and the low-data one while someone watches it. */
+  stream: LiveStream | null;
+  low_stream: LiveStream | null;
+  /** Events in the last 24 hours, and when the latest one ended (wrong ones left out). */
+  events_24h: number;
+  last_event_at: string | null;
   last_segment_at: string | null;
   last_is_night: boolean | null;
   private: boolean;
@@ -51,6 +57,15 @@ export interface Camera {
   /** Where the camera is, for the sun; null = the location in Settings. */
   latitude: number | null;
   longitude: number | null;
+}
+
+export interface LiveStream {
+  /** e.g. ["H264", "Opus"]. */
+  codecs: string[];
+  width: number | null;
+  height: number | null;
+  /** Measured between the server's last two looks; null until there are two. */
+  bitrate_kbit: number | null;
 }
 
 /** The sun over a camera's last days, and its target detections then (choosing a limit). */

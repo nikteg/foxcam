@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import re
 import shlex
+import time
 from typing import Any
 
 import httpx
@@ -22,6 +23,11 @@ log = logging.getLogger(__name__)
 # MediaMTX writes local time; %z (e.g. +0200) makes the name unambiguous. TZ=UTC is not
 # enough: Go ignores TZ on Windows.
 RECORD_NAME = "%Y-%m-%d_%H-%M-%S-%f%z"
+
+# A path's bitrate is measured between two control-API calls at least this far apart (closer
+# ones measure noise) and at most this far (further apart: an average, not "now").
+BITRATE_MIN_SECONDS = 2.0
+BITRATE_MAX_SECONDS = 60.0
 
 
 def _record_conf(settings: Settings, cam: CameraConfig) -> dict[str, Any]:
@@ -98,6 +104,9 @@ class MediaMtx:
         # The control API needs the internal login too (mediamtx_auth.py).
         self.client = httpx.AsyncClient(base_url=settings.mediamtx.api_url, timeout=5,
                                         auth=mediamtx_auth.api_auth(settings))
+        # Per path: the last (monotonic time, bytes received) sample and the kbit/s from it.
+        self._samples: dict[str, tuple[float, int]] = {}
+        self._bitrates: dict[str, float] = {}
 
     async def aclose(self) -> None:
         await self.client.aclose()
@@ -136,4 +145,22 @@ class MediaMtx:
         except httpx.HTTPError as e:
             log.debug("mediamtx unreachable: %s", e)
             return {}
-        return {item["name"]: item for item in r.json().get("items", [])}
+        now = time.monotonic()
+        items = {item["name"]: item for item in r.json().get("items", [])}
+        for name, item in items.items():
+            received = item.get("inboundBytes", item.get("bytesReceived"))
+            item["bitrate_kbit"] = (self._bitrate(name, received, now)
+                                    if item.get("ready") and received is not None else None)
+        return items
+
+    def _bitrate(self, name: str, received: int, now: float) -> float | None:
+        """kbit/s received on a path since the previous sample; None until there is one."""
+        prev = self._samples.get(name)
+        if prev is not None and now - prev[0] < BITRATE_MIN_SECONDS and received >= prev[1]:
+            return self._bitrates.get(name)
+        self._samples[name] = (now, received)
+        if prev is None or now - prev[0] > BITRATE_MAX_SECONDS or received < prev[1]:
+            self._bitrates.pop(name, None)  # first sample, stale, or the path restarted
+            return None
+        self._bitrates[name] = (received - prev[1]) * 8 / 1000 / (now - prev[0])
+        return self._bitrates[name]

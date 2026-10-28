@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from foxcam.config import Settings
-from foxcam.mediamtx import desired_paths
+from foxcam.mediamtx import MediaMtx, desired_paths
 from foxcam.web import queries
 from foxcam.web.deps import OPEN_ACCESS
 
@@ -109,3 +109,27 @@ def test_unknown_recording_profile_rejected(settings: Settings) -> None:
 
     with pytest.raises(recording.RecordingError):
         recording.set_camera_recording_profile(settings, "cam", "nope")
+
+
+def test_bitrate_between_samples(settings: Settings) -> None:
+    mtx = MediaMtx(settings)
+    assert mtx._bitrate("cam", 1_000, 100.0) is None  # one sample: nothing to compare
+    assert mtx._bitrate("cam", 251_000, 110.0) == 200.0  # 250 kB in 10 s
+    assert mtx._bitrate("cam", 300_000, 111.0) == 200.0  # too soon: the last value
+    assert mtx._bitrate("cam", 10, 120.0) is None  # restarted
+    assert mtx._bitrate("cam", 1_000_000, 500.0) is None  # stale
+
+
+def test_live_stream_facts() -> None:
+    path = {"ready": True, "readyTime": "2026-10-28T22:14:49.828307123+01:00",
+            "tracks2": [{"codec": "H264", "codecProps": {"width": 1280, "height": 720}},
+                        {"codec": "Opus", "codecProps": {"channelCount": 1}}],
+            "readers": [{"type": "webRTCSession"}, {"type": "rtspSession"},
+                        {"type": "hlsMuxer"}],
+            "bitrate_kbit": 512.0}
+    assert queries._stream(path) == {"codecs": ["H264", "Opus"], "width": 1280,
+                                     "height": 720, "bitrate_kbit": 512.0}
+    assert queries._stream({**path, "ready": False}) is None
+    assert queries._viewers(path) == 2
+    assert queries._viewers(None) == 0
+    assert queries._mediamtx_time(path["readyTime"]) == "2026-10-28T21:14:49Z"
