@@ -2351,21 +2351,19 @@ h2.panel-heading {
   z-index: 1000;
 }
 
-/* Live drawer title: name and LIVE, then the stream controls. */
+/* Live drawer title: name and LIVE. */
 .live-title {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--spacingHorizontalS) var(--spacingHorizontalM);
 }
-.live-title-controls {
-  display: inline-flex;
+/* Under the live drawer's facts: the low-data switch and the HLS fallback. */
+.live-controls {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--spacingHorizontalS);
-  margin-inline-start: var(--spacingHorizontalL);
-  font-size: var(--fontSizeBase300);
-  font-weight: var(--fontWeightRegular);
+  gap: var(--spacingVerticalS) var(--spacingHorizontalM);
 }
 /* Events grid: a heading per day across the whole row. */
 .cards-day {

@@ -1,7 +1,8 @@
 // Live view of one camera in a wide drawer (opened from a camera card's picture), with the
-// low-data switch and the HLS fallback in the title row, and the stream's facts under it.
+// stream's facts under it, then the low-data switch and the HLS fallback.
 import { Button, Switch } from "@fluentui/react-components";
 import { Open20Regular } from "@fluentui/react-icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import type { Camera, LiveStream } from "../api";
@@ -48,6 +49,9 @@ export function LiveDrawer({
   const low = lowData && c.webrtc_low_url !== null;
   const webrtc = low ? c.webrtc_low_url! : c.webrtc_url;
   const hls = low ? (c.hls_low_url ?? c.hls_url) : c.hls_url;
+  // The low-data stream starts when someone watches it: until it is up, there is nothing to
+  // tell about it (the main stream's facts would be the wrong ones).
+  const stream = low ? c.low_stream : c.stream;
 
   return (
     <Dialog open size="large" onOpenChange={(_, d) => !d.open && onClose()}>
@@ -64,28 +68,6 @@ export function LiveDrawer({
               ) : (
                 <output className="live-badge offline">{t("live.badgeOffline")}</output>
               )}
-              <span className="live-title-controls">
-                {c.webrtc_low_url !== null && (
-                  <Switch
-                    label={t("live.lowData")}
-                    title={t("live.lowDataHint")}
-                    checked={lowData}
-                    onChange={(_, d) => setLowData(d.checked)}
-                  />
-                )}
-                <Tag>{low ? t("live.lowDataTag") : "WebRTC"}</Tag>
-                <Button
-                  as="a"
-                  size="small"
-                  icon={<Open20Regular />}
-                  href={hls}
-                  target="_blank"
-                  rel="noreferrer"
-                  title={t("live.hlsFallbackHint")}
-                >
-                  {t("live.hlsFallback")}
-                </Button>
-              </span>
             </span>
           </DialogTitle>
           <DialogContent className="form-stack">
@@ -105,13 +87,48 @@ export function LiveDrawer({
             ) : (
               <div className="live-frame offline">{t("live.offline")}</div>
             )}
-            <LiveFacts camera={c} stream={(low && c.low_stream) || c.stream} />
+            <LiveFacts camera={c} stream={stream} />
+            <div className="live-controls">
+              {c.webrtc_low_url !== null && (
+                <Switch
+                  label={t("live.lowData")}
+                  title={t("live.lowDataHint")}
+                  checked={lowData}
+                  onChange={(_, d) => setLowData(d.checked)}
+                />
+              )}
+              <Button
+                as="a"
+                size="small"
+                icon={<Open20Regular />}
+                href={hls}
+                target="_blank"
+                rel="noreferrer"
+                title={t("live.hlsFallbackHint")}
+              >
+                {t("live.hlsFallback")}
+              </Button>
+            </div>
           </DialogContent>
           <CloseActions />
         </DialogBody>
       </DialogSurface>
     </Dialog>
   );
+}
+
+/** While the stream's facts are still coming (the low-data stream starting, the bitrate
+ * needing a second look), the camera list is fetched more often than the page does. */
+function useFactsPolling(waiting: boolean) {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!waiting) return;
+    const id = setInterval(() => {
+      for (const key of [["cameras"], ["status"]])
+        void queryClient.refetchQueries({ queryKey: key, type: "active" });
+    }, 3000);
+    return () => clearInterval(id);
+  }, [waiting, queryClient]);
 }
 
 /** The current time, again every second (a running "online for"). */
@@ -133,6 +150,7 @@ function bitrate(kbit: number): string {
 function LiveFacts({ camera: c, stream }: { camera: Camera; stream: LiveStream | null }) {
   const { t } = useI18n();
   const now = useNow();
+  useFactsPolling(c.online && stream?.bitrate_kbit == null);
   return (
     <Facts>
       {c.online && (
@@ -145,20 +163,21 @@ function LiveFacts({ camera: c, stream }: { camera: Camera; stream: LiveStream |
             )}
           </Fact>
           <Fact label={t("live.stream")}>
-            {stream && (stream.codecs.length > 0 || stream.width) ? (
-              <span className="chips">
-                {stream.width && stream.height && (
-                  <Tag>
-                    {stream.width} × {stream.height}
-                  </Tag>
-                )}
-                {stream.codecs.map((codec) => (
-                  <Tag key={codec}>{codec}</Tag>
-                ))}
-              </span>
-            ) : (
-              <NoValue />
-            )}
+            <span className="chips">
+              <Tag>WebRTC</Tag>
+              {stream && (
+                <>
+                  {stream.width && stream.height && (
+                    <Tag>
+                      {stream.width} × {stream.height}
+                    </Tag>
+                  )}
+                  {stream.codecs.map((codec) => (
+                    <Tag key={codec}>{codec}</Tag>
+                  ))}
+                </>
+              )}
+            </span>
           </Fact>
           <Fact label={t("live.bitrate")}>
             {stream?.bitrate_kbit != null ? bitrate(stream.bitrate_kbit) : <NoValue />}
