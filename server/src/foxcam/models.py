@@ -446,6 +446,25 @@ class Notification(Base):
     sent_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
+class PushSubscription(Base):
+    """A browser or home screen app that gets a web push channel's notifications (webpush.py).
+    The endpoint is the push service's URL for that one device; whoever has it (and the keys)
+    can send it notifications, so it is never sent back to the UI."""
+
+    __tablename__ = "push_subscription"
+    __table_args__ = (UniqueConstraint("channel_id", "endpoint"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    channel_id: Mapped[str] = mapped_column(String, index=True)
+    endpoint: Mapped[str] = mapped_column(String)
+    p256dh: Mapped[str] = mapped_column(String)  # the browser's public key (base64url)
+    auth: Mapped[str] = mapped_column(String)  # its auth secret (base64url)
+    name: Mapped[str | None] = mapped_column(String)  # "iPhone", "Chrome on Mac"…
+    user_id: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    last_sent_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
 class User(Base):
     """A person who signs in to the web UI (see accounts.py)."""
 

@@ -23,6 +23,7 @@ from . import (
     api_cameras,
     api_notify,
     api_profiles,
+    api_push,
     api_users,
     api_worker,
     api_workers,
@@ -105,6 +106,7 @@ def create_app(settings: Settings | None = None, background: bool = True) -> Fas
     app.include_router(api_workers.router)
     app.include_router(api_profiles.router)
     app.include_router(api_notify.router)
+    app.include_router(api_push.router)
     app.include_router(api.router)
     _mount_spa(app, _web_dist())
     return app

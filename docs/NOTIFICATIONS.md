@@ -4,6 +4,7 @@ Foxcam can tell you when something is seen:
 
 | Channel | Use it for | Image |
 |---|---|---|
+| **web push** | push notifications from Foxcam itself: the iPhone/iPad home screen app, or any browser | – |
 | **ntfy** | push notifications to your phone via [ntfy](https://ntfy.sh) (ntfy.sh or self-hosted) | ✅ attached |
 | **webhook** | Home Assistant, Node-RED, n8n, Zapier, your own code: a JSON `POST` per event | link only |
 | **Apprise** | ~100 services: Telegram, Discord, Slack, Pushover, Gotify, Signal, Matrix, e-mail, … | ✅ where supported |
@@ -68,6 +69,44 @@ notifications:
 [ARCHITECTURE.md](ARCHITECTURE.md#detection-profiles)): the channel is notified once that
 many of them have seen the event. Each event notifies a channel at most once per trigger,
 so a second model joining an event never sends it again.
+
+## Web push
+
+Notifications straight from Foxcam, without another app. Add a **Web push** channel (no
+settings beyond the usual filters), then on each phone, iPad or computer that should get
+them open **Settings → Notifications** and press **Turn on here** on the channel's card. The
+card lists the devices that have turned it on; **Turn off here** stops them on this one.
+
+Only admins see Settings. To let other users get them too, turn on **Users can turn it on**
+(`open_to_users: true`): the channel then shows up on their **Account** page, where they
+turn it on for their own devices. Each device only gets events from cameras its user can
+see, and an admin's test is held to the same rule.
+
+- **iPhone and iPad** (iOS 16.4 or later): only the home screen app can get them. In Safari
+  use Share → **Add to Home Screen**, open Foxcam from there, and turn them on in it.
+- **Android, Mac, Windows, Linux**: Chrome, Edge, Firefox and Safari can all get them, also
+  from a normal tab.
+- Needs HTTPS (or `localhost`), like any web push.
+
+The text is the same as ntfy's. Tapping it opens the event in Foxcam; the "clip ready"
+notification replaces the event's first one. There is no picture: iOS doesn't show images
+in web push notifications.
+
+The server signs its messages with a key pair it makes on first use
+(`<data_dir>/webpush-vapid-key.pem`). Keep it with your backups: browsers subscribe to that
+key, so a new one means turning notifications on again on every device. A device that
+removed the app or blocked notifications is forgotten the next time a send to it fails.
+
+`config.yaml`:
+
+```yaml
+notifications:
+  channels:
+    - id: app
+      type: webpush
+      when: [event.new, event.clip]
+      open_to_users: true  # on users' Account pages too
+```
 
 ## ntfy
 

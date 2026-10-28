@@ -697,7 +697,7 @@ export const sv: Record<MessageKey, string> = {
   "settings.storage": "Lagring",
   "settings.notifications": "Aviseringar",
   "notify.intro":
-    "Få en push-notis (ntfy), anropa en webhook (Home Assistant, n8n, egen kod) eller avisera ~100 andra tjänster via Apprise när en händelse börjar eller dess klipp är klart.",
+    "Få en push-notis (i Foxcam-appen eller via ntfy), anropa en webhook (Home Assistant, n8n, egen kod) eller avisera ~100 andra tjänster via Apprise när en händelse börjar eller dess klipp är klart.",
   "notify.add": "Lägg till kanal",
   "notify.none": "Inga aviseringskanaler än.",
   "notify.noPublicUrl":
@@ -707,6 +707,23 @@ export const sv: Record<MessageKey, string> = {
   "notify.type.ntfy": "ntfy-push",
   "notify.type.webhook": "Webhook",
   "notify.type.apprise": "Apprise (Telegram, Discord, Pushover, …)",
+  "notify.type.webpush": "Webbpush",
+  "notify.webpushHint":
+    "Skickar till Foxcam självt, ingen annan app behövs. Tryck på ”Slå på här” efter att du sparat, på varje telefon, iPad eller dator som ska få dem (på iPhone och iPad: i Foxcam på hemskärmen). Ingen bild.",
+  "notify.devices": "Enheter",
+  "notify.thisDevice": "{name} (den här enheten)",
+  "notify.noDevices": "Inga än",
+  "notify.pushOn": "Slå på här",
+  "notify.pushOff": "Stäng av här",
+  "notify.pushIosHint":
+    "För att få dem på den här iPhonen eller iPaden: lägg till Foxcam på hemskärmen (Dela → Lägg till på hemskärmen), öppna den därifrån och slå på dem här.",
+  "notify.pushUnsupported": "Den här webbläsaren kan inte ta emot push-notiser.",
+  "notify.pushDenied":
+    "Notiser är blockerade för Foxcam på den här enheten. Tillåt dem i systeminställningarna (iPhone: Inställningar → Notiser → Foxcam) och försök igen.",
+  "notify.openToUsers": "Användare kan slå på den",
+  "notify.openToUsersHint":
+    "Användare som inte är administratörer kan slå på den för sina egna enheter på sin kontosida. De får bara händelser från kameror de kan se.",
+  "notify.openToUsersTag": "Öppen för användare",
   "notify.disabled": "Avstängd",
   "notify.target": "Skickar till",
   "notify.when": "När",
@@ -1152,6 +1169,7 @@ export const sv: Record<MessageKey, string> = {
   "account.disconnectTitle": "Koppla bort {name}?",
   "account.disconnectBody": "Du kan inte längre logga in med det.",
   "account.myCameras": "Mina kameror",
+  "account.notifications": "Aviseringar",
   "account.noCameras": "Inga kameror är delade med dig än.",
   "account.leave": "Lämna",
   "apiKeys.title": "API-nycklar",
@@ -1243,4 +1261,20 @@ export const sv: Record<MessageKey, string> = {
   "users.removeTitle": "Ta bort {name}?",
   "users.removeBody":
     "Kontot, dess sessioner och kameradelningar tas bort. Kameror som kontot har lagt till finns kvar.",
+  "filter.period": "Period",
+  "filter.anyTime": "När som helst",
+  "filter.period.24h": "Senaste dygnet",
+  "filter.period.7d": "Senaste 7 dagarna",
+  "filter.period.30d": "Senaste 30 dagarna",
+  "filter.period.custom": "Från – till",
+  "filter.from": "Från",
+  "filter.to": "Till",
+  "filter.anyLight": "Dag och natt",
+  "filter.day": "Dagsljus",
+  "filter.night": "Natt",
+  "filter.feedback": "Markerade",
+  "filter.anyFeedback": "Markerade eller inte",
+  "filter.correct": "Rätt",
+  "filter.wrong": "Fel",
+  "filter.unmarked": "Inte markerade",
 };

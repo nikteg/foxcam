@@ -63,12 +63,16 @@ import {
   DialogTitle,
 } from "./Drawer";
 import { CardsSkeleton } from "./Skeletons";
+import { PushToggleButton, PushToggleMessage, usePushToggle, useThisDevice } from "./PushToggle";
 
 const TYPE_LABELS: Record<ChannelType, MessageKey> = {
   ntfy: "notify.type.ntfy",
   webhook: "notify.type.webhook",
   apprise: "notify.type.apprise",
+  webpush: "notify.type.webpush",
 };
+/** Types that can send the detection frame (iOS web push can't show one). */
+const IMAGE_TYPES = new Set<ChannelType>(["ntfy", "apprise"]);
 const TRIGGERS: NotifyTrigger[] = ["event.new", "event.clip"];
 const TRIGGER_LABELS: Record<NotifyTrigger, MessageKey> = {
   "event.new": "notify.on.new",
@@ -87,7 +91,8 @@ function toggle<T>(list: T[] | null, all: T[], value: T, checked: boolean): T[] 
   return next.length === 0 || next.length === all.length ? null : next;
 }
 
-/** Notification channels (ntfy, webhooks, Apprise) with a test button and recent deliveries. */
+/** Notification channels (ntfy, webhooks, Apprise, web push) with a test button and recent
+ * deliveries. */
 export function Notifications() {
   const client = useQueryClient();
   const { t, rich } = useI18n();
@@ -123,11 +128,12 @@ export function Notifications() {
         </MessageBar>
       )}
       {data?.channels.length === 0 && <Empty>{t("notify.none")}</Empty>}
-      <div className="cards">
+      <div className="cards block">
         {data?.channels.map((ch) => (
           <ChannelCard
             key={ch.id}
             channel={ch}
+            pushKey={data.webpush_key}
             onEdit={() => setEditing(ch)}
             onRemove={() =>
               api
@@ -155,10 +161,12 @@ export function Notifications() {
 
 function ChannelCard({
   channel: c,
+  pushKey,
   onEdit,
   onRemove,
 }: {
   channel: Channel;
+  pushKey: string;
   onEdit: () => void;
   onRemove: () => Promise<unknown>;
 }) {
@@ -166,6 +174,8 @@ function ChannelCard({
   const [result, setResult] = useState<ProbeResult | null>(null);
   const test = useMutation({ mutationFn: () => api.testChannel(c.id), onSuccess: setResult });
   const target = c.type === "ntfy" ? `${c.server.replace(/\/$/, "")}/${c.topic}` : (c.url ?? "");
+  const thisDevice = useThisDevice();
+  const push = usePushToggle(c.id, c.devices ?? [], pushKey);
 
   return (
     <Card>
@@ -181,14 +191,37 @@ function ChannelCard({
           <span className="row wrap tags">
             <Tag>{t(TYPE_LABELS[c.type])}</Tag>
             {c.managed === "config" && <ConfigTag />}
+            {c.type === "webpush" && c.open_to_users && <Tag>{t("notify.openToUsersTag")}</Tag>}
             {!c.enabled && <Tag kind="warn">{t("notify.disabled")}</Tag>}
           </span>
         }
       />
       <Facts>
-        <Fact label={t("notify.target")} className="mono">
-          {target}
-        </Fact>
+        {c.type === "webpush" ? (
+          <Fact label={t("notify.devices")}>
+            {c.devices?.length ? (
+              <span className="chips">
+                {c.devices.map((d) => (
+                  <Tag
+                    key={d.id}
+                    kind={d.endpoint_id === thisDevice ? "brand" : undefined}
+                    title={d.user ?? undefined}
+                  >
+                    {d.endpoint_id === thisDevice
+                      ? t("notify.thisDevice", { name: d.name ?? "?" })
+                      : (d.name ?? "?")}
+                  </Tag>
+                ))}
+              </span>
+            ) : (
+              t("notify.noDevices")
+            )}
+          </Fact>
+        ) : (
+          <Fact label={t("notify.target")} className="mono">
+            {target}
+          </Fact>
+        )}
         <Fact label={t("notify.when")}>
           <span className="chips">
             {c.when.map((o) => (
@@ -252,15 +285,17 @@ function ChannelCard({
           </>
         )}
         <Fact label={t("notify.image")}>
-          {c.include_image && c.type !== "webhook" ? t("common.yes") : t("common.no")}
+          {c.include_image && IMAGE_TYPES.has(c.type) ? t("common.yes") : t("common.no")}
         </Fact>
       </Facts>
+      {c.type === "webpush" && <PushToggleMessage push={push} />}
       {result && (
         <MessageBar intent={result.ok ? "success" : "error"}>
           <MessageBarBody>{result.ok ? t("notify.testOk") : result.detail}</MessageBarBody>
         </MessageBar>
       )}
       <CardFooter className="wrap">
+        {c.type === "webpush" && <PushToggleButton push={push} />}
         <Button
           size="small"
           icon={<Send20Regular />}
@@ -390,6 +425,7 @@ function ChannelDialog({
   const [token, setToken] = useState("");
   const [priority, setPriority] = useState(String(channel?.priority ?? 3));
   const [tags, setTags] = useState(channel?.tags.join(", ") ?? "");
+  const [openToUsers, setOpenToUsers] = useState(channel?.open_to_users ?? false);
   const [url, setUrl] = useState(channel?.type === "apprise" ? "" : (channel?.url ?? ""));
   const [secret, setSecret] = useState("");
   const [headers, setHeaders] = useState(
@@ -419,6 +455,7 @@ function ChannelDialog({
     password: null,
     priority: Number(priority),
     tags: splitList(tags),
+    open_to_users: openToUsers,
     url: url.trim() || null,
     secret: secret || null,
     headers: Object.fromEntries(
@@ -534,6 +571,20 @@ function ChannelDialog({
                       resize="vertical"
                       placeholder="Authorization: Bearer …"
                       onChange={(_, d) => setHeaders(d.value)}
+                    />
+                  </Field>
+                </>
+              )}
+              {type === "webpush" && (
+                <>
+                  <MessageBar intent="info">
+                    <MessageBarBody>{t("notify.webpushHint")}</MessageBarBody>
+                  </MessageBar>
+                  <Field hint={t("notify.openToUsersHint")}>
+                    <Switch
+                      label={t("notify.openToUsers")}
+                      checked={openToUsers}
+                      onChange={(_, d) => setOpenToUsers(d.checked)}
                     />
                   </Field>
                 </>
@@ -656,7 +707,7 @@ function ChannelDialog({
                   onChange={(_, d) => setCooldown(d.value)}
                 />
               </Field>
-              {type !== "webhook" && (
+              {IMAGE_TYPES.has(type) && (
                 <Switch
                   label={t("notify.includeImage")}
                   checked={image}

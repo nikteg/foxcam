@@ -14,6 +14,7 @@ import { Events } from "./pages/Events";
 import { Queue } from "./pages/Queue";
 import { Recordings } from "./pages/Recordings";
 import { Settings } from "./pages/Settings";
+import { onOpenFromNotification } from "./push";
 import { ThemeProvider } from "./theme";
 import "./styles.css";
 
@@ -47,6 +48,8 @@ const router = createBrowserRouter([
     ],
   },
 ]);
+
+onOpenFromNotification((path) => void router.navigate(path));
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

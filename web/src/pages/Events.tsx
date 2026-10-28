@@ -3,7 +3,16 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import { CameraSelect } from "../components/CameraSelect";
 import { EventsGrid } from "../components/EventsGrid";
-import { MessageBar, MessageBarBody, Select } from "@fluentui/react-components";
+import {
+  FeedbackSelect,
+  asFeedback,
+  asLight,
+  LightSelect,
+  PERIOD_KEYS,
+  PeriodFilter,
+  periodBounds,
+} from "../components/Filters";
+import { Input, MessageBar, MessageBarBody, Select } from "@fluentui/react-components";
 
 import { ModelsSection } from "../components/ModelsSection";
 import { MotionSection } from "../components/MotionSection";
@@ -66,25 +75,34 @@ export function Events() {
 }
 
 function EventList() {
-  const [{ camera, profile, agreement, favorite }, setFilter] = useFilters([
+  const [f, setFilter] = useFilters([
     "camera",
     "profile",
+    "label",
     "agreement",
+    "light",
+    "feedback",
     "favorite",
+    ...PERIOD_KEYS,
   ] as const);
+  const { camera, profile, agreement, favorite } = f;
   const severalDetectors = useSeveralDetectors();
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
   const profiles = useProfiles();
   const events = useQuery({
-    queryKey: ["events", camera, profile, agreement, favorite],
+    queryKey: ["events", f],
     // A new filter keeps the current list on screen until its own data arrives.
     placeholderData: keepPreviousData,
     queryFn: () =>
       api.events({
         camera,
         profile,
+        label: f.label,
         min_agreement: Number(agreement) || undefined,
         favorite: favorite === "true",
+        light: asLight(f.light),
+        feedback: asFeedback(f.feedback),
+        ...periodBounds(f),
         limit: 200,
       }),
     refetchInterval: 15_000,
@@ -134,6 +152,16 @@ function EventList() {
       <div className="filters">
         <CameraSelect value={camera} onChange={(v) => setFilter("camera", v)} />
         <ProfileSelect value={profile} onChange={(v) => setFilter("profile", v)} />
+        <PeriodFilter value={f} onChange={setFilter} />
+        <Input
+          placeholder={t("detections.labelPlaceholder")}
+          aria-label={t("col.label")}
+          defaultValue={f.label}
+          onKeyDown={(e) => e.key === "Enter" && setFilter("label", e.currentTarget.value.trim())}
+          onBlur={(e) => setFilter("label", e.currentTarget.value.trim())}
+        />
+        <LightSelect value={f.light} onChange={(v) => setFilter("light", v)} />
+        <FeedbackSelect value={f.feedback} onChange={(v) => setFilter("feedback", v)} />
         {(severalDetectors || agreement) && (
           <Select
             value={agreement}

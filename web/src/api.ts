@@ -721,7 +721,7 @@ export interface StorageStatus {
   last_error?: string | null;
 }
 
-export type ChannelType = "ntfy" | "webhook" | "apprise";
+export type ChannelType = "ntfy" | "webhook" | "apprise" | "webpush";
 export type NotifyTrigger = "event.new" | "event.clip";
 
 /** A notification channel as sent to the server (secrets: empty = keep stored value). */
@@ -747,6 +747,8 @@ export interface ChannelInput {
   password: string | null;
   priority: number;
   tags: string[];
+  /** Web push: users who aren't admins can turn it on too (only their cameras). */
+  open_to_users: boolean;
   url: string | null;
   secret: string | null;
   headers: Record<string, string>;
@@ -759,6 +761,30 @@ export interface Channel extends Omit<ChannelInput, "token" | "password" | "secr
   has_token: boolean;
   has_password: boolean;
   has_secret: boolean;
+  /** Web push channels: the devices that turned it on. */
+  devices?: PushDevice[];
+}
+
+export interface PushDevice {
+  id: number;
+  name: string | null;
+  /** Who turned it on. */
+  user: string | null;
+  user_id: number | null;
+  /** Matches push.ts currentEndpointId() on that device. */
+  endpoint_id: string;
+  created_at: string;
+  last_sent_at: string | null;
+}
+
+/** The web push channels the signed-in user may turn on, with their own devices on them. */
+export interface PushOverview {
+  key: string;
+  channels: {
+    id: string;
+    name: string;
+    devices: { id: number; name: string | null; endpoint_id: string }[];
+  }[];
 }
 
 export interface NotificationsOverview {
@@ -766,6 +792,8 @@ export interface NotificationsOverview {
   public_url: string | null;
   timezone: string | null;
   apprise: boolean;
+  /** The server's public key that browsers subscribe with. */
+  webpush_key: string;
 }
 
 export interface Delivery {
@@ -1030,6 +1058,11 @@ export const api = {
     hide_still?: boolean;
     /** Only starred ones. */
     favorite?: boolean;
+    /** From / before these times (ISO). */
+    since?: string;
+    until?: string;
+    light?: "day" | "night";
+    feedback?: "correct" | "wrong" | "none";
     limit?: number;
   }) => request<Detection[]>("GET", withQuery("/api/detections", q)),
   feedback: (id: number, correct: boolean | null) =>
@@ -1050,11 +1083,17 @@ export const api = {
   events: (q: {
     camera?: string;
     profile?: string;
+    label?: string;
     min_agreement?: number;
     /** Leave out events marked wrong. */
     hide_wrong?: boolean;
     /** Only starred ones. */
     favorite?: boolean;
+    /** Starting from / before these times (ISO). */
+    since?: string;
+    until?: string;
+    light?: "day" | "night";
+    feedback?: "correct" | "wrong" | "none";
     limit?: number;
   }) => request<DetectionEvent[]>("GET", withQuery("/api/events", q)),
   motionReport: (days: number) =>
@@ -1162,6 +1201,18 @@ export const api = {
     ),
   deleteChannel: (id: string) =>
     request<{ status: string }>("DELETE", `/api/notifications/channels/${encodeURIComponent(id)}`),
+  push: () => request<PushOverview>("GET", "/api/push"),
+  addPushDevice: (channelId: string, body: PushSubscriptionJSON & { name: string }) =>
+    request<{ id: number; endpoint_id: string }>(
+      "POST",
+      `/api/push/channels/${encodeURIComponent(channelId)}/devices`,
+      body,
+    ),
+  removePushDevice: (channelId: string, deviceId: number) =>
+    request<{ status: string }>(
+      "DELETE",
+      `/api/push/channels/${encodeURIComponent(channelId)}/devices/${deviceId}`,
+    ),
   testChannel: (id: string) =>
     request<ProbeResult>("POST", `/api/notifications/channels/${encodeURIComponent(id)}/test`),
   requeue: (jobId: number) =>

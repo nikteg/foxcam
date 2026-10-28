@@ -1,4 +1,4 @@
-"""Event notifications: webhooks, ntfy, and ~100 more services through Apprise.
+"""Event notifications: webhooks, ntfy, web push, and ~100 more services through Apprise.
 
 Channels come from ``config.yaml`` (``notifications.channels``, read-only in the UI) or are
 added in the web UI. When an event starts (``event.new``) or its clip is ready
@@ -17,6 +17,7 @@ from datetime import datetime, time, timedelta
 from email.header import Header
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -24,17 +25,21 @@ from pydantic import ValidationError
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from . import ffmpeg
+from . import ffmpeg, webpush
 from .config import ChannelConfig, Settings
 from .db import db_ready, session_scope
 from .models import (
+    CameraAccess,
+    CameraRole,
     Detection,
     Event,
     MaskVersion,
     Notification,
     NotificationChannel,
     NotificationStatus,
+    PushSubscription,
     Segment,
+    User,
     utcnow,
 )
 
@@ -43,6 +48,7 @@ log = logging.getLogger(__name__)
 MAX_ATTEMPTS = 6  # ~30 s, 1, 2, 4, 8 min between tries
 TIMEOUT = 20
 SECRET_FIELDS = ("token", "password", "secret")
+IMAGE_TYPES = ("ntfy", "apprise")  # web push can't show a picture on iOS
 # ntfy turns tags that are emoji short codes into emojis.
 LABEL_EMOJI = {"fox": "fox_face", "red fox": "fox_face", "cat": "cat", "dog": "dog",
                "person": "bust_in_silhouette", "car": "car", "truck": "truck",
@@ -116,6 +122,79 @@ def delete_channel(channel_id: str) -> None:
         s.delete(row)
         s.execute(delete(Notification).where(Notification.channel_id == channel_id,
                                              Notification.status == NotificationStatus.PENDING))
+        s.execute(delete(PushSubscription).where(PushSubscription.channel_id == channel_id))
+
+
+# --- web push devices ----------------------------------------------------------------
+
+
+def endpoint_id(endpoint: str) -> str:
+    """Lets a browser recognise its own subscription without the UI ever seeing endpoints."""
+    return hashlib.sha256(endpoint.encode()).hexdigest()[:16]
+
+
+def devices(channel_id: str) -> list[dict[str, Any]]:
+    with session_scope() as s:
+        rows = s.execute(select(PushSubscription, User.name, User.email)
+                         .join(User, User.id == PushSubscription.user_id, isouter=True)
+                         .where(PushSubscription.channel_id == channel_id)
+                         .order_by(PushSubscription.created_at)).all()
+        return [{"id": d.id, "name": d.name, "user": name or email, "user_id": d.user_id,
+                 "endpoint_id": endpoint_id(d.endpoint), "created_at": _iso(d.created_at),
+                 "last_sent_at": _iso(d.last_sent_at)} for d, name, email in rows]
+
+
+def add_device(ch: ChannelConfig, endpoint: str, p256dh: str, auth: str, name: str | None,
+               user_id: int | None) -> int:
+    """Subscribe a browser to a web push channel (again: same endpoint, fresh keys)."""
+    if ch.type != "webpush":
+        raise NotifyError("only web push channels have devices")
+    if not endpoint.startswith("https://"):
+        raise NotifyError("a push endpoint is an https URL")
+    try:
+        if len(webpush.unb64url(p256dh)) != 65 or len(webpush.unb64url(auth)) != 16:
+            raise ValueError
+    except ValueError:
+        raise NotifyError("the browser's push keys are not valid") from None
+    with session_scope() as s:
+        row = s.scalar(select(PushSubscription).where(PushSubscription.channel_id == ch.id,
+                                                      PushSubscription.endpoint == endpoint))
+        if row is None:
+            row = PushSubscription(channel_id=ch.id, endpoint=endpoint)
+            s.add(row)
+        row.p256dh, row.auth, row.name, row.user_id = p256dh, auth, name, user_id
+        s.flush()
+        return row.id
+
+
+def remove_device(channel_id: str, device_id: int, user_id: int | None = None) -> None:
+    """`user_id`: only that user's own device (None: any, for admins)."""
+    with session_scope() as s:
+        row = s.get(PushSubscription, device_id)
+        if row is None or row.channel_id != channel_id or \
+                (user_id is not None and row.user_id != user_id):
+            raise NotifyError("unknown device")
+        s.delete(row)
+
+
+def push_channels(settings: Settings, is_admin: bool) -> list[ChannelConfig]:
+    """The web push channels this user may turn on: all for admins, else the open ones."""
+    return [c for c in all_channels(settings) if c.type == "webpush"
+            and (is_admin or c.open_to_users)]
+
+
+def _may_see(s: Session, user_id: int | None, camera_id: str) -> bool:
+    """Whether a device's user may get an event from this camera (as in the web UI)."""
+    if user_id is None:
+        return True  # added with sign-in turned off: everyone sees everything
+    user = s.get(User, user_id)
+    if user is None or user.disabled:
+        return False
+    if user.is_admin:
+        return True
+    role = s.scalar(select(CameraAccess.role).where(CameraAccess.user_id == user_id,
+                                                    CameraAccess.camera_id == camera_id))
+    return role is not None and CameraRole.at_least(role, CameraRole.VIEWER)
 
 
 def public_channel(ch: ChannelConfig) -> dict[str, Any]:
@@ -363,6 +442,51 @@ def send_ntfy(ch: ChannelConfig, settings: Settings, data: dict[str, Any],
         raise NotifyError(f"ntfy answered {r.status_code}: {r.text.strip()[:200]}")
 
 
+def send_webpush(ch: ChannelConfig, settings: Settings, data: dict[str, Any],
+                 client: httpx.Client) -> None:
+    """To every device that turned the channel on. Sent when it reached at least one; devices
+    whose subscription is gone are forgotten."""
+    title, body = texts(settings, data)
+    ev = data["event"]
+    message = {"title": title, "body": body,
+               # Opened in the app on tap; relative, so it works without public_url.
+               "url": f"/events?camera={quote(ev['camera_id'])}&details={ev['id']}"
+               if ev["id"] else "/events",
+               # The clip-ready notification replaces the event's first one.
+               "tag": f"event-{ev['id']}"}
+    with session_scope() as s:
+        devices = s.scalars(select(PushSubscription)
+                            .where(PushSubscription.channel_id == ch.id)).all()
+        if not devices:
+            raise NotifyError("no device has turned this channel on yet")
+        # Each device only gets events from cameras its user can see (the test without any
+        # event has no camera).
+        targets = [(d.id, d.name, webpush.Device(d.endpoint, d.p256dh, d.auth))
+                   for d in devices
+                   if not ev["id"] or _may_see(s, d.user_id, ev["camera_id"])]
+    if not targets:
+        return  # nobody on this channel may see this camera
+    sent, gone, errors = [], [], []
+    for device_id, name, device in targets:
+        try:
+            webpush.send(settings, device, message, client, urgent=data["type"] != "event.clip")
+            sent.append(device_id)
+        except webpush.Gone:
+            gone.append(device_id)
+        except (httpx.HTTPError, RuntimeError) as e:
+            errors.append(f"{name or 'device'}: {e}")
+    with session_scope() as s:
+        if gone:
+            s.execute(delete(PushSubscription).where(PushSubscription.id.in_(gone)))
+        for row in s.scalars(select(PushSubscription).where(PushSubscription.id.in_(sent))):
+            row.last_sent_at = utcnow()
+    if errors and sent:
+        log.warning("web push via %s reached %d device(s), not: %s", ch.id, len(sent),
+                    "; ".join(errors))
+    if not sent:
+        raise NotifyError("; ".join(errors) or "every device has turned notifications off")
+
+
 def signature(secret: str, body: bytes) -> str:
     return "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
 
@@ -405,6 +529,8 @@ def send(ch: ChannelConfig, settings: Settings, data: dict[str, Any], image: Pat
             send_ntfy(ch, settings, data, image if ch.include_image else None, client)
         elif ch.type == "webhook":
             send_webhook(ch, data, client)
+        elif ch.type == "webpush":
+            send_webpush(ch, settings, data, client)
         else:
             send_apprise(ch, settings, data, image if ch.include_image else None)
     except httpx.HTTPError as e:
@@ -443,7 +569,7 @@ def deliver_pending(settings: Settings, client: httpx.Client | None = None,
             try:
                 data = payload(settings, event_id, kind)
                 image = event_image(settings, event_id) if ch.include_image and \
-                    ch.type != "webhook" else None
+                    ch.type in IMAGE_TYPES else None
                 send(ch, settings, data, image, client)
             except NotifyError as e:
                 error = str(e)
@@ -472,7 +598,7 @@ def test(settings: Settings, ch: ChannelConfig) -> dict[str, Any]:
         latest = s.scalar(select(Event.id).order_by(Event.first_ts.desc()).limit(1))
     if latest is not None:
         data = payload(settings, latest, "test")
-        image = event_image(settings, latest) if ch.type != "webhook" else None
+        image = event_image(settings, latest) if ch.type in IMAGE_TYPES else None
     else:
         now = _iso(utcnow())
         data = {"type": "test", "sent_at": now,

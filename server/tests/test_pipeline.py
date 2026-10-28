@@ -3,7 +3,7 @@
 import os
 import subprocess
 import time
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 
 from foxcam import ffmpeg
 from foxcam.db import session_scope
@@ -257,6 +257,45 @@ def test_detections_standing_still_can_be_left_out(settings):
         s.get(Detection, still).still = True
     assert {d["id"]: d["still"] for d in queries.detections(settings)} == {moving: False, still: True}
     assert [d["id"] for d in queries.detections(settings, hide_still=True)] == [moving]
+
+
+def test_events_and_detections_filter_by_time_light_and_feedback(settings):
+    from foxcam.web import queries
+
+    start = utcnow().replace(microsecond=0, second=0) - timedelta(hours=3)
+    segs = [add_segment(settings, start=start + timedelta(hours=i), with_file=False,
+                        is_night=i == 2) for i in range(3)]
+    dets = []
+    for seg_id in segs:  # an hour apart: three events
+        add_job(seg_id, state="done")
+        dets.append(add_detection(seg_id, seg_id, 500))
+        with session_scope() as s:
+            s.get(Segment, seg_id).has_target = True
+    events.assign_events(settings)
+    with session_scope() as s:  # what building the clip sets (no footage here)
+        for ev in s.query(Event):
+            ev.is_night = ev.best_detection_id == dets[2]
+    queries.set_feedback(settings, dets[0], False)
+    queries.set_feedback(settings, dets[1], True)
+    with app_client(settings) as client:
+        def ids(path: str) -> list[int]:
+            rows = client.get(path).json()
+            return sorted(r.get("best_detection_id", r["id"]) for r in rows)
+
+        # A time with a zone is taken as that moment; one without is UTC.
+        since = (start + timedelta(minutes=30)).isoformat() + "Z"
+        until = (start + timedelta(hours=1, minutes=30)).isoformat()
+        for kind in ("events", "detections"):
+            assert ids(f"/api/{kind}?since={since}&until={until}") == [dets[1]]
+            assert ids(f"/api/{kind}?since={since}") == dets[1:]
+            assert ids(f"/api/{kind}?light=night") == [dets[2]]
+            assert ids(f"/api/{kind}?light=day") == dets[:2]
+            assert ids(f"/api/{kind}?feedback=wrong") == [dets[0]]
+            assert ids(f"/api/{kind}?feedback=correct") == [dets[1]]
+            assert ids(f"/api/{kind}?feedback=none") == [dets[2]]
+        zoned = (start + timedelta(minutes=30)).replace(tzinfo=UTC).astimezone(
+            timezone(timedelta(hours=2))).isoformat()
+        assert ids("/api/events?since=" + zoned.replace("+", "%2B")) == dets[1:]
 
 
 def test_reanalyse_a_time_range(settings):
