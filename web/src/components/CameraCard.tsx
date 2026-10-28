@@ -22,6 +22,7 @@ import { ProfileTag } from "./ProfileSelect";
 import { useRoleName } from "./ShareDialog";
 import { ConfigTag, Dot, Fact, Facts, Light, Tag, Time, useRouterHref, useSourceLabel } from "./ui";
 import { FrameImage } from "./FrameImage";
+import { useToast } from "./Toasts";
 
 export function sourceDetail(source: CameraSource, synthetic: string): string {
   switch (source.type) {
@@ -68,12 +69,14 @@ export function CameraCard({
   const recordingName = useRecordingProfileName();
   const roleName = useRoleName();
   const client = useQueryClient();
+  const toast = useToast();
   const toggle = useMutation({
     mutationFn: (enabled: boolean) => api.updateCamera(c.id, { enabled }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["cameras"] });
       void client.invalidateQueries({ queryKey: ["status"] });
     },
+    onError: (e) => toast.error(e),
   });
   const canEdit = hasRole(c, "editor");
   const isOwner = hasRole(c, "owner");

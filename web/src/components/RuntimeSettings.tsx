@@ -21,6 +21,7 @@ import { useI18n, type MessageKey } from "../i18n";
 import { useRecordingProfiles, useRecordingSummary } from "../recordingProfiles";
 import { FieldSkeleton } from "./Skeletons";
 import { Fact, Facts, QueryState, Tag } from "./ui";
+import { useToast } from "./Toasts";
 
 /** "percent": stored 0–1, entered and shown as 0–100 %. "choice": one of `options`.
  *  "timezone": an IANA zone (e.g. Europe/Stockholm), or none (the server's own). */
@@ -264,6 +265,7 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
       }),
     ),
   );
+  const toast = useToast();
   const save = useMutation({
     mutationFn: async (change: { values?: Record<string, unknown>; reset?: string[] }) => {
       if (!change.reset && recording.changed) {
@@ -275,6 +277,7 @@ function SettingsForm({ groups, data }: { groups: SettingsGroup[]; data: Runtime
     onSuccess: (next) => {
       if (next) client.setQueryData(["runtimeSettings"], next);
       if (recording.changed) recording.saved();
+      toast.success(t("common.saved"));
     },
   });
   const original = (k: string) => {

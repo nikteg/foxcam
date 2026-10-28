@@ -27,6 +27,7 @@ import {
 import { VideoPlayer, type PlayerHandle } from "./VideoPlayer";
 import { MotionShare } from "./Motion";
 import { playerDetections } from "./Boxes";
+import { useToast } from "./Toasts";
 
 /**
  * A recording's detail drawer, for the recording whose id is in `segmentId`. Pass `segment`
@@ -86,9 +87,11 @@ function SegmentDetail({
   const canEdit = role !== undefined && hasRole({ role }, "editor");
   const client = useQueryClient();
   // Its detections are replaced: asks first.
+  const toast = useToast();
   const reanalyse = useMutation({
     mutationFn: () => api.reanalyse(s.id),
     onSuccess: () => {
+      toast.success(t("recordings.analyseQueued"));
       for (const key of ["segments", "segment", "segment-jobs", "detections", "events", "queue"]) {
         void client.invalidateQueries({ queryKey: [key] });
       }

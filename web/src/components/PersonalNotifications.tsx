@@ -139,7 +139,7 @@ function RulesForm({ data }: { data: PushOverview }) {
   const save = useMutation({
     mutationFn: () => api.savePushRules({ enabled, ...rulesFromDraft(rules), timezone: ZONE }),
     onSuccess: () => {
-      toast.success(t("account.saved"));
+      toast.success(t("common.saved"));
       return client.invalidateQueries({ queryKey: ["push"] });
     },
     onError: (e) => toast.error(e),

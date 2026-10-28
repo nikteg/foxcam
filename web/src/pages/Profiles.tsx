@@ -53,6 +53,7 @@ import {
 } from "../components/Drawer";
 import { CameraTag } from "../components/CameraSelect";
 import { CardsSkeleton } from "../components/Skeletons";
+import { useToast } from "../components/Toasts";
 
 type AliasRow = { from: string; to: string };
 /** A target's own Match from, in percent as typed. */
@@ -358,12 +359,14 @@ export function ProfileDialog({
     skip_without_motion: skipStill,
     enabled,
   });
+  const toast = useToast();
   const save = useMutation({
     mutationFn: () => (profile ? api.updateProfile(body()) : api.createProfile(body())),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["profiles"] });
       void client.invalidateQueries({ queryKey: ["cameras"] });
       onSaved?.();
+      toast.success(t("common.saved"));
       onClose();
     },
   });

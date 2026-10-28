@@ -51,6 +51,7 @@ export const en = {
   "common.play": "Play",
   "common.remove": "Remove",
   "common.save": "Save",
+  "common.saved": "Saved",
   "light.day": "day",
   "light.night": "night",
   "light.nightIr": "night / IR",
@@ -399,6 +400,7 @@ export const en = {
   "recordings.segmentsTab": "Segments",
   "recordings.inHourlyFile": "Joined into an archive file",
   "recordings.analyseAgain": "Detect again",
+  "recordings.analyseQueued": "Queued to detect again",
   "recordings.analyseAgainTitle": "Detect again in this recording?",
   "recordings.analyseAgainBody":
     "Detection runs again with the camera's current censor areas and detection profiles. The new results replace this recording's detections (and their correct/wrong marks); events are updated to match.",
@@ -473,6 +475,7 @@ export const en = {
   "queue.clearFilter": "Clear filter",
   "queue.noJobs": "No jobs.",
   "queue.retry": "Retry",
+  "queue.retried": "Queued again",
   "queue.doneCount": "Done",
   "queue.failedCount": "Failed",
   "workers.add": "Add worker",
@@ -1147,7 +1150,6 @@ export const en = {
   "account.signOut": "Sign out",
   "account.authOff":
     "Accounts are turned off on this server (auth.enabled: false): everyone is an admin.",
-  "account.saved": "Saved",
   "account.noPassword":
     "You sign in with an external account. Set a password to also sign in with your e-mail.",
   "account.currentPassword": "Current password",

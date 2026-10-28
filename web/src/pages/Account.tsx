@@ -41,6 +41,7 @@ import {
 import { Checkbox, Empty, PageTitle, PasswordInput, Tag, Time } from "../components/ui";
 import { useRoleName } from "../components/ShareDialog";
 import { useI18n } from "../i18n";
+import { useToast } from "../components/Toasts";
 
 export function Account() {
   const { t } = useI18n();
@@ -107,7 +108,7 @@ function ProfileForm() {
       )}
       <div>
         <Button type="submit" disabled={save.isPending || name === (me?.user?.name ?? "")}>
-          {save.isSuccess ? t("account.saved") : t("common.save")}
+          {save.isSuccess ? t("common.saved") : t("common.save")}
         </Button>
       </div>
     </form>
@@ -252,9 +253,11 @@ function MyCameras() {
   const client = useQueryClient();
   const roleName = useRoleName();
   const cameras = useQuery({ queryKey: ["cameras"], queryFn: api.cameras });
+  const toast = useToast();
   const leave = useMutation({
     mutationFn: (cameraId: string) => api.unshare(cameraId, me?.user?.id ?? 0),
     onSuccess: () => client.invalidateQueries({ queryKey: ["cameras"] }),
+    onError: (e) => toast.error(e),
   });
   if (me?.is_admin) return null;
   return (

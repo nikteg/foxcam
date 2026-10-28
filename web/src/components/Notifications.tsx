@@ -390,10 +390,12 @@ function ChannelDialog({
         .map(([k, ...v]) => [k, v.join(":")]),
     ),
   });
+  const toast = useToast();
   const save = useMutation({
     mutationFn: () => (channel ? api.updateChannel(body()) : api.createChannel(body())),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["notifications"] });
+      toast.success(t("common.saved"));
       onClose();
     },
   });

@@ -52,6 +52,7 @@ export const sv: Record<MessageKey, string> = {
   "common.play": "Spela upp",
   "common.remove": "Ta bort",
   "common.save": "Spara",
+  "common.saved": "Sparat",
   "light.day": "dag",
   "light.night": "natt",
   "light.nightIr": "natt / IR",
@@ -404,6 +405,7 @@ export const sv: Record<MessageKey, string> = {
   "recordings.segmentsTab": "Segment",
   "recordings.inHourlyFile": "Hopfogad till en arkivfil",
   "recordings.analyseAgain": "Detektera igen",
+  "recordings.analyseQueued": "Köad för ny analys",
   "recordings.analyseAgainTitle": "Detektera igen i den här inspelningen?",
   "recordings.analyseAgainBody":
     "Detektionen körs igen med kamerans nuvarande maskering och detektionsprofiler. De nya resultaten ersätter inspelningens detektioner (och deras rätt/fel-markeringar); händelserna uppdateras därefter.",
@@ -479,6 +481,7 @@ export const sv: Record<MessageKey, string> = {
   "queue.clearFilter": "Rensa filter",
   "queue.noJobs": "Inga jobb.",
   "queue.retry": "Försök igen",
+  "queue.retried": "Köad igen",
   "queue.doneCount": "Klara",
   "queue.failedCount": "Misslyckade",
   "workers.add": "Lägg till arbetare",
@@ -1154,7 +1157,6 @@ export const sv: Record<MessageKey, string> = {
   "account.signOut": "Logga ut",
   "account.authOff":
     "Konton är avstängda på den här servern (auth.enabled: false): alla är administratörer.",
-  "account.saved": "Sparat",
   "account.noPassword":
     "Du loggar in med ett externt konto. Sätt ett lösenord för att även kunna logga in med din e-post.",
   "account.currentPassword": "Nuvarande lösenord",

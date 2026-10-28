@@ -45,6 +45,7 @@ import { WorkersSection } from "../components/WorkersSection";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
 import { StatsSkeleton, TableSkeleton } from "../components/Skeletons";
+import { useToast } from "../components/Toasts";
 
 const STATES: JobState[] = ["pending", "leased", "done", "failed", "dead", "skipped"];
 
@@ -67,11 +68,16 @@ export function Queue() {
     queryFn: () => api.queue({ state, limit: 100 }),
     refetchInterval: 5_000,
   });
+  const { t } = useI18n();
+  const toast = useToast();
   const requeue = useMutation({
     mutationFn: api.requeue,
-    onSuccess: () => client.invalidateQueries({ queryKey: ["queue"] }),
+    onSuccess: () => {
+      toast.success(t("queue.retried"));
+      return client.invalidateQueries({ queryKey: ["queue"] });
+    },
+    onError: (e) => toast.error(e),
   });
-  const { t } = useI18n();
   const stateLabel = useStateLabel();
   const cameraName = useCameraName();
   const jobColumns = makeJobColumns(

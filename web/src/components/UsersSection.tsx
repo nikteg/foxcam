@@ -47,6 +47,7 @@ import {
   DialogTitle,
 } from "./Drawer";
 import { CardsSkeleton } from "./Skeletons";
+import { useToast } from "./Toasts";
 
 /** Settings → Users (admins): accounts and invite links. */
 export function UsersSection() {
@@ -255,10 +256,12 @@ function AddUserDialog({ onClose }: { onClose: () => void }) {
   const { t } = useI18n();
   const client = useQueryClient();
   const [form, setForm] = useState({ email: "", name: "", password: "", is_admin: false });
+  const toast = useToast();
   const add = useMutation({
     mutationFn: () => api.createUser({ ...form, password: form.password || null }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["users"] });
+      toast.success(t("common.saved"));
       onClose();
     },
   });
@@ -367,10 +370,12 @@ function PasswordDialog({ user, onClose }: { user: User; onClose: () => void }) 
   const { t } = useI18n();
   const client = useQueryClient();
   const [password, setPassword] = useState("");
+  const toast = useToast();
   const save = useMutation({
     mutationFn: () => api.setUserPassword(user.id, password),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["users"] });
+      toast.success(t("common.saved"));
       onClose();
     },
   });

@@ -17,6 +17,7 @@ import {
   DialogSurface,
   DialogTitle,
 } from "./Drawer";
+import { useToast } from "./Toasts";
 
 interface Row {
   id: string;
@@ -205,11 +206,13 @@ function TagsDialog({ token, onClose }: { token: WorkerToken; onClose: () => voi
   const { t } = useI18n();
   const client = useQueryClient();
   const [tags, setTags] = useState<string[]>(token.tags);
+  const toast = useToast();
   const save = useMutation({
     mutationFn: () => api.setTokenTags(token.id, tags),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["workers"] });
       void client.invalidateQueries({ queryKey: ["profiles"] });
+      toast.success(t("common.saved"));
       onClose();
     },
   });

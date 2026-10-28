@@ -27,6 +27,7 @@ import {
 import { HEIGHT as CHART_HEIGHT, kindOf, snap, SunChart, type Kind } from "./SunChart";
 import { DrawerTitle, Fact, Facts, QueryState } from "./ui";
 import { BoxSkeleton, FieldSkeleton } from "./Skeletons";
+import { useToast } from "./Toasts";
 
 const DAYS = [7, 14, 30, 90];
 const DEFAULT_DAYS = 14;
@@ -56,11 +57,13 @@ export function SunDrawer({ camera, onClose }: { camera: Camera; onClose: () => 
     ...sunChartQuery(camera.id, days),
     placeholderData: (prev) => prev,
   });
+  const toast = useToast();
   const save = useMutation({
     mutationFn: () => api.setSun(camera.id, { limit, latitude: parse(lat), longitude: parse(lon) }),
     onSuccess: () => {
       for (const key of ["cameras", "sun", "events", "detections", "segments"])
         void client.invalidateQueries({ queryKey: [key] });
+      toast.success(t("common.saved"));
       onClose();
     },
   });

@@ -61,6 +61,7 @@ import {
   DialogTitle,
 } from "../components/Drawer";
 import { CardsSkeleton, ChoicesSkeleton } from "../components/Skeletons";
+import { useToast } from "../components/Toasts";
 
 export function Cameras() {
   const { t, rich } = useI18n();
@@ -198,6 +199,7 @@ function GeneralPanel({
   const tapo = camera.source_config.type === "tapo_cloud" ? camera.source_config : null;
   const [quality, setQuality] = useState<"HD" | "VGA">(tapo?.resolution ?? "HD");
   const [editingMask, setEditingMask] = useState(false);
+  const toast = useToast();
   const save = useMutation({
     mutationFn: () =>
       api.updateCamera(camera.id, {
@@ -207,6 +209,7 @@ function GeneralPanel({
       }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["cameras"] });
+      toast.success(t("common.saved"));
       onClose();
     },
   });
@@ -360,11 +363,13 @@ function RecordingPanel({
   const profiles = list.data ?? [];
   const summary = useRecordingSummary();
   const [selected, setSelected] = useState(camera.recording_profile);
+  const toast = useToast();
   const save = useMutation({
     mutationFn: (id: string | null) => api.setRecordingProfile(camera.id, id),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["cameras"] });
       void client.invalidateQueries({ queryKey: ["recording-profiles"] });
+      toast.success(t("common.saved"));
       onClose();
     },
   });
@@ -454,11 +459,13 @@ function DetectionPanel({
   const client = useQueryClient();
   const { data: profiles = [] } = useProfiles();
   const [selected, setSelected] = useState<string[]>(camera.profiles);
+  const toast = useToast();
   const save = useMutation({
     mutationFn: (ids: string[] | null) => api.setCameraProfiles(camera.id, ids),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["cameras"] });
       void client.invalidateQueries({ queryKey: ["profiles"] });
+      toast.success(t("common.saved"));
       onClose();
     },
   });
