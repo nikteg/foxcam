@@ -448,7 +448,7 @@ def segment(segment_id: int, p: Principal = Depends(principal)) -> dict[str, Any
     """One recording, with where things moved (``motion_boxes``) and footage missing in it
     (``gaps``)."""
     seg = _segment(p, segment_id)
-    return {**queries.segment_dict(seg), "motion_boxes": seg.motion_boxes,
+    return {**queries.segment_dict(seg), "motion_boxes": queries.motion_frames(seg.motion_boxes),
             "gaps": footage.segment_gaps(seg)}
 
 

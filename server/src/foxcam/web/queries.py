@@ -339,7 +339,7 @@ def detection_dict(d: Detection, moving: bool | None, match: bool) -> dict[str, 
         "id": d.id, "segment_id": d.segment_id, "camera_id": d.camera_id, "ts": iso(d.ts),
         "profile_id": d.profile_id, "detector_id": d.detector_id, "event_id": d.event_id,
         "offset_ms": d.offset_ms, "label": d.label, "confidence": round(d.confidence, 3),
-        "bbox": d.bbox, "is_target": d.is_target, "model": d.model, "worker_id": d.worker_id,
+        "bbox": rect(d.bbox), "is_target": d.is_target, "model": d.model, "worker_id": d.worker_id,
         "feedback": d.feedback, "favorite": bool(d.favorite),
         "is_night": d.segment.is_night if d.segment else None,
         # The recording's picture size, which the frame has too: the web app keeps room
@@ -534,11 +534,25 @@ def events(camera_id: str | None = None, limit: int = 100,
             "thumb_url": f"/api/events/{e.id}/thumb" if e.thumb_path or e.thumb_remote_key
             else None,
             # Drawn over the thumbnail (None: none, or burned into an older one).
-            "thumb_box": e.thumb_box,
+            "thumb_box": rect(e.thumb_box),
             "remote": e.clip_remote_key is not None,
             "clip_duration_s": e.clip_duration_s, "building": e.clip_dirty,
             "clip_error": e.clip_error,
         } for e, is_wrong, is_correct, is_favorite in s.execute(q)]
+
+
+#: Decimals of the box coordinates (0..1) sent to the web app: under a pixel at 4K.
+BOX_DECIMALS = 4
+
+
+def rect(box: list[float] | None) -> list[float] | None:
+    """A box ([x, y, w, h], 0..1) as sent to the web app: rounded (stored unrounded)."""
+    return None if box is None else [round(v, BOX_DECIMALS) for v in box]
+
+
+def motion_frames(frames: list[list[Any]] | None) -> list[list[Any]]:
+    """Motion frames (``[ms, [box, …]]``) with their boxes rounded like ``rect``."""
+    return [[at, [rect(b) for b in boxes]] for at, boxes in frames or []]
 
 
 def _motion_in(parts: list[tuple[Segment, float]], length_s: float) -> list[list[Any]]:
@@ -547,7 +561,7 @@ def _motion_in(parts: list[tuple[Segment, float]], length_s: float) -> list[list
     recording and that offset in seconds, may be negative) and cut to its length."""
     frames = []
     for seg, offset_s in sorted(parts, key=lambda p: p[1]):
-        for at, boxes in seg.motion_boxes or []:
+        for at, boxes in motion_frames(seg.motion_boxes):
             t = round(at + offset_s * 1000)
             if 0 <= t <= length_s * 1000:
                 frames.append([t, boxes])
@@ -577,7 +591,7 @@ def _detections_in(s, parts: list[tuple[Segment, float]], length_s: float,
     for d, match in s.execute(q):
         at = round(d.offset_ms + offsets[d.segment_id] * 1000)
         if 0 <= at <= length_s * 1000:
-            out.append({"id": d.id, "at_ms": at, "bbox": d.bbox, "label": d.label,
+            out.append({"id": d.id, "at_ms": at, "bbox": rect(d.bbox), "label": d.label,
                         "confidence": round(d.confidence, 3), "detector_id": d.detector_id,
                         "match": bool(match)})
     return sorted(out, key=lambda d: d["at_ms"])
