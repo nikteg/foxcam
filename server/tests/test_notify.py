@@ -137,6 +137,13 @@ def test_ntfy_attaches_censored_image_with_utf8_title(settings):
     assert req.headers["Priority"] == "4" and req.headers["Tags"] == "camera,fox_face"
 
 
+def test_ntfy_header_never_folds_long_utf8_text():
+    text = "12:47:54 – 92 % sure\\nProfile: Wildlife and people\\nSeen for 2 min 28 s"
+    value = notify._header(text)
+    assert value.isascii() and "\n" not in value and "\r" not in value
+    assert str(email.header.make_header(email.header.decode_header(value))) == text
+
+
 def test_ntfy_without_image_posts_json(settings):
     settings.public_url = "https://cams.example.org"
     _channel(settings, id="phone", type="ntfy", server="https://ntfy.example.org/",

@@ -320,8 +320,10 @@ def event_image(settings: Settings, event_id: int) -> Path | None:
 
 
 def _header(value: str) -> str:
-    """HTTP headers are ASCII; ntfy accepts RFC 2047 for anything else (å, ä, ö, emoji)."""
-    return value if value.isascii() else Header(value, "utf-8").encode()
+    """HTTP headers are ASCII; ntfy accepts RFC 2047 for anything else (å, ä, ö, emoji).
+    Long values are split into several encoded words joined by spaces, not folded onto a new
+    line as in email: a line break is not allowed in an HTTP header."""
+    return value if value.isascii() else Header(value, "utf-8").encode(linesep=" ")
 
 
 def send_ntfy(ch: ChannelConfig, settings: Settings, data: dict[str, Any],
