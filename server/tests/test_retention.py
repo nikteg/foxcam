@@ -1,10 +1,10 @@
 from datetime import timedelta
 
 from foxcam.db import session_scope
-from foxcam.models import Event, JobState, Segment, SegmentStatus, utcnow
+from foxcam.models import Detection, Event, JobState, Segment, SegmentStatus, utcnow
 from foxcam.pipeline import retention
 
-from .conftest import add_job, add_segment, needs_ffmpeg
+from .conftest import add_detection, add_job, add_segment, needs_ffmpeg
 
 DAY = timedelta(days=1)
 
@@ -101,3 +101,22 @@ def test_recording_profile_keep_days(settings):
     assert _deleted(default_old) and _deleted(long_old) and _deleted(short_old)
     assert not _deleted(long_kept)
 
+
+
+@needs_ffmpeg
+def test_favorite_events_are_not_expired(settings):
+    settings.retention.events_days = 30
+    now = utcnow().replace(microsecond=0)
+    seg_id = add_segment(settings, start=now - 40 * DAY, pinned=True)
+    job_id = add_job(seg_id, state=JobState.DONE)
+    det_id = add_detection(seg_id, job_id, 500)
+    with session_scope() as s:
+        ev = Event(camera_id="cam", label="fox", first_ts=now - 40 * DAY,
+                   last_ts=now - 40 * DAY, max_confidence=0.9, clip_dirty=False)
+        ev.segments.append(s.get(Segment, seg_id))
+        s.add(ev)
+        s.flush()
+        det = s.get(Detection, det_id)
+        det.event_id, det.favorite = ev.id, True
+    assert retention.run_retention(settings)["events"] == 0
+    assert not _deleted(seg_id)  # still pinned by the event

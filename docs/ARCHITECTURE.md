@@ -220,7 +220,7 @@ or `foxcam motion-backfill --days 7`); that changes no detections or events.
 | `segment` | One recording file: camera, start (UTC), duration, status, light tags, mask version used, motion (score, boxes and faint boxes), skips in the camera's footage, match flag, pinned, archive and offset in it, `deleted_at`. |
 | `archive` | One hourly file made by compaction: camera, start, size, recording profile and encoder used, S3 key. |
 | `job` | Work item per segment, profile and detector (with the worker's raw result, ≤ 256 kB, for debugging): state (`pending/leased/done/failed/dead`, `skipped` for cascade detectors that did not run and profiles that skip recordings without motion), lease token and expiry, attempts, model, timing. |
-| `detection` | Worker result: profile, detector, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, standing still, event. |
+| `detection` | Worker result: profile, detector, offset, absolute time, (aliased) label, confidence, normalized box, model, worker, feedback, favorite (starred; an event is a favorite when one of its detections is, so stars survive rebuilding events), standing still, event. |
 | `event` | Merged sighting of one label for one profile: time range, best detection, detectors that saw it and how many (`agreement`), confirmed, quiet (rebuilt, notifies nobody), clip and thumbnail paths, the gaps between recordings the clip keeps. |
 | `footage_skip` | Footage a camera never delivered: when its stream jumped ahead (the Tapo cloud relay catching up after a stall) and how far the camera's clock jumped. Ingest also leaves a half-second pause in the stream there, which preparing the recording finds (`segment.skips`), so the player marks the exact place. |
 | `worker` | Last-seen info, tags and reported vocabulary per worker id (Jobs → Detection workers). |
@@ -243,7 +243,8 @@ Windows, where it always uses the local time zone. Older names without an offset
 Runs every 10 minutes (`pipeline/retention.py`):
 
 - events older than their profile's `events_days`, else `retention.events_days` (0 = forever),
-  are deleted, and their segments unpinned;
+  are deleted, and their segments unpinned; favorites (one of their detections starred) are
+  kept;
 - unpinned segments older than `segments_days` are deleted, **except** segments still waiting for a
   worker, which are kept up to `unprocessed_max_days` (so an offline GPU box does not lose footage);
 - if `max_disk_gb` is set, the oldest unpinned segments are deleted until under the cap;

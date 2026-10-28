@@ -40,6 +40,7 @@ import { AuthScreen } from "./pages/Login";
 import { LanguageMenu, useI18n, type MessageKey } from "./i18n";
 import { ThemeMenu } from "./theme";
 import { NewVersionBanner } from "./components/NewVersionBanner";
+import { AppToaster } from "./components/Toasts";
 import { PageSpinner } from "./components/Skeletons";
 
 interface NavItem {
@@ -286,6 +287,7 @@ function AppShell({ isAdmin }: { isAdmin: boolean }) {
         <NewVersionBanner />
         <Outlet />
       </main>
+      <AppToaster />
 
       <nav className="bottom-tabs" aria-label={t("nav.main")}>
         {[...tabs, ...extraTabs].map((tab) => (

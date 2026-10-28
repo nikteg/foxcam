@@ -77,3 +77,13 @@ export function useCameraRole(cameraId: string | undefined): CameraRole | undefi
   const cameras = useQuery({ queryKey: ["cameras"], queryFn: api.cameras });
   return cameras.data?.find((c) => c.id === cameraId)?.role;
 }
+
+/** Whether the user may label (feedback, stars) on a camera: editors and owners. */
+export function useCanLabel(): (cameraId: string) => boolean {
+  const cameras = useQuery({ queryKey: ["cameras"], queryFn: api.cameras });
+  return (cameraId) =>
+    hasRole(
+      cameras.data?.find((c) => c.id === cameraId),
+      "editor",
+    );
+}

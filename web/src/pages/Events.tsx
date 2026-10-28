@@ -9,6 +9,7 @@ import { ModelsSection } from "../components/ModelsSection";
 import { MotionSection } from "../components/MotionSection";
 import { ProfileSelect, useProfiles, useSeveralDetectors } from "../components/ProfileSelect";
 import {
+  Checkbox,
   InfoBanner,
   PageTabs,
   PageTitle,
@@ -16,7 +17,8 @@ import {
   RouterLink,
   useSubPage,
 } from "../components/ui";
-import { useIsAdmin } from "../auth";
+import { useCanLabel, useIsAdmin } from "../auth";
+import { BulkBar, useSelection } from "../components/Bulk";
 import { useI18n } from "../i18n";
 import { useFilters } from "../useFilters";
 import { DetectionList } from "./Detections";
@@ -64,20 +66,27 @@ export function Events() {
 }
 
 function EventList() {
-  const [{ camera, profile, agreement }, setFilter] = useFilters([
+  const [{ camera, profile, agreement, favorite }, setFilter] = useFilters([
     "camera",
     "profile",
     "agreement",
+    "favorite",
   ] as const);
   const severalDetectors = useSeveralDetectors();
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
   const profiles = useProfiles();
   const events = useQuery({
-    queryKey: ["events", camera, profile, agreement],
+    queryKey: ["events", camera, profile, agreement, favorite],
     // A new filter keeps the current list on screen until its own data arrives.
     placeholderData: keepPreviousData,
     queryFn: () =>
-      api.events({ camera, profile, min_agreement: Number(agreement) || undefined, limit: 200 }),
+      api.events({
+        camera,
+        profile,
+        min_agreement: Number(agreement) || undefined,
+        favorite: favorite === "true",
+        limit: 200,
+      }),
     refetchInterval: 15_000,
   });
   const targets = [
@@ -89,6 +98,12 @@ function EventList() {
   ];
   const cfg = settings.data;
   const { t, rich } = useI18n();
+  const canLabel = useCanLabel();
+  const selection = useSelection(
+    events.data,
+    (e) => e.id,
+    (e) => canLabel(e.camera_id),
+  );
 
   return (
     <>
@@ -133,9 +148,17 @@ function EventList() {
             ))}
           </Select>
         )}
+        <Checkbox
+          label={t("favorite.filter")}
+          checked={favorite === "true"}
+          onChange={(_, d) => setFilter("favorite", d.checked === true)}
+        />
       </div>
       <QueryState error={events.error} loading={events.isPending} skeleton={<CardsSkeleton />} />
-      {events.data && <EventsGrid events={events.data} byDay />}
+      {events.data && <EventsGrid events={events.data} byDay selection={selection} />}
+      {events.data && (
+        <BulkBar kind="events" selection={selection} items={events.data} getId={(e) => e.id} />
+      )}
     </>
   );
 }

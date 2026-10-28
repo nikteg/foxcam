@@ -341,6 +341,9 @@ class Detection(Base):
     # Human feedback for building a training set: True = correct, False = wrong.
     feedback: Mapped[bool | None] = mapped_column(Boolean)
     feedback_at: Mapped[datetime | None] = mapped_column(DateTime)
+    # Starred by someone (shared by everyone). An event is a favorite when one of its
+    # detections is: kept when events are rebuilt, and the event is not expired.
+    favorite: Mapped[bool | None] = mapped_column(Boolean, index=True)
 
     segment: Mapped[Segment] = relationship()
 

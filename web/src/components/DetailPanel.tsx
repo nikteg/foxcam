@@ -13,9 +13,10 @@ import { useI18n } from "../i18n";
 import { PHONE, useMediaQuery } from "../useMediaQuery";
 
 /** Clicks here don't close the panel: list rows and event cards' picture and title (they
- * pick another item) and anything opened from it (menus, pickers, tooltips, a dialog). */
+ * pick another item), their checkboxes and stars, the bulk action bar, and anything opened from it (menus, pickers, tooltips, a dialog). */
 const KEEP_OPEN =
-  ".dt-row, .event-card .thumb-button, .event-card .event-title, [role=dialog], " +
+  ".dt-row, .event-card .thumb-button, .event-card .event-title, .event-card .event-pick, " +
+  ".event-card .favorite-star, .bulk-bar, [role=dialog], " +
   "[role=menu], [role=listbox], .fui-Popover, .fui-PopoverSurface, .fui-Tooltip";
 
 /**

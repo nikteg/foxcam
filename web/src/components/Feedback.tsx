@@ -5,12 +5,24 @@ import {
   DismissCircle20Filled,
   DismissCircle20Regular,
 } from "@fluentui/react-icons";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 
 import { api, type Detection } from "../api";
 import { hasRole, useCameraRole } from "../auth";
 import { useI18n } from "../i18n";
+import { useToast } from "./Toasts";
+
+/** After feedback or stars changed: the lists showing them, and what counts matches. The
+ * promise ends when the detections are back, so buttons stay on their pending choice. */
+export function refreshLabels(client: QueryClient) {
+  void client.invalidateQueries({ queryKey: ["events"] }); // shown or hidden as wrong
+  // A wrong detection is no match: the recording's and archive's match counts follow.
+  for (const key of ["segments", "segment", "segment-jobs", "archives", "status"]) {
+    void client.invalidateQueries({ queryKey: [key] });
+  }
+  return client.invalidateQueries({ queryKey: ["detections"] });
+}
 
 /** ✓ / ✗ training feedback for a detection; clicking the active choice clears it. */
 export function Feedback({
@@ -22,18 +34,13 @@ export function Feedback({
 }) {
   const { t } = useI18n();
   const client = useQueryClient();
+  const toast = useToast();
   const mutation = useMutation({
     mutationFn: (correct: boolean | null) => api.feedback(detection.id, correct),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ["events"] }); // shown or hidden as wrong
-      // A wrong detection is no match: the recording's and archive's match counts follow.
-      for (const key of ["segments", "segment", "segment-jobs", "archives", "status"]) {
-        void client.invalidateQueries({ queryKey: [key] });
-      }
-      // Pending until the detection comes back with its new feedback, so the button
-      // doesn't flash back to the old choice in between.
-      return client.invalidateQueries({ queryKey: ["detections"] });
-    },
+    // Pending until the detection comes back with its new feedback, so the button
+    // doesn't flash back to the old choice in between.
+    onSuccess: () => refreshLabels(client),
+    onError: (e) => toast.error(e),
   });
   // Show the pending choice immediately.
   const value = mutation.isPending ? mutation.variables : detection.feedback;

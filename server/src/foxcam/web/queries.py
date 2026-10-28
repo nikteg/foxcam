@@ -146,6 +146,11 @@ def _feedback():
             exists().where(Detection.event_id == Event.id, Detection.feedback.is_(True)))
 
 
+def _favorite():
+    """An event is a favorite when one of its detections is."""
+    return exists().where(Detection.event_id == Event.id, Detection.favorite.is_(True))
+
+
 def overview(settings: Settings, camera_ids: set[str] | None = None) -> dict[str, Any]:
     now = utcnow()
     with session_scope() as s:
@@ -319,7 +324,8 @@ def detection_dict(d: Detection, moving: bool | None) -> dict[str, Any]:
         "profile_id": d.profile_id, "detector_id": d.detector_id, "event_id": d.event_id,
         "offset_ms": d.offset_ms, "label": d.label, "confidence": round(d.confidence, 3),
         "bbox": d.bbox, "is_target": d.is_target, "model": d.model, "worker_id": d.worker_id,
-        "feedback": d.feedback, "is_night": d.segment.is_night if d.segment else None,
+        "feedback": d.feedback, "favorite": bool(d.favorite),
+        "is_night": d.segment.is_night if d.segment else None,
         # Standing still for the profile's still_minutes: no match.
         "still": bool(d.still),
         # The box overlapped motion at that moment (None: not measured).
@@ -336,7 +342,8 @@ def detections(settings: Settings, camera_id: str | None = None, label: str | No
                camera_ids: set[str] | None = None,
                detector_id: str | None = None,
                event_id: int | None = None,
-               hide_still: bool = False) -> list[dict[str, Any]]:
+               hide_still: bool = False,
+               only_favorites: bool = False) -> list[dict[str, Any]]:
     # The recordings' few columns used here, in one query (not their motion data).
     q = _only(select(Detection), Detection.camera_id, camera_ids) \
         .options(selectinload(Detection.segment).options(
@@ -359,36 +366,88 @@ def detections(settings: Settings, camera_id: str | None = None, label: str | No
         q = q.where(Detection.is_target.is_(True))
     if hide_still:
         q = q.where(Detection.still.is_not(True))
+    if only_favorites:
+        q = q.where(Detection.favorite.is_(True))
     moving = _moving(settings)
     with session_scope() as s:
         return [detection_dict(d, moving(d)) for d in s.scalars(q)]
 
 
 def set_feedback(settings: Settings, detection_id: int, correct: bool | None) -> bool:
+    return set_detections(settings, [detection_id], feedback=correct) == 1
+
+
+_UNSET: Any = object()
+
+
+def set_detections(settings: Settings, ids: list[int], feedback: bool | None = _UNSET,
+                   favorite: bool | None = None) -> int:
+    """Feedback (None clears it) and/or the favorite star for detections. Returns how many
+    were found."""
     with session_scope() as s:
-        d = s.get(Detection, detection_id)
-        if d is None:
-            return False
-        d.feedback = correct
-        d.feedback_at = utcnow() if correct is not None else None
-        # A detection marked wrong is no match, nor are the others of an event marked
-        # wrong: the recordings' "with a match" (and the archives' counts) follow.
-        if d.event_id is not None:
-            queue.refresh_event_matches(settings, s, d.event_id)
-        elif (seg := s.get(Segment, d.segment_id)) is not None:
-            queue.refresh_match(settings, seg)
-        return True
+        dets = s.scalars(select(Detection).where(Detection.id.in_(ids))).all()
+        for d in dets:
+            if favorite is not None:
+                d.favorite = favorite or None
+            if feedback is not _UNSET:
+                d.feedback = feedback
+                d.feedback_at = utcnow() if feedback is not None else None
+        if feedback is not _UNSET:
+            _refresh_matches(settings, s, dets)
+        return len(dets)
+
+
+def _refresh_matches(settings: Settings, s, dets: list[Detection]) -> None:
+    """A detection marked wrong is no match, nor are the others of an event marked wrong:
+    the recordings' "with a match" (and the archives' counts) follow."""
+    for event_id in {d.event_id for d in dets if d.event_id is not None}:
+        queue.refresh_event_matches(settings, s, event_id)
+    seg_ids = {d.segment_id for d in dets if d.event_id is None}
+    for seg in s.scalars(select(Segment).where(Segment.id.in_(seg_ids))):
+        queue.refresh_match(settings, seg)
+
+
+def set_events(settings: Settings, ids: list[int], feedback: bool | None = _UNSET,
+               favorite: bool | None = None) -> int:
+    """Feedback and/or the star for events, through their detections (where both live):
+    the best detection gets the mark, like in the event's drawer. Marking an event wrong
+    also turns its detections marked correct to wrong (else it would still count), and
+    taking the star off clears it from all of them. Returns how many were found."""
+    with session_scope() as s:
+        events = s.scalars(select(Event).where(Event.id.in_(ids))).all()
+        for ev in events:
+            dets = s.scalars(select(Detection).where(Detection.event_id == ev.id)).all()
+            best = next((d for d in dets if d.id == ev.best_detection_id),
+                        max(dets, key=lambda d: d.confidence, default=None))
+            if best is None:
+                continue
+            if favorite is True:
+                best.favorite = True
+            elif favorite is False:
+                for d in dets:
+                    d.favorite = None
+            if feedback is not _UNSET:
+                marked = [best] + [d for d in dets if feedback is False and d.feedback is True]
+                for d in marked:
+                    d.feedback = feedback
+                    d.feedback_at = utcnow() if feedback is not None else None
+                _refresh_matches(settings, s, [best])
+        return len(events)
 
 
 def events(camera_id: str | None = None, limit: int = 100,
            profile_id: str | None = None, label: str | None = None,
            camera_ids: set[str] | None = None,
-           min_agreement: int = 1, hide_wrong: bool = False) -> list[dict[str, Any]]:
+           min_agreement: int = 1, hide_wrong: bool = False,
+           only_favorites: bool = False) -> list[dict[str, Any]]:
     wrong, correct = _feedback()
-    q = _only(select(Event, wrong, correct), Event.camera_id, camera_ids) \
+    favorite = _favorite()
+    q = _only(select(Event, wrong, correct, favorite), Event.camera_id, camera_ids) \
         .order_by(Event.first_ts.desc()).limit(limit)
     if hide_wrong:
         q = q.where(~(wrong & ~correct))
+    if only_favorites:
+        q = q.where(favorite)
     if camera_id:
         q = q.where(Event.camera_id == camera_id)
     if profile_id:
@@ -402,6 +461,7 @@ def events(camera_id: str | None = None, limit: int = 100,
             "id": e.id, "camera_id": e.camera_id, "profile_id": e.profile_id, "label": e.label,
             "best_detection_id": e.best_detection_id,
             "feedback": "correct" if is_correct else "wrong" if is_wrong else None,
+            "favorite": bool(is_favorite),
             "first_ts": iso(e.first_ts),
             "last_ts": iso(e.last_ts), "max_confidence": round(e.max_confidence, 3),
             "detection_count": e.detection_count, "is_night": e.is_night,
@@ -413,7 +473,7 @@ def events(camera_id: str | None = None, limit: int = 100,
             "remote": e.clip_remote_key is not None,
             "clip_duration_s": e.clip_duration_s, "building": e.clip_dirty,
             "clip_error": e.clip_error,
-        } for e, is_wrong, is_correct in s.execute(q)]
+        } for e, is_wrong, is_correct, is_favorite in s.execute(q)]
 
 
 def _motion_in(parts: list[tuple[Segment, float]], length_s: float) -> list[list[Any]]:

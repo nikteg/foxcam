@@ -442,6 +442,8 @@ export interface Detection {
   model: string | null;
   worker_id: string | null;
   feedback: boolean | null;
+  /** Starred (shared by everyone). */
+  favorite: boolean;
   is_night: boolean | null;
   /** Standing still for the profile's still_minutes: no match. */
   still: boolean;
@@ -452,12 +454,20 @@ export interface Detection {
   extra: DetectionExtra;
 }
 
+/** What a bulk action changes: left out = unchanged. */
+export interface BulkChanges {
+  feedback?: boolean | null;
+  favorite?: boolean;
+}
+
 export interface DetectionEvent {
   id: number;
   /** Its most confident detection (the frame, box and feedback in the detection drawer). */
   best_detection_id: number | null;
   /** From its detections' feedback: wrong = one marked wrong and none correct. */
   feedback: "correct" | "wrong" | null;
+  /** One of its detections is starred. */
+  favorite: boolean;
   camera_id: string;
   profile_id: string | null;
   label: string;
@@ -946,16 +956,33 @@ export const api = {
     event?: number;
     /** Leave out objects standing still (they make no event). */
     hide_still?: boolean;
+    /** Only starred ones. */
+    favorite?: boolean;
     limit?: number;
   }) => request<Detection[]>("GET", withQuery("/api/detections", q)),
   feedback: (id: number, correct: boolean | null) =>
     request<{ status: string }>("POST", `/api/detections/${id}/feedback`, { correct }),
+  favorite: (kind: "detections" | "events", id: number, favorite: boolean) =>
+    request<{ status: string }>("POST", `/api/${kind}/${id}/favorite`, { favorite }),
+  /** Feedback (null clears it) and/or the star for many at once; events through their best
+   * detection. */
+  bulk: (kind: "detections" | "events", ids: number[], changes: BulkChanges) =>
+    request<{ changed: number }>("POST", `/api/${kind}/bulk`, { ids, ...changes }),
+  /** Detection again on the recordings of these detections or events (theirs are replaced). */
+  bulkReanalyse: (kind: "detections" | "events", ids: number[]) =>
+    request<{ queued: number; skipped: number; detections_removed: number }>(
+      "POST",
+      `/api/${kind}/reanalyse`,
+      { ids },
+    ),
   events: (q: {
     camera?: string;
     profile?: string;
     min_agreement?: number;
     /** Leave out events marked wrong. */
     hide_wrong?: boolean;
+    /** Only starred ones. */
+    favorite?: boolean;
     limit?: number;
   }) => request<DetectionEvent[]>("GET", withQuery("/api/events", q)),
   motionReport: (days: number) =>

@@ -19,7 +19,8 @@ import { useI18n } from "../i18n";
  * when it succeeds (an error is shown in it). With ``open`` / ``onOpenChange`` the caller
  * decides when it shows (e.g. also when a drawer is closed another way). With
  * ``typeToConfirm`` the red button waits until that word is typed (Settings → Danger zone:
- * whole kinds of data, like deleting a repository on GitHub). */
+ * whole kinds of data, like deleting a repository on GitHub). With ``target`` instead of a
+ * trigger it opens at that element (e.g. the button of the menu an action was picked from). */
 export function ConfirmPopover({
   title,
   body,
@@ -30,6 +31,7 @@ export function ConfirmPopover({
   open: openProp,
   onOpenChange,
   typeToConfirm,
+  target,
   children,
 }: {
   title: string;
@@ -45,8 +47,10 @@ export function ConfirmPopover({
   onOpenChange?: (open: boolean) => void;
   /** A word to type before the red button works. */
   typeToConfirm?: string;
+  /** Where it opens when there is no trigger (`open` decides when). */
+  target?: HTMLElement | null;
   /** The trigger button. */
-  children: ReactElement;
+  children?: ReactElement;
 }) {
   const { t, rich } = useI18n();
   const [ownOpen, setOwnOpen] = useState(false);
@@ -67,11 +71,20 @@ export function ConfirmPopover({
         setOpen(d.open);
         setError(null);
       }}
-      positioning={align === "start" ? "above-start" : "above-end"}
+      positioning={{
+        position: "above",
+        align: align === "start" ? "start" : "end",
+        ...(target ? { target } : {}),
+      }}
       withArrow
       trapFocus
     >
-      <PopoverTrigger disableButtonEnhancement>{children}</PopoverTrigger>
+      {children ? (
+        <PopoverTrigger disableButtonEnhancement>{children}</PopoverTrigger>
+      ) : (
+        // Opened at `target`: nothing to trigger it.
+        <span hidden />
+      )}
       <PopoverSurface className="confirm-popover" aria-label={title}>
         <Text weight="semibold" as="p">
           {title}

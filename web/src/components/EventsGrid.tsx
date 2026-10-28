@@ -15,8 +15,10 @@ import type { DetectionEvent } from "../api";
 import { duration, localDay, localTime } from "../format";
 import { useI18n } from "../i18n";
 import { useCameraName } from "./CameraSelect";
+import { withShift, type Selection } from "./Bulk";
 import { DetailPanel } from "./DetailPanel";
 import { EventDetail } from "./EventDetail";
+import { FavoriteStar } from "./Favorite";
 import { useVideoTimeline } from "./Motion";
 import {
   useDetectorNames,
@@ -24,7 +26,16 @@ import {
   useProfiles,
   useSeveralDetectors,
 } from "./ProfileSelect";
-import { ConfidenceBar, DownloadButton, DrawerTitle, Empty, Light, Tag, Time } from "./ui";
+import {
+  Checkbox,
+  ConfidenceBar,
+  DownloadButton,
+  DrawerTitle,
+  Empty,
+  Light,
+  Tag,
+  Time,
+} from "./ui";
 import { VideoPlayer } from "./VideoPlayer";
 import {
   Dialog,
@@ -38,10 +49,13 @@ import {
 export function EventsGrid({
   events,
   byDay = false,
+  selection,
 }: {
   events: DetectionEvent[];
   /** A heading per day (the Events page; the dashboard shows only the latest few). */
   byDay?: boolean;
+  /** A checkbox on each card for bulk actions (components/Bulk). */
+  selection?: Selection<DetectionEvent>;
 }) {
   const { t } = useI18n();
   const [playing, setPlaying] = useState<DetectionEvent | null>(null);
@@ -77,14 +91,24 @@ export function EventsGrid({
 
   return (
     <>
-      <div className="cards">
+      {/* While some are picked, every card shows its checkbox (not only on hover). */}
+      <div className={`cards ${selection?.chosen.length ? "picking" : ""}`}>
         {events.map((e, i) => (
           <Fragment key={e.id}>
             {byDay && (i === 0 || localDay(events[i - 1]!.first_ts) !== localDay(e.first_ts)) && (
               <h2 className="cards-day">{localDay(e.first_ts)}</h2>
             )}
-            <Card className="event-card">
+            <Card className={`event-card ${selection?.isSelected(e) ? "checked" : ""}`}>
               <CardPreview>
+                {selection?.canSelect(e) && (
+                  <span className="event-pick">
+                    <Checkbox
+                      checked={selection.isSelected(e)}
+                      aria-label={t("bulk.selectThis", { label: e.label })}
+                      onChange={(ev) => selection.toggle(e, withShift(ev), events)}
+                    />
+                  </span>
+                )}
                 {e.thumb_url ? (
                   <button
                     type="button"
@@ -172,6 +196,13 @@ export function EventsGrid({
                 ) : (
                   <Tag kind="pending">{t("events.buildingClip")}</Tag>
                 )}
+                <span className="spacer" />
+                <FavoriteStar
+                  kind="events"
+                  id={e.id}
+                  cameraId={e.camera_id}
+                  favorite={e.favorite}
+                />
               </CardFooter>
             </Card>
           </Fragment>

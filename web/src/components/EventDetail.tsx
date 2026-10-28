@@ -9,6 +9,7 @@ import { api, detectionFrameUrl, type DetectionEvent } from "../api";
 import { duration } from "../format";
 import { useI18n } from "../i18n";
 import { CameraTag } from "./CameraSelect";
+import { FavoriteStar } from "./Favorite";
 import { Feedback } from "./Feedback";
 import { ProfileTag, useDetectorNames, useProfiles, useSeveralDetectors } from "./ProfileSelect";
 import { ConfidenceBar, Fact, Facts, Light, QueryState, Tag, Time, useRouterHref } from "./ui";
@@ -72,11 +73,16 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
               })}
         />
       )}
-      {best && (
-        <span className="row wrap">
-          <Feedback detection={best} withLabels />
-        </span>
-      )}
+      <span className="row wrap">
+        {best && <Feedback detection={best} withLabels />}
+        <FavoriteStar
+          kind="events"
+          id={e.id}
+          cameraId={e.camera_id}
+          favorite={e.favorite}
+          withLabel
+        />
+      </span>
       <Facts>
         <Fact label={t("common.camera")}>
           <CameraTag id={e.camera_id} />

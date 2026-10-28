@@ -54,6 +54,10 @@ anything else, and keep the clips.
   ✅/❌ feedback for building a training set. A detection marked wrong is no match anywhere
   (counts, events, notifications, archives), and something that stands still (a parked
   car, ten minutes by default) stops making events.
+- **Favorites and bulk actions.** Star events and detections (in the lists and their
+  drawers) and filter on them; starred events are never expired. Pick several rows or
+  cards (Shift for a range) and mark them correct, wrong or favorite at once, or run
+  detection again on their recordings.
 - **A UI for every screen.** Live view (WebRTC/HLS, with a ~480p *low data* mode for
   mobile connections), events, detections, recordings, worker queue, camera management and
   settings, on phone, tablet and desktop, light or dark, in English and Swedish. On an

@@ -36,7 +36,17 @@ from ..accounts import Principal
 from ..config import Settings
 from ..db import session_scope
 from ..mediamtx import MediaMtx
-from ..models import Archive, CameraRole, Detection, Event, Job, JobState, Segment, utcnow
+from ..models import (
+    Archive,
+    CameraRole,
+    Detection,
+    Event,
+    Job,
+    JobState,
+    Segment,
+    event_segments,
+    utcnow,
+)
 from ..pipeline import compaction, motion_report, preprocess, queue, runner, uploader
 from ..pipeline.events import rebuild_events as rebuild_all_events
 from ..pipeline.reanalyse import ReanalyseError, reanalyse_segment
@@ -417,10 +427,16 @@ def reanalyse_range(body: ReanalyseRange, settings: Settings = Depends(settings_
             q = q.where(Segment.camera_id == body.camera)
         rows = [(i, c) for i, c in s.execute(q.order_by(Segment.start_at))
                 if p.can(c, CameraRole.EDITOR)]
-    if len(rows) > REANALYSE_MAX:
-        raise HTTPException(422, f"{len(rows)} recordings: at most {REANALYSE_MAX} at once")
+    return _reanalyse_many(settings, [i for i, _ in rows])
+
+
+def _reanalyse_many(settings: Settings, segment_ids: list[int]) -> dict[str, Any]:
+    """/segments/{id}/reanalyse for each; ones busy, waiting or deleted are skipped."""
+    if len(segment_ids) > REANALYSE_MAX:
+        raise HTTPException(422, f"{len(segment_ids)} recordings: at most {REANALYSE_MAX} "
+                                 "at once")
     queued = skipped = removed = 0
-    for seg_id, _ in rows:
+    for seg_id in segment_ids:
         try:
             removed += reanalyse_segment(settings, seg_id)
             queued += 1
@@ -626,12 +642,13 @@ def detections(camera: str | None = None, label: str | None = None, only_targets
                event: int | None = None,
                hide_still: bool = Query(
                    False, description="leave out targets standing still (no match)"),
+               favorite: bool = Query(False, description="only favorites"),
                limit: int = Query(200, le=2000),
                settings: Settings = Depends(settings_dep),
                p: Principal = Depends(principal)) -> list[dict[str, Any]]:
     return queries.detections(settings, camera, label, only_targets, min_confidence, limit, segment,
                               profile, _camera_filter(p, camera), detector, event,
-                              hide_still)
+                              hide_still, favorite)
 
 
 @router.get("/detections/{detection_id}/frame.jpg")
@@ -666,20 +683,121 @@ class FeedbackBody(BaseModel):
     correct: bool | None  # null clears the feedback
 
 
+class FavoriteBody(BaseModel):
+    favorite: bool
+
+
+# Most rows a bulk change takes at once (a table shows at most this many).
+BULK_MAX = 2000
+
+
+class BulkBody(BaseModel):
+    ids: list[int] = Field(min_length=1, max_length=BULK_MAX)
+    # Left out: unchanged. null clears the feedback.
+    feedback: bool | None = None
+    favorite: bool | None = None
+
+    def changes(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        if "feedback" in self.model_fields_set:
+            out["feedback"] = self.feedback
+        if self.favorite is not None:
+            out["favorite"] = self.favorite
+        if not out:
+            raise HTTPException(422, "nothing to change: give feedback and/or favorite")
+        return out
+
+
+def _editable(p: Principal, model: type[Detection | Event], ids: list[int],
+              what: str) -> None:
+    """404 unless every row exists and its camera can be seen, 403 unless the caller is an
+    editor of them all (labels and stars are for editors, like feedback)."""
+    with session_scope() as s:
+        cameras = dict(s.execute(select(model.id, model.camera_id).where(model.id.in_(ids))).all())
+    if len(cameras) < len(set(ids)) or not all(p.can(c) for c in cameras.values()):
+        raise HTTPException(404, f"unknown {what}")
+    for camera_id in set(cameras.values()):
+        check_camera(p, camera_id, CameraRole.EDITOR)
+
+
 @router.post("/detections/{detection_id}/feedback")
 def feedback(detection_id: int, body: FeedbackBody,
              settings: Settings = Depends(settings_dep),
              p: Principal = Depends(principal)) -> dict[str, str]:
     """Editors of the camera label detections (training data for all models)."""
-    with session_scope() as s:
-        det = s.get(Detection, detection_id)
-        camera_id = det.camera_id if det else None
-    if camera_id is None or not p.can(camera_id):
-        raise HTTPException(404, "unknown detection")
-    check_camera(p, camera_id, CameraRole.EDITOR)
+    _editable(p, Detection, [detection_id], "detection")
     if not queries.set_feedback(settings, detection_id, body.correct):
         raise HTTPException(404, "unknown detection")
     return {"status": "ok"}
+
+
+@router.post("/detections/{detection_id}/favorite")
+def detection_favorite(detection_id: int, body: FavoriteBody,
+                       settings: Settings = Depends(settings_dep),
+                       p: Principal = Depends(principal)) -> dict[str, str]:
+    """Star a detection, or take the star off (editors of the camera)."""
+    _editable(p, Detection, [detection_id], "detection")
+    queries.set_detections(settings, [detection_id], favorite=body.favorite)
+    return {"status": "ok"}
+
+
+@router.post("/detections/bulk")
+def detections_bulk(body: BulkBody, settings: Settings = Depends(settings_dep),
+                    p: Principal = Depends(principal)) -> dict[str, int]:
+    """Feedback and/or the star for several detections at once (editors of their cameras)."""
+    changes = body.changes()
+    _editable(p, Detection, body.ids, "detection")
+    return {"changed": queries.set_detections(settings, body.ids, **changes)}
+
+
+class IdsBody(BaseModel):
+    ids: list[int] = Field(min_length=1, max_length=BULK_MAX)
+
+
+@router.post("/detections/reanalyse")
+def detections_reanalyse(body: IdsBody, settings: Settings = Depends(settings_dep),
+                         p: Principal = Depends(principal)) -> dict[str, Any]:
+    """Run detection again on the recordings of these detections (their detections, with
+    feedback and stars, are replaced). Editors of their cameras."""
+    _editable(p, Detection, body.ids, "detection")
+    with session_scope() as s:
+        segs = sorted(set(s.scalars(select(Detection.segment_id)
+                                    .where(Detection.id.in_(body.ids)))))
+    return _reanalyse_many(settings, segs)
+
+
+@router.post("/events/reanalyse")
+def events_reanalyse(body: IdsBody, settings: Settings = Depends(settings_dep),
+                     p: Principal = Depends(principal)) -> dict[str, Any]:
+    """Run detection again on every recording of these events (the events are rebuilt
+    from what is found). Editors of their cameras."""
+    _editable(p, Event, body.ids, "event")
+    with session_scope() as s:
+        segs = sorted(set(s.scalars(select(event_segments.c.segment_id)
+                                    .where(event_segments.c.event_id.in_(body.ids)))) |
+                      set(s.scalars(select(Detection.segment_id)
+                                    .where(Detection.event_id.in_(body.ids)))))
+    return _reanalyse_many(settings, segs)
+
+
+@router.post("/events/{event_id}/favorite")
+def event_favorite(event_id: int, body: FavoriteBody,
+                   settings: Settings = Depends(settings_dep),
+                   p: Principal = Depends(principal)) -> dict[str, str]:
+    """Star an event (its best detection), or take the star off all its detections."""
+    _editable(p, Event, [event_id], "event")
+    queries.set_events(settings, [event_id], favorite=body.favorite)
+    return {"status": "ok"}
+
+
+@router.post("/events/bulk")
+def events_bulk(body: BulkBody, settings: Settings = Depends(settings_dep),
+                p: Principal = Depends(principal)) -> dict[str, int]:
+    """Feedback and/or the star for several events at once, through their best detections
+    (editors of their cameras)."""
+    changes = body.changes()
+    _editable(p, Event, body.ids, "event")
+    return {"changed": queries.set_events(settings, body.ids, **changes)}
 
 
 @router.get("/detections/feedback-export", dependencies=[Depends(require_admin)])
@@ -692,10 +810,11 @@ def events(camera: str | None = None, profile: str | None = None, label: str | N
            min_agreement: int = Query(1, ge=1, le=10,
                                       description="seen by at least this many detectors"),
            hide_wrong: bool = Query(False, description="leave out events marked wrong"),
+           favorite: bool = Query(False, description="only favorites"),
            limit: int = Query(100, le=1000),
            p: Principal = Depends(principal)) -> list[dict[str, Any]]:
     return queries.events(camera, limit, profile, label, _camera_filter(p, camera),
-                          min_agreement, hide_wrong)
+                          min_agreement, hide_wrong, favorite)
 
 
 def _event(p: Principal, event_id: int) -> Event:

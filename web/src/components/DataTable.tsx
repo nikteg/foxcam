@@ -22,7 +22,8 @@ import {
 
 import { useI18n } from "../i18n";
 import { PHONE, useMediaQuery } from "../useMediaQuery";
-import { Fact, Facts, NoValue } from "./ui";
+import { withShift, type Selection } from "./Bulk";
+import { Checkbox, Fact, Facts, NoValue } from "./ui";
 
 export interface Column<T> {
   id: string;
@@ -47,8 +48,12 @@ interface Props<T> {
   selectedId?: string | number | null;
   rowClassName?: (item: T) => string | undefined;
   defaultSort?: { column: string; direction: "ascending" | "descending" };
+  /** A checkbox per row (and select all in the header) for bulk actions (components/Bulk). */
+  selection?: Selection<T>;
 }
 
+/** The selection checkboxes' column. */
+const SELECT = "_select";
 /** Rows rendered at first, and added each time the end of the table scrolls into view. */
 const PAGE = 100;
 /** A column grows to fit its content up to this width; longer text is cut with "…". */
@@ -73,6 +78,7 @@ export function DataTable<T>({
   selectedId,
   rowClassName,
   defaultSort,
+  selection,
 }: Props<T>) {
   const { t } = useI18n();
   const phone = useMediaQuery(PHONE);
@@ -81,6 +87,36 @@ export function DataTable<T>({
     sortDirection: defaultSort?.direction ?? "ascending",
   });
   const [shown, setShown] = useState(PAGE);
+  const compare = columns.find((c) => c.id === sort.sortColumn)?.compare;
+  const sorted = compare
+    ? items.toSorted((a, b) => (sort.sortDirection === "ascending" ? 1 : -1) * compare(a, b))
+    : items;
+  const visible = sorted.slice(0, shown);
+  const selectable = selection ? sorted.filter(selection.canSelect) : [];
+  const picked = selection ? selectable.filter(selection.isSelected).length : 0;
+  // A row's checkbox; Shift picks the rows in between too (in the order shown).
+  const pick = (item: T) =>
+    selection?.canSelect(item) ? (
+      <span className="dt-select">
+        <Checkbox
+          checked={selection.isSelected(item)}
+          aria-label={t("bulk.select")}
+          onChange={(e) => selection.toggle(item, withShift(e), sorted)}
+        />
+      </span>
+    ) : null;
+  const selectColumn = createTableColumn<T>({
+    columnId: SELECT,
+    renderHeaderCell: () =>
+      selectable.length > 0 && (
+        <Checkbox
+          checked={picked === 0 ? false : picked === selectable.length ? true : "mixed"}
+          aria-label={t("bulk.selectAll", { count: selectable.length })}
+          onChange={() => selection!.setAll(selectable, picked < selectable.length)}
+        />
+      ),
+    renderCell: pick,
+  });
   const gridColumns = columns.map((c) =>
     createTableColumn<T>({
       columnId: c.id,
@@ -94,11 +130,13 @@ export function DataTable<T>({
       },
     }),
   );
+  if (selection) gridColumns.unshift(selectColumn);
   // Columns grow to fit what is in them (measured after rendering, see below), so tags,
   // names and model strings are not cut off; `width` is the starting point.
   const [fitted, setFitted] = useState<Record<string, number>>({});
-  const sizing: TableColumnSizingOptions = Object.fromEntries(
-    columns.map((c) => {
+  const sizing: TableColumnSizingOptions = Object.fromEntries([
+    [SELECT, { idealWidth: 44, minWidth: 44 }],
+    ...columns.map((c) => {
       const width = Math.max(c.width ?? 120, fitted[c.id] ?? 0);
       return [
         c.id,
@@ -108,12 +146,7 @@ export function DataTable<T>({
         },
       ];
     }),
-  );
-  const compare = columns.find((c) => c.id === sort.sortColumn)?.compare;
-  const sorted = compare
-    ? items.toSorted((a, b) => (sort.sortDirection === "ascending" ? 1 : -1) * compare(a, b))
-    : items;
-  const visible = sorted.slice(0, shown);
+  ]);
 
   // The latest click handler, behind a stable function: memoized rows keep it.
   const clickRef = useRef(onRowClick);
@@ -121,8 +154,10 @@ export function DataTable<T>({
     clickRef.current = onRowClick;
   });
   const [activate] = useState(() => (e: MouseEvent | KeyboardEvent, item: T) => {
-    // Let buttons and links inside the row do their own thing.
-    if ((e.target as HTMLElement).closest("a, button, input, [role=checkbox]")) return;
+    // Let buttons, links and the selection checkbox inside the row do their own thing.
+    if ((e.target as HTMLElement).closest("a, button, input, [role=checkbox], .dt-select")) {
+      return;
+    }
     clickRef.current?.(item);
   });
 
@@ -189,12 +224,17 @@ export function DataTable<T>({
               key={id}
               item={item}
               columns={columns}
-              className={[rowClassName?.(item), id === selectedId ? "selected" : ""]
+              className={[
+                rowClassName?.(item),
+                id === selectedId ? "selected" : "",
+                selection?.isSelected(item) ? "checked" : "",
+              ]
                 .filter(Boolean)
                 .join(" ")}
               selected={id === selectedId}
               clickable={!!onRowClick}
               activate={activate}
+              pick={pick(item)}
             />
           );
         })}
@@ -231,7 +271,12 @@ export function DataTable<T>({
             <Row<T>
               key={rowId}
               item={item}
-              className={["dt-row", rowClassName?.(item), rowId === selectedId ? "selected" : ""]
+              className={[
+                "dt-row",
+                rowClassName?.(item),
+                rowId === selectedId ? "selected" : "",
+                selection?.isSelected(item) ? "checked" : "",
+              ]
                 .filter(Boolean)
                 .join(" ")}
               selected={onRowClick ? rowId === selectedId : undefined}
@@ -286,6 +331,8 @@ interface PhoneCardProps<T> {
   selected: boolean;
   clickable: boolean;
   activate: (e: MouseEvent | KeyboardEvent, item: T) => void;
+  /** The selection checkbox, in the card's corner. */
+  pick: ReactNode;
 }
 
 /** A row on phones: picture, then the columns as facts, then full-width extras. */
@@ -296,6 +343,7 @@ function PhoneCardImpl<T>({
   selected,
   clickable,
   activate,
+  pick,
 }: PhoneCardProps<T>) {
   const values = columns
     .filter((c) => c.phone !== "hide")
@@ -313,6 +361,7 @@ function PhoneCardImpl<T>({
       onClick={(e) => activate(e, item)}
       onKeyDown={(e) => e.key === "Enter" && activate(e, item)}
     >
+      {pick}
       {values
         .filter(({ c }) => c.phone === "thumb")
         .map(({ c, v }) => (

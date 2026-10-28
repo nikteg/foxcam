@@ -330,3 +330,74 @@ def test_preprocessing_status_shows_the_waiting_and_the_pace(settings, monkeypat
         p = client.get("/api/preparation").json()
     assert p["waiting"] == 1 and [g["id"] for g in p["segments"]] == [older]
     assert p["done_last_hour"] == 1 and p["avg_seconds_last_hour"] is not None
+
+
+def test_favorites_and_bulk_changes_through_the_api(settings):
+    start = utcnow().replace(microsecond=0) - timedelta(minutes=30)
+    segs = [add_segment(settings, start=start + timedelta(minutes=10 * i), with_file=False)
+            for i in range(3)]
+    dets = []
+    for seg_id in segs:  # far apart: three events
+        add_job(seg_id, state="done")
+        dets.append(add_detection(seg_id, seg_id, 500))
+        with session_scope() as s:
+            s.get(Segment, seg_id).has_target = True
+    events.assign_events(settings)
+    with app_client(settings) as client:
+        ev_ids = {e["best_detection_id"]: e["id"] for e in client.get("/api/events").json()}
+        evs = [ev_ids[d] for d in dets]
+
+        # A star on a detection makes its event a favorite; both can be filtered on.
+        assert client.post(f"/api/detections/{dets[0]}/favorite",
+                           json={"favorite": True}).status_code == 200
+        assert [d["id"] for d in client.get("/api/detections?favorite=true").json()] == [dets[0]]
+        assert [e["id"] for e in client.get("/api/events?favorite=true").json()] == [evs[0]]
+        # Starring an event stars its best detection; taking it off clears them all.
+        client.post(f"/api/events/{evs[1]}/favorite", json={"favorite": True})
+        favs = client.get("/api/detections?favorite=true").json()
+        assert {d["id"] for d in favs} == {dets[0], dets[1]}
+        client.post(f"/api/events/{evs[0]}/favorite", json={"favorite": False})
+        assert [e["id"] for e in client.get("/api/events?favorite=true").json()] == [evs[1]]
+
+        # Bulk: events marked wrong and starred at once.
+        r = client.post("/api/events/bulk", json={"ids": evs[:2], "feedback": False,
+                                                  "favorite": True})
+        assert r.json() == {"changed": 2}
+        by_id = {e["id"]: e for e in client.get("/api/events").json()}
+        assert [(by_id[i]["feedback"], by_id[i]["favorite"]) for i in evs] == [
+            ("wrong", True), ("wrong", True), (None, False)]
+        with session_scope() as s:
+            assert [s.get(Segment, i).has_target for i in segs] == [False, False, True]
+        # Detections: feedback cleared (null), the star left alone.
+        r = client.post("/api/detections/bulk", json={"ids": dets, "feedback": None})
+        assert r.json() == {"changed": 3}
+        by_id = {d["id"]: d for d in client.get("/api/detections").json()}
+        assert [(by_id[i]["feedback"], by_id[i]["favorite"]) for i in dets] == [
+            (None, True), (None, True), (None, False)]
+        # Nothing to change, or an unknown id: refused.
+        assert client.post("/api/detections/bulk", json={"ids": dets}).status_code == 422
+        assert client.post("/api/detections/bulk",
+                           json={"ids": [*dets, 999999], "favorite": True}).status_code == 404
+
+
+def test_bulk_run_detection_again(settings):
+    start = utcnow().replace(microsecond=0) - timedelta(minutes=30)
+    segs = [add_segment(settings, start=start + timedelta(minutes=10 * i), with_file=False)
+            for i in range(3)]
+    dets = []
+    for seg_id in segs:  # far apart: three events
+        add_job(seg_id, state="done")
+        dets.append(add_detection(seg_id, seg_id, 500))
+    events.assign_events(settings)
+    with app_client(settings) as client:
+        # Detections: their recordings go back for detection, the detections are replaced.
+        r = client.post("/api/detections/reanalyse", json={"ids": [dets[0]]})
+        assert r.json() == {"queued": 1, "skipped": 0, "detections_removed": 1}
+        with session_scope() as s:
+            assert s.get(Segment, segs[0]).status == SegmentStatus.NEW
+        # Events: every recording of each (the first event went with its only detection).
+        ev_ids = [e["id"] for e in client.get("/api/events").json()]
+        r = client.post("/api/events/reanalyse", json={"ids": ev_ids})
+        assert r.json() == {"queued": 2, "skipped": 0, "detections_removed": 2}
+        assert client.get("/api/detections").json() == []
+        assert client.post("/api/events/reanalyse", json={"ids": [999999]}).status_code == 404

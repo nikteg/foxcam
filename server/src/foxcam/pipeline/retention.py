@@ -1,7 +1,8 @@
 """Delete old recordings.
 
 Rules, in order:
-- Events older than ``events_days`` (if > 0) are deleted and their segments unpinned.
+- Events older than ``events_days`` (if > 0) are deleted and their segments unpinned;
+  favorites are kept.
 - Unpinned segments older than ``segments_days`` are deleted, except segments still
   waiting for a worker, which are kept until ``unprocessed_max_days``.
 - If ``max_disk_gb`` is set, the oldest unpinned segments are deleted until under the cap.
@@ -16,7 +17,7 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, exists, func, select
 
 from .. import notify, sprites
 from ..config import Settings
@@ -67,8 +68,10 @@ def _expire_events(settings: Settings) -> int:
         return 0
     now = utcnow()
     with session_scope() as s:
+        # Favorites are kept (one of their detections starred).
+        favorite = exists().where(Detection.event_id == Event.id, Detection.favorite.is_(True))
         candidates = s.scalars(select(Event).where(
-            Event.last_ts < now - timedelta(days=min(positive)))).all()
+            Event.last_ts < now - timedelta(days=min(positive)), ~favorite)).all()
         events = [ev for ev in candidates
                   if (days := _events_days(settings, ev.profile_id, default)) > 0
                   and ev.last_ts < now - timedelta(days=days)]
@@ -217,7 +220,7 @@ def _drop_weak_non_targets(settings: Settings) -> int:
     with session_scope() as s:
         return s.execute(delete(Detection).where(
             Detection.is_target.is_(False), Detection.feedback.is_(None),
-            Detection.confidence < floor)).rowcount or 0
+            Detection.favorite.is_not(True), Detection.confidence < floor)).rowcount or 0
 
 
 def run_retention(settings: Settings) -> dict[str, int]:

@@ -2275,3 +2275,104 @@ h2.panel-heading {
   display: flex;
   margin-top: var(--spacingVerticalM);
 }
+
+/* Favorites (components/Favorite.tsx): a filled star in one colour. */
+.star-icon {
+  color: var(--colorPaletteMarigoldForeground1);
+}
+.fui-ToggleButton.favorite-star:disabled .star-icon {
+  color: var(--colorPaletteMarigoldForeground1);
+  opacity: 0.7;
+}
+
+/* Bulk selection (components/Bulk.tsx). Picked rows and cards: the brand's light tint. */
+.data-table div.dt-row.checked {
+  background: var(--colorBrandBackground2);
+}
+.data-table div.dt-row.checked.selected {
+  background: var(--colorBrandBackground2Hover);
+}
+.dt-card {
+  position: relative;
+}
+.dt-card.checked,
+.fui-Card.event-card.checked {
+  background: var(--colorBrandBackground2);
+  box-shadow: 0 0 0 2px var(--colorBrandStroke1);
+}
+/* Phones: the row's checkbox in the card's top corner, over its picture. */
+.dt-card > .dt-select {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 1;
+  background: var(--colorNeutralBackground1);
+  border-radius: var(--borderRadiusMedium);
+}
+.dt-card > .dt-select .fui-Checkbox__indicator {
+  margin: 4px;
+}
+/* Event cards: the checkbox over the picture's corner; shown on hover and focus, on touch
+   screens (no hover), and on every card once one is picked. */
+.event-card .fui-CardPreview {
+  position: relative;
+}
+.event-pick {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  background: var(--colorNeutralBackground1);
+  border-radius: var(--borderRadiusMedium);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.event-pick .fui-Checkbox__indicator {
+  margin: 4px;
+}
+.event-card:hover .event-pick,
+.event-card:focus-within .event-pick,
+.cards.picking .event-pick {
+  opacity: 1;
+}
+@media (pointer: coarse) {
+  .event-pick {
+    opacity: 1;
+  }
+}
+/* The bar: after the list, kept at the bottom of the screen while the list is in view;
+   above the bottom tab bar where there is one. */
+.bulk-bar {
+  position: sticky;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--spacingHorizontalXS);
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: var(--spacingVerticalL) auto 0;
+  padding: 6px 6px 6px 16px;
+  background: var(--colorNeutralBackground1);
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: var(--borderRadiusXLarge);
+  box-shadow: var(--shadow16);
+}
+.bulk-count {
+  white-space: nowrap;
+  margin-right: var(--spacingHorizontalS);
+}
+@media (max-width: 1279px) {
+  .bulk-bar {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+}
+@media (max-width: 720px) {
+  .bulk-bar {
+    padding-left: 12px;
+  }
+  .bulk-count {
+    margin-right: 0;
+  }
+}

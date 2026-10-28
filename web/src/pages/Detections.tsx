@@ -8,6 +8,8 @@ import { CameraSelect, CameraTag, useCameraName } from "../components/CameraSele
 import { ProfileSelect, useDetectorNames, useSeveralDetectors } from "../components/ProfileSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
+import { BulkBar, useSelection } from "../components/Bulk";
+import { FavoriteStar } from "../components/Favorite";
 import { Feedback } from "../components/Feedback";
 import {
   Checkbox,
@@ -25,6 +27,7 @@ import {
   Toolbar,
   useRouterHref,
 } from "../components/ui";
+import { useCanLabel } from "../auth";
 import { decimal, localTime } from "../format";
 import { useI18n, type I18n } from "../i18n";
 import { useFilters } from "../useFilters";
@@ -94,6 +97,15 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detec
     cell: (d) => <Feedback detection={d} />,
     compare: byNumber((d) => (d.feedback === null ? 0 : d.feedback ? 2 : 1)),
   },
+  {
+    id: "favorite",
+    header: t("col.favorite"),
+    width: 80,
+    cell: (d) => (
+      <FavoriteStar kind="detections" id={d.id} cameraId={d.camera_id} favorite={d.favorite} />
+    ),
+    compare: byNumber((d) => (d.favorite ? 1 : 0)),
+  },
 ];
 
 /** Events → Detections: every single hit, the evidence behind the events. */
@@ -107,6 +119,7 @@ export function DetectionList() {
     "min_confidence",
     "detector",
     "event",
+    "favorite",
     "selected",
   ] as const);
   const query = {
@@ -119,6 +132,7 @@ export function DetectionList() {
     // Targets standing still are no match: hidden unless asked for (they pile up).
     hide_still: f.still !== "true",
     min_confidence: Number(f.min_confidence) || 0,
+    favorite: f.favorite === "true",
     limit: 500,
   };
   const detections = useQuery({
@@ -134,6 +148,12 @@ export function DetectionList() {
   const cameraName = useCameraName();
   const severalDetectors = useSeveralDetectors();
   const detectorNames = useDetectorNames();
+  const canLabel = useCanLabel();
+  const selection = useSelection(
+    detections.data,
+    (d) => d.id,
+    (d) => canLabel(d.camera_id),
+  );
 
   return (
     <>
@@ -201,6 +221,11 @@ export function DetectionList() {
           onChange={(_, d) => setFilter("only_targets", d.checked === true)}
         />
         <Checkbox
+          label={t("favorite.filter")}
+          checked={f.favorite === "true"}
+          onChange={(_, d) => setFilter("favorite", d.checked === true)}
+        />
+        <Checkbox
           label={t("detections.showStill")}
           checked={f.still === "true"}
           onChange={(_, d) => setFilter("still", d.checked === true)}
@@ -223,6 +248,7 @@ export function DetectionList() {
               rowClassName={(d) => (d.is_target ? "target" : undefined)}
               selectedId={selected?.id}
               onRowClick={(d) => setFilter("selected", String(d.id))}
+              selection={selection}
             />
           )}
           {detections.data?.length === 0 && <Empty>{t("detections.none")}</Empty>}
@@ -242,6 +268,15 @@ export function DetectionList() {
           {selected && <DetectionDetail detection={selected} />}
         </DetailPanel>
       </div>
+      {/* Outside the list's sideways scroll, so it sticks to the bottom of the screen. */}
+      {detections.data && (
+        <BulkBar
+          kind="detections"
+          selection={selection}
+          items={detections.data}
+          getId={(d) => d.id}
+        />
+      )}
     </>
   );
 }
@@ -257,7 +292,16 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
         alt={t("detections.frameAlt", { label: d.label })}
       />
       <Caption1 className="muted">{t("detections.frameNote")}</Caption1>
-      <Feedback detection={d} withLabels />
+      <span className="row wrap">
+        <Feedback detection={d} withLabels />
+        <FavoriteStar
+          kind="detections"
+          id={d.id}
+          cameraId={d.camera_id}
+          favorite={d.favorite}
+          withLabel
+        />
+      </span>
       <Facts>
         <Fact label={t("col.time")}>
           <Time iso={d.ts} />
