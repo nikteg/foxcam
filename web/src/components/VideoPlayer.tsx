@@ -119,7 +119,18 @@ export function VideoPlayer({
     ...(motionOn ? motionMarkers(motion) : []),
     ...(detectionsOn && detections ? detectionMarkers(detections) : []),
   ];
-  const allMarkers = [...timelineMarkers, ...(gaps ?? []).map(([from, to]) => ({ from, to }))];
+  // Where the arrows and double taps jump: to the detections when their boxes are on (the
+  // first and last moment of each stretch, where its boxes show), else to where things
+  // moved; and to the given markers and the gaps.
+  const jumpMarkers = [
+    ...(markers ?? []),
+    ...(detectionsOn && detections?.length
+      ? detectionJumps(detections)
+      : motionOn
+        ? motionMarkers(motion)
+        : []),
+    ...(gaps ?? []).map(([from, to]) => ({ from, to })),
+  ];
   // One button for both kinds of boxes: both, detections only, motion only, none, both…
   // (with one kind, on and off).
   const cycleBoxes = () => {
@@ -158,7 +169,7 @@ export function VideoPlayer({
       // metadata is fetched up front.
       load="eager"
       posterLoad="eager"
-      keyShortcuts={keyShortcuts(allMarkers)}
+      keyShortcuts={keyShortcuts(jumpMarkers)}
       onLoadedMetadata={() => {
         if (startAt && ref.current) ref.current.currentTime = startAt;
       }}
@@ -176,7 +187,7 @@ export function VideoPlayer({
       )}
       {!!gaps?.length && <GapNotice gaps={gaps} />}
       <FrameClock />
-      <PictureTaps markers={allMarkers} />
+      <PictureTaps markers={jumpMarkers} />
       <PlayerControls
         thumbnails={thumbnails}
         markers={timelineMarkers}
@@ -573,6 +584,15 @@ function ScrubPicture({
   const [spriteWidth, setSpriteWidth] = useState(0);
   if (!active) return null;
   const { width: w, height: h, coords } = active;
+  // The boxes of the stretch the picture stands for (a tile covers a second or more, more
+  // than the dragged timeline moves per pixel), at its first moment that has some, not
+  // only those at the exact time dragged to.
+  const from = active.startTime * 1000;
+  const to = (active.endTime ?? time) * 1000;
+  const firstIn = (moments: number[]) =>
+    moments.find((at) => at >= from && at < to) ?? Math.max(time * 1000, from);
+  const motionMs = firstIn(motion?.map(([at]) => at) ?? []);
+  const detectionsMs = firstIn((detections ?? []).map((d) => d.at_ms).toSorted((a, b) => a - b));
   const tile = w && h && coords;
   return (
     <div className="player-scrub" aria-hidden="true">
@@ -595,8 +615,8 @@ function ScrubPicture({
               : { width: "100%", height: "100%", objectFit: "contain" }
           }
         />
-        {motion && <MotionBoxes boxes={motionAt(motion, time * 1000)?.[1] ?? []} />}
-        {detections && <DetectionBoxes detections={detectionsAt(detections, time * 1000)} />}
+        {motion && <MotionBoxes boxes={motionAt(motion, motionMs)?.[1] ?? []} />}
+        {detections && <DetectionBoxes detections={detectionsAt(detections, detectionsMs)} />}
       </div>
     </div>
   );
@@ -728,6 +748,17 @@ function detectionMarkers(detections: PlayerDetection[]): Marker[] {
   ];
 }
 
+/** Where to jump between detections: each stretch of them from its first moment to its
+ * last (where its boxes still show, unlike the end of its timeline marker). */
+function detectionJumps(detections: PlayerDetection[]): Marker[] {
+  const moments = [...new Set(detections.map((d) => d.at_ms))].toSorted((a, b) => a - b);
+  return stretches(moments, 0, "detection");
+}
+
+/** A seek lands this close (ms) to where it was asked, not always on it: boxes at a
+ * moment show from this much before it. */
+const SEEK_SLACK_MS = 20;
+
 /** How long one frame's motion stays on screen (frames are 0.5 s apart at 2 fps). */
 const FRAME_MS = 600;
 /** A detection stays on screen until its detector's next moment, if that comes within
@@ -776,14 +807,14 @@ function PlaybackBoxes({
 
 /** The frame with motion at `ms`, if any. */
 function motionAt(frames: MotionFrame[], ms: number): MotionFrame | undefined {
-  return frames.findLast(([at]) => at <= ms && ms < at + FRAME_MS);
+  return frames.findLast(([at]) => at <= ms + SEEK_SLACK_MS && ms < at + FRAME_MS);
 }
 
 /** Each detector's detections at its latest moment at or before `ms`, while on screen. */
 function detectionsAt(detections: PlayerDetection[], ms: number): PlayerDetection[] {
   const latest = new Map<string | null, number>();
   for (const d of detections) {
-    if (d.at_ms <= ms && d.at_ms > (latest.get(d.detector_id) ?? -Infinity))
+    if (d.at_ms <= ms + SEEK_SLACK_MS && d.at_ms > (latest.get(d.detector_id) ?? -Infinity))
       latest.set(d.detector_id, d.at_ms);
   }
   return detections.filter((d) => {

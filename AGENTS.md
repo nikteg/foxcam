@@ -104,10 +104,11 @@ iPad and desktop, in light and dark theme, and as an iOS home screen app.
 - One video player component everywhere (`VideoPlayer`): Vidstack plays the video, the
   controls are our own Fluent parts (speed in the bar, no settings or PiP buttons). Add to
   it by changing our controls, not by patching Vidstack's markup; anything that pops up
-  inside it (menus) is `inline` so it shows in fullscreen. Timeline `markers` (e.g. motion)
-  are what a double tap at the sides and the arrow keys jump between (each stretch's start
-  and end) (Shift+arrow: 5 s);
-  `,` and `.` step one frame. Clicks and taps act at once (no
+  inside it (menus) is `inline` so it shows in fullscreen. A double tap at the sides and
+  the arrow keys jump between the detections while their boxes are on (each stretch's
+  first and last moment), else between the motion stretches (start and end), and always
+  to given `markers` and gaps (Shift+arrow: 5 s); `,` and `.` step one frame. Scrubbing
+  shows the boxes of the stretch the thumbnail stands for. Clicks and taps act at once (no
   waiting to tell them from a double click; a double click is not fullscreen).
 - Keep it fast: no full-page spinners for filter changes, no refetching what is cached.
 
