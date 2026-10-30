@@ -8,6 +8,7 @@ import { CameraSelect, CameraTag, useCameraName } from "../components/CameraSele
 import { ProfileSelect, useDetectorNames, useSeveralDetectors } from "../components/ProfileSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
+import { DetectionRawData } from "../components/RawData";
 import { FrameImage } from "../components/FrameImage";
 import { playerDetections } from "../components/Boxes";
 import {
@@ -427,6 +428,7 @@ function DetectionDetail({ detection: d }: { detection: Detection }) {
           </DownloadButton>
         )}
       </span>
+      <DetectionRawData id={d.id} />
     </div>
   );
 }

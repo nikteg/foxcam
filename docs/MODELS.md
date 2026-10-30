@@ -39,8 +39,11 @@ something (`run: on_hit`, `after: yolo`), so an expensive model confirms a cheap
 detector and model: detections and targets, your feedback from Events → Detections (✓ / ✗,
 as precision), average processing time, jobs done, given up and skipped, and the agreement
 rate: of the recordings where a detector found a target and another detector of the profile
-also looked, how often that one found one too. Admins also see each run's raw worker
-result on the recording (Recordings → Segments → a recording → Detection runs).
+also looked, how often that one found one too. Each run's raw worker result is on the
+recording (Recordings → Segments → a recording → Detection runs), and "Raw data" at the
+bottom of an event's or a detection's drawer shows it as stored, with what the worker posted
+for each detection (`GET /api/events/{id}/raw`, `GET /api/detections/{id}/raw`), for anyone
+who can see the camera.
 
 **Give YOLO-World one word per thing.** Distinct targets are fine together, but synonyms of the
 same thing compete for the same object and pull every score down, often below the threshold.

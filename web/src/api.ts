@@ -348,8 +348,44 @@ export interface SegmentJob {
   finished_at: string | null;
   detections: number;
   targets: number;
-  /** Admins only: what the worker posted (``{truncated, bytes, text}`` when too big). */
-  raw_result?: unknown;
+  /** What the worker posted (``{truncated, bytes, text}`` when too big). */
+  raw_result: unknown;
+}
+
+/** One detection as a worker posted it (the same for every model; `extra` is the
+ *  detector's own, e.g. SpeciesNet's box label and top guesses). */
+export interface PostedDetection {
+  offset_ms: number;
+  label: string;
+  confidence: number;
+  bbox: number[] | null;
+  extra?: DetectionExtra | null;
+}
+
+/** A detection as stored, what the worker posted for it (null: not kept, the result was
+ *  too big) and the run that found it. */
+export interface DetectionRaw {
+  stored: { id: number; ts: string; label: string; detector_id: string | null } & Record<
+    string,
+    unknown
+  >;
+  posted: PostedDetection | null;
+  job: {
+    id: number;
+    state: JobState;
+    model: string | null;
+    worker_id: string | null;
+    processing_ms: number | null;
+    finished_at: string | null;
+    truncated: boolean;
+  } | null;
+}
+
+/** An event as stored, with its first detections raw. */
+export interface EventRaw {
+  stored: { last_ts: string; agreement: number | null } & Record<string, unknown>;
+  detections: DetectionRaw[];
+  more_detections: boolean;
 }
 
 /** One row of GET /api/models/stats: a profile's detector running one model. */
@@ -1115,6 +1151,8 @@ export const api = {
     limit?: number;
   }) => request<Detection[]>("GET", withQuery("/api/detections", q)),
   detection: (id: number) => request<Detection>("GET", `/api/detections/${id}`),
+  /** The detection as stored and what the worker posted for it. */
+  detectionRaw: (id: number) => request<DetectionRaw>("GET", `/api/detections/${id}/raw`),
   feedback: (id: number, correct: boolean | null) =>
     request<{ status: string }>("POST", `/api/detections/${id}/feedback`, { correct }),
   favorite: (kind: "detections" | "events", id: number, favorite: boolean) =>
@@ -1147,6 +1185,8 @@ export const api = {
     limit?: number;
   }) => request<DetectionEvent[]>("GET", withQuery("/api/events", q)),
   event: (id: number) => request<DetectionEvent>("GET", `/api/events/${id}`),
+  /** The event as stored, with its detections raw. */
+  eventRaw: (id: number) => request<EventRaw>("GET", `/api/events/${id}/raw`),
   motionReport: (days: number) =>
     request<MotionReport>("GET", withQuery("/api/motion/report", { days })),
   motionBackfill: (days: number) =>

@@ -1710,7 +1710,11 @@ Fluent's text styles would otherwise reset the margins. */
   gap: var(--spacingVerticalXS);
 }
 
-/* Recordings: a run's raw worker result (admins). */
+/* Raw data (components/RawData.tsx): what a worker posted, and its JSON. */
+.raw-data .facts,
+.raw-data .data-table {
+  min-width: 0;
+}
 .raw-result summary {
   cursor: pointer;
   color: var(--colorNeutralForeground3);
@@ -1718,7 +1722,7 @@ Fluent's text styles would otherwise reset the margins. */
 .raw-result pre {
   max-height: 320px;
   overflow: auto;
-  margin: var(--spacingVerticalXS) 0 0;
+  margin: var(--spacingVerticalS) 0 0;
   padding: var(--spacingVerticalS) var(--spacingHorizontalM);
   background: var(--colorNeutralBackground3);
   border-radius: var(--borderRadiusMedium);

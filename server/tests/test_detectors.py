@@ -9,8 +9,9 @@ from foxcam import profiles
 from foxcam.config import ProfileConfig
 from foxcam.db import session_scope
 from foxcam.models import Detection, Job, JobState, Segment, SegmentStatus
-from foxcam.pipeline import preprocess, queue
+from foxcam.pipeline import events, preprocess, queue
 from pydantic import ValidationError
+from sqlalchemy import select
 
 from .conftest import add_segment, app_client, make_video, needs_ffmpeg
 
@@ -424,7 +425,7 @@ def test_raw_results_are_kept_for_admins(wildlife):
     assert len(capped["text"]) < 270_000
 
 
-def test_raw_results_are_not_shown_to_viewers(wildlife):
+def test_raw_results_are_shown_to_viewers(wildlife):
     seg_id = _queued_segment(wildlife)
     from fastapi.testclient import TestClient
     from foxcam import accounts
@@ -435,7 +436,54 @@ def test_raw_results_are_not_shown_to_viewers(wildlife):
     with TestClient(create_app(wildlife, background=False)) as c:
         accounts.grant("cam", sign_in(c, wildlife, "viewer@example.org"), "viewer")
         jobs = c.get(f"/api/segments/{seg_id}/jobs").json()
-    assert jobs and all("raw_result" not in j for j in jobs)
+    assert jobs and all("raw_result" in j for j in jobs)
+
+
+def test_raw_detection_shows_what_the_worker_posted(wildlife):
+    seg_id = _queued_segment(wildlife)
+    posted = {"offset_ms": 500, "label": "fox", "confidence": 0.9,
+              "bbox": [0.1, 0.2, 0.3, 0.4], "extra": {"note": "hi"}}
+    with app_client(wildlife) as c:
+        job = c.post("/api/worker/lease", json={"worker_id": "y", "tags": [
+            "gpu", "open-vocabulary"]}).json()
+        c.post(f"/api/worker/jobs/{job['job_id']}/result", json={
+            "lease_token": job["lease_token"], "model": "m", "detections": [
+                {**posted, "offset_ms": 1, "confidence": 0.8}, posted]})
+        events.assign_events(wildlife)
+        [d] = [d for d in c.get(f"/api/detections?segment={seg_id}").json()
+               if d["offset_ms"] == 500]
+        raw = c.get(f"/api/detections/{d['id']}/raw").json()
+        assert raw["posted"] == posted
+        assert raw["stored"]["id"] == d["id"] and raw["stored"]["ts"].endswith("Z")
+        assert raw["job"]["id"] == job["job_id"] and raw["job"]["model"] == "m"
+        assert d["event_id"] is not None
+        ev = c.get(f"/api/events/{d['event_id']}/raw").json()
+        assert ev["stored"]["id"] == d["event_id"]
+        assert d["id"] in [x["stored"]["id"] for x in ev["detections"]]
+        assert c.get("/api/detections/999999/raw").status_code == 404
+
+
+def test_raw_detections_are_for_anyone_who_sees_the_camera(wildlife):
+    seg_id = _queued_segment(wildlife)
+    from fastapi.testclient import TestClient
+    from foxcam import accounts
+    from foxcam.web.app import create_app
+
+    from .conftest import sign_in
+
+    with session_scope() as s:
+        job = s.scalars(select(Job).where(Job.segment_id == seg_id)).first()
+        s.add(Detection(segment_id=seg_id, job_id=job.id, camera_id="cam", ts=utc_later(
+            wildlife, seg_id), offset_ms=0, label="fox", confidence=0.9, event_id=1))
+        s.flush()
+        det_id = s.scalars(select(Detection.id)).first()
+    with TestClient(create_app(wildlife, background=False)) as c:
+        assert c.get(f"/api/detections/{det_id}/raw").status_code == 401
+        user = sign_in(c, wildlife, "viewer@example.org")
+        # Another camera's: as if it did not exist.
+        assert c.get(f"/api/detections/{det_id}/raw").status_code == 404
+        accounts.grant("cam", user, "viewer")
+        assert c.get(f"/api/detections/{det_id}/raw").json()["stored"]["id"] == det_id
 
 
 def test_jobs_that_gave_up_count_with_the_detectors_model(wildlife):

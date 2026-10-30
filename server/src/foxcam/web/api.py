@@ -632,7 +632,7 @@ def segment_jobs(segment_id: int, settings: Settings = Depends(settings_dep),
                  p: Principal = Depends(principal)) -> list[dict[str, Any]]:
     """Detection runs of a segment (one per profile) with their detection counts."""
     _segment(p, segment_id)
-    return queries.segment_jobs(settings, segment_id, raw=p.is_admin)
+    return queries.segment_jobs(settings, segment_id)
 
 
 @router.get("/segments/{segment_id}/download")
@@ -762,6 +762,15 @@ def detection(detection_id: int, settings: Settings = Depends(settings_dep),
     if not found:
         raise HTTPException(404, "unknown detection")
     return found[0]
+
+
+@router.get("/detections/{detection_id}/raw")
+def detection_raw(detection_id: int, p: Principal = Depends(principal)) -> dict[str, Any]:
+    """The detection as stored, and what the worker posted for it (debugging)."""
+    found = queries.detection_raw(detection_id, _camera_filter(p, None))
+    if found is None:
+        raise HTTPException(404, "unknown detection")
+    return found
 
 
 @router.get("/detections/{detection_id}/frame.jpg")
@@ -948,6 +957,15 @@ def _event(p: Principal, event_id: int) -> Event:
         if ev is None or not p.can(ev.camera_id):
             raise HTTPException(404, "unknown event")
         return ev
+
+
+@router.get("/events/{event_id}/raw")
+def event_raw(event_id: int, p: Principal = Depends(principal)) -> dict[str, Any]:
+    """The event as stored, with its detections raw (debugging)."""
+    found = queries.event_raw(event_id, _camera_filter(p, None))
+    if found is None:
+        raise HTTPException(404, "unknown event")
+    return found
 
 
 @router.get("/events/{event_id}/clip")

@@ -252,8 +252,7 @@ def overview(settings: Settings, camera_ids: set[str] | None = None) -> dict[str
     }
 
 
-def segment_jobs(settings: Settings, segment_id: int,
-                 raw: bool = False) -> list[dict[str, Any]]:
+def segment_jobs(settings: Settings, segment_id: int) -> list[dict[str, Any]]:
     """One row per detection run (job) of a segment, with its detection counts, so "ran
     and found nothing" can be told apart from "never ran"."""
     with session_scope() as s:
@@ -275,10 +274,85 @@ def segment_jobs(settings: Settings, segment_id: int,
                 "attempts": j.attempts, "error": j.error, "processing_ms": j.processing_ms,
                 "finished_at": iso(j.finished_at), "detections": total,
                 "targets": int(targets),
-                # Admins only: what the worker posted (debugging).
-                **({"raw_result": j.raw_result} if raw else {}),
+                # What the worker posted (debugging).
+                "raw_result": j.raw_result,
             })
         return out
+
+
+# Where files are kept: the server's business, not the detection's.
+_STORAGE_COLUMNS = {"clip_path", "thumb_path", "clip_remote_key", "thumb_remote_key"}
+
+
+def _row(obj: Any) -> dict[str, Any]:
+    """The columns of a database row, as stored (times in UTC with ``Z``), without where
+    its files are kept."""
+    out = {}
+    for col in obj.__table__.columns:
+        if col.key in _STORAGE_COLUMNS:
+            continue
+        value = getattr(obj, col.key)
+        out[col.key] = iso(value) if isinstance(value, datetime) else value
+    return out
+
+
+def _posted(d: Detection, job: Job | None) -> dict[str, Any] | None:
+    """The item of the worker's result (Job.raw_result) this detection was made from."""
+    result = job.raw_result if job else None
+    items = result.get("detections") if isinstance(result, dict) else None
+    label = (d.extra or {}).get("raw_label", d.label)
+    box = [d.bbox_x, d.bbox_y, d.bbox_w, d.bbox_h]
+    for item in items if isinstance(items, list) else []:
+        if (isinstance(item, dict) and item.get("offset_ms") == d.offset_ms
+                and item.get("label") == label
+                and abs((item.get("confidence") or 0) - d.confidence) < 1e-6
+                and (item.get("bbox") or [None] * 4) == box):
+            return item
+    return None
+
+
+def _detection_raw(d: Detection, job: Job | None) -> dict[str, Any]:
+    return {
+        "stored": _row(d),
+        # What the worker posted for it (None: not kept, e.g. the result was too big).
+        "posted": _posted(d, job),
+        "job": {"id": job.id, "state": job.state, "model": job.model,
+                "worker_id": job.leased_by, "processing_ms": job.processing_ms,
+                "finished_at": iso(job.finished_at),
+                "truncated": isinstance(job.raw_result, dict)
+                and bool(job.raw_result.get("truncated"))} if job else None,
+    }
+
+
+def detection_raw(detection_id: int, camera_ids: set[str] | None) -> dict[str, Any] | None:
+    """A detection as stored, with what the worker posted for it (debugging)."""
+    with session_scope() as s:
+        d = s.get(Detection, detection_id)
+        if d is None or (camera_ids is not None and d.camera_id not in camera_ids):
+            return None
+        return _detection_raw(d, s.get(Job, d.job_id))
+
+
+RAW_EVENT_DETECTIONS = 100
+
+
+def event_raw(event_id: int, camera_ids: set[str] | None) -> dict[str, Any] | None:
+    """An event as stored, with its detections (the first RAW_EVENT_DETECTIONS) raw."""
+    with session_scope() as s:
+        ev = s.get(Event, event_id)
+        if ev is None or (camera_ids is not None and ev.camera_id not in camera_ids):
+            return None
+        found = list(s.scalars(select(Detection).where(Detection.event_id == ev.id)
+                               .order_by(Detection.ts, Detection.id)
+                               .limit(RAW_EVENT_DETECTIONS + 1)))
+        jobs = {j.id: j for j in s.scalars(
+            select(Job).where(Job.id.in_({d.job_id for d in found})))}
+        return {
+            "stored": _row(ev),
+            "detections": [_detection_raw(d, jobs.get(d.job_id))
+                           for d in found[:RAW_EVENT_DETECTIONS]],
+            "more_detections": len(found) > RAW_EVENT_DETECTIONS,
+        }
 
 
 def segment_dict(g: Segment) -> dict[str, Any]:

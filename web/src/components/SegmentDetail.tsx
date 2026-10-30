@@ -26,6 +26,7 @@ import {
 } from "./ui";
 import { VideoPlayer, type PlayerHandle } from "./VideoPlayer";
 import { MotionShare } from "./Motion";
+import { RunRawData } from "./RawData";
 import { playerDetections } from "./Boxes";
 import { useToast } from "./Toasts";
 
@@ -264,14 +265,7 @@ function RunSummary({ job: j }: { job: SegmentJob }) {
         {parts.length > 0 && <Caption1 className="muted">{parts.join(" – ")}</Caption1>}
       </span>
       {j.error && <Caption1 className="run-error">{j.error}</Caption1>}
-      {j.raw_result !== undefined && j.raw_result !== null && (
-        <details className="raw-result">
-          <summary>
-            <Caption1>{t("recordings.rawResult")}</Caption1>
-          </summary>
-          <pre>{JSON.stringify(j.raw_result, null, 2)}</pre>
-        </details>
-      )}
+      {j.raw_result !== null && <RunRawData result={j.raw_result} />}
     </li>
   );
 }

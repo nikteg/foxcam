@@ -23,6 +23,7 @@ import {
   Time,
   useRouterHref,
 } from "./ui";
+import { EventRawData } from "./RawData";
 import { VideoPlayer } from "./VideoPlayer";
 import { FeedbackSkeleton, TextSkeleton } from "./Skeletons";
 import { DetectionMotion, useVideoTimeline } from "./Motion";
@@ -182,6 +183,7 @@ export function EventDetail({ event: e }: { event: DetectionEvent }) {
           </DownloadButton>
         )}
       </span>
+      <EventRawData event={e} />
     </div>
   );
 }
