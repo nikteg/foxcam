@@ -421,7 +421,6 @@ export const sv: Record<MessageKey, string> = {
   "hourly.segments": "Segment",
   "hourly.withMotion": "{n} med rörelse",
   "hourly.segmentsWithMatch": "{n} ({matches} med träff)",
-  "hourly.deleted": "gallrad",
   "player.play": "Spela",
   "player.pause": "Pausa",
   "player.loop": "Upprepa",
@@ -691,6 +690,7 @@ export const sv: Record<MessageKey, string> = {
   "runtime.maxAttemptsHint": "Hur många gånger ett jobb som misslyckas provas innan det ges upp.",
   "runtime.retryBackoff": "Vänta mellan försök",
   "runtime.retryBackoffHint": "Växer för varje försök (detta gånger försöksnumret).",
+  "retention.deletedTag": "gallrad",
   "retention.title": "Gallring",
   "retention.segmentsDays": "Spara inspelningar",
   "retention.segmentsDaysHint":

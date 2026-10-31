@@ -11,6 +11,7 @@ import {
   Checkbox,
   ConfidenceBar,
   DateTimeInput,
+  DeletedTag,
   Empty,
   Light,
   PageTabs,
@@ -77,7 +78,8 @@ const columns = (
     id: "size",
     header: t("col.size"),
     width: 90,
-    cell: (r) => fileSize(r.size_bytes),
+    // Retention removed the file: say so instead of its old size.
+    cell: (r) => (r.deleted ? <DeletedTag /> : fileSize(r.size_bytes)),
     compare: byNumber((r) => r.size_bytes),
   },
   {

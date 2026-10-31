@@ -7,6 +7,7 @@ import { CameraTag, useCameraName } from "../components/CameraSelect";
 import { byNumber, byString, DataTable, type Column } from "../components/DataTable";
 import { DetailPanel } from "../components/DetailPanel";
 import {
+  DeletedTag,
   DownloadButton,
   DrawerTitle,
   Empty,
@@ -14,7 +15,6 @@ import {
   Facts,
   InfoBanner,
   QueryState,
-  Tag,
   Time,
 } from "../components/ui";
 import { duration, fileSize, localTime } from "../format";
@@ -72,8 +72,7 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Archi
     header: t("col.size"),
     width: 90,
     // Retention removed the file: say so instead of its old size.
-    cell: (r) =>
-      r.deleted ? <Tag kind="warn">{t("hourly.deleted")}</Tag> : fileSize(r.size_bytes),
+    cell: (r) => (r.deleted ? <DeletedTag /> : fileSize(r.size_bytes)),
     compare: byNumber((r) => r.size_bytes),
   },
   {
@@ -195,7 +194,7 @@ export function ArchivePanel({
               />
             </div>
           ) : (
-            <Empty>{t("hourly.deleted")}</Empty>
+            <Empty>{t("retention.deletedTag")}</Empty>
           )}
           <div className="row wrap">
             {archive.download_url && (

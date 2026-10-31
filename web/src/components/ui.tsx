@@ -480,6 +480,12 @@ export function ConfigTag() {
   );
 }
 
+/** In place of a file's size: retention deleted the video (the row and its data stay). */
+export function DeletedTag() {
+  const { t } = useI18n();
+  return <Tag kind="warn">{t("retention.deletedTag")}</Tag>;
+}
+
 export function Light({
   night,
   long = false,

@@ -416,7 +416,6 @@ export const en = {
   "hourly.segments": "Segments",
   "hourly.withMotion": "{n} with motion",
   "hourly.segmentsWithMatch": "{n} ({matches} with a match)",
-  "hourly.deleted": "deleted by retention",
   "player.play": "Play",
   "player.pause": "Pause",
   "player.loop": "Loop",
@@ -686,6 +685,7 @@ export const en = {
   "runtime.maxAttemptsHint": "How many times a failing job is tried before giving up.",
   "runtime.retryBackoff": "Wait between attempts",
   "runtime.retryBackoffHint": "Grows with each attempt (this times the attempt number).",
+  "retention.deletedTag": "deleted by retention",
   "retention.title": "Retention",
   "retention.segmentsDays": "Keep recordings",
   "retention.segmentsDaysHint":
