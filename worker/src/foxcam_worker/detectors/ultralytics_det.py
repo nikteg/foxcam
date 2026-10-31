@@ -10,7 +10,7 @@ new profiles without a restart. It advertises the ``open-vocabulary`` tag. ``--c
 is only the prompt for jobs that name no targets (e.g. ``foxcam-worker-detect`` runs).
 
 Intel GPUs (integrated UHD / Iris Xe / Arc, e.g. an N100 home server) run the model through
-OpenVINO with ``--device intel:gpu`` (N100: ~100 ms per frame, 3x the CPU). OpenVINO models
+OpenVINO with ``--device intel:gpu`` (N100: ~100 ms per frame, 6x the CPU). OpenVINO models
 have their classes built in, so each prompt is exported once (a few seconds) and kept in
 ``~/.cache/foxcam-worker/openvino``. Needs the ``openvino`` extra.
 
