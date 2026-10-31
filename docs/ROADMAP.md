@@ -9,6 +9,13 @@
   the Tapo cloud relay.
 - **Faster SpeciesNet worker** – keep the model loaded between jobs (Python API instead of
   the CLI); today every job pays ~25 s of model loading.
+- **Events keep only their clip** – today an event pins the recordings it happened in, and
+  after compaction that keeps the whole hourly file (retention only deletes whole files), up
+  to 12 times the footage needed. Stop pinning: keep the clip (perhaps with a longer pre/post
+  roll), let the recordings go with ordinary retention, and have the event drawer play the
+  clip only and hide re-analyse once its recordings are gone. Starred detections still keep
+  their recording. The alternative was trimming hourly files to the pinned stretches
+  (stream copy), which keeps the footage around events but is more work.
 
 ## Ideas
 
