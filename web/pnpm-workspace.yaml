@@ -1,0 +1,2 @@
+patchedDependencies:
+  "@vidstack/react@1.15.7": patches/@vidstack__react@1.15.7.patch

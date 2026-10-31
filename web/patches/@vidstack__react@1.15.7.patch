@@ -1,0 +1,66 @@
+diff --git a/dev/chunks/vidstack-BbCcIFs-.js b/dev/chunks/vidstack-BbCcIFs-.js
+index 98a520d947de5b704111e3bb863c392d973a79a8..686d0ba00f75797c18b7cb4b2fc753116da2f8f9 100644
+--- a/dev/chunks/vidstack-BbCcIFs-.js
++++ b/dev/chunks/vidstack-BbCcIFs-.js
+@@ -6506,7 +6506,7 @@ var SliderController = class extends ViewController {
+ 		effect(this.#watchHidden.bind(this));
+ 	}
+ 	#onIntersectionChange(entries) {
+-		this.#isIntersecting.set(entries[0].isIntersecting);
++		this.#isIntersecting.set(entries[entries.length - 1].isIntersecting);
+ 	}
+ 	#watchHidden() {
+ 		const { hidden } = this.$props;
+@@ -9356,7 +9356,7 @@ var Time = class extends Component {
+ 		effect(this.#watchToggle.bind(this));
+ 	}
+ 	#onIntersectionChange(entries) {
+-		this.#isIntersecting.set(entries[0].isIntersecting);
++		this.#isIntersecting.set(entries[entries.length - 1].isIntersecting);
+ 	}
+ 	#watchHidden() {
+ 		const { hidden } = this.$props;
+diff --git a/prod/chunks/vidstack-CJbb2Kvn.js b/prod/chunks/vidstack-CJbb2Kvn.js
+index 26792dffa80c73407966e1df439c28889a82468f..39208fa2400eed87b62fb2dae6c83eeebb57646f 100644
+--- a/prod/chunks/vidstack-CJbb2Kvn.js
++++ b/prod/chunks/vidstack-CJbb2Kvn.js
+@@ -6236,7 +6236,7 @@ var SliderController = class extends ViewController {
+ 		effect(this.#watchHidden.bind(this));
+ 	}
+ 	#onIntersectionChange(entries) {
+-		this.#isIntersecting.set(entries[0].isIntersecting);
++		this.#isIntersecting.set(entries[entries.length - 1].isIntersecting);
+ 	}
+ 	#watchHidden() {
+ 		const { hidden } = this.$props;
+@@ -9082,7 +9082,7 @@ var Time = class extends Component {
+ 		effect(this.#watchToggle.bind(this));
+ 	}
+ 	#onIntersectionChange(entries) {
+-		this.#isIntersecting.set(entries[0].isIntersecting);
++		this.#isIntersecting.set(entries[entries.length - 1].isIntersecting);
+ 	}
+ 	#watchHidden() {
+ 		const { hidden } = this.$props;
+diff --git a/server/chunks/vidstack-B6HI2MH-.js b/server/chunks/vidstack-B6HI2MH-.js
+index a8337233a991dc3baf28fd5299988b1494701960..791ef543b8af4e31585602192511841f4f61d69a 100644
+--- a/server/chunks/vidstack-B6HI2MH-.js
++++ b/server/chunks/vidstack-B6HI2MH-.js
+@@ -6237,7 +6237,7 @@ var SliderController = class extends ViewController {
+ 		effect(this.#watchHidden.bind(this));
+ 	}
+ 	#onIntersectionChange(entries) {
+-		this.#isIntersecting.set(entries[0].isIntersecting);
++		this.#isIntersecting.set(entries[entries.length - 1].isIntersecting);
+ 	}
+ 	#watchHidden() {
+ 		const { hidden } = this.$props;
+@@ -9083,7 +9083,7 @@ var Time = class extends Component {
+ 		effect(this.#watchToggle.bind(this));
+ 	}
+ 	#onIntersectionChange(entries) {
+-		this.#isIntersecting.set(entries[0].isIntersecting);
++		this.#isIntersecting.set(entries[entries.length - 1].isIntersecting);
+ 	}
+ 	#watchHidden() {
+ 		const { hidden } = this.$props;
