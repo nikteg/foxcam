@@ -54,12 +54,13 @@
    the match threshold) are merged into events when within `merge_gap_seconds`. After
    `settle_seconds` (and once the post-roll footage exists) a clip is cut from the **original**
    recordings with pre/post roll, plus a thumbnail of the best detection's frame (its box,
-   `thumb_box`, is drawn over it by the web app). Event segments are pinned.
+   `thumb_box`, is drawn over it by the web app). Event segments are pinned. Clips and
+   thumbnails carry no boxes; only notification pictures have them burned in.
    A gap between two recordings (the recorder stopped and started again) stays a gap in the
    clip, the picture holding there, so clip time is clock time; the player marks it as missing
    footage (`footage.py`), as it does skips inside a recording (below).
    Three kinds of target detection join no event:
-   - **marked wrong** (❌ on the Detections page): a wrong detection is no match anywhere,
+   - **marked wrong** (❌ under Events → Detections): a wrong detection is no match anywhere,
      not in counts, "with a match", the Status page, notifications or archives. An event
      counts as wrong once one of its detections is marked wrong and none correct;
    - **standing still**: a target whose box has had no motion under it for the profile's
@@ -67,7 +68,7 @@
      and is no match (`pipeline/still.py`, with [motion detection](#motion-detection)): a
      parked car neither keeps an event open forever nor pins its footage, and a stump
      never makes one. It counts again once it moves; its arrival counts. The Detections
-     page hides these unless *Show standing still* is ticked.
+     tab hides these unless *Show standing still* is ticked.
    - **below the sun limit**: a camera's `sun_limit` (Cameras → Settings → Detection →
      Sun limit, degrees of sun elevation; off by default) marks targets seen while the sun
      is lower `below_sun_limit`, and they are no match (`pipeline/daylight.py`): a window
@@ -75,11 +76,14 @@
      latitude/longitude, else `location` (Settings → General). Changing the limit or the
      location marks the camera's detections again at once: those now below leave their
      events (an event left empty goes), those above form events again, quietly.
+   Events found by *Analyse again* or *Rebuild events* are `quiet` too: they notify nobody.
 5. **Retention** (every 10 min): see below.
 6. **Upload** (every 30 s, only with `storage.s3.enabled`): see [Object storage](#object-storage-s3).
-7. **Notify** (every 5 s): new events and finished clips are queued per matching channel in
-   the `notification` outbox and sent to ntfy / webhooks / Apprise, with retries
-   ([NOTIFICATIONS.md](NOTIFICATIONS.md)).
+7. **Notify** (every 5 s): new events and finished clips are queued in the `notification`
+   outbox, one row per matching shared channel (ntfy, webhook, Apprise) and per user whose
+   own rules match (web push to that user's devices, `webpush.py`, only for cameras they
+   can see), and sent with retries; events seen longer ago than
+   `notifications.max_age_minutes` (a backlog processed late) are recorded as skipped ([NOTIFICATIONS.md](NOTIFICATIONS.md)).
 
 ## Detection profiles
 
@@ -234,17 +238,25 @@ or `foxcam motion-backfill --days 7`); that changes no detections or events.
 | `worker` | Last-seen info, tags and reported vocabulary per worker id (Jobs → Detection workers). |
 | `worker_token` | Worker access tokens (hashed) with their tags. |
 | `detection_profile` | Detection profiles added in the web UI. |
+| `event_segment` | The segments an event's clip covers (they are pinned). |
 | `notification_channel` | Notification channels added in the web UI. |
-| `notification` | Outbox: one row per channel, event and trigger; status, attempts, error. |
+| `notification` | Outbox: one row per channel (or `user:<owner>` for a user's own push), event and trigger; status, attempts, error. |
+| `push_device` | A user's browsers and home screen apps subscribed to web push (endpoint and keys). |
+| `notification_prefs` | Each user's own notification rules (Account page). |
 | `mask_version` | Immutable censor-rectangle sets; segments reference the version they were censored with. |
 | `camera_state` | Per-camera private flag, current mask version, profile selection, motion sensitivity and motion-ignore areas. |
 | `managed_camera` | Cameras added in the web UI (config.yaml cameras are not stored). |
 | `app_setting` | Settings changed in the web UI ([below](#settings-changed-in-the-web-ui)). |
-| `user_account`, `oauth_identity`, `user_session`, `api_key`, `camera_access`, `invite` | Accounts, their sign-ins, sessions, API keys, camera shares and invite links ([AUTH.md](AUTH.md)). |
+| `user_account`, `oauth_identity`, `user_session`, `api_key`, `camera_access`, `invite` | Accounts (admin flag, may add cameras, may use the local network), their sign-ins, sessions, API keys, camera shares and invite links ([AUTH.md](AUTH.md)). |
 
 All timestamps are UTC. Recording file names carry their UTC offset
 (`2026-10-24_14-00-35-560256+0200.mp4`), so MediaMTX may run in any time zone; this matters on
-Windows, where it always uses the local time zone. Older names without an offset are read as UTC.
+Windows, where it always uses the local time zone.
+
+Schema changes (`db.py`): `create_all` makes missing tables, and new nullable columns and
+indexes are added to existing tables at startup; that is the only migration. A one-off data
+fix for an upgrade goes next to it and is removed once production has run it. The server,
+ingest and compaction take turns doing this (a lock file in the data folder).
 
 ## Retention
 
@@ -253,29 +265,35 @@ Runs every 10 minutes (`pipeline/retention.py`):
 - events older than their profile's `events_days`, else `retention.events_days` (0 = forever),
   are deleted, and their segments unpinned; favorites (one of their detections starred) are
   kept;
-- unpinned segments older than `segments_days` are deleted, **except** segments still waiting for a
+- unpinned segments older than `segments_days` (or their recording profile's `keep_days`) are deleted, **except** segments still waiting for a
   worker, which are kept up to `unprocessed_max_days` (so an offline GPU box does not lose footage);
 - if `max_disk_gb` is set, the oldest unpinned segments are deleted until under the cap;
 - a segment with a starred detection counts as pinned, also when the detection is no match
-  (so starring a near miss on the Detections page keeps its footage);
+  (so starring a near miss under Events → Detections keeps its footage);
+- an archive file goes once all its segments are gone, so a pinned segment keeps its
+  whole hourly file ([below](#archiving-compaction-recording-profiles));
+- stored non-matches below `processing.keep_non_targets_from` are dropped, unless rated or
+  starred;
 - the censored worker input is deleted as soon as its job is done (`delete_derived_after_done`).
 
-Deleted segments keep their database row (`deleted_at`), so detections stay browsable.
+Deleted segments keep their database row (`deleted_at`), so detections stay browsable, and
+the Recordings list says they were deleted by retention.
 
 The day counts and `max_disk_gb` can also be changed in the web UI (see below).
 
 ## Settings changed in the web UI
 
-Admins can change these on the Settings page (General, Detection and Retention tabs) without
-a restart: `public_url`, `segment_seconds`, the default recording quality
-(`recording_profile_default`), `compaction.enabled` and `delay_minutes`,
-`processing.sample_fps`, `max_width`, `concurrency`, `night_saturation_threshold` and
-`keep_non_targets_from`, the low-data live view (`mediamtx.low_data`), the `events` timings,
-the `motion` defaults (sensitivity, light-change share, time window), the `queue` lease,
-attempts and backoff, and the `retention` days and disk cap
-(`runtime_settings.EDITABLE`). Each value set there is an `app_setting` row keyed by its
-config.yaml path and wins over config.yaml (and its environment variables) until it is
-reset, which brings config.yaml's value back. They are validated with the bounds of the
+Admins can change these on the Settings page (General, Detection, Retention, Users and
+Notifications tabs) without a restart: `public_url`, `segment_seconds`, the default
+recording quality (`recording_profile_default`), `compaction.enabled` and `delay_minutes`,
+`location`, the low-data live view (`mediamtx.low_data`), `processing.sample_fps`,
+`max_width`, `concurrency`, `night_saturation_threshold` and `keep_non_targets_from`, the
+`motion` defaults (sensitivity, light-change share, time window), the `events` timings, the
+`queue` lease, attempts and backoff, the `retention` days and disk cap, the limits for new
+accounts (`auth.users_can_add_cameras`, `auth.max_cameras_per_user`) and
+`notifications.timezone` and `max_age_minutes` (`runtime_settings.EDITABLE`). Each value
+set there is an `app_setting` row keyed by its config.yaml path and wins over config.yaml
+(and its environment variables) until it is reset, which brings config.yaml's value back. They are validated with the bounds of the
 models in `config.py`. Language and theme (Settings → General → Appearance, also on the
 Account page) are per browser, not server settings.
 
@@ -349,8 +367,8 @@ SeaweedFS, Hetzner, Wasabi…), configured in `storage.s3` (`pipeline/uploader.p
 - **Retention**: expired events delete their remote clip and thumbnail too.
 - Upload errors are retried every round and shown under Settings → Storage, which also has a
   *Test connection* button (write, read and delete a small object).
-- The remote keys are stored in `segment.remote_key`, `event.clip_remote_key` and
-  `event.thumb_remote_key` (added to existing databases automatically at startup).
+- The remote keys are stored in `segment.remote_key`, `archive.remote_key`,
+  `event.clip_remote_key` and `event.thumb_remote_key`.
 
 ## Privacy model
 
@@ -358,7 +376,14 @@ SeaweedFS, Hetzner, Wasabi…), configured in `storage.s3` (`pipeline/uploader.p
   server, so a SaaS detector never sees censored areas.
 - Private cameras never produce jobs.
 - The web UI shows original footage (live view, recordings, clips) to signed-in users, and
-  only for the cameras shared with them (see [AUTH.md](AUTH.md)).
+  only for the cameras shared with them (see [AUTH.md](AUTH.md)). Accounts add cameras
+  only when allowed (`auth.users_can_add_cameras`, per account in Settings → Users), up
+  to `auth.max_cameras_per_user`, and their RTSP cameras need a public address unless an
+  admin lets them use the server's local network.
+- Notification pictures leave the server with the camera's censor areas drawn in.
+- Download links work without the session cookie (the iOS home screen app opens them in
+  Safari) through a short-lived token signed for the user (`download_links.py`, `?dl=`):
+  files only, with the usual camera checks.
 - Camera passwords (RTSP URLs) are stored on the server and redacted in API responses. The Tapo
   cloud session token is stored in `data/tapo-session.json` (mode 0600); the password is never stored.
 
@@ -372,20 +397,37 @@ server/src/foxcam/
   recording.py       recording profiles, default recording quality, burned-in masks
   runtime_settings.py  settings changed in the web UI (app_setting)
   accounts.py, oauth.py, api_keys.py, download_links.py   users, sign-in, API keys, signed links
-  mediamtx.py        MediaMTX API client (path sync, live status)
+  worker_tokens.py   per-worker access tokens
+  mediamtx.py, mediamtx_auth.py  MediaMTX API client (path sync, live status); its internal login
   ffmpeg.py, hwaccel.py  probe, censored derivative, thumbnails, clips; hardware encoders
-  pipeline/          scanner, preprocess, motion (+ still, motion_report), queue, events,
-                     retention, uploader, compaction, reanalyse, runner
+  footage.py         missing footage (gaps between recordings, skips inside one)
+  sprites.py         timeline preview sprites for the player
+  pipeline/          scanner, preprocess, motion (+ still, daylight, motion_report), queue,
+                     events, retention, uploader, compaction, reanalyse, runner
   storage.py         S3-compatible object storage client (boto3)
-  notify.py          notification channels, outbox and senders (ntfy, webhook, Apprise)
+  notify.py, webpush.py  channels, personal rules, outbox and senders (ntfy, webhook, Apprise, web push)
+  labels.py, model_stats.py  label suggestions; comparing models
+  backup.py, reset.py  settings export / import; Danger zone and `foxcam reset`
   ingest/            publishers for tapo_cloud / file / test sources
   tapo_account.py    Tapo cloud sign-in (MFA) and device discovery for the UI
-  web/               FastAPI app: worker, camera, auth, user, notification and live APIs
+  web/               FastAPI app: worker, camera, profile, auth, user, notification, push and live APIs
 worker/src/foxcam_worker/
-  cli.py             lease loop; `detect-file` for offline tests (local.py)
+  cli.py             lease loop; `detect-file` for offline tests (local.py); `doctor` (doctor.py) checks the machine
   detectors/         dummy, ultralytics (YOLO-World / YOLO), speciesnet
 web/src/             React + Fluent UI app (pages/, components/, i18n/)
 ```
+
+## Web app
+
+- The API is gzipped (JSON, the web app's files, thumbnail tracks; not video or pictures).
+- Every API response carries the web build the server serves (`X-Foxcam-Build`); a page
+  left open across a deploy shows a banner offering to reload (`web/src/newVersion.ts`).
+- Detection boxes are drawn by the web app over pictures and playback (`Boxes.tsx`), from
+  the detections the API sends with each recording, clip and archive timeline.
+- Every video the player shows has a timeline sprite (`sprites.py`) for hover previews and
+  scrubbing; missing footage (`footage.py`) is marked on the timeline.
+- The event, detection and recording drawers show the worker's raw result (*Raw data*,
+  `GET /api/events/{id}/raw`, `/api/detections/{id}/raw`) to anyone who can see the camera.
 
 ## Processing stage (burned-in masks)
 

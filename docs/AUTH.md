@@ -1,8 +1,9 @@
 # Accounts, sign-in and sharing
 
 Everything except the worker API needs a signed-in user: the web UI, the JSON API, the
-recordings, clips and snapshots, and the live view. Workers keep their own access tokens
-([WORKER_PROTOCOL.md](WORKER_PROTOCOL.md)).
+recordings, clips and snapshots, and the live view. Workers use their own tokens (`msw_…`,
+Jobs → Detection workers → Add worker), not accounts or API keys, and are not let in without
+one unless `open_worker_access` is on ([WORKER_PROTOCOL.md](WORKER_PROTOCOL.md)).
 
 ## First start
 
@@ -15,8 +16,9 @@ e-mail in `auth.admin_emails` and sign in with an OAuth provider.
 
 ## Signing in
 
-- **E-mail and password.** Passwords are hashed with scrypt; repeated failures from one
-  address or for one account are blocked for 15 minutes.
+- **E-mail and password.** Passwords are hashed with scrypt; repeated failures are limited
+  ([Login limits](#login-limits)). `auth.password_login: false` turns password sign-in and
+  sign-up off, leaving OAuth.
 - **OAuth / OpenID Connect.** Google, Microsoft, GitHub, or any OIDC provider (Authentik,
   Keycloak, Authelia, Auth0, …):
 
@@ -76,8 +78,7 @@ working), limited further by its **scopes**:
 An admin's key without `admin` still sees every camera, but counts as a regular user
 everywhere else. Keys can also **expire**. Keys can't reach `/api/auth/`: no making more keys,
 changing the password or signing in. Only a SHA-256 of each key is stored, and the key
-itself is shown once; revoke it on the Account page. Workers use their own tokens
-(`msw_…`, Jobs → Detection workers → Add worker), not API keys.
+itself is shown once; revoke it on the Account page.
 
 ## Download links
 
@@ -99,7 +100,15 @@ a disabled account stop working.
 | `open` | anyone who reaches the server (they see nothing until something is shared) |
 | `closed` | nobody; admins add accounts (Settings → Users, or `foxcam user add`) |
 
-E-mails in `auth.admin_emails` can always sign up through OAuth and are admins once the address is verified (see Signing up).
+E-mails in `auth.admin_emails` can always sign up through OAuth, and are admins once the
+address is verified.
+
+Self sign-up with a password (`registration: open`, or with an invite link) does not prove
+the e-mail address. Such accounts get no rights from `admin_emails` and are not matched to
+OAuth sign-ins by address; connecting an OAuth account with the same, confirmed, address
+on the account page verifies it. Accounts made by an admin, the setup page, `foxcam
+user add` or OAuth count as verified. `admin_emails` therefore never skip the invite for
+password sign-up: those admins sign in with OAuth, or are added on the command line.
 
 ## Roles
 
@@ -108,15 +117,15 @@ notifications, storage, the Tapo account, users and the configuration.
 
 Everyone else only sees the cameras shared with them, and what those cameras recorded
 (recordings, events, detections, snapshots, live view). Of the detection profiles they see
-the ones on those cameras (an editor also the ones they may choose for one), by name and
-targets only: nothing about workers, tags or thresholds, and nothing of the server's disk
-or job queue. An account without cameras gets a note on how to get one instead of empty
-pages. Per camera, a user is:
+the ones on those cameras (an editor also the ones they may choose for one), by name,
+targets and models only: nothing about workers, tags or thresholds, and nothing of the
+server's disk or job queue. An account without cameras gets a note on how to get one
+instead of empty pages. Per camera, a user is:
 
 | Role | Can |
 |---|---|
-| `viewer` | live view, recordings, events, detections, downloads |
-| `editor` | + censor areas, private flag, detection profiles, recording profile, name, segment length, enable/disable, ✅/❌ feedback |
+| `viewer` | live view, recordings, events, detections (with their raw data), downloads |
+| `editor` | + censor areas, private flag, motion settings, sun limit, detection profiles, recording profile, name, segment length, enable/disable, correct / wrong feedback, stars, running detection again |
 | `owner` | + share the camera and remove it |
 
 Whoever adds a camera owns it. What an account may add is up to the admins (Settings →
@@ -133,9 +142,10 @@ Users; admins themselves may do all of it):
   Turn it on for someone in the household. The server itself, MediaMTX and link-local
   addresses stay admin-only either way.
 
-Both defaults are runtime settings, under "New accounts" on the Users tab. Cameras from
-`config.yaml` have no owner: admins share them. Adding Tapo cloud cameras is admin-only,
-since the Tapo account is the server's.
+`auth.users_can_add_cameras` and `auth.max_cameras_per_user` are runtime settings, under
+"New accounts" on the Users tab. Cameras from `config.yaml` have no owner: admins share
+them. Tapo cloud cameras (the Tapo account is the server's), test patterns and sample
+files are admin-only.
 
 ## Sharing
 
@@ -150,7 +160,7 @@ On the Cameras page, **Settings → Share** on a camera you own:
 
 Admins also create account-only invite links (optionally making the new account an admin)
 under Settings → Users. Users can stop seeing a shared camera from their account page.
-Removing a camera removes its shares.
+Removing a camera removes its shares and unused invites to it.
 
 ## Live view
 
@@ -176,15 +186,6 @@ MediaMTX's port 8189, only for sessions set up through the server.
 To watch over RTSP from another device (VLC, Home Assistant), add a user with a password
 and `read` permission to `mediamtx.yml` (an example is in the file) and publish port 8554.
 
-## Signing up
-
-Self sign-up with a password (`registration: open`, or with an invite link) does not prove
-the e-mail address. Such accounts get no rights from `admin_emails` and are not matched to
-OAuth sign-ins by address; connecting an OAuth account with the same, confirmed, address
-on the account page verifies it. Accounts made by an admin, the setup page, `foxcam
-user add` or OAuth count as verified. `admin_emails` therefore never skip the invite for
-password sign-up: those admins sign in with OAuth, or are added on the command line.
-
 ## Exposing it to the internet
 
 Put a TLS-terminating reverse proxy in front of port 8000 only, e.g. Caddy:
@@ -202,9 +203,9 @@ ports.
 The server believes `X-Forwarded-For` / `-Proto` only from `trusted_proxies` (config.yaml,
 or `$FORWARDED_ALLOW_IPS`; default 127.0.0.1, a proxy on the same machine). In Docker the
 proxy connects from another address, e.g. the bridge gateway `172.18.0.1` (`docker network
-inspect`): set it there, or every visitor looks like the proxy, and the login limits (10
-failed attempts per address in 15 minutes) hit everyone at once. Never `*` while the server
-can also be reached without the proxy: anyone could then claim any address.
+inspect`): set it there, or every visitor looks like the proxy, and the per-address login
+limits hit everyone at once. Never `*` while the server can also be reached without the
+proxy: anyone could then claim any address.
 
 ## Login limits
 

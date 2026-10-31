@@ -77,7 +77,7 @@ WSL 2 runs the Linux version of the worker with full CUDA support. All detectors
    The scheduled task keeps `wsl.exe` running, which also keeps the WSL VM from shutting
    down when no terminal is open. Remove it with `install-task.ps1 -Uninstall`.
    Alternatively enable systemd in WSL (`/etc/wsl.conf`: `[boot]` `systemd=true`) and use
-   the [systemd unit](#linux); WSL itself must then still be started at logon.
+   the [systemd unit](#linux); WSL itself must then still be started at sign-in.
 
 ### WSL networking
 
@@ -159,7 +159,7 @@ selects the PyTorch CUDA build; use `cu126` for older drivers.
 
 `docker-compose.worker.yml` adds a YOLO-World worker to the server's stack that runs on the
 Intel GPU through OpenVINO (`--device intel:gpu`; N100: ~100 ms per frame, 6x its CPU).
-Create a token under **Jobs → Detection workers → Add worker**, then:
+With a token from **Add worker**:
 
 ```sh
 LOCAL_WORKER_TOKEN=msw_... docker compose -f docker-compose.yml -f docker-compose.vaapi.yml \
@@ -167,22 +167,11 @@ LOCAL_WORKER_TOKEN=msw_... docker compose -f docker-compose.yml -f docker-compos
 ```
 
 The GPU detects, but decoding and preparing frames still take CPU: the worker gets at most
-two cores. Set `WORKER_CPUS=1` for a quieter box (jobs take a little longer). To check that
-detection really runs on the GPU, look for `on GPU.0` in the worker's log, or watch
-`sudo intel_gpu_top` on the host while a job runs.
-
-### A quieter box: `--max-fps`
-
-Every camera's segment finishes at about the same time, so by default the worker runs flat
-out for a minute or two and then waits for the next segments; the fan follows those bursts.
-`--max-fps` (or `FOXCAM_WORKER_MAX_FPS`; `WORKER_MAX_FPS` in `docker-compose.worker.yml`)
-caps how many frames per second the worker analyses, so the same work runs at an even,
-lower load. Keep the cap above what the cameras produce, cameras x the profile's sample
-rate, with room for catching up after an outage: 4 cameras at 1 fps produce 4 frames per
-second, so `WORKER_MAX_FPS=6` or so. Lower than that and the queue only grows. Jobs take
-longer to finish, so events arrive later (up to the segment length). Detectors that take
-the whole segment at once (SpeciesNet) are paced per job: they still run in one go, then
-wait before the next job.
+two cores. Set `WORKER_CPUS=1` for a quieter box (jobs take a little longer; see also
+[`--max-fps`](#a-quieter-box---max-fps)). `WORKER_DEVICE=intel:cpu` runs on the CPU instead,
+`WORKER_MODEL` picks other weights. To check that detection really runs on the GPU, look
+for `on GPU.0` in the worker's log, or watch `sudo intel_gpu_top` on the host while a job
+runs.
 
 Each new prompt (a profile's targets) is exported to OpenVINO once, which takes a few
 seconds; the first job also downloads the weights. In LXC containers, pass
@@ -200,15 +189,29 @@ foxcam-worker doctor --server http://192.168.1.10:8000 --token msw_...
 Run as a service with `worker/deploy/foxcam-worker.service` (instructions in the file).
 AMD GPUs: `--torch-backend rocm7.1` (match your ROCm install), untested.
 
+## A quieter box: `--max-fps`
+
+Every camera's segment finishes at about the same time, so by default the worker runs flat
+out for a minute or two and then waits for the next segments; the fan follows those bursts.
+`--max-fps` (or `FOXCAM_WORKER_MAX_FPS`; `WORKER_MAX_FPS` for the
+[Intel worker](#intel-gpu-next-to-the-server)) caps how many frames per second the worker
+analyses, so the same work runs at an even, lower load. Keep the cap above what the cameras
+produce, cameras x the profile's sample rate, with room for catching up after an outage:
+4 cameras at 1 fps produce 4 frames per second, so a cap of 6 or so. Lower than that and the queue only grows. Jobs take
+longer to finish, so events arrive later (up to the segment length). Detectors that take
+the whole segment at once (SpeciesNet) are paced per job: they still run in one go, then
+wait before the next job.
+
 ## Tags: which jobs a worker gets
 
 Each recording is analysed once per [detection profile](ARCHITECTURE.md#detection-profiles)
 of its camera, and a profile may require worker tags. A worker's tags are its detector
-(`speciesnet`, `ultralytics`, plus `open-vocabulary` for YOLO-World / YOLOE,
-`dummy`), anything passed with `--tags gpu,winhack` (or `FOXCAM_WORKER_TAGS`), and the tags
-set on its access token in the web UI (**Jobs → Detection workers → Tags**). To pin a profile to this
+(`speciesnet`, `ultralytics` plus `open-vocabulary` for YOLO-World / YOLOE, or `dummy`),
+anything passed with `--tags gpu,winhack` (or `FOXCAM_WORKER_TAGS`), and the tags set on its
+access token in the web UI (**Jobs → Detection workers → Tags**). To pin a profile to this
 machine, give the machine a unique tag and require it in the profile. Cameras → Detection
-profiles and the Jobs page show profiles that no online worker can run.
+profiles and the Jobs page show profiles that no online worker can run. How the server
+matches them: [WORKER_PROTOCOL.md](WORKER_PROTOCOL.md#lease).
 
 ## Troubleshooting
 
@@ -220,5 +223,5 @@ profiles and the Jobs page show profiles that no online worker can run.
 | `server … Connection refused` from WSL to `localhost` | Use the server's LAN address or [mirrored networking](#wsl-networking). |
 | `server … worker token required` / `invalid worker token` | Create a token in **Jobs → Detection workers → Add worker**; tokens are shown once. |
 | Worker idles while jobs wait | Their profile requires tags the worker lacks; compare **Cameras → Detection profiles** with the worker's tags under **Jobs → Detection workers**. |
-| Jobs start but are retried / `lease lost` | The worker was too slow or offline for longer than `queue.lease_seconds`; check the GPU is used, or raise the lease. |
+| Jobs start but are retried / `lease lost` | The worker's heartbeats (every 30 s) did not reach the server for longer than `queue.lease_seconds`: check the connection, or raise the lease in Settings. |
 | SpeciesNet: every job takes ~25 s extra | Expected: the model loads per job (see [ROADMAP.md](ROADMAP.md)). |

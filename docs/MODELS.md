@@ -11,12 +11,12 @@ distance, partly hidden. That rules out the default choice:
 
 | Model | Type | Fox support | Speed | Licence | Notes |
 |---|---|---|---|---|---|
-| **MegaDetector + SpeciesNet** (Google) | camera-trap detector + species classifier | ✅ "red fox" (and ~2000 species) | moderate | Apache-2.0 | Trained on millions of camera-trap images incl. IR night shots. Supports country geofencing (`location.country` in `config.yaml`, sent to workers). **Recommended starting point.** Detector: `speciesnet`. |
-| **YOLO-World / YOLOE** (Ultralytics) | open-vocabulary detector | ✅ prompt "fox" | fast (real time) | AGPL-3.0 | Weaker on IR/night, small or hidden animals. **Prompt only `fox`**: adding `dog,cat,…` makes it label foxes as "dog" (measured below). Detector: `ultralytics` (prompted with each profile's targets, so it serves every profile; `--classes` is only the prompt for local file runs). |
+| **MegaDetector + SpeciesNet** (Google) | camera-trap detector + species classifier | ✅ "red fox" (and ~2000 species) | moderate | Apache-2.0 | Trained on millions of camera-trap images incl. IR night shots. Supports country geofencing (`location.country` in `config.yaml`, sent to workers as `hints.country`). **Recommended starting point.** Detector: `speciesnet`. |
+| **YOLO-World / YOLOE** (Ultralytics) | open-vocabulary detector | ✅ prompt "fox" | fast (real time) | AGPL-3.0 | Weaker on IR/night, small or hidden animals. **Prompt only `fox`**: adding `dog,cat,…` makes it label foxes as "dog" (measured below). Detector: `ultralytics` (prompted with each profile's targets, so it serves every profile; `--classes` is only the prompt for jobs without targets). Runs on Intel GPUs through OpenVINO (`--device intel:gpu`). |
 | **OWLv2 / Grounding DINO** | zero-shot detector | ✅ prompt "fox" | slow | Apache-2.0 | Good for labelling a dataset, too slow for every frame. Not bundled. |
 | **RF-DETR / YOLO11 fine-tuned** | custom detector | ✅ after training | fast | Apache-2.0 / AGPL-3.0 | Best long-term accuracy *for your cameras*. Train on your own ✅/❌-reviewed detections (see below). Detector: `ultralytics --model best.pt`. |
 | **VLM verification** (Qwen-VL class) | vision-language model | ✅ "is this a fox?" | slow | varies | Optional second stage on crops to cut false positives. Not bundled. |
-| **Cloud APIs** (AWS Rekognition, Google Vision, Azure Vision) | SaaS | ✅ usually "fox" / "red fox" label | network bound | paid | Write a small detector adapter (see [WORKER_PROTOCOL.md](WORKER_PROTOCOL.md)). Only censored frames leave your network. |
+| **Cloud APIs** (AWS Rekognition, Google Vision, Azure Vision) | SaaS | ✅ usually "fox" / "red fox" label | network bound | paid | Write a small detector adapter ([WORKER_PROTOCOL.md](WORKER_PROTOCOL.md#writing-a-detector-for-the-bundled-worker)). Only censored frames leave your network. |
 | **Stock YOLO / RT-DETR on COCO** | closed-set detector | ❌ (fox → dog/cat) | fastest | AGPL / Apache | Useful only as a motion/"some animal" pre-filter. |
 
 ## Several models side by side
@@ -64,8 +64,8 @@ Unrelated words (`dog, cat`) only hurt when they look like the target (see the f
 
 ## Recommended path
 
-1. **Start** with SpeciesNet (MegaDetector + classifier) on the GPU box:
-   `uv run foxcam-worker --server http://<server>:8000 --detector speciesnet`.
+1. **Start** with SpeciesNet (MegaDetector + classifier) on a GPU worker
+   ([WORKER_SETUP.md](WORKER_SETUP.md)): `foxcam-worker --detector speciesnet`.
 2. **Review** detections in the web UI and mark them ✅/❌. Keep hard cases (night, far away,
    partly hidden) as test clips in `samples/`.
 3. **Measure** each candidate on your clips without the server:
@@ -91,7 +91,8 @@ at ≥ 50 % confidence. A fox event only needs one such frame per segment.
 | **Clips with an event** | | 4 / 5 day, 3 / 5 night | 1 / 5 | **5 / 5 day, 4 / 5 night** | – |
 
 Speed (CPU): YOLO-World ≈ 20 frames/s. SpeciesNet ≈ 1–2 s per frame plus ~25 s to load the model
-for every job, so on a CPU it is slower than real time; use a GPU worker.
+for every job (the worker runs SpeciesNet's command line once per job), so on a CPU it is
+slower than real time; use a GPU worker.
 
 Takeaways:
 

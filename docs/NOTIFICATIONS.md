@@ -11,7 +11,7 @@ channels:
 | **Apprise** | ~100 services: Telegram, Discord, Slack, Pushover, Gotify, Signal, Matrix, e-mail, … | ✅ where supported |
 
 Channels are added in the web UI (**Settings → Notifications**, with a *Send test* button
-and the latest deliveries) or in `config.yaml`. Each channel chooses:
+and the latest deliveries) or in `config.yaml` (read-only in the UI). Each channel chooses:
 
 - **When**: `event.new` (an event starts: fast) and/or `event.clip` (its clip is ready, with
   a link to it).
@@ -22,9 +22,9 @@ and the latest deliveries) or in `config.yaml`. Each channel chooses:
 - **Quiet hours** (e.g. `23:00-06:00`, in the time zone set under Settings → Notifications,
   `notifications.timezone` in the config) and a **cooldown**
   (at most one *event starts* per camera per N minutes).
-- **Image**: the frame of the best detection with its box and label (e.g. "fox 94%"),
-  **censor areas blacked out**,
-  so masked areas never leave the server through a notification either.
+- **Image** (`include_image`, on by default): the frame of the best detection with its box
+  and its label on a red tag (e.g. "fox 94%"), like the web app, **censor areas blacked
+  out**, so masked areas never leave the server through a notification either.
 
 Only recent events notify: one whose latest detection is older than
 `notifications.max_age_minutes` (default 15, 0 = no limit, also under Settings →
@@ -34,10 +34,13 @@ backlog of footage.
 Delivery goes through an outbox: if a service is down, Foxcam retries with backoff
 (30 s, 1, 2, 4, 8 min) before giving up; the UI shows sent / waiting / failed / skipped.
 An event marked wrong (one of its detections marked wrong, none correct) sends nothing more:
-notifications still waiting for it are skipped. Detections marked wrong and objects standing
-still join no event, so they notify nobody, and neither do events made again by
-Settings → Detection → Maintenance → Rebuild events, or by running detection again on
-recordings (Reanalyse).
+notifications still waiting for it are skipped. Detections marked wrong, objects standing
+still and detections while the sun is below the camera's limit join no event, so they
+notify nobody. Neither do events made again by Settings → Detection → Maintenance →
+Rebuild events, by running detection again on recordings (Detect again, Run detection
+again), or by changing a camera's sun limit. A profile with a confirming model (`confirm:
+true`, [ARCHITECTURE.md](ARCHITECTURE.md#detection-profiles)) notifies only once it has
+confirmed the event.
 
 Set `public_url` (how you open the UI, e.g. `http://192.168.1.10:8000`) so notifications
 can link to the event and its clip; `scripts/dev.sh` sets it to this machine's LAN address
@@ -86,10 +89,12 @@ are not a channel: everyone sets up their own on their **Account** page, and onl
 events from cameras they can see (admins: all of them).
 
 - **Turn on here** turns them on for the device you are using; do it on each device. The
-  page lists your devices (and when each was last notified); **Remove** stops one.
+  page lists your devices (and when each was last notified); **Turn off here** or
+  **Remove** stops one.
 - **What to notify about**: the same rules as a channel (when, cameras, profiles, labels,
-  how sure, quiet hours, cooldown), just for you. Quiet hours and the times in messages are
-  in your browser's time zone, saved with the rules.
+  how sure, quiet hours, cooldown), just for you; **Notifications on** pauses all devices.
+  Quiet hours and the times in messages are in your browser's time zone, saved with the
+  rules.
 - **Send test** sends one to all your devices, about the latest event you can see.
 
 Where it works:
@@ -125,6 +130,8 @@ models when several agree, and the clip's length once it is ready. Without a tim
 (Settings → Notifications) the times are the server's own clock, which is UTC in Docker.
 Tapping it shows the whole notification (picture and all) rather than opening a page: its
 **Open event** button opens the event's details, and **Open clip** the clip once it is ready.
+With a picture, the text travels in HTTP headers; anything beyond ASCII (å, ä, ö, emoji) is
+sent RFC 2047-encoded, which ntfy decodes.
 
 On the public ntfy.sh anyone who knows a topic name can read it: pick a long random name,
 use access control, or self-host ntfy.
@@ -144,7 +151,7 @@ A `POST` with `Content-Type: application/json` per notification:
     "first_ts": "2026-10-24T13:04:58Z", "last_ts": "2026-10-24T13:05:03Z",
     "detection_count": 12, "is_night": true,
     "detectors": ["speciesnet", "yolo"], "detector_names": ["SpeciesNet", "YOLO-World"],
-    "agreement": 2,
+    "agreement": 2, "confirmed": true,
     "clip_ready": false, "clip_duration_s": null
   },
   "links": {
@@ -158,6 +165,8 @@ A `POST` with `Content-Type: application/json` per notification:
 
 `type` is `event.new`, `event.clip` (clip ready; `links.clip` filled in) or `test`. Any
 `2xx` counts as delivered. Extra request headers can be set per channel (`headers:`).
+`links.thumbnail` and `links.clip` need sign-in like the rest of the API: fetch them with
+an [API key](AUTH.md#api-keys).
 
 With a `secret`, the raw body is signed: `X-Foxcam-Signature: sha256=<hex>`
 (HMAC-SHA256). Verify it before trusting the request:

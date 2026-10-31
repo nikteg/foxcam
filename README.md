@@ -6,7 +6,7 @@
 Record Tapo (or any RTSP) cameras, let GPU workers anywhere look for foxes, wildlife or
 anything else, and keep the clips.
 
-![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-SQLite-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React_19-Fluent_UI-61DAFB?logo=react&logoColor=black)
 ![MediaMTX](https://img.shields.io/badge/MediaMTX-RTSP%20%E2%80%93%20WebRTC%20%E2%80%93%20HLS-555)
@@ -20,8 +20,8 @@ anything else, and keep the clips.
 ## Highlights
 
 - **Record everything, keep what matters.** MediaMTX records each camera in segments of
-  configurable length. Retention deletes ordinary footage after N days but keeps every
-  segment that belongs to an event.
+  configurable length. Retention deletes ordinary footage after N days but keeps the
+  recordings of events and of starred detections.
 - **Detection runs anywhere.** Workers lease jobs over plain HTTP: a GPU PC at home, a
   Windows/WSL gaming machine, a Docker box or a SaaS adapter. No inbound ports on the
   worker, per-worker access tokens, automatic retries.
@@ -55,12 +55,11 @@ anything else, and keep the clips.
   ([docs/HARDWARE.md](docs/HARDWARE.md)).
 - **Events with clips.** Sightings close in time become one event with a clip cut from the
   original footage (with pre/post roll), a thumbnail, a day/night tag and ✅/❌ feedback
-  for building a training set. Detection boxes are drawn over the pictures and the playing
-  video (with label and confidence, marked on the timeline: matches in red, other
-  detections faint, motion below; one button cycles which boxes show), not burned in;
-  only notification images have the box (and its label) in the picture. A detection marked wrong is no match anywhere
-  (counts, events, notifications, archives), and something that stands still (a parked
-  car, ten minutes by default) stops making events.
+  for building a training set (Export training set). Detection boxes are drawn over the
+  pictures and the playing video, not burned in (only notification images have them in the
+  picture); the timeline marks matches, other detections and motion, and the arrow keys
+  jump between them. A detection marked wrong is no match anywhere (counts, events,
+  notifications, archives). Each event and detection shows the worker's raw result.
 - **Filters.** Events and detections filter by camera, profile, label, period (the last
   day, week or month, or any From – To), day or night, and how they were marked
   (correct, wrong, not yet); detections also by detector, confidence and standing still.
@@ -69,20 +68,23 @@ anything else, and keep the clips.
   cards (Shift for a range) and mark them correct, wrong or favorite at once, or run
   detection again on their recordings.
 - **A UI for every screen.** Live view (WebRTC/HLS, with a ~480p *low data* mode for
-  mobile connections, and the camera model, the stream's uptime, resolution, codecs, bitrate,
-  the last segment, viewers and recent events under it), events, detections, recordings, worker queue, camera management and
-  settings, on phone, tablet and desktop, light or dark, in English and Swedish. On an
-  iPhone or iPad, add it to the home screen and it runs full screen like an app, with a
-  bottom tab bar, a refresh button and downloads handed to Safari.
+  mobile connections, and the stream's facts and recent events under it), events,
+  detections, recordings, jobs, cameras and settings, on phone, tablet and desktop, light
+  or dark, in English and Swedish. On an iPhone or iPad, add it to the home screen and it
+  runs full screen like an app, with a bottom tab bar, a refresh button and downloads
+  handed to Safari.
 - **Accounts and sharing.** E-mail and password or OAuth sign-in, cameras shared per user
   as viewer, editor or owner, and API keys with scopes for scripts and Home Assistant.
+  Admins decide who may add cameras, how many, and whether those may be on the local
+  network.
 - **Tapo cloud cameras.** Stream cameras you can't reach on the LAN (say, at the summer
   house) through the TP-Link cloud, kept alive with the same heartbeats the Tapo app sends.
 - **Notifications and webhooks.** Everyone gets their own push notifications from Foxcam
   itself (web push, also the iOS home screen app), with their own rules and only their
   cameras. Shared channels push with ntfy, call Home Assistant or any webhook (HMAC-signed
   JSON), or notify Telegram, Discord, Pushover and ~100 more via Apprise, with an image of
-  the detection, quiet hours and per-camera cooldown.
+  the detection, quiet hours and per-camera cooldown
+  ([docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md)).
 - **Optional S3.** Copy clips and recordings to AWS S3, Cloudflare R2, Backblaze B2,
   MinIO…, served through short-lived signed links.
 
@@ -210,7 +212,7 @@ cd web && FOXCAM_API=https://cams.example.org pnpm dev
 
 ```sh
 cp config.example.yaml config.yaml          # add your cameras (or add them in the UI)
-docker compose up --build -d                # MediaMTX + server (with UI) + ingest on :8000
+docker compose up --build -d                # MediaMTX, server, ingest, compact; UI on :8000
 docker compose logs server | grep "setup code"   # for the first (admin) account
 
 # With a GPU for video encoding (see docs/HARDWARE.md):
@@ -227,13 +229,18 @@ to `webrtcAdditionalHosts` in `mediamtx/mediamtx.yml` so WebRTC can connect from
 devices, and set `public_url` for links in notifications. Check which video encoder the
 container can use with `docker compose exec mediamtx foxcam hwaccel`.
 
+Without a config file, `FOXCAM_CONFIG=./config.docker.yaml` takes the few settings it needs
+from the environment (for a Komodo or Portainer stack from git); everything else is set in
+the UI. Behind a reverse proxy in Docker, add `docker-compose.proxy.yml` (its header lists
+the variables) and see [docs/AUTH.md](docs/AUTH.md) for TLS and `FORWARDED_ALLOW_IPS`.
+
 ## Adding cameras
 
 Use **Cameras → Add camera** in the web UI; cameras start recording within seconds, no
 restart needed. A camera's **Settings** then has tabs for **General** (name, segment
-length, censor areas), **Detection** (which profiles run, motion
-sensitivity and areas to ignore), **Recording** (quality profile
-and retention) and **Share**.
+length, censor areas), **Detection** (which profiles run, motion sensitivity and areas to
+ignore, sun limit), **Recording** (quality profile) and **Share**. Admins always may add
+cameras; other accounts when an admin allows it ([docs/AUTH.md](docs/AUTH.md)).
 
 - **RTSP** – the robust option when the server can reach the camera (same network, or a VPN
   such as Tailscale). In the Tapo app create a *Camera Account* (camera → Settings →
@@ -288,8 +295,10 @@ foxcam-worker --server http://<server>:8000 --token msw_… --detector speciesne
 | **YOLO-World** (Ultralytics) | any object you can name | prompted with each job's profile targets (no `--classes` needed); fast on a GPU |
 | **Your own** | anything | implement one method, or speak the [HTTP protocol](docs/WORKER_PROTOCOL.md) from any language or SaaS |
 
-Measured results on fox footage: [docs/MODELS.md](docs/MODELS.md). GPU setup on
-Windows/WSL, Docker and Linux: [docs/WORKER_SETUP.md](docs/WORKER_SETUP.md).
+On an Intel box (an N100 and the like), `docker-compose.worker.yml` runs a YOLO-World worker
+next to the server through OpenVINO. Measured results on fox footage:
+[docs/MODELS.md](docs/MODELS.md). GPU setup on Windows/WSL, Docker and Linux:
+[docs/WORKER_SETUP.md](docs/WORKER_SETUP.md).
 
 ## Configuration
 
@@ -301,6 +310,8 @@ and more without a restart; resetting a value brings back config.yaml's
 
 | Section | What it controls |
 |---|---|
+| `segment_seconds` | length of each recorded file (default 60; also per camera) |
+| `worker_token`, `open_worker_access` | a shared worker token next to the ones made in the UI; workers without a token (trusted networks only) |
 | `cameras` | sources, per-camera segment length, which profiles run, recording profile |
 | `profiles` | targets, aliases, match thresholds (also per target), required worker tags, detectors (several models per profile, cascades that confirm), frame rate, standing-still minutes, skipping recordings without motion, event retention |
 | `detection` | optional: a quick built-in `default` profile when there are no `profiles` (commented out in the example) |
@@ -314,9 +325,9 @@ and more without a restart; resetting a value brings back config.yaml's
 | `retention` | how long to keep footage, events and unprocessed segments; disk cap |
 | `compaction` | joining finished segments into hourly files (period, delay, on/off) |
 | `storage.s3` | S3-compatible bucket for clips and recordings |
-| `notifications` | ntfy / webhook / Apprise channels, filters, quiet hours ([guide](docs/NOTIFICATIONS.md)) |
+| `notifications` | ntfy / webhook / Apprise channels, filters, quiet hours, time zone, how old an event may be to notify ([guide](docs/NOTIFICATIONS.md)) |
 | `public_url` | how you open the UI; used for links in notifications |
-| `auth` | accounts: registration (invite / open / closed), admin e-mails, OAuth providers ([guide](docs/AUTH.md)) |
+| `auth` | accounts: registration (invite / open / closed), admin e-mails, OAuth providers, who may add cameras and how many ([guide](docs/AUTH.md)) |
 | `location` | coordinates (sun elevation) and country (SpeciesNet geofencing) |
 
 ## Development
@@ -335,6 +346,7 @@ and more without a restart; resetting a value brings back config.yaml's
 | `seed` (`-- --profiles`) | fake cameras from `samples/` and a fox profile (and an example vehicles profile) |
 | `cameras:remove-test` | remove the test cameras and the data of removed cameras |
 | `check` | ruff, oxlint, typecheck, oxfmt and all tests |
+| `layout-check` | open every page at phone and desktop width against a running server and report spacing and overflow problems |
 | `doctor` | check ffmpeg, GPU, detectors and the connection to the server |
 | `s3:local` | a local S3 server to try `storage.s3` |
 | `screenshots` | regenerate `docs/screenshots` from a throwaway demo stack (sample clips, YOLO-World if installed) |
@@ -343,7 +355,8 @@ and more without a restart; resetting a value brings back config.yaml's
 | `reset`, `clean:all` | wipe all data – back to a fresh checkout |
 
 `uv run foxcam --help` lists the server commands, e.g. `hwaccel` (which video
-encoders work here), `worker-token`, `remove-cameras` and `reset`.
+encoders work here), `worker-token`, `user`, `settings` (the tunables Settings changes),
+`remove-cameras` and `reset`.
 
 | Part | Stack |
 |---|---|
@@ -363,16 +376,16 @@ encoders work here), `worker-token`, `remove-cameras` and `reset`.
 | [Hardware encoding](docs/HARDWARE.md) | Quick Sync, NVENC, AMD, VideoToolbox; Docker GPU setup |
 | [Notifications](docs/NOTIFICATIONS.md) | your own web push, ntfy, webhooks (payload, signatures, Home Assistant) and Apprise |
 | [Authentication](docs/AUTH.md) | accounts, OAuth, camera sharing and what is protected how |
-| [Roadmap](docs/ROADMAP.md) | planned work |
+| [Roadmap](docs/ROADMAP.md) | planned work and ideas |
 
 ## Security
 
 Everything except the worker API needs a login (e-mail and password and/or Google,
 Microsoft, GitHub or any OpenID Connect provider) or an API key. Users only see the
-cameras shared with them; live view is served through the server, and MediaMTX only
-accepts local processes. Workers need an access token, camera passwords are redacted in
-the API, and workers only ever receive censored footage. Put TLS in front (e.g. Caddy)
-before exposing it to the internet. Details: [docs/AUTH.md](docs/AUTH.md).
+cameras shared with them; live view is served through the server, and MediaMTX only gives
+video to Foxcam's own processes (signed in with a generated password). Workers need an
+access token, camera passwords are redacted in the API, and workers only ever receive
+censored footage. Put TLS in front (e.g. Caddy) before exposing it to the internet. Details: [docs/AUTH.md](docs/AUTH.md).
 
 ## Credits
 

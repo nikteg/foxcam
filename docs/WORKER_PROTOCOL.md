@@ -4,7 +4,8 @@ Workers pull work over plain HTTP + JSON. Anything that can speak HTTP can be a 
 bundled Python worker, a script on a GPU box, or an adapter that forwards frames to a SaaS
 detection API. The server never calls workers, so they can sit behind NAT and come and go.
 
-All timestamps are UTC (ISO 8601). Interactive API docs: `http://<server>:8000/docs`.
+All timestamps are UTC (ISO 8601). Interactive API docs: `http://<server>:8000/docs`, when the
+server runs with `FOXCAM_API_DOCS=1` (development only: they are outside the login).
 
 ## Authentication
 
@@ -17,8 +18,10 @@ Authorization: Bearer <token>
 ```
 
 Until a token exists no worker can connect. Only `open_worker_access: true` in the config
-lets workers in without a token (trusted test networks). `GET /api/worker/whoami` checks credentials without side
-effects: `200 {"authenticated": true, "token_name": "gpu-box"}` or `401`.
+lets workers in without a token (trusted test networks). A per-worker token also fixes the
+worker's identity: the server uses the token's name as `worker_id`, whatever the client
+sends. `GET /api/worker/whoami` checks credentials without side effects:
+`200 {"authenticated": true, "token_name": "gpu-box", "token_tags": ["gpu"]}` or `401`.
 
 ## Flow
 
@@ -31,10 +34,11 @@ POST /api/worker/jobs/{id}/result         done
 POST /api/worker/jobs/{id}/fail           gave up (retryable or not)
 ```
 
-A lease lasts `queue.lease_seconds` (default 300 s) and is extended by each heartbeat. If a
-worker disappears, the lease expires and the job goes back to the queue. After
-`queue.max_attempts` failures the job is marked `dead`. Any request with a stale or wrong
-token gets **409**: drop the job and lease a new one.
+A lease lasts `queue.lease_seconds` (default 300 s) and is extended by each heartbeat (which
+returns the new `lease_expires_at`). If a worker disappears, the lease expires and the job
+goes back to the queue. A failed job waits `queue.retry_backoff_seconds` x its attempts
+before it is handed out again; after `queue.max_attempts` attempts it is marked `dead`. Any
+request with a stale or wrong lease token gets **409**: drop the job and lease a new one.
 
 ### Lease
 
@@ -50,7 +54,7 @@ classes), list them; it then only gets jobs of profiles looking for at least one
 `hints.target_labels`).
 
 `vocabulary` (optional): everything the detector can report, e.g. a COCO model's 80
-classes or SpeciesNet's ~3,500 taxonomy names. Not a filter: the server stores it per
+classes or SpeciesNet's few thousand taxonomy names. Not a filter: the server stores it per
 worker and suggests these labels in the profile and notification editors (`GET
 /api/labels`), and warns about targets no eligible worker can report. Send it with the
 first lease and then every few minutes (the reference worker: every 10 minutes), not with
@@ -89,17 +93,19 @@ so the same segment may come back for another profile or detector.
 the input is shared by all profiles of the camera, so subsample to it). Subsample so that
 frame `i` is the picture at `i / sample_fps` seconds: with ffmpeg, `fps=N:round=up` (the
 default rounding takes a frame up to half an interval later, and boxes then trail moving
-targets). `detector` says which
-of the profile's detectors this job is for; `profile.min_confidence` is the detector's own
-threshold when it has one, and `hints.target_min_confidence` the targets with one of their
-own (e.g. `{"person": 0.8}`). `hints.target_labels` are what the profile
-looks for: open-vocabulary detectors should prompt with them. Report every label you see; the
-server applies the profile's aliases and threshold to decide what is a target.
+targets). `detector` says which of the profile's detectors this job is for;
+`profile.min_confidence` is the detector's own threshold when it has one, and
+`hints.target_min_confidence` the targets with one of their own (e.g. `{"person": 0.8}`).
+`hints.target_labels` are what the profile looks for: open-vocabulary detectors should
+prompt with them. Report every label you see; the server applies the profile's aliases and
+threshold to decide what is a target.
 
-Newest segments are handed out first, so fresh footage is processed first after an outage.
+Newest segments are handed out first, so fresh footage is processed first after an outage;
+confirmation jobs of a [cascade](ARCHITECTURE.md#detection-profiles) go ahead of them.
 
 The result body you post (without the lease token) is kept on the job for debugging, up to
-256 kB (beyond that only its start), and shown to admins on the recording.
+256 kB (beyond that only its start), and shown as raw data on the recording, event and
+detection to anyone who can see the camera.
 
 ### Input
 
@@ -142,7 +148,7 @@ POST /api/worker/jobs/42/fail
 
 ## Writing a detector for the bundled worker
 
-Implement `foxcam_worker.detectors.base.Detector`:
+Implement `foxcam_worker.detectors.base.Detector` (the bundled worker does the protocol):
 
 ```python
 class MyDetector(Detector):
@@ -156,7 +162,11 @@ class MyDetector(Detector):
         return out
 ```
 
-Register it in `detectors/__init__.py` (`create_detector`) and test it offline first:
+By default `detect` gets all of a segment's frames as JPEG files in one call; set
+`in_memory = True` to get batches of decoded frames (`f.image`, BGR numpy arrays) instead.
+Override `tags()`, `labels()` or `vocabulary()` to change what the worker sends with its
+leases (see [Lease](#lease)). Register it in `detectors/__init__.py` (`--detector` choices and
+`create_detector`) and test it offline first:
 
 ```sh
 uv run foxcam-worker detect-file samples/fox-garden.mp4 --detector my-saas --expect fox --out out/test

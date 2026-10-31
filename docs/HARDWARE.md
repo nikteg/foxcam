@@ -5,21 +5,22 @@ Foxcam re-encodes video in three places:
 | What | When | Run by |
 |---|---|---|
 | **Low-data live view** (`<camera>/low`, ~480p) | only while someone watches it | MediaMTX (`foxcam transcode`) |
-| **Burned-in censor areas** | continuously, live | MediaMTX (`foxcam transcode`) |
-| **Recording profiles** that re-encode (1080p, 720p, 480p, H.265, custom) | once per finished hour | `foxcam compact` |
+| **Burned-in censor areas** (if switched on for the camera) | continuously, live | MediaMTX (`foxcam transcode`) |
+| **Recording profiles** that re-encode (1080p, 720p, 480p, H.265, custom) | once per finished period (an hour by default) | `foxcam compact` |
 
-Recording profiles are applied when compaction joins an hour into one file, not live:
+Recording profiles are applied when compaction joins a period into one file, not live:
 detection and live view keep the camera's original, and a batch encode compresses better
 than a live one. With a GPU an hour of 3K footage takes a few minutes. Every segment
-must start on a keyframe in the hourly file (so it can be cut back out without
-re-encoding): compaction forces keyframes there and checks them, and joins the hour
-without re-encoding if the encoder did not comply.
+must start on a keyframe in the joined file (so it can be cut back out without
+re-encoding): compaction forces keyframes there and checks them, and joins the period
+without re-encoding if the encoder did not comply or failed.
 
 The censored copy each worker gets is made on the CPU (libx264, small and low frame
 rate); where a VAAPI render node exists (`mediamtx.hw_device`, default
-`/dev/dri/renderD128`), the GPU decodes and scales it first, with a CPU fallback.
+`/dev/dri/renderD128`) and `hwaccel` is not `none`, the GPU decodes and scales it first,
+with a CPU fallback. NVIDIA and VideoToolbox are not used for this step.
 
-Each of the three decodes the camera stream and encodes it again. On the CPU that is fine for a
+Each of the three re-encodings decodes the camera stream and encodes it again. On the CPU that is fine for a
 camera or two; with a GPU's video engine it costs almost nothing, even for many cameras.
 
 ## Backends
@@ -40,7 +41,8 @@ There is no single cross-platform API for video encoding. Each OS has its own:
 With `hwaccel: auto` (the default) the transcoder tries, in order:
 
 - macOS: `videotoolbox`
-- Linux: `nvenc`, `qsv`, `vaapi`
+- Linux: `nvenc`, `vaapi`, `qsv` (VAAPI first: same Intel hardware, but `h264_qsv` rejects
+  some camera streams, e.g. odd frame rates)
 - Windows: `nvenc`, `qsv`, `amf`, `mf`
 
 and then the CPU. Each candidate is tested with a tiny real encode **where the transcode
@@ -64,26 +66,25 @@ Check what works on a machine:
 ```console
 $ foxcam hwaccel                                # bare metal / dev
 $ docker compose exec mediamtx foxcam hwaccel   # Docker
-auto picks, in order: nvenc, qsv, vaapi, software
+auto picks, in order: nvenc, vaapi, qsv, software
   no   nvenc         h264_nvenc         Cannot load libcuda.so.1
-  ok   qsv           h264_qsv
-  ok   qsv           hevc_qsv
   ok   vaapi         h264_vaapi
+  ok   vaapi         hevc_vaapi
+  ok   qsv           h264_qsv
   …
-auto -> qsv (h264_qsv)
+auto -> vaapi (h264_vaapi)
 ```
 
 The MediaMTX log shows the choice for each transcode, e.g.
-`transcode garden -> low: qsv (h264_qsv)`.
+`transcode garden -> low: vaapi (h264_vaapi)`. Compaction logs the encoder per archive.
 
 ## Docker
 
 The image includes ffmpeg with VAAPI, QSV, NVENC and Vulkan support, the Intel media driver
 and Quick Sync runtime (amd64), and Mesa's VAAPI driver for AMD. MediaMTX runs from the same
-image, so its transcodes find all of it. The container only needs access to the GPU:
-
-The override files below give the GPU to both the `mediamtx` service (live transcodes) and
-the `compact` service (re-encoding finished hours).
+image, so its transcodes find all of it. The containers only need access to the GPU, which
+the override files below give to `mediamtx` (live transcodes) and `compact` (recording
+profiles); the VAAPI one also to `server` (the workers' censored copy).
 
 **Intel or AMD** (VAAPI / Quick Sync): pass the render node.
 
