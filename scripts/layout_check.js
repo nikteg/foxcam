@@ -16,7 +16,7 @@ async ({ here = false, list = false, pages = null, minGap = 8 } = {}) => {
     "/jobs/preparation", "/jobs/archiving", "/jobs/detection", "/jobs/detection-workers",
     "/cameras", "/cameras/profiles", "/cameras/integrations",
     "/settings/general", "/settings/detection", "/settings/retention", "/settings/users",
-    "/settings/notifications", "/settings/storage", "/settings/configuration",
+    "/settings/notifications", "/settings/storage", "/settings/configuration", "/settings/logs",
     "/settings/danger", "/account",
   ];
   const SIZES = { phone: [390, 844], desktop: [1280, 800] };

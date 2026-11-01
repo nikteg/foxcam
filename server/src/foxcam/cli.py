@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import logging
 import os
+import sys
+from pathlib import Path
+
+from . import logs
 
 
 def _backends() -> tuple[str, ...]:
@@ -87,13 +92,36 @@ def _user_command(settings, args: argparse.Namespace) -> int:
     return 0
 
 
-def _exec_mediamtx(args: argparse.Namespace, password: str) -> None:
-    """Replace this process with MediaMTX, which then knows the internal login."""
-    from . import mediamtx_auth
+def _exec_mediamtx(args: argparse.Namespace, password: str, data_dir: Path) -> None:
+    """Run MediaMTX with the internal login, its output both on stdout (as it is) and in
+    its log file (redacted, for Settings → Logs). Stops it on SIGTERM / Ctrl+C."""
+    import signal
+    import subprocess
+
+    from . import logs, mediamtx_auth
 
     env = {**os.environ, **mediamtx_auth.process_env(password)}
-    os.execvpe(args.binary, [args.binary, args.mediamtx_config], env)
-    raise SystemExit(127)  # only reached if exec did not replace the process
+    try:
+        log = logs.mediamtx_logger(data_dir)
+    except OSError as e:  # no log then, but MediaMTX still runs
+        print(f"foxcam: no MediaMTX log file ({e})", file=sys.stderr)
+        os.execvpe(args.binary, [args.binary, args.mediamtx_config], env)
+    proc = subprocess.Popen([args.binary, args.mediamtx_config], env=env,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            bufsize=1, text=True, errors="replace")
+
+    def forward(signum: int, _frame: object) -> None:
+        proc.send_signal(signum)
+
+    signal.signal(signal.SIGTERM, forward)
+    signal.signal(signal.SIGINT, forward)
+    assert proc.stdout is not None
+    for line in proc.stdout:
+        sys.stdout.write(line)
+        sys.stdout.flush()
+        with contextlib.suppress(Exception):  # the log must never stop MediaMTX
+            logs.mediamtx_line(log, line.rstrip("\n"))
+    raise SystemExit(proc.wait())
 
 
 def _settings_command(settings, args) -> int:
@@ -236,21 +264,29 @@ def main() -> None:
 
         from . import mediamtx_auth
 
-        _exec_mediamtx(args, mediamtx_auth.stored(Path(args.password_file)))
+        password_file = Path(args.password_file)
+        logs.setup(logging.DEBUG if args.verbose else logging.INFO)
+        # The container's data folder: the password lives in <data>/mediamtx/.
+        _exec_mediamtx(args, mediamtx_auth.stored(password_file), password_file.parent.parent)
     if args.cmd in ("transcode", "hwaccel"):  # no config needed (runs inside MediaMTX)
-        logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
-                            format="%(asctime)s %(levelname)-7s %(name)s: %(message)s")
+        logs.setup(logging.DEBUG if args.verbose else logging.INFO)
         raise SystemExit(_hw_command(args))
     if args.config:
         os.environ["FOXCAM_CONFIG"] = args.config
-    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
-                        format="%(asctime)s %(levelname)-7s %(name)s: %(message)s")
+    logs.setup(logging.DEBUG if args.verbose else logging.INFO)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("watchfiles").setLevel(logging.WARNING)  # --reload: one line per save
 
     from .config import get_settings
 
     settings = get_settings()
+    # The long-running processes also keep a log file (Settings → Logs).
+    process = {"serve": "server", "ingest": "ingest", "compact": "compact"}.get(args.cmd)
+    if process and not getattr(args, "once", False):
+        try:
+            logs.to_file(settings.data_dir, process)
+        except OSError as e:
+            logging.getLogger(__name__).warning("no log file: %s", e)
 
     if args.cmd == "serve":
         import uvicorn
@@ -263,12 +299,14 @@ def main() -> None:
         proxies = settings.trusted_proxies
         uvicorn.run("foxcam.web.main:app", host=args.host, port=args.port,
                     reload=args.reload, reload_dirs=[str(Path(__file__).parent)],
-                    log_level="info", proxy_headers=True,
+                    # Uvicorn logs through the root logger (redacted, and in the log file;
+                    # the file leaves out the access lines).
+                    log_config=None, log_level="info", proxy_headers=True,
                     forwarded_allow_ips=",".join(proxies) if proxies else None)
     elif args.cmd == "mediamtx":
         from . import mediamtx_auth
 
-        _exec_mediamtx(args, mediamtx_auth.password(settings))
+        _exec_mediamtx(args, mediamtx_auth.password(settings), settings.data_dir)
     elif args.cmd == "ingest":
         import signal
 

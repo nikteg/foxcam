@@ -96,6 +96,26 @@ export interface SunDetection {
   still: boolean;
 }
 
+/** A long-running process's log (Settings → Logs): server, ingest, compact, mediamtx, or
+ *  worker-<worker id> (workers send theirs to the server). */
+export type LogProcess = string;
+
+export interface LogFile {
+  process: LogProcess;
+  /** All its rotated files together. */
+  bytes: number;
+  updated_at: string;
+}
+
+export interface LogEntry {
+  /** UTC. */
+  ts: string;
+  level: "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+  logger: string;
+  /** Can span lines (a traceback). */
+  message: string;
+}
+
 export interface SunSetting {
   limit: number | null;
   latitude: number | null;
@@ -1071,6 +1091,9 @@ export const api = {
   deleteInvite: (id: number) => request<{ status: string }>("DELETE", `/api/invites/${id}`),
   status: () => request<Status>("GET", "/api/status"),
   settings: () => request<Settings>("GET", "/api/settings"),
+  logFiles: () => request<LogFile[]>("GET", "/api/logs"),
+  logs: (process: LogProcess, q: { level?: string; q?: string; limit?: number }) =>
+    request<LogEntry[]>("GET", withQuery(`/api/logs/${process}`, q)),
   cameras: () => request<Camera[]>("GET", "/api/cameras"),
   /** Moments of the last two days with footage (newest first), for the mask editor. */
   snapshotMoments: (cameraId: string) =>

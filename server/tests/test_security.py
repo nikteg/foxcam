@@ -4,6 +4,7 @@ sources users may add, sign-up and e-mail verification, reused camera ids, proxi
 from __future__ import annotations
 
 import base64
+import logging
 import subprocess
 import time
 from pathlib import Path
@@ -159,22 +160,40 @@ def test_the_control_api_client_signs_in(settings):
 
 
 def test_launcher_with_a_password_file_needs_no_config(tmp_path, monkeypatch):
+    import io
+    import signal
+    import subprocess
     import sys
 
-    from foxcam import cli
+    from foxcam import cli, logs
 
     calls = []
-    monkeypatch.setattr(cli.os, "execvpe", lambda *a: calls.append(a))
+
+    class FakeMediaMtx:
+        def __init__(self, argv, env, **_):
+            calls.append((argv, env))
+            self.stdout = io.StringIO("2026/11/01 10:00:00 WAR [path cam] detected drift\n")
+
+        def wait(self):
+            return 0
+
+    monkeypatch.setattr(subprocess, "Popen", FakeMediaMtx)
+    monkeypatch.setattr(signal, "signal", lambda *a: None)
     monkeypatch.setenv("FOXCAM_CONFIG", str(tmp_path / "missing.yaml"))
     pw_file = tmp_path / "mediamtx" / "password"
     monkeypatch.setattr(sys, "argv", ["foxcam", "mediamtx", "m.yml", "--binary",
                                       "/bin/mtx", "--password-file", str(pw_file)])
     with pytest.raises(SystemExit):
         cli.main()
-    binary, argv, env = calls[0]
+    argv, env = calls[0]
     pw = pw_file.read_text().strip()
-    assert (binary, argv) == ("/bin/mtx", ["/bin/mtx", "m.yml"])
+    assert argv == ["/bin/mtx", "m.yml"]
     assert env["MTX_AUTHINTERNALUSERS_0_PASS"] == pw == env["FOXCAM_MTX_PASSWORD"]
+    # Its lines also go to its log file, next to the password (the container's only folder).
+    for h in logging.getLogger("mediamtx").handlers:
+        h.close()
+    assert [e["message"] for e in logs.read(tmp_path, "mediamtx")] == [
+        "[path cam] detected drift"]
 
 
 def test_the_mediamtx_container_gets_no_secrets_but_its_password():

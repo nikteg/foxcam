@@ -17,6 +17,8 @@ services:
     image: foxcam-worker:openvino
     pull_policy: build
     restart: unless-stopped
+    # Docker keeps container logs forever unless told otherwise: at most 5 × 10 MB.
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "5" } }
     command: ["--detector", "ultralytics", "--model", "${WORKER_MODEL:-yolov8s-worldv2.pt}",
               "--device", "${WORKER_DEVICE:-intel:gpu}"]
     depends_on: [server]

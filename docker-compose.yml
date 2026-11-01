@@ -11,6 +11,12 @@
 # needs the internal login (mediamtx/mediamtx.yml), and browsers reach live view through
 # the server (behind the login). The
 # first start prints a setup code for the first account: docker compose logs server
+# Docker keeps container logs forever unless told otherwise: at most 5 × 10 MB each. The
+# processes also keep their own rotated log files in data/ (Settings → Logs).
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "5" }
+
 services:
   mediamtx:
     # Same image as the server: MediaMTX runs `foxcam transcode` (masks, recording
@@ -25,6 +31,7 @@ services:
     # recordings: no config.yaml, database or other secrets.
     command: ["mediamtx", "/mediamtx.yml", "--password-file", "/data/mediamtx/password"]
     restart: unless-stopped
+    logging: *logging
     volumes:
       - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
       - ${FOXCAM_DATA_PATH:-./data}/mediamtx:/data/mediamtx
@@ -42,6 +49,7 @@ services:
     image: foxcam:local
     pull_policy: build # built here, never pulled (Komodo pulls before deploying)
     restart: unless-stopped
+    logging: *logging
     command: ["serve"]
     depends_on: [mediamtx]
     network_mode: service:mediamtx # port 8000 is published by the mediamtx service
@@ -69,6 +77,7 @@ services:
     image: foxcam:local
     pull_policy: build # built here, never pulled (Komodo pulls before deploying)
     restart: unless-stopped
+    logging: *logging
     command: ["ingest"]
     depends_on: [mediamtx]
     network_mode: service:mediamtx
@@ -86,6 +95,7 @@ services:
     image: foxcam:local
     pull_policy: build # built here, never pulled (Komodo pulls before deploying)
     restart: unless-stopped
+    logging: *logging
     command: ["compact"]
     volumes:
       - ${FOXCAM_CONFIG:-./config.yaml}:/app/config.yaml:ro
