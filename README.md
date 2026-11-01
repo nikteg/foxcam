@@ -125,7 +125,7 @@ anything else, and keep the clips.
     <td></td>
   </tr>
   <tr>
-    <td><b>Settings</b> – tunables without a restart (reset to config.yaml), maintenance, settings export/import, and a danger zone for clean starts</td>
+    <td><b>Settings</b> – tunables without a restart (reset to config.yaml), maintenance, settings export/import, the server's and workers' logs, and a danger zone for clean starts</td>
     <td></td>
   </tr>
 </table>
@@ -369,7 +369,7 @@ encoders work here), `worker-token`, `user`, `settings` (the tunables Settings c
 
 | | |
 |---|---|
-| [Architecture](docs/ARCHITECTURE.md) | pipeline, detection and recording profiles, data model, retention, S3, privacy |
+| [Architecture](docs/ARCHITECTURE.md) | pipeline, detection and recording profiles, data model, retention, logs, S3, privacy |
 | [Worker setup](docs/WORKER_SETUP.md) | GPU workers on Windows/WSL, Docker and Linux |
 | [Worker protocol](docs/WORKER_PROTOCOL.md) | HTTP API for workers and SaaS adapters |
 | [Models](docs/MODELS.md) | detection models compared on fox footage |

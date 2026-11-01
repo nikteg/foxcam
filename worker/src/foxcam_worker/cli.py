@@ -23,6 +23,7 @@ from .client import Client, LeaseLost
 from .detectors import add_detector_args, create_detector
 from .doctor import environment, gpu_summary
 from .frames import extract_frames, frame_batches
+from .logship import LogShipper
 from .pacing import Pacer
 
 log = logging.getLogger("foxcam_worker")
@@ -176,6 +177,8 @@ def main() -> None:
         t.strip().lower() for t in [*detector.tags(), *args.tags.split(",")] if t.strip()))
     client = Client(args.server, args.worker_id, args.token, info, tags, detector.labels(),
                     detector.vocabulary())
+    # The log also goes to the server (Settings → Logs).
+    shipper = LogShipper(client.http, args.worker_id).start()
     log.info("worker %s using %s (tags: %s) -> %s", args.worker_id, detector.name,
              ",".join(tags), args.server)
     pacer = Pacer(args.max_fps)
@@ -220,6 +223,7 @@ def main() -> None:
     except KeyboardInterrupt:
         log.info("bye")
     finally:
+        shipper.stop()
         client.close()
 
 

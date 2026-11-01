@@ -6,12 +6,13 @@ lease -> download input -> heartbeat while working -> result | fail
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
+from .. import logs
 from ..config import Settings
 from ..pipeline import queue
 from ..profiles import normalize_tags
@@ -187,4 +188,27 @@ def fail(job_id: int, body: FailBody, settings: Settings = Depends(settings_dep)
         queue.fail(settings, job_id, body.lease_token, body.error, body.retryable)
     except queue.LeaseError as e:
         raise _lease_error(e) from e
+    return {"status": "ok"}
+
+
+class LogEntryIn(BaseModel):
+    ts: str = Field(max_length=40)
+    level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    logger: str = Field(default="worker", max_length=200)
+    message: str = Field(max_length=20000)
+
+
+class LogsBody(BaseModel):
+    worker_id: str = Field(min_length=1, max_length=100)
+    entries: list[LogEntryIn] = Field(max_length=1000)
+
+
+@router.post("/logs")
+def worker_logs(body: LogsBody, settings: Settings = Depends(settings_dep),
+                identity: Identity = Depends(require_worker)) -> dict[str, str]:
+    """A worker's log lines (it sends them now and then), for Settings → Logs. Like the
+    lease, a per-worker token decides whose log it is."""
+    if not logs.write_worker_entries(settings.data_dir, identity.name or body.worker_id,
+                                     [e.model_dump() for e in body.entries]):
+        raise HTTPException(429, "too many workers' logs; remove old ones in data/logs/")
     return {"status": "ok"}

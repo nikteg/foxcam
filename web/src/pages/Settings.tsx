@@ -27,6 +27,7 @@ import {
 import { Navigate } from "react-router";
 
 import { useI18n } from "../i18n";
+import { LogsSection } from "../components/LogsSection";
 import { CardsSkeleton } from "../components/Skeletons";
 
 // Language and theme are in the top bar; everything here is for admins.
@@ -38,6 +39,7 @@ type SubPage =
   | "notifications"
   | "storage"
   | "configuration"
+  | "logs"
   | "danger";
 
 // The tunables on each tab (server: runtime_settings.EDITABLE).
@@ -191,6 +193,7 @@ export function Settings() {
     "notifications",
     "storage",
     "configuration",
+    "logs",
     "danger",
   ];
   const tab = useSubPage("/settings", ids);
@@ -202,6 +205,7 @@ export function Settings() {
     notifications: t("settings.notifications"),
     storage: t("settings.storage"),
     configuration: t("settings.configuration"),
+    logs: t("logs.title"),
     danger: t("danger.title"),
   };
 
@@ -260,6 +264,7 @@ export function Settings() {
         </>
       )}
       {tab === "storage" && <StorageCard />}
+      {tab === "logs" && <LogsSection />}
       {tab === "danger" && <DangerZoneSection />}
       {tab === "configuration" && (
         <>

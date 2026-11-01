@@ -2886,3 +2886,41 @@ h2.panel-heading {
 .sun-key.unmarked {
   fill: var(--colorBrandBackground);
 }
+
+/* Settings → Logs (components/LogsSection.tsx): log text, newest first, long lines wrap
+   (nothing wider than a phone), a traceback keeps its lines. */
+.log-lines {
+  font-family: var(--fontFamilyMonospace);
+  font-size: var(--fontSizeBase200);
+  line-height: var(--lineHeightBase200);
+  background: var(--colorNeutralBackground1);
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: var(--borderRadiusMedium);
+  padding: var(--spacingVerticalS) var(--spacingHorizontalM);
+  min-width: 0;
+}
+.log-line {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 2px 0;
+}
+.log-line + .log-line {
+  border-top: 1px solid var(--colorNeutralStroke3);
+}
+.log-time,
+.log-logger {
+  color: var(--colorNeutralForeground3);
+}
+.log-level {
+  font-weight: var(--fontWeightSemibold);
+}
+.log-debug .log-level {
+  color: var(--colorNeutralForeground3);
+}
+.log-warning .log-level {
+  color: var(--colorPaletteMarigoldForeground1);
+}
+.log-error .log-level,
+.log-critical .log-level {
+  color: var(--colorPaletteRedForeground1);
+}

@@ -25,6 +25,19 @@
 | compaction | `foxcam compact` | Joins finished segments into hourly files, re-encoding them when the camera's recording profile says so ([below](#archiving-compaction-recording-profiles)). |
 | worker | `foxcam-worker` | Runs anywhere with HTTP access to the server. Leases jobs, runs a detector, posts results. |
 
+### Logs
+
+Every process logs to stdout (`docker logs`) and also to a file the web UI shows under
+Settings → Logs (`logs.py`, admins only): `data/logs/server.log`, `ingest.log`,
+`compact.log`, and `data/mediamtx/mediamtx.log` (`foxcam mediamtx` runs MediaMTX as a child
+and copies its output there; that container sees only `data/mediamtx/`). Workers send their
+lines to the server (`POST /api/worker/logs`, [WORKER_PROTOCOL.md](WORKER_PROTOCOL.md)),
+which writes `data/logs/worker-<id>.log`. Each file rotates at 5 MB and keeps 4 old ones (at
+most 25 MB per process; at most 20 workers' logs). Every line, on stdout too, has logins in
+URLs and token/password/secret values replaced by `***`. Times are UTC with a `Z`.
+Uvicorn's line per request stays on stdout only. Docker's own logs rotate too
+(`docker-compose.yml`: 5 × 10 MB per container).
+
 ## Pipeline (server background loops)
 
 1. **Scanner** (every 5 s): registers finished recording files as `segment` rows. A file is finished
@@ -399,6 +412,7 @@ server/src/foxcam/
   accounts.py, oauth.py, api_keys.py, download_links.py   users, sign-in, API keys, signed links
   worker_tokens.py   per-worker access tokens
   mediamtx.py, mediamtx_auth.py  MediaMTX API client (path sync, live status); its internal login
+  logs.py            log files (rotation, redaction, reading) for Settings → Logs
   ffmpeg.py, hwaccel.py  probe, censored derivative, thumbnails, clips; hardware encoders
   footage.py         missing footage (gaps between recordings, skips inside one)
   sprites.py         timeline preview sprites for the player
@@ -413,6 +427,7 @@ server/src/foxcam/
   web/               FastAPI app: worker, camera, profile, auth, user, notification, push and live APIs
 worker/src/foxcam_worker/
   cli.py             lease loop; `detect-file` for offline tests (local.py); `doctor` (doctor.py) checks the machine
+  logship.py         sends the worker's log to the server
   detectors/         dummy, ultralytics (YOLO-World / YOLO), speciesnet
 web/src/             React + Fluent UI app (pages/, components/, i18n/)
 ```

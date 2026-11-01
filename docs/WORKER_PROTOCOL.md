@@ -32,6 +32,7 @@ GET  /api/worker/jobs/{id}/input          (X-Lease-Token header)  → censored M
 POST /api/worker/jobs/{id}/heartbeat      every ~30 s while working
 POST /api/worker/jobs/{id}/result         done
 POST /api/worker/jobs/{id}/fail           gave up (retryable or not)
+POST /api/worker/logs                     the worker's log lines, now and then (optional)
 ```
 
 A lease lasts `queue.lease_seconds` (default 300 s) and is extended by each heartbeat (which
@@ -39,6 +40,22 @@ returns the new `lease_expires_at`). If a worker disappears, the lease expires a
 goes back to the queue. A failed job waits `queue.retry_backoff_seconds` x its attempts
 before it is handed out again; after `queue.max_attempts` attempts it is marked `dead`. Any
 request with a stale or wrong lease token gets **409**: drop the job and lease a new one.
+
+### Logs
+
+```http
+POST /api/worker/logs
+{"worker_id": "gpu-box", "entries": [{"ts": "2026-11-01T10:21:00.000Z", "level": "WARNING",
+  "logger": "foxcam_worker", "message": "job 812: server error ..."}]}
+```
+
+Optional: the worker's log, so admins see it under Settings → Logs next to the server's,
+wherever the worker runs. Up to 1000 entries a request; `level` is `DEBUG`, `INFO`,
+`WARNING`, `ERROR` or `CRITICAL`; `message` may span lines (a traceback). The server writes
+them to `data/logs/worker-<worker id>.log` (rotated like its own, secrets taken out); with
+a per-worker token the token's name is the id. It keeps logs of at most 20 workers and
+answers **429** past that. The reference worker sends INFO and up every 10 s, keeps up to
+5000 lines while the server is away, and stops sending on a **404** (an older server).
 
 ### Lease
 
