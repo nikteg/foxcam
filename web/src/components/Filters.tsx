@@ -1,4 +1,4 @@
-import { Select } from "@fluentui/react-components";
+import { MessageBar, MessageBarBody, Select } from "@fluentui/react-components";
 
 import { useI18n } from "../i18n";
 import { DateTimeInput } from "./ui";
@@ -13,7 +13,8 @@ export const PERIOD_KEYS = ["period", "from", "to"] as const;
 type PeriodValues = Record<(typeof PERIOD_KEYS)[number], string>;
 
 // datetime-local values ("YYYY-MM-DDTHH:MM") are read as local time.
-const iso = (local: string) => (local ? new Date(local).toISOString() : undefined);
+const iso = (local: string, plusMs = 0) =>
+  local ? new Date(new Date(local).getTime() + plusMs).toISOString() : undefined;
 
 /** A period filter as API bounds (UTC ISO). Relative periods count back from when it is
  *  called, so call it in the query function: each refetch moves along. */
@@ -21,7 +22,8 @@ export function periodBounds(f: PeriodValues): { since?: string; until?: string 
   const hours = PERIOD_HOURS[f.period];
   if (hours) return { since: new Date(Date.now() - hours * 3_600_000).toISOString() };
   if (f.period !== "custom") return {};
-  return { since: iso(f.from), until: iso(f.to) };
+  // To is the last minute shown (To 23:59 includes the whole minute).
+  return { since: iso(f.from), until: iso(f.to, 60_000) };
 }
 
 /** Any time, the last day/week/month, or a custom From–To (local time). */
@@ -54,6 +56,7 @@ export function PeriodFilter({
             value={value.from}
             placeholder={t("filter.from")}
             aria-label={t("filter.from")}
+            emptyTime="00:00"
             onChange={(v) => onChange("from", v)}
           />
           <DateTimeInput
@@ -61,6 +64,7 @@ export function PeriodFilter({
             value={value.to}
             placeholder={t("filter.to")}
             aria-label={t("filter.to")}
+            emptyTime="23:59"
             onChange={(v) => onChange("to", v)}
           />
         </span>
@@ -112,5 +116,16 @@ export function FeedbackSelect({
       <option value="wrong">{t("filter.wrong")}</option>
       <option value="none">{t("filter.unmarked")}</option>
     </Select>
+  );
+}
+
+/** Under a list cut off at `limit` (newest first): older rows need a narrower filter. */
+export function LimitNote({ count, limit }: { count: number | undefined; limit: number }) {
+  const { t } = useI18n();
+  if (count === undefined || count < limit) return null;
+  return (
+    <MessageBar intent="info" className="block">
+      <MessageBarBody>{t("filter.limitReached", { n: limit })}</MessageBarBody>
+    </MessageBar>
   );
 }

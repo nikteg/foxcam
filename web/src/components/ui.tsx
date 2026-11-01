@@ -162,14 +162,26 @@ export function DateTimeInput({
   value,
   placeholder,
   onChange,
+  emptyTime,
   ...rest
 }: {
   type: "date" | "time" | "datetime-local";
   value: string;
   placeholder: string;
   onChange: (value: string) => void;
+  /** datetime-local: the time an empty field starts at when picked (e.g. "00:00"). A
+   *  touch puts today at that time in the field just before the picker opens, so the
+   *  picker shows it rather than the time now; left without a change, it is empty again. */
+  emptyTime?: string;
   "aria-label"?: string;
 }) {
+  const startAt = (input: HTMLInputElement) => {
+    if (emptyTime && type === "datetime-local" && !input.value) {
+      const d = new Date();
+      const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      input.value = `${day}T${emptyTime}`;
+    }
+  };
   return (
     <Input
       {...rest}
@@ -180,6 +192,10 @@ export function DateTimeInput({
       root={
         { "data-placeholder": value ? undefined : placeholder } as HTMLAttributes<HTMLSpanElement>
       }
+      onPointerDown={(e) => e.pointerType !== "mouse" && startAt(e.currentTarget)}
+      onBlur={(e) => {
+        if (!value) e.currentTarget.value = "";
+      }}
       onChange={(_, d) => onChange(d.value)}
     />
   );

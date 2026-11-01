@@ -13,6 +13,7 @@ import { FrameImage } from "../components/FrameImage";
 import { playerDetections } from "../components/Boxes";
 import {
   FeedbackSelect,
+  LimitNote,
   asFeedback,
   asLight,
   LightSelect,
@@ -135,6 +136,9 @@ const columns = (t: I18n["t"], cameraName: (id: string) => string): Column<Detec
 ];
 
 /** Events → Detections: every single hit, the evidence behind the events. */
+/** The newest this many; older ones need a narrower filter (LimitNote says so). */
+const LIMIT = 500;
+
 export function DetectionList() {
   const [f, setFilter] = useFilters([
     "camera",
@@ -164,7 +168,7 @@ export function DetectionList() {
     favorite: f.favorite === "true",
     light: asLight(f.light),
     feedback: asFeedback(f.feedback),
-    limit: 500,
+    limit: LIMIT,
   };
   const period = { period: f.period, from: f.from, to: f.to };
   const detections = useQuery({
@@ -278,6 +282,7 @@ export function DetectionList() {
       />
       <div className="master-detail">
         <div className="master">
+          <LimitNote count={detections.data?.length} limit={LIMIT} />
           {detections.data && detections.data.length > 0 && (
             <DataTable
               ariaLabel={t("nav.detections")}

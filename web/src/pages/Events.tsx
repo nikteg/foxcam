@@ -8,6 +8,7 @@ import {
   asFeedback,
   asLight,
   LightSelect,
+  LimitNote,
   PERIOD_KEYS,
   PeriodFilter,
   periodBounds,
@@ -36,6 +37,9 @@ import { CardsSkeleton, TextSkeleton } from "../components/Skeletons";
 
 /** Events (what happened, as clips), the detections behind them and, for admins, how the
  * models did. */
+/** The newest this many; older ones need a narrower filter (LimitNote says so). */
+const LIMIT = 200;
+
 export function Events() {
   const { t } = useI18n();
   const isAdmin = useIsAdmin();
@@ -113,7 +117,7 @@ function EventList() {
         light: asLight(f.light),
         feedback: asFeedback(f.feedback),
         ...periodBounds(f),
-        limit: 200,
+        limit: LIMIT,
       }),
     refetchInterval: 15_000,
   });
@@ -198,6 +202,7 @@ function EventList() {
         />
       </div>
       <QueryState error={events.error} loading={events.isPending} skeleton={<CardsSkeleton />} />
+      <LimitNote count={events.data?.length} limit={LIMIT} />
       {events.data && <EventsGrid events={events.data} byDay selection={selection} />}
       {events.data && (
         <BulkBar

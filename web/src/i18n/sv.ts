@@ -1317,6 +1317,8 @@ export const sv: Record<MessageKey, string> = {
   "filter.period.custom": "Från – till",
   "filter.from": "Från",
   "filter.to": "Till",
+  "filter.limitReached":
+    "Visar de {n} senaste. Välj en Till-tid eller smalna av filtren för att se äldre.",
   "filter.anyLight": "Dag och natt",
   "filter.day": "Dagsljus",
   "filter.night": "Natt",

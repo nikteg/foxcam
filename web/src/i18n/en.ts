@@ -1309,6 +1309,8 @@ export const en = {
   "filter.period.custom": "From – to",
   "filter.from": "From",
   "filter.to": "To",
+  "filter.limitReached":
+    "Showing the newest {n}. Set a To time or narrow the filters to see older ones.",
   "filter.anyLight": "Day and night",
   "filter.day": "Daylight",
   "filter.night": "Night",
