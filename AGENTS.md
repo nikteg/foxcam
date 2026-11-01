@@ -138,8 +138,10 @@ iPad and desktop, in light and dark theme, and as an iOS home screen app.
 ## Debugging what production does
 
 - Look at real data and logs before theorising: the `prod` skill (`scripts/prod-api.sh`
-  with the key in `mise.local.toml`, never pasted into commands), and for logs give the
-  user ready-to-run `docker logs` commands with a UTC time window.
+  with the key in `mise.local.toml`, never pasted into commands). Read the logs
+  yourself through the API (`GET /api/logs/{process}?level=WARNING`, the `prod` skill);
+  for what they don't hold (access log, crashes before logging starts, restarts) give
+  the user ready-to-run `docker logs` commands with a UTC time window.
 - For video problems (jumps, missing footage, wrong frames, boxes in the wrong place)
   start with `scripts/footage_probe.py` (the `footage-debug` skill).
 - Dev servers the user started are theirs: don't stop or restart them. To look at a

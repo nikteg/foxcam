@@ -1,6 +1,6 @@
 ---
 name: prod
-description: Look at what the production Foxcam server is doing - its API (events, recordings, clips, jobs, settings) with the private API key, and the container logs the user can fetch. Use whenever a question is about real data or real behaviour ("why did event X...", "check the live server", "re-run detections", "is the worker busy"), before theorising from the code.
+description: Look at what the production Foxcam server is doing - its API (events, recordings, clips, jobs, settings) with the private API key, and the processes' logs (GET /api/logs; Docker logs the user can fetch for the rest). Use whenever a question is about real data or real behaviour ("why did event X...", "check the live server", "re-run detections", "is the worker busy"), before theorising from the code.
 ---
 
 # Production Foxcam
@@ -53,8 +53,33 @@ with a Monitor or a bounded loop, at a pace that matches (a minute, not seconds)
 
 ## Logs
 
-You cannot reach the server. Write the commands for the user, with a UTC window around
-the moment in question (convert from local time), grepped to the camera:
+Read them yourself through the API first (admin key, which `prod-api.sh` has). Each
+process writes its own rotated log file, secrets taken out; the same as Settings → Logs:
+
+```sh
+scripts/prod-api.sh GET /api/logs                       # processes with a log, size, last write
+scripts/prod-api.sh GET '/api/logs/server?level=WARNING&limit=5000'
+scripts/prod-api.sh GET '/api/logs/mediamtx?q=grusgang&limit=1000'
+```
+
+- Processes: `server`, `ingest`, `compact`, `mediamtx`, and `worker-<id>` per worker
+  (workers send theirs, also from other machines).
+- `GET /api/logs/{process}?level=&q=&limit=`: entries newest first, `{ts, level, logger,
+  message}`. `level` is a floor (`DEBUG`, `INFO`, `WARNING`, `ERROR`); `q` is plain text,
+  any case, matched in logger and message; `limit` up to 5000. A traceback is one
+  entry's message. `GET /api/logs/{process}/download` gives the whole text.
+- `ts` is UTC. There is no time window parameter: fetch enough and filter on `ts` (pipe
+  through `python3 -I -c`, reversed for oldest first). Save long ones under `out/logs/`.
+- Start with `level=WARNING` for every process, then read INFO entries around what turns
+  up (all processes in the same minutes: a stall shows in ingest, MediaMTX and the
+  scanner at once).
+- Not in these files: the HTTP access log (`uvicorn.access`), anything printed before
+  logging was set up (a crash at import), and lines from before the log files existed or
+  older than the rotation keeps (5 × 5 MB per process). For those, and for restart
+  counts, fall back to Docker.
+
+The Docker side, which you cannot reach: write the commands for the user, with a UTC
+window around the moment in question (convert from local time), grepped to the camera:
 
 ```sh
 sudo docker inspect -f '{{.Name}} started={{.State.StartedAt}} restarts={{.RestartCount}}' \
