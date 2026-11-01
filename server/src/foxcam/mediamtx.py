@@ -115,10 +115,14 @@ class MediaMtx:
         """Make MediaMTX's path list match the enabled cameras (adds, updates, removes)."""
         wanted = desired_paths(self.settings)
         listed = await self.client.get("/v3/config/paths/list", params={"itemsPerPage": 1000})
+        # Which paths exist decides add or replace; asking MediaMTX for a missing one makes
+        # it log "path configuration not found" (as an error), so go by the list.
+        configured: set[str] | None = None
         if listed.status_code == 200:
-            for item in listed.json().get("items", []):
-                name = item.get("name")
-                if name and name != "all_others" and name not in wanted:
+            configured = {item["name"] for item in listed.json().get("items", [])
+                          if item.get("name")}
+            for name in sorted(configured):
+                if name != "all_others" and name not in wanted:
                     r = await self.client.delete(f"/v3/config/paths/delete/{name}")
                     if r.status_code >= 400:
                         log.error("mediamtx: removing path %s failed: %s %s", name,
@@ -126,8 +130,12 @@ class MediaMtx:
                         continue
                     log.info("mediamtx: path %s removed", name)
         for name, conf in wanted.items():
-            existing = await self.client.get(f"/v3/config/paths/get/{name}")
-            if existing.status_code == 200:
+            if configured is None:  # no list: ask for each path
+                got = await self.client.get(f"/v3/config/paths/get/{name}")
+                exists = got.status_code == 200
+            else:
+                exists = name in configured
+            if exists:
                 r = await self.client.post(f"/v3/config/paths/replace/{name}", json=conf)
             else:
                 r = await self.client.post(f"/v3/config/paths/add/{name}", json=conf)

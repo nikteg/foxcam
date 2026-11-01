@@ -147,7 +147,7 @@ def build(src: Path, image: Path, meta: Path, *, duration: float, interval: floa
     columns = min(COLUMNS, tiles)
     image.parent.mkdir(parents=True, exist_ok=True)
     part = image.with_suffix(".part.jpg")
-    args = ["ffmpeg", "-v", "error", "-y", "-hwaccel", "auto"]
+    args = ["ffmpeg", "-v", "error", "-y"]
     if keyframes_only:
         args += ["-skip_frame", "nokey"]
     if offset:
@@ -155,7 +155,14 @@ def build(src: Path, image: Path, meta: Path, *, duration: float, interval: floa
     args += ["-t", f"{duration:.3f}", "-i", str(src),
              "-vf", f"{ffmpeg.sample(f'1/{interval}')},scale={tile_width}:-2,tile={columns}x{rows}",
              "-frames:v", "1", "-q:v", "5", str(part)]
-    proc = subprocess.run(args, capture_output=True, text=True, timeout=600, check=False)
+    # Hardware decoding first; a damaged frame (a cloud relay's stall cuts a keyframe
+    # short) can make it give up before the sheet is written, where software copes.
+    for decode in (["-hwaccel", "auto"], []):
+        part.unlink(missing_ok=True)
+        proc = subprocess.run([*args[:4], *decode, *args[4:]], capture_output=True,
+                              text=True, timeout=600, check=False)
+        if proc.returncode == 0 and part.exists():
+            break
     if proc.returncode != 0 or not part.exists():
         part.unlink(missing_ok=True)
         tail = proc.stderr.strip().splitlines()[-1:] or ["no output"]

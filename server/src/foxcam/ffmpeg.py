@@ -7,6 +7,9 @@ import json
 import logging
 import re
 import subprocess
+import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -166,19 +169,37 @@ def _grab(src: Path, dst: Path, at_s: float, vf: list[str]) -> None:
     # (older cloud-relay recordings, stamped on arrival in bunches: a quarter second).
     at_s = max(at_s, 0)
     start = max(at_s - THUMB_WINDOW_S, 0)
-    dst.unlink(missing_ok=True)
-    _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{start:.6f}", "-i", str(src),
-          "-t", f"{at_s - start + 0.0005:.6f}", "-vf", ",".join(vf), "-update", "1",
-          "-q:v", "4", str(dst)], timeout=60)
-    if not dst.exists():  # no frame in the window (a gap in the recording): the next one
-        _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{at_s:.3f}", "-i", str(src),
-              "-frames:v", "1", "-vf", ",".join(vf), "-q:v", "4", str(dst)], timeout=60)
+    with _written_whole(dst) as part:
+        _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{start:.6f}", "-i", str(src),
+              "-t", f"{at_s - start + 0.0005:.6f}", "-vf", ",".join(vf), "-update", "1",
+              "-q:v", "4", str(part)], timeout=60)
+        if not part.exists():  # no frame in the window (a gap in the recording): the next
+            _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{at_s:.3f}", "-i", str(src),
+                  "-frames:v", "1", "-vf", ",".join(vf), "-q:v", "4", str(part)], timeout=60)
 
 
 def snapshot_from_url(url: str, dst: Path, timeout: float = 10) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
-    _run(["ffmpeg", "-y", "-v", "error", "-rtsp_transport", "tcp", "-i", url,
-          "-frames:v", "1", "-q:v", "3", str(dst)], timeout=timeout)
+    with _written_whole(dst) as part:
+        _run(["ffmpeg", "-y", "-v", "error", "-rtsp_transport", "tcp", "-i", url,
+              "-frames:v", "1", "-q:v", "3", str(part)], timeout=timeout)
+
+
+@contextmanager
+def _written_whole(dst: Path) -> Iterator[Path]:
+    """A file of its own to write ``dst`` into, put in its place once written: someone
+    reading ``dst`` meanwhile (a request serving it) gets the old picture or the new one,
+    never one cut short ("Response content shorter than Content-Length"). Nothing written
+    (and no error): no ``dst`` either."""
+    part = dst.with_name(f"{dst.stem}.{uuid.uuid4().hex[:8]}.part{dst.suffix}")
+    try:
+        yield part
+        if part.exists():
+            part.replace(dst)
+        else:
+            dst.unlink(missing_ok=True)
+    finally:
+        part.unlink(missing_ok=True)
 
 
 # A piece of footage for concat_clip: a file, or the [inpoint, outpoint) part of one
